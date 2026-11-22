@@ -50,6 +50,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Unit test pins the header; exact-head CI only. Not deployed and not yet proven against the live GitHub catalog.',
     },
     {
+        id: 'unverified-cleanup-empty-signup-org-20261122',
+        title: 'Unverified-account cleanup: removable when the only link is an empty signup organization',
+        state: 'active',
+        detail: 'Source-only policy change in the guarded owner cleanup: an old unverified account whose only links are a sole-owner organization that no other table references, plus its own signup contact profile, becomes eligible; purge removes that empty organization with it. Any license, order, subscription, outbox, audit or extra-member reference keeps the account protected. Still behind the owner flag, a hash-confirmed preview and the owner click.',
+        evidence:
+            'Feature tests and exact-head CI only; production audit of 29 old accounts showed all had a sole-owner organization and one organization had a license row. Not deployed and nothing deleted.',
+    },
+    {
         id: 'modelfabric-guided-providers-20261122',
         title: 'ModelFabric: guided connect cards for GitHub Models, Cerebras and NVIDIA',
         state: 'active',

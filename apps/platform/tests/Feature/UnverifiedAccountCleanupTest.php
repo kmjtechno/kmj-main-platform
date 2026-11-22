@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\AiProvider;
 use App\Models\User;
 use App\Services\Licensing\UnverifiedAccountCleanup;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -47,6 +48,15 @@ final class UnverifiedAccountCleanupTest extends TestCase
             'organization_id' => $orgId,
             'user_id' => $linked->id,
             'role' => 'owner',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        // A second member makes the organization real: the account is not its only member.
+        DB::table('organization_memberships')->insert([
+            'id' => (string) Str::uuid(),
+            'organization_id' => $orgId,
+            'user_id' => $verified->id,
+            'role' => 'member',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -101,6 +111,82 @@ final class UnverifiedAccountCleanupTest extends TestCase
             $cleanup->purge(1, str_repeat('f', 64));
         } finally {
             $this->assertDatabaseHas('users', ['id' => $old->id]);
+        }
+    }
+
+    private function signupOrganization(User $user): string
+    {
+        $orgId = (string) Str::uuid();
+        DB::table('organizations')->insert(['id' => $orgId, 'name' => 'Signup Org', 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('organization_memberships')->insert([
+            'id' => (string) Str::uuid(),
+            'organization_id' => $orgId,
+            'user_id' => $user->id,
+            'role' => 'owner',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $orgId;
+    }
+
+    public function test_sole_owner_of_an_empty_signup_organization_is_removed_with_it_and_its_profile(): void
+    {
+        $old = User::factory()->create(['email_verified_at' => null, 'created_at' => now()->subDays(12)]);
+        $orgId = $this->signupOrganization($old);
+        DB::table('customer_profiles')->insert([
+            'user_id' => $old->id, 'account_type' => 'individual', 'phone' => '+910000000000',
+            'country' => 'India', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $cleanup = app(UnverifiedAccountCleanup::class);
+        $preview = $cleanup->preview();
+        $this->assertSame([$old->id], $preview['candidateIds']);
+
+        $this->assertSame(1, $cleanup->purge(1, $preview['sha256']));
+        $this->assertDatabaseMissing('users', ['id' => $old->id]);
+        $this->assertDatabaseMissing('organizations', ['id' => $orgId]);
+        $this->assertDatabaseMissing('organization_memberships', ['organization_id' => $orgId]);
+        $this->assertDatabaseMissing('customer_profiles', ['user_id' => $old->id]);
+    }
+
+    public function test_an_organization_referenced_by_any_other_table_keeps_the_account_protected(): void
+    {
+        $old = User::factory()->create(['email_verified_at' => null, 'created_at' => now()->subDays(12)]);
+        $orgId = $this->signupOrganization($old);
+        AiProvider::query()->create([
+            'organization_id' => $orgId, 'name' => 'Referenced', 'preset' => 'github', 'kind' => 'openai-compatible',
+            'base_url' => 'https://models.github.ai/inference', 'api_key' => 'github_pat_test_key_123456',
+            'key_last4' => '3456', 'enabled' => true, 'free_only' => true,
+        ]);
+
+        $preview = app(UnverifiedAccountCleanup::class)->preview();
+        $this->assertSame(0, $preview['eligible']);
+        $this->assertSame(1, $preview['protected']);
+        $this->assertDatabaseHas('users', ['id' => $old->id]);
+        $this->assertDatabaseHas('organizations', ['id' => $orgId]);
+    }
+
+    public function test_a_reference_added_after_the_preview_aborts_the_purge_and_keeps_everything(): void
+    {
+        $old = User::factory()->create(['email_verified_at' => null, 'created_at' => now()->subDays(12)]);
+        $orgId = $this->signupOrganization($old);
+        $cleanup = app(UnverifiedAccountCleanup::class);
+        $preview = $cleanup->preview();
+        $this->assertSame(1, $preview['eligible']);
+
+        AiProvider::query()->create([
+            'organization_id' => $orgId, 'name' => 'Late', 'preset' => 'github', 'kind' => 'openai-compatible',
+            'base_url' => 'https://models.github.ai/inference', 'api_key' => 'github_pat_test_key_123456',
+            'key_last4' => '3456', 'enabled' => true, 'free_only' => true,
+        ]);
+
+        try {
+            $cleanup->purge(1, $preview['sha256']);
+            $this->fail('A stale preview must abort the purge.');
+        } catch (RuntimeException) {
+            $this->assertDatabaseHas('users', ['id' => $old->id]);
+            $this->assertDatabaseHas('organizations', ['id' => $orgId]);
         }
     }
 }
