@@ -59,7 +59,7 @@ final class OpenAiCompatibleAdapter
             $response = Http::withOptions([
                 'allow_redirects' => false,
                 'curl' => [CURLOPT_RESOLVE => [$target['host'].':443:'.$target['ip']]],
-            ])->withToken($apiKey)->acceptJson()->withHeaders($github ? ['X-GitHub-Api-Version' => '2022-11-28'] : [])->timeout(10)->connectTimeout(5)->get($catalogUrl);
+            ])->withToken($apiKey)->acceptJson()->withHeaders($github ? ['Accept' => 'application/vnd.github+json', 'X-GitHub-Api-Version' => '2022-11-28'] : [])->timeout(10)->connectTimeout(5)->get($catalogUrl);
         } catch (ConnectionException) {
             return $this->result('unreachable', [], [], 'connection_failed');
         }
