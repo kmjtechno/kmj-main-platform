@@ -138,6 +138,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'ops-release-admission-intent-20261122',
+        title: 'Ops: owner request for release admission with an explicit authenticated-QA attestation',
+        state: 'active',
+        detail: 'Passkey-gated Ops action that writes a short-lived admission intent only while the fixed root preflight is waiting for admission evidence, and only with the owner attestation that authenticated QA was completed. It never writes the admission, approves a release or deploys; the root broker re-verifies every receipt.',
+        evidence:
+            'Feature tests and exact-head CI only. The root broker and collectors are not installed on Elite, so one-click release is not proven end to end.',
+    },
+    {
         id: 'release-admission-broker-20261122',
         title: 'Release admission broker: root writes the gate admission only from real receipts and an owner intent',
         state: 'active',
