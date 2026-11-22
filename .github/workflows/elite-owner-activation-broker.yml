@@ -1,0 +1,66 @@
+name: Elite owner release activation broker contract
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/elite_owner_activation_broker.py'
+      - 'scripts/test_elite_owner_activation_broker.py'
+      - 'apps/platform/app/Services/Operations/EliteActivationIntentQueue.php'
+      - 'apps/platform/tests/Feature/EliteActivationIntentTest.php'
+      - 'apps/platform/routes/operator-ops.php'
+      - 'apps/platform/resources/js/pages/operator-ops.tsx'
+      - 'infra/server/systemd/kmj-elite-owner-activation-broker.*'
+      - 'docs/operations/ELITE_ONECLICK_ACTIVATION_BROKER.md'
+      - '.github/workflows/elite-owner-activation-broker.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  no-bypass-activation-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile source-only fixed broker and exact regression tests
+        run: python3 -m py_compile scripts/operations/elite_owner_activation_broker.py scripts/test_elite_owner_activation_broker.py
+      - name: Root gate, strict intent schema, replay, fixed target negative tests
+        run: python3 scripts/test_elite_owner_activation_broker.py -v
+      - name: PHP syntax without installing any host service
+        run: |
+          php -l apps/platform/app/Services/Operations/EliteActivationIntentQueue.php
+          php -l apps/platform/tests/Feature/EliteActivationIntentTest.php
+          php -l apps/platform/routes/operator-ops.php
+      - name: Prove source does not silently install or activate on runner
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('scripts/operations/elite_owner_activation_broker.py').read_text()
+          assert 'activate_existing_approved_release' in text
+          assert 'systemctl", "start", UNIT' in text
+          assert '--execute' in text and '--inspect' in text
+          assert 'BLOCKED_PROTECTED_GATE_' in text
+          assert 'O_NOFOLLOW' in text and 'O_EXCL' in text
+          assert 'os.unlink(INTENT)' not in text
+          assert not Path('/opt/kmj-main-platform-activation/elite_owner_activation_broker.py').exists()
+          print('ELITE_ACTIVATION_SOURCE_CONTRACT=PASS_NO_PRODUCTION_MUTATION')
+          PY
+
+  frontend-formatter-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Output exact Vite Plus formatter diff without touching source
+        working-directory: apps/platform
+        run: |
+          set -Eeuo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          ./node_modules/.bin/vp fmt resources/js/pages/operator-ops.tsx
+          git --no-pager diff -- resources/js/pages/operator-ops.tsx

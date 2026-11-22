@@ -917,6 +917,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence:
             'PR #97 + PR #98 + completed issue #95 + OperatorOpsConsoleTest',
     },
+    {
+        id: 'elite-oneclick-owner-activation-intent-20261121',
+        title: 'Exact-SHA owner one-click activation intent and root-gated broker',
+        state: 'active',
+        detail: 'Source-only production activation intent: password-confirmed Platform Owner can queue a short-lived exact-SHA predecessor request only if the root-attested preflight is fresh. The independent Elite broker rechecks owner-protected admission and LIVE CAS before starting ONLY the fixed production release systemd unit, with a root-only no-replay claim. No new timer is installed and accepted is never called deployed.',
+        evidence:
+            'PR source implements Laravel owner request and audit, unique no-clobber inbox, Python root broker, optional systemd unit/timer templates and negative CI. Requires reviewed root installation and legitimate staging, disposable restore, rollback and owner approval; DR remains NOT_VERIFIED.',
+    },
 ];
 
 export const verifiedDeliveryMilestones = deliveryMilestones.filter(
