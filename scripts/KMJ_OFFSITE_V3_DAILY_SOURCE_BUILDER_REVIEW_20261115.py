@@ -10,8 +10,10 @@ owner-approved atomic publication, actual restore and health-unit proof.
 
 Snapshot input sets: dump, release storage root (app/framework/logs),
 three independently pinned config directories, and app env. No credentials
-or source paths are printed. Unsafe source symlinks/hardlinks/special files
-are rejected and no pre-existing snapshots are overwritten or removed.
+or source paths are printed. Certbot-standard live->archive same-lineage relative certificate links are
+preserved only within config/letsencrypt, after nofollow SHA verification.
+All other symlinks/hardlinks/special files remain rejected. Existing backups
+are never overwritten or removed.
 """
 from __future__ import annotations
 import hashlib
@@ -172,7 +174,8 @@ def copy_file(source,targetfd,name,owners,stats,*,private=False):
     finally:os.close(src)
 
 
-def copy_tree(src_path,dstfd,owners,stats,manifest,prefix,depth=0):
+def copy_tree(src_path,dstfd,owners,stats,manifest,prefix,depth=0,*,
+              certbot_root=None,certbot_relative=""):
     if depth>MAX_DEPTH:raise Deny("SOURCE_TREE_DEPTH_LIMIT")
     src=owned_dir(src_path,owners)
     try:
@@ -184,11 +187,30 @@ def copy_tree(src_path,dstfd,owners,stats,manifest,prefix,depth=0):
             stats["entries"]+=1
             if stats["entries"]>MAX_ENTRIES:raise Deny("SOURCE_TREE_ENTRY_LIMIT")
             before=os.stat(name,dir_fd=src,follow_symlinks=False)
-            if not (stat.S_ISDIR(before.st_mode) or stat.S_ISREG(before.st_mode)):
+            cert_link=stat.S_ISLNK(before.st_mode)
+            if not (stat.S_ISDIR(before.st_mode) or stat.S_ISREG(before.st_mode)
+                    or (cert_link and certbot_root is not None)):
                 raise Deny("SOURCE_LINK_OR_SPECIAL_ENTRY")
-            if before.st_uid not in owners or before.st_mode&0o022:
+            if (before.st_uid not in owners
+                    or (not cert_link and before.st_mode&0o022)):
                 raise Deny("SOURCE_ENTRY_OWNER_OR_MODE")
-            if stat.S_ISREG(before.st_mode):
+            if cert_link:
+                if re.fullmatch(r"live/[A-Za-z0-9][A-Za-z0-9._-]{0,119}",
+                                certbot_relative) is None:
+                    raise Deny("SOURCE_LINK_OR_SPECIAL_ENTRY")
+                certrootfd=owned_dir(certbot_root,owners)
+                try:
+                    target,digest=daily.certbot_link_target(
+                        certrootfd,src,certbot_relative,name,owners)
+                finally:os.close(certrootfd)
+                os.symlink(target,name,dir_fd=dstfd)
+                final=os.stat(name,dir_fd=dstfd,follow_symlinks=False)
+                if (not stat.S_ISLNK(final.st_mode)
+                        or final.st_uid not in owners
+                        or os.readlink(name,dir_fd=dstfd)!=target):
+                    raise Deny("CERTBOT_LINK_COPY_INTEGRITY_FAILED")
+                manifest.append((prefix+"/"+name,digest))
+            elif stat.S_ISREG(before.st_mode):
                 child,meta=checked_file(src,name,owners)
                 try:
                     digest=copy_fd(child,meta,dstfd,name,MAX_BYTES,stats)
@@ -201,7 +223,9 @@ def copy_tree(src_path,dstfd,owners,stats,manifest,prefix,depth=0):
                 try:
                     os.fchmod(sub,0o700)
                     copy_tree(Path(src_path)/name,sub,owners,stats,manifest,
-                              prefix+"/"+name,depth+1)
+                              prefix+"/"+name,depth+1,
+                              certbot_root=certbot_root,
+                              certbot_relative=(certbot_relative+"/"+name).lstrip("/"))
                     os.fsync(sub)
                 finally:os.close(sub)
             else:
@@ -308,7 +332,9 @@ def build_preverified_snapshot(
                     out=os.open(subname,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW|os.O_CLOEXEC,dir_fd=config)
                     try:
                         copy_tree(config_sources[subname],out,{expected_uid},
-                                  stats,manifest,"config/"+subname)
+                                  stats,manifest,"config/"+subname,
+                                  certbot_root=(config_sources[subname]
+                                                if subname=="letsencrypt" else None))
                         os.fsync(out)
                     finally:os.close(out)
                 os.fsync(config)
