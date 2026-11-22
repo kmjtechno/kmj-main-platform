@@ -191,7 +191,9 @@ final class UnverifiedAccountCleanup
                     continue;
                 }
                 $type = strtolower((string) ($column['type_name'] ?? ''));
-                if (in_array($type, ['bigint', 'integer', 'smallint', 'int2', 'int4', 'int8', 'bool', 'boolean', 'timestamp', 'timestamptz', 'date', 'json', 'jsonb', 'float4', 'float8', 'numeric'], true)) {
+                // JSON/JSONB can contain nested organization UUID strings. Never treat
+                // a potential organization reference in either type as proven empty.
+                if (in_array($type, ['bigint', 'integer', 'smallint', 'int2', 'int4', 'int8', 'bool', 'boolean', 'timestamp', 'timestamptz', 'date', 'float4', 'float8', 'numeric'], true)) {
                     continue; // cannot hold a UUID organization id
                 }
                 if (! in_array($type, ['uuid', 'varchar', 'text', 'bpchar', 'char', 'citext'], true)) {

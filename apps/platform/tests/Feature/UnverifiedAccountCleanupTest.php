@@ -7,8 +7,10 @@ namespace Tests\Feature;
 use App\Models\AiProvider;
 use App\Models\User;
 use App\Services\Licensing\UnverifiedAccountCleanup;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Tests\TestCase;
@@ -188,5 +190,39 @@ final class UnverifiedAccountCleanupTest extends TestCase
             $this->assertDatabaseHas('users', ['id' => $old->id]);
             $this->assertDatabaseHas('organizations', ['id' => $orgId]);
         }
+    }
+
+    public function test_json_organization_reference_requires_schema_review_before_a_cleanup_preview(): void
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            $this->markTestSkipped('PostgreSQL JSONB column introspection is required.');
+        }
+
+        $old = User::factory()->create([
+            'email_verified_at' => null,
+            'created_at' => now()->subDays(12),
+        ]);
+        $orgId = $this->signupOrganization($old);
+
+        // An organization UUID may be embedded in a JSON document even without
+        // a foreign key. Unknown references must block cleanup, not be ignored.
+        Schema::create('cleanup_json_reference_witness', function (Blueprint $table): void {
+            $table->id();
+            $table->jsonb('organization_reference');
+        });
+        DB::table('cleanup_json_reference_witness')->insert([
+            'organization_reference' => json_encode(['organization_id' => $orgId], JSON_THROW_ON_ERROR),
+        ]);
+
+        $cleanup = app(UnverifiedAccountCleanup::class);
+        try {
+            $cleanup->preview();
+            $this->fail('An unreviewed JSON organization reference must block cleanup.');
+        } catch (RuntimeException $e) {
+            $this->assertSame('UNVERIFIED_CLEANUP_ORG_REFERENCE_TYPE_UNKNOWN', $e->getMessage());
+        }
+
+        $this->assertDatabaseHas('users', ['id' => $old->id]);
+        $this->assertDatabaseHas('organizations', ['id' => $orgId]);
     }
 }

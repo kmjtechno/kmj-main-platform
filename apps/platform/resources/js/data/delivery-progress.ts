@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'auth-brand-owner-profile-dropdown-20261122',
+        title: 'Auth logo and owner account profile/logout menu',
+        state: 'active',
+        detail: 'Source-only UI fix: sign-in, registration and all shared auth pages use the existing locked horizontal KMJ TECHNO logo instead of the tiny glyph. Super Admin Command Center and all owner module headers use accessible profile dropdowns, reusing the existing Settings and explicit POST Logout menu.',
+        evidence:
+            'Screenshot-reported defects; source regression checks. Requires exact-head CI and protected Elite release before any live claim.',
+    },
+    {
         id: 'owner-licensing-register-pagination-20261122',
         title: 'Owner Licensing Hub: searchable compact registers and accessible license forms',
         state: 'active',
@@ -56,6 +64,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         detail: 'Policy document only, owner-directed: credit-limited cloud routes become admissible under hard-cap rules (no overage possible, own usage counter, expiring evidence) and owner-registered local endpoints are no longer prohibited. Paid fallback stays prohibited and NO_FREE_ROUTE_AVAILABLE stays. No routing code changes: credit and local routes need their own reviewed slices.',
         evidence:
             'Docs-only change with exact-head CI; nothing deployed and no new route is admitted yet.',
+    },
+    {
+        id: 'unverified-cleanup-json-org-reference-20261122',
+        title: 'Unverified cleanup: fail closed on unknown JSON organization references',
+        state: 'active',
+        detail: 'Source-only safety hardening: JSON and JSONB fields whose names imply an organization or tenant reference can contain nested UUID strings. The cleanup eligibility preview now rejects such unreviewed reference shapes instead of treating them as incapable of holding an organization ID. A failed safety preview never grants deletion permission; existing owner-only cleanup flag and exact cohort confirmation remain unchanged.',
+        evidence:
+            'PostgreSQL JSONB negative regression test and hosted exact-head CI required. No cleanup approval, account deletion, release or live schema reconciliation is implied by this source change.',
     },
     {
         id: 'unverified-cleanup-empty-signup-org-20261122',
