@@ -90,6 +90,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Unit test pins the header; exact-head CI only. Not deployed and not yet proven against the live GitHub catalog.',
     },
     {
+        id: 'modelfabric-connect-guide-20261122',
+        title: 'ModelFabric: copy-ready Connect guide on the API tokens tab',
+        state: 'active',
+        detail: 'Source-only, frontend only: the API tokens tab now shows Base URL, model (modelfabric-auto) and API key with copy buttons plus Python SDK and curl snippets, pre-filled with the one-time token only while it is on screen. Nothing is stored in the browser and routing is unchanged.',
+        evidence:
+            'Static check and exact-head CI only. Not deployed and not yet verified in a browser by the owner.',
+    },
+    {
         id: 'modelfabric-sticky-sessions-20261122',
         title: 'ModelFabric: sticky sessions keep a conversation on the route that last answered it',
         state: 'active',
