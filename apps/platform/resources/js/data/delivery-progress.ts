@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'owner-directory-simple-confirm-selected-delete-20261122',
+        title: 'Owner Customers: easy single and selected batch deletion',
+        state: 'active',
+        detail: 'Source-only customer directory UX uses one browser confirmation for individual deletion and page-scoped select-all/checkbox selection for 1-15 explicitly chosen customers. Two or more customers use a bounded owner/password/passkey-gated atomic batch transaction; an unsafe link or missing account rolls the entire selection back. There is no filter-wide unverified cleanup, no deletion of shared organizations or licensed customer records.',
+        evidence:
+            'New PHP access-control and all-or-nothing rollback tests. Exact-head CI, security review, owner-approved signed Elite release and authenticated browser click verification required before claiming live.',
+    },
+    {
         id: 'owner-customer-account-signup-graph-delete-20261122',
         title: 'Owner Customers: complete private signup data deletion',
         state: 'active',
