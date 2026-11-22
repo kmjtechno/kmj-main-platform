@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\AiProvider;
 use App\Models\CustomerProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -395,7 +396,7 @@ final class OwnerDirectoryHttpTest extends TestCase
         $owner = $this->owner();
         $target = User::factory()->create(['email_verified_at' => null]);
         $organization = app(OrganizationCreator::class)->create('Active organization', $target->id);
-        \App\Models\AiProvider::query()->create([
+        AiProvider::query()->create([
             'organization_id' => $organization->id,
             'name' => 'Active provider',
             'preset' => 'github',
