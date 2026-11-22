@@ -217,11 +217,12 @@ final class OmniDeskActivationQueryService
         OmniDeskApiPrincipal $principal,
         bool $lock = false,
     ): array {
+        if ($lock) {
+            return $this->lockedRecordsForPrincipal($activationId, $principal);
+        }
+
         $bindingQuery = DB::table('omnidesk_activation_bindings')
             ->where('activation_id', $activationId);
-        if ($lock) {
-            $bindingQuery->lockForUpdate();
-        }
         $bindingRow = $bindingQuery->first();
 
         if ($bindingRow === null) {
@@ -241,9 +242,6 @@ final class OmniDeskActivationQueryService
 
         $activationQuery = DB::table('kslp_activations')
             ->where('id', $activationId);
-        if ($lock) {
-            $activationQuery->lockForUpdate();
-        }
         $activationRow = $activationQuery->first();
         if ($activationRow === null) {
             throw new DomainException('OMNIDESK_ACTIVATION_NOT_FOUND');
@@ -255,9 +253,6 @@ final class OmniDeskActivationQueryService
             ->where('id', $activation['license_id'])
             ->where('customer_id', $principal->organizationId)
             ->where('product', OmniDeskLicenseContract::PRODUCT_ID);
-        if ($lock) {
-            $licenseQuery->lockForUpdate();
-        }
         $licenseRow = $licenseQuery->first();
         if ($licenseRow === null) {
             throw new DomainException('OMNIDESK_ACTIVATION_NOT_FOUND');
@@ -266,5 +261,62 @@ final class OmniDeskActivationQueryService
         $license = (array) $licenseRow;
 
         return [$binding, $activation, $license];
+    }
+
+    /**
+     * Acquire locks in the same order as OmniDeskActivationBindingStore::advanceLease:
+     * license -> activation -> binding. Non-locking lookups are identifiers
+     * only and MUST be rechecked after the authoritative locks are held.
+     *
+     * @return array{array<string, mixed>, array<string, mixed>, array<string, mixed>}
+     */
+    private function lockedRecordsForPrincipal(
+        string $activationId,
+        OmniDeskApiPrincipal $principal,
+    ): array {
+        $previewBinding = DB::table('omnidesk_activation_bindings')
+            ->where('activation_id', $activationId)
+            ->first(['organization_id']);
+        if ($previewBinding === null
+            || ! hash_equals((string) $previewBinding->organization_id, $principal->organizationId)) {
+            throw new DomainException('OMNIDESK_ACTIVATION_NOT_FOUND');
+        }
+
+        $previewActivation = DB::table('kslp_activations')
+            ->where('id', $activationId)
+            ->first(['license_id']);
+        if ($previewActivation === null) {
+            throw new DomainException('OMNIDESK_ACTIVATION_NOT_FOUND');
+        }
+
+        $licenseRow = DB::table('kslp_licenses')
+            ->where('id', $previewActivation->license_id)
+            ->where('customer_id', $principal->organizationId)
+            ->where('product', OmniDeskLicenseContract::PRODUCT_ID)
+            ->lockForUpdate()
+            ->first();
+        if ($licenseRow === null) {
+            throw new DomainException('OMNIDESK_ACTIVATION_NOT_FOUND');
+        }
+
+        $activationRow = DB::table('kslp_activations')
+            ->where('id', $activationId)
+            ->where('license_id', $licenseRow->id)
+            ->lockForUpdate()
+            ->first();
+        if ($activationRow === null) {
+            throw new DomainException('OMNIDESK_ACTIVATION_NOT_FOUND');
+        }
+
+        $bindingRow = DB::table('omnidesk_activation_bindings')
+            ->where('activation_id', $activationId)
+            ->where('organization_id', $principal->organizationId)
+            ->lockForUpdate()
+            ->first();
+        if ($bindingRow === null) {
+            throw new DomainException('OMNIDESK_ACTIVATION_NOT_FOUND');
+        }
+
+        return [(array) $bindingRow, (array) $activationRow, (array) $licenseRow];
     }
 }
