@@ -70,9 +70,10 @@ final class SubmitNativeExternalMail implements ShouldQueue
         }
 
         try {
-            // Unlike Laravel's default mailer, this can NEVER become log/array
-            // or a remote third-party provider via a future env default.
-            Mail::mailer('sendmail')->to((string) $message->recipient_email)
+            // Only the pinned, bounded, owner-activated local Postfix SMTP
+            // transport; never fork sendmail/postdrop in a sandboxed worker.
+            // This is NOT a remote provider or the transactional mailer.
+            Mail::mailer('kmj_native_loopback')->to((string) $message->recipient_email)
                 ->send(new NativeExternalMailMessage(
                     (string) $message->subject,
                     (string) $message->body,
