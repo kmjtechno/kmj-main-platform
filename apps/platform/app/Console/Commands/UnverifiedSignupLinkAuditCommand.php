@@ -7,7 +7,6 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use RuntimeException;
 
 /**
  * Read-only owner-operator preflight. Signup creates user, customer profile
@@ -25,12 +24,14 @@ final class UnverifiedSignupLinkAuditCommand extends Command
         $days = filter_var($this->option('days'), FILTER_VALIDATE_INT);
         if ($days === false || $days < 0 || $days > 3650) {
             $this->error('days must be 0..3650');
+
             return self::FAILURE;
         }
 
         foreach (['users', 'customer_profiles', 'organizations', 'organization_memberships'] as $required) {
             if (! Schema::hasTable($required)) {
                 $this->error('UNVERIFIED_SIGNUP_AUDIT_SCHEMA_INCOMPLETE');
+
                 return self::FAILURE;
             }
         }
@@ -64,11 +65,11 @@ final class UnverifiedSignupLinkAuditCommand extends Command
             if ($ms->count() === 1 && $profiles->has($id)
                 && $ms->first()->role === 'owner'
                 && (int) $memberCounts->get($ms->first()->organization_id, 0) === 1) {
-                ++$signupShape;
+                $signupShape++
             }
             foreach ($ms as $membership) {
                 if ((int) $memberCounts->get($membership->organization_id, 0) > 1) {
-                    ++$linkedMultiMember;
+                    $linkedMultiMember++
                     break;
                 }
             }
@@ -81,6 +82,7 @@ final class UnverifiedSignupLinkAuditCommand extends Command
             $table = $entry['name'] ?? null;
             if (! is_string($table) || preg_match('/\A[a-z][a-z0-9_]*\z/D', $table) !== 1) {
                 $unsafeSchema = true;
+
                 continue;
             }
             if (in_array($table, ['users', 'organizations', 'organization_memberships',
@@ -98,6 +100,7 @@ final class UnverifiedSignupLinkAuditCommand extends Command
             foreach (Schema::getForeignKeys($table) as $fk) {
                 if (count($fk['columns'] ?? []) !== 1) {
                     $unsafeSchema = true;
+
                     continue;
                 }
                 if (($fk['foreign_table'] ?? null) === 'organizations') {
@@ -110,6 +113,7 @@ final class UnverifiedSignupLinkAuditCommand extends Command
             foreach (array_unique($orgRefs) as $column) {
                 if (! preg_match('/\A[a-z][a-z0-9_]*\z/D', $column)) {
                     $unsafeSchema = true;
+
                     continue;
                 }
                 $count = DB::table($table)->whereIn($column, $orgIds)->count();
@@ -120,6 +124,7 @@ final class UnverifiedSignupLinkAuditCommand extends Command
             foreach (array_unique($userRefs) as $column) {
                 if (! preg_match('/\A[a-z][a-z0-9_]*\z/D', $column)) {
                     $unsafeSchema = true;
+
                     continue;
                 }
                 // Never compare a decimal users.id to a native UUID field: PostgreSQL
@@ -132,6 +137,7 @@ final class UnverifiedSignupLinkAuditCommand extends Command
                     'bpchar', 'char', 'text', 'citext', 'decimal', 'numeric',
                 ], true)) {
                     $unsafeSchema = true;
+
                     continue;
                 }
                 $count = DB::table($table)->whereIn($column, array_map('strval', $ids))->count();

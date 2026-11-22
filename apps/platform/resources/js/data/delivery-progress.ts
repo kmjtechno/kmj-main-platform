@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'unverified-signup-profile-org-audit-20261122',
+        title: 'Accounts: second-stage privacy-safe unverified signup linkage audit',
+        state: 'active',
+        detail: 'Source-only read-only operator command aggregates email-unverified signup profile ownership, sole-owner organization membership and possible commercial organization/user references. Both seven-day and all-age cohorts can be inspected without revealing user names, email, IDs or tokens. The report explicitly refuses to authorize deletion, because cross-service licensing identity and backup/restore must be reviewed separately.',
+        evidence:
+            'Owner-readonly baseline: 58 users, 2 verified, 56 unverified, 29 aged at least seven days. Draft PR #987 includes an aggregate command and regression tests; CI and owner-protected Elite release pending. No database mutation or user deletion.',
+    },
+    {
         id: 'owner-licensing-register-pagination-20261122',
         title: 'Owner Licensing Hub: searchable compact registers and accessible license forms',
         state: 'active',
