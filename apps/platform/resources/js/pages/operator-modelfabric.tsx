@@ -637,6 +637,84 @@ export default function OperatorModelFabric({
         };
     })();
 
+    const DAY = 86_400_000;
+    const now = Date.now();
+    const daysLeft = (iso: string) =>
+        Math.ceil((new Date(iso).getTime() - now) / DAY);
+    type Todo = {
+        key: string;
+        tone: 'bad' | 'warn';
+        text: string;
+        action: string;
+        tab?: Tab;
+        href?: string;
+    };
+    const todos: Todo[] = [];
+    const expiredEvidence = evidence.filter(
+        (row) => !row.revoked && !row.current,
+    ).length;
+    const soonEvidence = evidence.filter(
+        (row) => row.current && !row.revoked && daysLeft(row.expires_at) <= 7,
+    ).length;
+    if (expiredEvidence > 0) {
+        todos.push({
+            key: 'expired',
+            tone: 'bad',
+            text: `${expiredEvidence} approval(s) expired and are no longer routed. Re-check the pricing page and renew.`,
+            action: 'Renew approvals',
+            tab: 'models',
+        });
+    }
+    if (soonEvidence > 0) {
+        todos.push({
+            key: 'soon',
+            tone: 'warn',
+            text: `${soonEvidence} approval(s) expire within 7 days.`,
+            action: 'Renew approvals',
+            tab: 'models',
+        });
+    }
+    const unhealthy = providers.filter(
+        (p) => p.enabled && p.health !== 'ok',
+    ).length;
+    if (unhealthy > 0 && providers.length > 0) {
+        todos.push({
+            key: 'health',
+            tone: 'warn',
+            text: `${unhealthy} provider(s) are not healthy. Run Test connection.`,
+            action: 'Open providers',
+            href: '/services/kmj-codebridge/ai-providers',
+        });
+    }
+    const unapproved = providers.filter(
+        (p) =>
+            p.enabled &&
+            p.health === 'ok' &&
+            p.discovered_model_count > 0 &&
+            !evidence.some((row) => row.provider_id === p.id && row.current),
+    ).length;
+    if (unapproved > 0) {
+        todos.push({
+            key: 'unapproved',
+            tone: 'warn',
+            text: `${unapproved} healthy provider(s) have no approved free model yet, so they are not used.`,
+            action: 'Approve models',
+            tab: 'models',
+        });
+    }
+    const tokenSoon = tokens.filter(
+        (t) => t.active && daysLeft(t.expires_at) <= 7,
+    ).length;
+    if (tokenSoon > 0) {
+        todos.push({
+            key: 'tokens',
+            tone: 'warn',
+            text: `${tokenSoon} API token(s) expire within 7 days.`,
+            action: 'Open tokens',
+            tab: 'tokens',
+        });
+    }
+
     const save = () => {
         router.post(
             `${BASE}/evidence`,
@@ -938,6 +1016,58 @@ export default function OperatorModelFabric({
 
                 {tab === 'start' ? (
                     <>
+                        <section
+                            className="owner-panel"
+                            aria-label="To do"
+                            data-testid="modelfabric-todo"
+                        >
+                            <p className="text-sm font-black">To do today</p>
+                            {todos.length === 0 ? (
+                                <p className="text-muted-foreground mt-1 text-sm">
+                                    Nothing needs your attention. Approvals,
+                                    providers and tokens are all current.
+                                </p>
+                            ) : (
+                                <ul className="mt-2 divide-y text-sm">
+                                    {todos.map((todo) => (
+                                        <li
+                                            key={todo.key}
+                                            className="flex flex-wrap items-center justify-between gap-2 py-2"
+                                        >
+                                            <span>
+                                                <StatusPill tone={todo.tone}>
+                                                    {todo.tone === 'bad'
+                                                        ? 'now'
+                                                        : 'soon'}
+                                                </StatusPill>{' '}
+                                                {todo.text}
+                                            </span>
+                                            {todo.href ? (
+                                                <a
+                                                    className={ghostButton}
+                                                    href={todo.href}
+                                                >
+                                                    {todo.action}
+                                                </a>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className={ghostButton}
+                                                    onClick={() =>
+                                                        setTab(
+                                                            todo.tab ??
+                                                                'models',
+                                                        )
+                                                    }
+                                                >
+                                                    {todo.action}
+                                                </button>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </section>
                         <section
                             id="routes"
                             className="grid gap-4 md:grid-cols-2"

@@ -90,6 +90,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Unit test pins the header; exact-head CI only. Not deployed and not yet proven against the live GitHub catalog.',
     },
     {
+        id: 'modelfabric-todo-panel-20261122',
+        title: 'ModelFabric: "To do today" panel on the Overview tab',
+        state: 'active',
+        detail: 'Source-only, frontend only: the Overview tab lists what needs the owner now or soon (expired approvals that are no longer routed, approvals and tokens expiring within 7 days, unhealthy providers, healthy providers with no approved model) with one button each. It only reads data the page already receives; routing and approvals are unchanged.',
+        evidence:
+            'Static check and exact-head CI only. Not deployed and not yet verified in a browser by the owner.',
+    },
+    {
         id: 'modelfabric-connect-guide-20261122',
         title: 'ModelFabric: copy-ready Connect guide on the API tokens tab',
         state: 'active',
