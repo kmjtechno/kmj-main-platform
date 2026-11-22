@@ -69,5 +69,18 @@ class ReleaseContractTests(unittest.TestCase):
             self.assertEqual(mod.main(Path(td)), 1)
 
 
+    def test_attestation_probes_are_optional_but_strict(self):
+        self.assertFalse(self.errors(lambda o: o.update(staging_qa={"probe": "authenticated-surfaces"})))
+        for bad in ("make test", "../x", "$(id)", "a b"):
+            self.assertTrue(self.errors(lambda o, b=bad: o.update(staging_qa={"probe": b})), bad)
+            self.assertTrue(self.errors(lambda o, b=bad: o.update(restore={"probe": b})), bad)
+        self.assertTrue(self.errors(lambda o: o.update(restore={"probe": "x1", "cmd": "y"})))
+
+    def test_data_changing_release_must_name_a_restore_probe(self):
+        self.assertTrue(self.errors(lambda o: (o.update(data_risk="migrations"), o.pop("restore", None))))
+        self.assertFalse(self.errors(lambda o: o.update(data_risk="migrations", restore={"probe": "disposable-pg-restore"})))
+        self.assertFalse(self.errors(lambda o: o.update(data_risk="none")))
+
+
 if __name__ == "__main__":
     unittest.main()

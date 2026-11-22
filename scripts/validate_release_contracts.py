@@ -22,11 +22,16 @@ SLUG = re.compile(r"[a-z][a-z0-9-]{1,40}\Z")
 NAME = re.compile(r"[a-z0-9][a-z0-9-]{1,40}(:[a-z0-9-]{1,40})?\Z")
 CHECK = re.compile(r"[A-Za-z0-9][A-Za-z0-9 ()+._/,:-]{0,119}\Z")
 REPO = re.compile(r"kmjtechno/[a-z0-9][a-z0-9._-]{1,60}\Z")
-TOP = {
+REQUIRED = {
     "schema_version", "project", "kind", "repository", "default_branch", "required_checks",
     "stage", "smoke", "health", "rollback", "data_risk", "approval", "signing",
 }
-NESTED = {"stage": "gate", "smoke": "probe", "health": "probe", "rollback": "strategy"}
+# Optional attestation names: staging_qa proves the exact staged origin was exercised, restore proves a
+# disposable restore of the data. restore becomes mandatory as soon as a release can change data.
+OPTIONAL = {"staging_qa", "restore"}
+TOP = REQUIRED | OPTIONAL
+NESTED = {"stage": "gate", "smoke": "probe", "health": "probe", "rollback": "strategy",
+          "staging_qa": "probe", "restore": "probe"}
 
 
 def strict_load(data: bytes) -> dict:
@@ -52,7 +57,7 @@ def strict_load(data: bytes) -> dict:
 def validate(obj: dict, filename: str) -> list[str]:
     errors: list[str] = []
     unknown = set(obj) - TOP
-    missing = TOP - set(obj)
+    missing = REQUIRED - set(obj)
     if unknown:
         errors.append(f"unknown keys: {sorted(unknown)}")
     if missing:
@@ -78,12 +83,16 @@ def validate(obj: dict, filename: str) -> list[str]:
             or len(set(checks)) != len(checks)):
         errors.append("required_checks must be 1-20 unique plain check names")
     for key, inner in NESTED.items():
+        if key not in obj:
+            continue
         value = obj[key]
         if (not isinstance(value, dict) or set(value) != {inner}
                 or not isinstance(value[inner], str) or not NAME.fullmatch(value[inner])):
             errors.append(f"{key} must be {{{inner!r}: <named gate>}} (a name, never a command)")
     if obj["data_risk"] not in DATA_RISK:
         errors.append("data_risk not allowed")
+    elif obj["data_risk"] != "none" and "restore" not in obj:
+        errors.append("a release that can change data must name a restore probe")
     if obj["approval"] != "owner-passkey":
         errors.append("approval must be owner-passkey")
     if obj["signing"] not in SIGNING:
