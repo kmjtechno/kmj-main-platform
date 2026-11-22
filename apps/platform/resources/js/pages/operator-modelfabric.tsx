@@ -1096,31 +1096,67 @@ export default function OperatorModelFabric({
                             data-testid="modelfabric-setup-journey"
                         >
                             <div className="owner-panel-title">
-                                <h2><ShieldCheck size={17} /> Set up ModelFabric</h2>
+                                <h2>
+                                    <ShieldCheck size={17} /> Set up ModelFabric
+                                </h2>
                                 <span className="text-muted-foreground text-xs">
-                                    {setupJourney.filter((step) => step.complete).length} / {setupJourney.length} evidenced
+                                    {
+                                        setupJourney.filter(
+                                            (step) => step.complete,
+                                        ).length
+                                    }{' '}
+                                    / {setupJourney.length} evidenced
                                 </span>
                             </div>
                             <p className="text-muted-foreground mt-1 text-xs">
-                                Based on the FreeLLMAPI connection journey, with KMJ owner-controlled
-                                pricing evidence, one token and zero paid fallback.
-                                A step is never marked complete from a simulated request.
+                                Based on the FreeLLMAPI connection journey, with
+                                KMJ owner-controlled pricing evidence, one token
+                                and zero paid fallback. A step is never marked
+                                complete from a simulated request.
                             </p>
                             <ol className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                                 {setupJourney.map((step, index) => (
-                                    <li key={step.title} className="flex flex-col gap-2 rounded-xl border p-3">
+                                    <li
+                                        key={step.title}
+                                        className="flex flex-col gap-2 rounded-xl border p-3"
+                                    >
                                         <div className="flex items-center justify-between gap-2">
-                                            <strong className="text-xs">{index + 1}. {step.title}</strong>
-                                            <StatusPill tone={step.complete ? 'ok' : 'warn'}>
-                                                {step.complete ? 'Evidence found' : 'Next action'}
+                                            <strong className="text-xs">
+                                                {index + 1}. {step.title}
+                                            </strong>
+                                            <StatusPill
+                                                tone={
+                                                    step.complete
+                                                        ? 'ok'
+                                                        : 'warn'
+                                                }
+                                            >
+                                                {step.complete
+                                                    ? 'Evidence found'
+                                                    : 'Next action'}
                                             </StatusPill>
                                         </div>
-                                        <p className="text-muted-foreground flex-1 text-xs leading-5">{step.detail}</p>
+                                        <p className="text-muted-foreground flex-1 text-xs leading-5">
+                                            {step.detail}
+                                        </p>
                                         {step.href ? (
-                                            <a className={ghostButton} href={step.href}>Open setup <ChevronRight size={13} /></a>
+                                            <a
+                                                className={ghostButton}
+                                                href={step.href}
+                                            >
+                                                Open setup{' '}
+                                                <ChevronRight size={13} />
+                                            </a>
                                         ) : (
-                                            <button type="button" className={ghostButton} onClick={() => setTab(step.tab ?? 'start')}>
-                                                Open {step.title} <ChevronRight size={13} />
+                                            <button
+                                                type="button"
+                                                className={ghostButton}
+                                                onClick={() =>
+                                                    setTab(step.tab ?? 'start')
+                                                }
+                                            >
+                                                Open {step.title}{' '}
+                                                <ChevronRight size={13} />
                                             </button>
                                         )}
                                     </li>
