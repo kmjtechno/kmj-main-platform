@@ -1,0 +1,30 @@
+name: Temporary Owner Directory Format Diff
+
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/resources/js/pages/operator-directory.tsx'
+      - 'apps/platform/resources/js/components/owner-directory-user-actions.tsx'
+      - '.github/workflows/_temporary_owner_directory_format_preview.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Print exact source-only formatter diff
+        shell: bash
+        working-directory: apps/platform
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          ./node_modules/.bin/vp fmt resources/js/pages/operator-directory.tsx resources/js/components/owner-directory-user-actions.tsx
+          git diff -- resources/js/pages/operator-directory.tsx resources/js/components/owner-directory-user-actions.tsx
+          echo FORMAT_PREVIEW_ONLY_NO_COMMIT_NO_PUSH
