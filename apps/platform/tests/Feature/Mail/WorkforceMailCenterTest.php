@@ -11,8 +11,6 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use InvalidArgumentException;
-use KMJ\MainPlatform\Organizations\Models\OrganizationMembership;
-use KMJ\MainPlatform\Organizations\Services\OrganizationCreator;
 use Tests\TestCase;
 
 final class WorkforceMailCenterTest extends TestCase
@@ -50,53 +48,52 @@ final class WorkforceMailCenterTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('mail-center')
                 ->where('audience', 'owner')
-                ->where('mailboxConnection', 'not_connected')
+                ->where('workspaceMode', 'native_internal')
+                ->has('mailbox.items', 0)
                 ->where('testEnabled', false)
                 ->has('templates', 5)
                 ->where('templates.0.kind', 'owner_briefing'));
     }
 
-    public function test_team_mail_requires_current_verified_organization_membership(): void
+    public function test_team_mail_requires_separate_owner_granted_internal_staff_access(): void
     {
-        $user = User::factory()->create();
-        $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()])
+        $owner = $this->owner();
+        $staff = User::factory()->create(['email_verified_at' => now()]);
+        $outsider = User::factory()->create(['email_verified_at' => now()]);
+
+        $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
             ->get('/team/mail')->assertForbidden();
 
-        $organization = app(OrganizationCreator::class)->create('Authorized Test Org', $user->id);
-        $other = User::factory()->create();
-        OrganizationMembership::query()->create([
-            'organization_id' => (string) $organization->getKey(),
-            'user_id' => (int) $other->getKey(),
-            'role' => 'member',
-        ]);
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/mail/staff', ['target_user_id' => $staff->id])
+            ->assertRedirect('/operator/mail');
 
-        $this->actingAs($other)->withSession(['auth.password_confirmed_at' => time()])
-            ->get('/team/mail')
-            ->assertOk()
+        $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/team/mail')->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('mail-center')
-                ->where('audience', 'team')
-                ->where('mailboxConnection', 'not_connected')
+                ->where('audience', 'staff')
+                ->where('workspaceMode', 'native_internal')
+                ->has('mailbox.items', 0)
                 ->has('templates', 5)
                 ->where('templates.0.kind', 'team_welcome'));
 
-        $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()])
-            ->get('/team/mail')->assertOk();
+        $this->actingAs($outsider)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/team/mail')->assertForbidden();
 
-        OrganizationMembership::query()->where('user_id', $other->id)->delete();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/mail/staff/'.$staff->id.'/revoke')->assertRedirect('/operator/mail');
 
-        $this->actingAs($other)->withSession(['auth.password_confirmed_at' => time()])
+        $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
             ->get('/team/mail')->assertForbidden();
     }
 
-    public function test_unknown_role_fails_closed_for_team_mail(): void
+    public function test_existing_customer_organization_membership_does_not_grant_internal_mail(): void
     {
-        $owner = User::factory()->create();
-        $organization = app(OrganizationCreator::class)->create('Membership Test Org', $owner->id);
-        OrganizationMembership::query()->where('organization_id', $organization->getKey())
-            ->where('user_id', $owner->id)->update(['role' => 'unknown']);
-
-        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        app(\\KMJ\\MainPlatform\\Organizations\\Services\\OrganizationCreator::class)
+            ->create('Customer organization', $customer->id);
+        $this->actingAs($customer)->withSession(['auth.password_confirmed_at' => time()])
             ->get('/team/mail')->assertForbidden();
     }
 
@@ -146,7 +143,10 @@ final class WorkforceMailCenterTest extends TestCase
     {
         Notification::fake();
         $member = User::factory()->create();
-        app(OrganizationCreator::class)->create('My Team', $member->id);
+        $owner = $this->owner();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/mail/staff', ['target_user_id' => $member->id])
+            ->assertRedirect('/operator/mail');
         $this->allowTestSending();
 
         $this->actingAs($member)->withSession(['auth.password_confirmed_at' => time()])
