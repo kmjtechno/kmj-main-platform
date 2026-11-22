@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-huggingface-token-shape-20261122',
+        title: 'ModelFabric: accept the real Hugging Face access token format',
+        state: 'active',
+        detail: 'Source-only fix from the first real sign-in: Hugging Face answered the token exchange with HTTP 200, but the strict token-shape check rejected the access token. The check now accepts any printable, whitespace-free token up to 4096 characters. A failure reports only the HTTP status, the provider short OAuth error code or a coarse reason (no access token, or the token length), never the response body or the token.',
+        evidence:
+            'Feature and static tests with faked HTTP; exact-head CI only. Not proven against the real Hugging Face service until the owner retries Connect Hugging Face after deployment.',
+    },
+    {
         id: 'modelfabric-connect-in-place-20261122',
         title: 'ModelFabric: connect OpenRouter and Hugging Face from the ModelFabric page',
         state: 'active',
