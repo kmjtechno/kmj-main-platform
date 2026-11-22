@@ -169,8 +169,7 @@ final class BrandedTransactionalSuiteTest extends TestCase
         Notification::assertSentTo(
             $user,
             BrandedCustomerNotification::class,
-            fn (BrandedCustomerNotification $notice): bool =>
-                $notice->kind === 'order_received'
+            fn (BrandedCustomerNotification $notice): bool => $notice->kind === 'order_received'
                 && $notice->context['order'] === (string) $order->getKey()
                 && $notice->context['state'] === 'requested',
         );
