@@ -224,4 +224,5 @@ final class UnverifiedAccountCleanupTest extends TestCase
 
         $this->assertDatabaseHas('users', ['id' => $old->id]);
         $this->assertDatabaseHas('organizations', ['id' => $orgId]);
-  }
+    }
+}
