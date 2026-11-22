@@ -23,6 +23,8 @@ final class KslpKeyRegistry
         string $purpose,
         string $publicKey,
         string $status = 'active',
+        ?string $productId = null,
+        ?\DateTimeInterface $notAfter = null,
     ): void {
         if (! in_array($purpose, self::PURPOSES, true)) {
             throw new DomainException('KSLP_INVALID_KEY_PURPOSE');
@@ -35,7 +37,26 @@ final class KslpKeyRegistry
         }
         self::decodeEd25519PublicKey($publicKey);
 
-        DB::transaction(function () use ($kid, $purpose, $publicKey, $status): void {
+        // Product-scoped client keys must have a finite expiry and can never
+        // borrow a generic/CloudOS signing key identity.
+        if ($productId !== null) {
+            if ($purpose !== 'license'
+                || preg_match('/^[A-Z][A-Z0-9_]{2,63}$/D', $productId) !== 1
+                || $notAfter === null) {
+                throw new DomainException('KSLP_INVALID_KEY_SCOPE');
+            }
+        }
+        // Persist an unambiguous UTC instant. A caller can supply a scoped
+        // key expiry with any timezone; storing its local wall clock would
+        // silently extend or shorten the trust window in a UTC database.
+        $expiresAt = $notAfter === null
+            ? null
+            : gmdate('Y-m-d H:i:s', $notAfter->getTimestamp());
+        if ($notAfter !== null && $notAfter->getTimestamp() <= now()->getTimestamp()) {
+            throw new DomainException('KSLP_INVALID_KEY_WINDOW');
+        }
+
+        DB::transaction(function () use ($kid, $purpose, $publicKey, $status, $productId, $notAfter, $expiresAt): void {
             $existing = DB::table('kslp_signing_keys')
                 ->where('kid', $kid)
                 ->lockForUpdate()
@@ -45,8 +66,14 @@ final class KslpKeyRegistry
                 if (
                     ! hash_equals((string) $existing->purpose, $purpose)
                     || ! hash_equals((string) $existing->public_key, $publicKey)
+                    || (string) ($existing->product_id ?? '') !== (string) ($productId ?? '')
                 ) {
                     throw new DomainException('KSLP_KEY_IDENTITY_CONFLICT');
+                }
+                if ($notAfter !== null
+                    && ($existing->not_after === null
+                        || strtotime((string) $existing->not_after) !== $notAfter->getTimestamp())) {
+                    throw new DomainException('KSLP_KEY_WINDOW_CONFLICT');
                 }
                 if ($existing->revoked_at !== null || $existing->status === 'revoked') {
                     throw new DomainException('KSLP_KEY_REVOKED');
@@ -65,8 +92,9 @@ final class KslpKeyRegistry
                 'purpose' => $purpose,
                 'public_key' => $publicKey,
                 'status' => $status,
+                'product_id' => $productId,
                 'not_before' => $now,
-                'not_after' => null,
+                'not_after' => $expiresAt,
                 'revoked_at' => null,
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -96,7 +124,7 @@ final class KslpKeyRegistry
      *
      * @return array<array-key, mixed>
      */
-    public function discovery(string $purpose): array
+    public function discovery(string $purpose, ?string $productId = null): array
     {
         if (! in_array($purpose, self::PURPOSES, true)) {
             throw new DomainException('KSLP_INVALID_KEY_PURPOSE');
@@ -104,6 +132,7 @@ final class KslpKeyRegistry
 
         return DB::table('kslp_signing_keys')
             ->where('purpose', $purpose)
+            ->where('product_id', $productId)
             ->whereIn('status', self::PUBLISHABLE_STATUSES)
             ->whereNull('revoked_at')
             ->where('not_before', '<=', now())
@@ -115,7 +144,7 @@ final class KslpKeyRegistry
     }
 
     /** Get the raw 32-byte key expected by sodium_crypto_sign_verify_detached. */
-    public function publicKey(string $kid, string $purpose): string
+    public function publicKey(string $kid, string $purpose, ?string $productId = null): string
     {
         if (! in_array($purpose, self::PURPOSES, true)) {
             throw new DomainException('KSLP_INVALID_KEY_PURPOSE');
@@ -124,6 +153,7 @@ final class KslpKeyRegistry
         $key = DB::table('kslp_signing_keys')
             ->where('kid', $kid)
             ->where('purpose', $purpose)
+            ->where('product_id', $productId)
             ->whereIn('status', self::PUBLISHABLE_STATUSES)
             ->whereNull('revoked_at')
             ->where('not_before', '<=', now())
