@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use InvalidArgumentException;
+use KMJ\MainPlatform\Organizations\Services\OrganizationCreator;
 use Tests\TestCase;
 
 final class WorkforceMailCenterTest extends TestCase
@@ -91,7 +92,7 @@ final class WorkforceMailCenterTest extends TestCase
     public function test_existing_customer_organization_membership_does_not_grant_internal_mail(): void
     {
         $customer = User::factory()->create(['email_verified_at' => now()]);
-        app(\KMJ\MainPlatform\Organizations\Services\OrganizationCreator::class)
+        app(OrganizationCreator::class)
             ->create('Customer organization', $customer->id);
         $this->actingAs($customer)->withSession(['auth.password_confirmed_at' => time()])
             ->get('/team/mail')->assertForbidden();
