@@ -35,7 +35,7 @@ plus the approval tool, each pinned by sha256 (a mismatch aborts before anything
 ```bash
 SHA=<SHA>
 curl -fsSL "https://raw.githubusercontent.com/kmjtechno/kmj-main-platform/$SHA/scripts/operations/owner-release-main-platform.sh" -o /root/orm.sh \
- && echo "440e6de22e8a7173717b06d0f39db6e8ac17e71b54ced8b27f8c375820085947  /root/orm.sh" | sha256sum -c - \
+ && echo "71f77d40d32e46fdf1f62172c49187dfe24171bef92bafdb8adc08cac904b538  /root/orm.sh" | sha256sum -c - \
  && bash /root/orm.sh "$SHA"
 ```
 
