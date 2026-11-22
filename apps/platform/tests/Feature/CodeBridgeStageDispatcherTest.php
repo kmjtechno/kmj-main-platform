@@ -54,8 +54,8 @@ final class CodeBridgeStageDispatcherTest extends TestCase
         Http::fake([
             'https://api.github.com/repos/kmjtechno/kmj-codebridge/commits/main' => Http::response(['sha' => str_repeat('b', 40)], 200),
             'https://api.github.com/repos/kmjtechno/kmj-codebridge/actions/workflows/oneclick-stage.yml/runs*' => Http::response(['workflow_runs' => [
-                    ['head_sha' => str_repeat('b', 40), 'status' => 'in_progress'],
-                ]], 200),
+                ['head_sha' => str_repeat('b', 40), 'status' => 'in_progress'],
+            ]], 200),
         ]);
         $owner = User::factory()->create();
         $this->expectException(RuntimeException::class);
