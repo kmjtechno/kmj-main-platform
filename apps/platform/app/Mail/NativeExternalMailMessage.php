@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Mail;
 
+use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Mail\Mailable;
 
 /**
  * Original KMJ-branded plain text + escaped HTML.
