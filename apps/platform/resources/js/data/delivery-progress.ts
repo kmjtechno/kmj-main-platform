@@ -114,6 +114,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Unit test pins the header; exact-head CI only. Not deployed and not yet proven against the live GitHub catalog.',
     },
     {
+        id: 'release-contracts-validator-20261122',
+        title: 'Release Center phase 1: deny-by-default release contracts and validator',
+        state: 'active',
+        detail: 'Source-only: a versioned release contract (named gates and probes, required CI checks, data risk, owner-passkey approval, signing) for Main Platform and CodeBridge, and a strict validator that rejects unknown keys, commands, paths, duplicate keys, a relaxed approval, a non-main branch and any repository outside kmjtechno. Required check names were read from the real check runs of each repository main head. Nothing reads or acts on these contracts yet.',
+        evidence:
+            'Offline negative tests in a dedicated workflow and exact-head CI only. No release, stage or approval is executed or changed, and the Release Center page does not exist yet.',
+    },
+    {
         id: 'universal-release-center-design-20261122',
         title: 'Release Center: design for one one-click release system across KMJ projects',
         state: 'active',
