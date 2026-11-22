@@ -65,11 +65,11 @@ final class UnverifiedSignupLinkAuditCommand extends Command
             if ($ms->count() === 1 && $profiles->has($id)
                 && $ms->first()->role === 'owner'
                 && (int) $memberCounts->get($ms->first()->organization_id, 0) === 1) {
-                $signupShape++
+                $signupShape++;
             }
             foreach ($ms as $membership) {
                 if ((int) $memberCounts->get($membership->organization_id, 0) > 1) {
-                    $linkedMultiMember++
+                    $linkedMultiMember++;
                     break;
                 }
             }
