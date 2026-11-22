@@ -1263,7 +1263,7 @@ export default function OperatorModelFabric({
                         ) : (
                             <p className="text-sm">
                                 {canManage
-                                    ? 'Connect a provider with an allowlist tier (Groq, Gemini, Cerebras, Mistral, SambaNova, Hugging Face, NVIDIA) and run Test connection first.'
+                                    ? 'Connect a provider with an allowlist tier (Groq, Gemini, Cerebras, Mistral, SambaNova, Hugging Face, NVIDIA, GitHub Models) and run Test connection first.'
                                     : 'You can view approvals; managing them needs organization manager rights.'}
                             </p>
                         )}

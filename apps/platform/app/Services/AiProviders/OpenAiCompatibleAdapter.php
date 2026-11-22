@@ -49,12 +49,17 @@ final class OpenAiCompatibleAdapter
         if ($target['host'] === 'openrouter.ai') {
             $catalogUrl .= '?max_price=0';
         }
+        // GitHub Models lists its catalog at a sibling path and returns a bare JSON list.
+        $github = $target['host'] === 'models.github.ai';
+        if ($github) {
+            $catalogUrl = 'https://models.github.ai/catalog/models';
+        }
 
         try {
             $response = Http::withOptions([
                 'allow_redirects' => false,
                 'curl' => [CURLOPT_RESOLVE => [$target['host'].':443:'.$target['ip']]],
-            ])->withToken($apiKey)->acceptJson()->timeout(10)->connectTimeout(5)->get($catalogUrl);
+            ])->withToken($apiKey)->acceptJson()->withHeaders($github ? ['X-GitHub-Api-Version' => '2022-11-28'] : [])->timeout(10)->connectTimeout(5)->get($catalogUrl);
         } catch (ConnectionException) {
             return $this->result('unreachable', [], [], 'connection_failed');
         }
@@ -74,7 +79,7 @@ final class OpenAiCompatibleAdapter
             return $this->result('unreachable', [], $rate, 'response_too_large');
         }
 
-        $data = $response->json('data');
+        $data = $github ? $response->json() : $response->json('data');
         if (! is_array($data) || ! array_is_list($data)) {
             // An HTTP 200 with an error payload is not a successful catalog.
             return $this->result('unreachable', [], $rate, 'invalid_catalog');
