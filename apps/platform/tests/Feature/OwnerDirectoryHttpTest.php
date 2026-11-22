@@ -159,7 +159,6 @@ final class OwnerDirectoryHttpTest extends TestCase
                 ->where('users.data.0.customer_profile', null));
     }
 
-
     public function test_owner_can_update_contact_but_cannot_set_verification_or_privileges(): void
     {
         $owner = $this->owner();
