@@ -6,7 +6,7 @@ use App\Http\Controllers\NativeMailController;
 use Illuminate\Support\Facades\Route;
 
 /*
- * KMJ native private mail — no Gmail connector and no untrusted SMTP endpoint.
+ * KMJ native mail — no Gmail connector, no arbitrary SMTP endpoint;\n * external submission is guarded through existing local Elite Postfix.
  * Only verified passkey Platform Owners and explicitly granted KMJ staff.
  * Staff membership is a separate owner-controlled allowlist, NOT a customer
  * organization membership or arbitrary login.
@@ -19,6 +19,11 @@ Route::middleware(['auth', 'verified', 'password.confirm'])->group(function (): 
         ->whereIn('portal', ['operator', 'team'])
         ->middleware('throttle:6,1')
         ->name('kmj-mail.send');
+    Route::post('{portal}/mail/send-external', [NativeMailController::class, 'sendExternal'])
+        ->whereIn('portal', ['operator', 'team'])
+        ->middleware('throttle:2,1')
+        ->name('kmj-mail.send-external');
+
     Route::post('{portal}/mail/drafts', [NativeMailController::class, 'draft'])
         ->whereIn('portal', ['operator', 'team'])
         ->middleware('throttle:15,1')
@@ -48,6 +53,11 @@ Route::middleware(['auth', 'verified', 'password.confirm'])->group(function (): 
     Route::post('operator/mail/staff', [NativeMailController::class, 'grantStaff'])
         ->middleware('throttle:6,1')
         ->name('kmj-mail.staff-grant');
+    Route::post('operator/mail/staff/{userId}/sender-alias', [NativeMailController::class, 'setStaffSenderAlias'])
+        ->whereNumber('userId')
+        ->middleware('throttle:6,1')
+        ->name('kmj-mail.staff-sender-alias');
+
     Route::post('operator/mail/staff/{userId}/revoke', [NativeMailController::class, 'revokeStaff'])
         ->whereNumber('userId')
         ->middleware('throttle:6,1')
