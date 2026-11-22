@@ -122,8 +122,18 @@ final class UnverifiedSignupLinkAuditCommand extends Command
                     $unsafeSchema = true;
                     continue;
                 }
-                // Some "customer_id" columns represent UUID commercial identities;
-                // these counts are conservative signals, never negative proof.
+                // Never compare a decimal users.id to a native UUID field: PostgreSQL
+                // would reject the cast. Skipped or unknown cross-service identity
+                // types are explicitly reported as unresolved, not proof of safety.
+                $type = Schema::getColumnType($table, $column);
+                if (! in_array($type, [
+                    'bigint', 'integer', 'smallint', 'int2', 'int4', 'int8',
+                    'string', 'varchar', 'character varying', 'character',
+                    'bpchar', 'char', 'text', 'citext', 'decimal', 'numeric',
+                ], true)) {
+                    $unsafeSchema = true;
+                    continue;
+                }
                 $count = DB::table($table)->whereIn($column, array_map('strval', $ids))->count();
                 if ($count > 0) {
                     $userLinks[$table] = ($userLinks[$table] ?? 0) + $count;
