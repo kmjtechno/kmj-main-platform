@@ -2,7 +2,6 @@ import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import {
-    Archive,
     ArrowLeft,
     Check,
     ChevronLeft,
@@ -10,7 +9,6 @@ import {
     Inbox,
     KeyRound,
     LockKeyhole,
-    Mail,
     MailOpen,
     Pencil,
     RotateCcw,
