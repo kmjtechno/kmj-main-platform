@@ -142,6 +142,7 @@ final class WorkforceMailCatalog
         }
 
         $subject = '[TEST PREVIEW] '.$match['subject'];
+
         return (new MailMessage)
             ->subject($subject)
             ->view([
