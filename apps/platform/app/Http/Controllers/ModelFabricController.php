@@ -6,12 +6,14 @@ namespace App\Http\Controllers;
 
 use App\Models\AiModelEvidence;
 use App\Models\AiModelRequest;
+use App\Models\AiModelRule;
 use App\Models\AiModelToken;
 use App\Models\AiProvider;
 use App\Models\OperatorActionAudit;
 use App\Models\User;
 use App\Services\AiProviders\ModelFabricGateway;
 use App\Services\AiProviders\ModelFabricRouter;
+use App\Services\AiProviders\ModelFabricRuleApplier;
 use App\Services\AiProviders\ProviderManager;
 use App\Services\AiProviders\ResolvesAiProviderScope;
 use App\Services\PlatformOwnerAccess;
@@ -38,6 +40,7 @@ final class ModelFabricController extends Controller
         private readonly ResolvesAiProviderScope $scope,
         private readonly ProviderManager $manager,
         private readonly ModelFabricRouter $router,
+        private readonly ModelFabricRuleApplier $rules,
     ) {}
 
     public function index(Request $request): Response
@@ -80,6 +83,19 @@ final class ModelFabricController extends Controller
                 'current' => $row->isCurrent(),
                 'revoked' => $row->revoked_at !== null,
             ])->values(),
+            'rules' => AiModelRule::query()->where('organization_id', $orgId)->orderByDesc('created_at')->limit(50)->get()
+                ->map(fn (AiModelRule $rule): array => [
+                    'id' => $rule->id,
+                    'provider_id' => $rule->ai_provider_id,
+                    'model_pattern' => $rule->model_pattern,
+                    'price_evidence_url' => $rule->price_evidence_url,
+                    'expires_at' => $rule->expires_at->toIso8601String(),
+                    'data_handling' => $rule->data_handling,
+                    'capabilities' => $rule->capabilities ?? [],
+                    'active' => $rule->isActive(),
+                    'revoked' => $rule->revoked_at !== null,
+                    'matches' => $this->providerMatches($rule, $providers->all()),
+                ])->values(),
             'analytics' => $this->analytics($orgId, $providers->all()),
             'newToken' => session('modelfabric_new_token'),
             'tokens' => AiModelToken::query()->where('organization_id', $orgId)->orderByDesc('created_at')->limit(50)->get()
@@ -252,6 +268,119 @@ final class ModelFabricController extends Controller
         $this->audit($request, 'model_fabric.evidence_renewed', ['model' => $row->model_id]);
 
         return back()->with('status', 'Evidence renewed for '.self::MAX_EVIDENCE_DAYS.' days.');
+    }
+
+    /**
+     * An owner rule: every model the provider lists that matches a narrow pattern is free today.
+     * It expires within 30 days, never covers non-chat models and only creates ordinary evidence.
+     */
+    public function storeRule(Request $request): RedirectResponse
+    {
+        $scope = $this->owner($request, true);
+        $data = $request->validate([
+            'provider_id' => ['required', 'uuid'],
+            'model_pattern' => ['required', 'string', 'max:96'],
+            'price_evidence_url' => ['required', 'string', 'max:255', 'url:https'],
+            'price_evidence_note' => ['required', 'string', 'min:10', 'max:250'],
+            'valid_days' => ['required', 'integer', 'min:1', 'max:'.self::MAX_EVIDENCE_DAYS],
+            'data_handling' => ['required', Rule::in(['no-training-documented', 'unknown'])],
+            'capabilities' => ['sometimes', 'array', 'max:4'],
+            'capabilities.*' => [Rule::in(['chat', 'tools', 'code', 'vision'])],
+            'attest_pricing' => ['accepted'],
+        ]);
+        $patternError = ModelFabricRuleApplier::patternError($data['model_pattern']);
+        if ($patternError !== null) {
+            return back()->withErrors(['model_pattern' => $patternError]);
+        }
+        $provider = AiProvider::query()->where('organization_id', $scope['organization_id'])->whereKey($data['provider_id'])->first();
+        if ($provider === null) {
+            return back()->withErrors(['provider_id' => 'Provider not found.']);
+        }
+        if (($this->manager->presets()[$provider->preset]['free_tier'] ?? 'none') !== 'allowlist') {
+            return back()->withErrors(['model_pattern' => 'Rules apply only to allowlist providers; this provider is not one.']);
+        }
+        $count = count(ModelFabricRuleApplier::matches($data['model_pattern'], $provider->models_cache ?? []));
+        if ($count === 0) {
+            return back()->withErrors(['model_pattern' => 'No chat model in the last discovery matches. Run Test connection or fix the pattern.']);
+        }
+        if ($count > ModelFabricRuleApplier::MAX_MATCHES) {
+            return back()->withErrors(['model_pattern' => "The pattern matches {$count} models; narrow it to at most ".ModelFabricRuleApplier::MAX_MATCHES.'.']);
+        }
+
+        $now = now();
+        $rule = AiModelRule::query()->updateOrCreate(
+            ['ai_provider_id' => $provider->id, 'model_pattern' => $data['model_pattern']],
+            [
+                'organization_id' => $scope['organization_id'],
+                'price_evidence_url' => $data['price_evidence_url'],
+                'price_evidence_note' => $data['price_evidence_note'],
+                'data_handling' => $data['data_handling'],
+                'capabilities' => array_values(array_unique($data['capabilities'] ?? ['chat'])),
+                'attested_by' => (int) $this->user($request)->id,
+                'attested_at' => $now,
+                'expires_at' => $now->copy()->addDays((int) $data['valid_days']),
+                'revoked_at' => null,
+            ],
+        );
+        $this->audit($request, 'model_fabric.rule_saved', ['provider' => $provider->name, 'pattern' => $rule->model_pattern, 'matches' => $count, 'valid_days' => (int) $data['valid_days']]);
+        $applied = $this->rules->apply($provider);
+
+        return back()->with('status', "Rule saved. {$applied['approved']} model(s) approved now; new matching models are approved automatically until the rule expires.");
+    }
+
+    /** Re-attest a rule for another period; a revoked rule is never revived here. */
+    public function renewRule(Request $request, string $rule): RedirectResponse
+    {
+        $scope = $this->owner($request, true);
+        $request->validate(['attest_pricing' => ['accepted']]);
+        $row = AiModelRule::query()->where('organization_id', $scope['organization_id'])->whereKey($rule)->first();
+        if ($row === null) {
+            return back()->withErrors(['rule' => 'Rule not found.']);
+        }
+        if ($row->revoked_at !== null) {
+            return back()->withErrors(['rule' => 'A revoked rule cannot be renewed. Create it again with a fresh source.']);
+        }
+        $now = now();
+        $row->attested_by = (int) $this->user($request)->id;
+        $row->attested_at = $now;
+        $row->expires_at = $now->copy()->addDays(self::MAX_EVIDENCE_DAYS);
+        $row->save();
+        $this->audit($request, 'model_fabric.rule_renewed', ['pattern' => $row->model_pattern]);
+        $provider = AiProvider::query()->whereKey($row->ai_provider_id)->first();
+        if ($provider instanceof AiProvider) {
+            $this->rules->apply($provider);
+        }
+
+        return back()->with('status', 'Rule renewed for '.self::MAX_EVIDENCE_DAYS.' days.');
+    }
+
+    public function revokeRule(Request $request, string $rule): RedirectResponse
+    {
+        $scope = $this->owner($request, true);
+        $row = AiModelRule::query()->where('organization_id', $scope['organization_id'])->whereKey($rule)->first();
+        if ($row === null) {
+            return back()->withErrors(['rule' => 'Rule not found.']);
+        }
+        $row->revoked_at = now();
+        $row->save();
+        $revoked = AiModelEvidence::query()->where('ai_model_rule_id', $row->id)->whereNull('revoked_at')->update(['revoked_at' => now()]);
+        $this->audit($request, 'model_fabric.rule_revoked', ['pattern' => $row->model_pattern, 'models_revoked' => $revoked]);
+
+        return back()->with('status', "Rule revoked. {$revoked} model(s) it approved are no longer routable.");
+    }
+
+    /**
+     * @param  array<int, AiProvider>  $providers
+     */
+    private function providerMatches(AiModelRule $rule, array $providers): int
+    {
+        foreach ($providers as $provider) {
+            if ($provider->id === $rule->ai_provider_id) {
+                return count(ModelFabricRuleApplier::matches($rule->model_pattern, $provider->models_cache ?? []));
+            }
+        }
+
+        return 0;
     }
 
     public function revokeEvidence(Request $request, string $evidence): RedirectResponse

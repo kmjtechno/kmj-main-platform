@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $id
  * @property string $organization_id
  * @property string $ai_provider_id
+ * @property string|null $ai_model_rule_id
  * @property string $model_id
  * @property string $price_evidence_url
  * @property string $price_evidence_note

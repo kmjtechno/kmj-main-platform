@@ -69,6 +69,19 @@ type Analytics = {
     cooling_until: string | null;
 };
 
+type Rule = {
+    id: string;
+    provider_id: string;
+    model_pattern: string;
+    price_evidence_url: string;
+    expires_at: string;
+    data_handling: string;
+    capabilities: string[];
+    active: boolean;
+    revoked: boolean;
+    matches: number;
+};
+
 type Token = {
     id: string;
     name: string;
@@ -87,6 +100,7 @@ type Props = {
     maxEvidenceDays: number;
     providers: Provider[];
     evidence: Evidence[];
+    rules: Rule[];
     analytics: Analytics[];
     plans: { chat: Plan; privateSource: Plan };
 };
@@ -412,6 +426,7 @@ export default function OperatorModelFabric({
     maxEvidenceDays,
     providers,
     evidence,
+    rules,
     analytics,
     plans,
 }: Props) {
@@ -437,6 +452,25 @@ export default function OperatorModelFabric({
     const [picked, setPicked] = useState<string[]>([]);
     const [hfFree, setHfFree] = useState(false);
     const selected = providers.find((provider) => provider.id === providerId);
+    const [rulePattern, setRulePattern] = useState('');
+    const [ruleUrl, setRuleUrl] = useState('');
+    const [ruleNote, setRuleNote] = useState('');
+    const [ruleConfirmed, setRuleConfirmed] = useState(false);
+    const ruleMatches = (selected?.discovered_models ?? []).filter((id) => {
+        if (!rulePattern.includes('*')) return false;
+        const escaped = rulePattern
+            .replace(/[.+?^${}()|[\]\\/]/g, '\\$&')
+            .replace(/\*/g, '[A-Za-z0-9._/-]*');
+        return new RegExp(`^${escaped}$`).test(id);
+    });
+    const canRule =
+        canManage &&
+        !!selected &&
+        rulePattern.includes('*') &&
+        rulePattern.split('*')[0].length >= 10 &&
+        ruleUrl.startsWith('https://') &&
+        ruleNote.trim().length >= 10 &&
+        ruleConfirmed;
     const hint = selected ? PRICING_HINTS[selected.preset] : undefined;
     const modelKnown = !!selected?.discovered_models.includes(model);
     const origin =
@@ -559,6 +593,45 @@ export default function OperatorModelFabric({
             kind === 'huggingface'
                 ? { free_account_confirmed: true, return_to: 'modelfabric' }
                 : { return_to: 'modelfabric' },
+            { preserveScroll: true },
+        );
+    };
+
+    const saveRule = () => {
+        router.post(
+            `${BASE}/rules`,
+            {
+                provider_id: providerId,
+                model_pattern: rulePattern,
+                price_evidence_url: ruleUrl,
+                price_evidence_note: ruleNote,
+                valid_days: 30,
+                data_handling: handling,
+                capabilities: ['chat'],
+                attest_pricing: ruleConfirmed,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setRulePattern('');
+                    setRuleNote('');
+                    setRuleConfirmed(false);
+                },
+            },
+        );
+    };
+
+    const renewRule = (id: string) => {
+        if (
+            !window.confirm(
+                'Re-check the pricing page first. Renew this rule for 30 days?',
+            )
+        ) {
+            return;
+        }
+        router.post(
+            `${BASE}/rules/${id}/renew`,
+            { attest_pricing: true },
             { preserveScroll: true },
         );
     };
@@ -1266,6 +1339,162 @@ export default function OperatorModelFabric({
                                             <Trash2 className="h-3 w-3" />{' '}
                                             Revoke
                                         </button>
+                                    ) : null}
+                                </li>
+                            ))}
+                        </ul>
+                    </Card>
+                ) : null}
+
+                {tab === 'models' && allowlistProviders.length > 0 ? (
+                    <Card
+                        id="auto-rules"
+                        title="Auto-approve rule"
+                        label="Automation"
+                        help="Attest once that every chat model matching a pattern is free today, and matching models, including new ones, are approved for you until the rule expires (30 days). Image, audio, live and embedding models are never included. Use the provider and pricing page chosen in the form above."
+                    >
+                        {canManage ? (
+                            <div className="grid gap-3 md:grid-cols-2">
+                                <label className="text-sm md:col-span-2">
+                                    <span className="font-medium">
+                                        Model pattern (needs at least 10 letters
+                                        before the first *)
+                                    </span>
+                                    <input
+                                        className={fieldClass}
+                                        value={rulePattern}
+                                        placeholder="models/gemini-2.5-flash*"
+                                        onChange={(e) =>
+                                            setRulePattern(
+                                                e.target.value.trim(),
+                                            )
+                                        }
+                                    />
+                                </label>
+                                <label className="text-sm">
+                                    <span className="font-medium">
+                                        Pricing page (https)
+                                    </span>
+                                    <input
+                                        className={fieldClass}
+                                        value={ruleUrl}
+                                        placeholder="https://ai.google.dev/gemini-api/docs/pricing"
+                                        onChange={(e) =>
+                                            setRuleUrl(e.target.value.trim())
+                                        }
+                                    />
+                                </label>
+                                <label className="text-sm">
+                                    <span className="font-medium">
+                                        What the page says
+                                    </span>
+                                    <input
+                                        className={fieldClass}
+                                        value={ruleNote}
+                                        placeholder="Free tier lists these models as free of charge"
+                                        onChange={(e) =>
+                                            setRuleNote(e.target.value)
+                                        }
+                                    />
+                                </label>
+                                <p className="text-muted-foreground text-xs md:col-span-2">
+                                    {selected
+                                        ? `${ruleMatches.length} listed model(s) of ${selected.name} match now.`
+                                        : 'Pick a provider in the form above.'}
+                                    {ruleMatches.length > 50
+                                        ? ' Too many (max 50): narrow the pattern.'
+                                        : ''}
+                                </p>
+                                <label className="flex items-start gap-2 text-sm md:col-span-2">
+                                    <input
+                                        type="checkbox"
+                                        className="mt-1"
+                                        checked={ruleConfirmed}
+                                        onChange={(e) =>
+                                            setRuleConfirmed(e.target.checked)
+                                        }
+                                    />
+                                    I opened this page myself and it shows every
+                                    chat model matching this pattern is free
+                                    today, and the account is on the free tier
+                                    with no billing.
+                                </label>
+                                <div className="md:col-span-2">
+                                    <button
+                                        type="button"
+                                        className={primaryButton}
+                                        disabled={
+                                            !canRule ||
+                                            ruleMatches.length === 0 ||
+                                            ruleMatches.length > 50
+                                        }
+                                        onClick={saveRule}
+                                    >
+                                        Save auto-approve rule
+                                    </button>
+                                </div>
+                            </div>
+                        ) : null}
+                        <ul className="mt-4 space-y-2 text-sm">
+                            {rules.length === 0 ? (
+                                <li className="text-muted-foreground">
+                                    No rule yet.
+                                </li>
+                            ) : null}
+                            {rules.map((rule) => (
+                                <li
+                                    key={rule.id}
+                                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3"
+                                >
+                                    <span>
+                                        <strong>{rule.model_pattern}</strong>{' '}
+                                        <StatusPill
+                                            tone={
+                                                rule.active
+                                                    ? 'ok'
+                                                    : rule.revoked
+                                                      ? 'bad'
+                                                      : 'warn'
+                                            }
+                                        >
+                                            {rule.active
+                                                ? 'active'
+                                                : rule.revoked
+                                                  ? 'revoked'
+                                                  : 'expired'}
+                                        </StatusPill>{' '}
+                                        <span className="text-muted-foreground text-xs">
+                                            {rule.matches} match now · until{' '}
+                                            {new Date(
+                                                rule.expires_at,
+                                            ).toLocaleDateString()}
+                                        </span>
+                                    </span>
+                                    {canManage && !rule.revoked ? (
+                                        <span className="flex gap-3 text-xs font-bold">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    renewRule(rule.id)
+                                                }
+                                            >
+                                                Renew 30 days
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="text-red-500"
+                                                onClick={() =>
+                                                    router.delete(
+                                                        `${BASE}/rules/${rule.id}`,
+                                                        {
+                                                            preserveScroll: true,
+                                                        },
+                                                    )
+                                                }
+                                            >
+                                                Revoke
+                                            </button>
+                                        </span>
                                     ) : null}
                                 </li>
                             ))}

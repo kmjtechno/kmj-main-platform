@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\Models\AiModelRequest;
 use App\Models\AiProvider;
+use App\Services\AiProviders\ModelFabricRuleApplier;
 use App\Services\AiProviders\ProviderManager;
 use Illuminate\Console\Command;
 
@@ -19,16 +20,17 @@ final class ModelFabricRefreshCommand extends Command
 
     protected $description = 'Refresh provider model discovery (read-only) and prune old request metadata';
 
-    public function handle(ProviderManager $manager): int
+    public function handle(ProviderManager $manager, ModelFabricRuleApplier $rules): int
     {
         $checked = 0;
         foreach (AiProvider::query()->where('enabled', true)->get() as $provider) {
             $manager->test($provider);
             $checked++;
         }
+        $applied = $rules->apply();
         $pruned = AiModelRequest::query()->where('created_at', '<', now()->subDays(90))->delete();
 
-        $this->info("MODELFABRIC_REFRESH providers={$checked} pruned={$pruned}");
+        $this->info("MODELFABRIC_REFRESH providers={$checked} rules={$applied['rules']} auto_approved={$applied['approved']} pruned={$pruned}");
 
         return self::SUCCESS;
     }
