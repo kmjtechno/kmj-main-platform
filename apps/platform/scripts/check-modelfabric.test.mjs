@@ -96,6 +96,15 @@ void test('API tokens tab shows a copy-ready connect guide without persisting th
     assert.doesNotMatch(page, /localStorage|sessionStorage/);
 });
 
+void test('Overview lists expiring approvals, unhealthy providers and expiring tokens as a to-do', () => {
+    const page = read('resources/js/pages/operator-modelfabric.tsx');
+    assert.match(page, /modelfabric-todo/);
+    assert.match(page, /expire within 7 days/);
+    assert.match(page, /no longer routed/);
+    assert.match(page, /not healthy/);
+    assert.doesNotMatch(page, /localStorage|sessionStorage/);
+});
+
 void test('owner daily caps and priority are enforced before provider limits and stay owner-only', () => {
     const gateway = read('app/Services/AiProviders/ModelFabricGateway.php');
     const scorer = read('app/Services/AiProviders/RouteScorer.php');
