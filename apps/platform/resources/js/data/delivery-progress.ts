@@ -138,6 +138,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-collector-rollback-rehearsal-20261122',
+        title: 'Release collector 4: rollback-rehearsal receipt from the isolated rehearsal',
+        state: 'active',
+        detail: 'Source-only collector that runs the existing isolated migrate/rollback rehearsal as the project user against an owner-provisioned disposable database, accepts it only when every required marker passes and none fail, and issues only the rollback-rehearsal receipt. Storage continuity is not covered, so no migration-storage receipt is issued.',
+        evidence:
+            'Unit tests and exact-head CI only. Not installed or run on Elite; the owner must provision the disposable database config before it can run.',
+    },
+    {
         id: 'release-collector-backup-restore-20261122',
         title: 'Release collectors 2 and 3: backup-witness and disposable-restore receipts',
         state: 'active',
