@@ -39,7 +39,7 @@ import {
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import OwnerAccountMenu from '@/components/owner-account-menu';
+import { UserMenuContent } from '@/components/user-menu-content';
 import ProductArtwork from '@/components/product-artwork';
 import KristiOwnerAssistant from '@/components/kristi-owner-assistant';
 import { ownerGreetingForHour } from '@/components/owner-greeting.mjs';
@@ -312,7 +312,7 @@ export default function OperatorCommandOs({
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="z-[150] w-64">
-                        {auth.user && <OwnerAccountMenu user={auth.user} />}
+                        {auth.user && <UserMenuContent user={auth.user} />}
                     </DropdownMenuContent>
                 </DropdownMenu>
             </header>
