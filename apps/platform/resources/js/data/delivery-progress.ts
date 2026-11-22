@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-quota-aware-routing-20261122',
+        title: 'ModelFabric: model-specific free quota failover and additional provider presets',
+        state: 'active',
+        detail: 'Source-only: routing scores provider and model independently; a reported Groq model-specific 429 cools that model but leaves other already verified-free models eligible. New Cohere, Qwen Singapore/US and Fireworks connection presets do not create accounts, prove free billing or enable paid inference. All original admission and owner daily caps remain enforced.',
+        evidence:
+            'PR #1033 and isolated PHP routing regressions. Exact-head PHP/TypeScript/PostgreSQL CI, protected peer review, authenticated staging and signed Elite release still required. Nothing deployed or connected by this source change.',
+    },
+    {
         id: 'kmj-native-external-postfix-compose-20261122',
         title: 'KMJ Mail: guarded external address sending via own Elite Postfix',
         state: 'active',

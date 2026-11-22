@@ -16,7 +16,7 @@ final class RouteScorer
 
     /**
      * @param  list<array<string, mixed>>  $routes
-     * @param  callable(string): array{low: bool, fails: int, priority?: int}  $signals  per provider id
+     * @param  callable(string, string): array{low: bool, fails: int, priority?: int}  $signals  per provider and model
      * @return list<array<string, mixed>>
      */
     public function order(array $routes, string $profile, callable $signals): array
@@ -30,7 +30,7 @@ final class RouteScorer
         $scored = [];
         foreach ($routes as $index => $route) {
             $info = $this->catalog->info((string) $route['model']);
-            $signal = $signals((string) $route['provider_id']);
+            $signal = $signals((string) $route['provider_id'], (string) $route['model']);
             $score = 10 - abs($info['tier'] - $desired) * 3;
             // A stronger model is never worse than a weaker one for hard work.
             if ($info['tier'] > $desired && $desired >= 2) {

@@ -37,6 +37,22 @@ final class TaskRoutingTest extends TestCase
         $this->assertSame('qwen3-coder-480b', $scorer->order($routes, 'coding', $calm)[0]['model']);
     }
 
+    public function test_scorer_prefers_healthy_model_on_same_provider(): void
+    {
+        $scorer = new RouteScorer(new ModelCatalog);
+        $routes = [
+            ['provider_id' => 'groq-1', 'model' => 'free-model-a'],
+            ['provider_id' => 'groq-1', 'model' => 'free-model-b'],
+        ];
+        $ordered = $scorer->order($routes, 'simple', static fn (string $id, string $model): array => [
+            'low' => $model === 'free-model-a',
+            'fails' => 0,
+        ]);
+
+        $this->assertSame('free-model-b', $ordered[0]['model']);
+        $this->assertCount(2, $ordered);
+    }
+
     public function test_scorer_sinks_routes_near_their_limit_and_never_adds_or_drops_a_route(): void
     {
         $scorer = new RouteScorer(new ModelCatalog);

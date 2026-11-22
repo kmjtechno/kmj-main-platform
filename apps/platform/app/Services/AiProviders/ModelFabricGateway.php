@@ -49,8 +49,8 @@ final class ModelFabricGateway
             return $this->fail(ModelFabricRouter::NO_ROUTE, 0, $profile);
         }
         $limits = $this->providerLimits($organizationId);
-        $plan['routes'] = $this->scorer->order($plan['routes'], $profile, fn (string $id): array => [
-            'low' => $this->nearLimit($id) || $this->nearDailyCap($limits[$id] ?? null),
+        $plan['routes'] = $this->scorer->order($plan['routes'], $profile, fn (string $id, string $model): array => [
+            'low' => $this->nearLimit($id, $model, (bool) ($limits[$id]['model_scoped'] ?? false)) || $this->nearDailyCap($limits[$id] ?? null),
             'fails' => (int) Cache::get($this->failKey($id), 0),
             'priority' => (int) ($limits[$id]['priority'] ?? 100),
         ]);
@@ -72,6 +72,12 @@ final class ModelFabricGateway
             }
             $providerId = (string) $route['provider_id'];
             if (self::coolingUntil($providerId) !== null) {
+                continue;
+            }
+            // A model-specific 429 should not disable other eligible models at the same provider.
+            if ($this->modelCoolingUntil($providerId, (string) $route['model']) !== null) {
+                $last = 'model_rate_limited';
+
                 continue;
             }
             if (($route['cost_class'] ?? 'free') === 'credit-limited') {
@@ -99,7 +105,7 @@ final class ModelFabricGateway
             $latency = (int) ((hrtime(true) - $started) / 1_000_000);
 
             $this->record($organizationId, $provider, (string) $route['model'], $result['ok'], $result['error_code'], $latency);
-            $this->learnLimits($providerId, $result['rate'] ?? null);
+            $this->learnLimits($providerId, (string) $route['model'], (bool) ($limits[$providerId]['model_scoped'] ?? false), $result['rate'] ?? null);
             if ($result['ok']) {
                 Cache::forget($this->failKey($providerId));
                 if ($sessionKey !== null) {
@@ -118,7 +124,7 @@ final class ModelFabricGateway
             }
 
             $last = (string) ($result['error_code'] ?? 'unknown');
-            $this->penalize($provider, $last, $result['rate']['retry_after'] ?? null);
+            $this->penalize($provider, (string) $route['model'], $last, $result['rate'] ?? null);
         }
 
         return $this->fail($last, $attempts, $profile);
@@ -127,7 +133,7 @@ final class ModelFabricGateway
     /**
      * Owner priority/cap plus today's routed attempts (UTC day) per provider of this organization.
      *
-     * @return array<string, array{priority: int, cap: ?int, used: int}>
+     * @return array<string, array{priority: int, cap: ?int, used: int, model_scoped: bool}>
      */
     private function providerLimits(string $organizationId): array
     {
@@ -139,11 +145,13 @@ final class ModelFabricGateway
             ->pluck('c', 'ai_provider_id');
 
         $out = [];
-        foreach (AiProvider::query()->where('organization_id', $organizationId)->get(['id', 'priority', 'daily_request_cap']) as $provider) {
+        foreach (AiProvider::query()->where('organization_id', $organizationId)->get(['id', 'preset', 'priority', 'daily_request_cap']) as $provider) {
             $out[$provider->id] = [
                 'priority' => (int) $provider->priority,
                 'cap' => $provider->daily_request_cap === null ? null : (int) $provider->daily_request_cap,
                 'used' => (int) ($used[$provider->id] ?? 0),
+                // Groq publishes per-model rate limits; unknown providers remain account-scoped.
+                'model_scoped' => $provider->preset === 'groq',
             ];
         }
 
@@ -259,12 +267,12 @@ final class ModelFabricGateway
      *
      * @param  array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int}|null  $rate
      */
-    private function learnLimits(string $providerId, ?array $rate): void
+    private function learnLimits(string $providerId, string $model, bool $modelScoped, ?array $rate): void
     {
         if ($rate === null || ($rate['requests_remaining'] === null && $rate['tokens_remaining'] === null)) {
             return;
         }
-        $key = 'modelfabric:rate:'.$providerId;
+        $key = $this->rateKey($providerId, $model, $modelScoped);
         $seen = Cache::get($key);
         $maxRequests = max((int) ($rate['requests_remaining'] ?? 0), is_array($seen) ? (int) ($seen['max_requests'] ?? 0) : 0);
         Cache::put($key, [
@@ -274,9 +282,9 @@ final class ModelFabricGateway
         ], 120);
     }
 
-    private function nearLimit(string $providerId): bool
+    private function nearLimit(string $providerId, string $model, bool $modelScoped): bool
     {
-        $seen = Cache::get('modelfabric:rate:'.$providerId);
+        $seen = Cache::get($this->rateKey($providerId, $model, $modelScoped));
         if (! is_array($seen)) {
             return false;
         }
@@ -288,8 +296,18 @@ final class ModelFabricGateway
         return $lowRequests || (is_int($tokens) && $tokens <= 2000);
     }
 
-    private function penalize(AiProvider $provider, string $code, ?int $retryAfter = null): void
+    /** @param array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int}|null $rate */
+    private function penalize(AiProvider $provider, string $model, string $code, ?array $rate = null): void
     {
+        $retryAfter = $rate['retry_after'] ?? null;
+        // A verified Groq model's exhausted quota must not cool the entire provider.
+        // Without a typed remaining=0 report, conservatively use provider-wide cooldown.
+        if ($code === 'rate_limited' && $provider->preset === 'groq' && ($rate['requests_remaining'] ?? null) === 0) {
+            $seconds = $retryAfter !== null ? max(5, min(300, $retryAfter)) : self::RATE_LIMIT_COOLDOWN;
+            Cache::put($this->modelCooldownKey($provider->id, $model), time() + $seconds, $seconds);
+
+            return;
+        }
         $seconds = match ($code) {
             'rate_limited' => $retryAfter !== null ? max(5, min(300, $retryAfter)) : self::RATE_LIMIT_COOLDOWN,
             'auth_failed' => self::AUTH_COOLDOWN,
@@ -306,6 +324,23 @@ final class ModelFabricGateway
         if ($seconds > 0) {
             Cache::put('modelfabric:cooldown:'.$provider->id, time() + $seconds, $seconds);
         }
+    }
+
+    private function rateKey(string $providerId, string $model, bool $modelScoped): string
+    {
+        return 'modelfabric:rate:'.($modelScoped ? hash('sha256', $providerId.'|'.$model) : $providerId);
+    }
+
+    private function modelCooldownKey(string $providerId, string $model): string
+    {
+        return 'modelfabric:model-cooldown:'.hash('sha256', $providerId.'|'.$model);
+    }
+
+    private function modelCoolingUntil(string $providerId, string $model): ?int
+    {
+        $until = Cache::get($this->modelCooldownKey($providerId, $model));
+
+        return is_int($until) && $until > time() ? $until : null;
     }
 
     private function softFailure(string $providerId): int
