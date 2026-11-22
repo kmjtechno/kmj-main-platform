@@ -448,6 +448,134 @@ final class OwnerDirectoryHttpTest extends TestCase
         $this->assertDatabaseHas('ai_providers', ['organization_id' => $organization->id]);
     }
 
+    public function test_owner_bulk_deletes_only_two_explicitly_selected_private_signup_graphs(): void
+    {
+        $owner = $this->owner();
+        $selected = [];
+        $organizations = [];
+
+        foreach (range(1, 2) as $index) {
+            $account = User::factory()->create();
+            $organization = app(OrganizationCreator::class)
+                ->create('Selected signup '.$index, $account->id);
+            CustomerProfile::query()->create([
+                'user_id' => $account->id,
+                'account_type' => 'individual',
+                'phone' => '+91 1111111111',
+                'country' => 'India',
+            ]);
+            $selected[] = $account->id;
+            $organizations[] = $organization->id;
+        }
+        $notSelected = User::factory()->create();
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/directory/users/bulk-delete', [
+                'user_ids' => $selected,
+            ])->assertRedirect('/operator/directory');
+
+        foreach ($selected as $id) {
+            $this->assertDatabaseMissing('users', ['id' => $id]);
+            $this->assertDatabaseMissing('customer_profiles', ['user_id' => $id]);
+        }
+        foreach ($organizations as $orgId) {
+            $this->assertDatabaseMissing('organizations', ['id' => $orgId]);
+        }
+        $this->assertDatabaseHas('users', ['id' => $notSelected->id]);
+        $this->assertSame(2, DB::table('operator_action_audits')
+            ->where('actor_user_id', $owner->id)
+            ->where('action', 'directory_customer_signup_graph_deleted')->count());
+    }
+
+    public function test_bulk_delete_is_all_or_nothing_when_one_customer_has_a_shared_org(): void
+    {
+        $owner = $this->owner();
+        $safe = User::factory()->create();
+        $safeOrg = app(OrganizationCreator::class)->create('Disposable signup', $safe->id);
+        $blocked = User::factory()->create();
+        $blockedOrg = app(OrganizationCreator::class)->create('Shared paid org', $blocked->id);
+        $member = User::factory()->create();
+        DB::table('organization_memberships')->insert([
+            'id' => (string) Str::uuid(),
+            'organization_id' => $blockedOrg->id,
+            'user_id' => $member->id,
+            'role' => 'member',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/directory/users/bulk-delete', [
+                'user_ids' => [$safe->id, $blocked->id],
+            ])->assertSessionHasErrors('user_ids');
+
+        $this->assertDatabaseHas('users', ['id' => $safe->id]);
+        $this->assertDatabaseHas('users', ['id' => $blocked->id]);
+        $this->assertDatabaseHas('organizations', ['id' => $safeOrg->id]);
+        $this->assertDatabaseHas('organizations', ['id' => $blockedOrg->id]);
+        $this->assertSame(0, DB::table('operator_action_audits')
+            ->where('actor_user_id', $owner->id)
+            ->where('action', 'directory_customer_signup_graph_deleted')->count());
+    }
+
+    public function test_untrusted_account_cannot_bulk_delete_selected_users(): void
+    {
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        $targets = User::factory()->count(2)->create();
+        $this->actingAs($customer)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/directory/users/bulk-delete', [
+                'user_ids' => $targets->pluck('id')->all(),
+            ])->assertForbidden();
+
+        foreach ($targets as $target) {
+            $this->assertDatabaseHas('users', ['id' => $target->id]);
+        }
+    }
+
+    public function test_bulk_delete_refuses_duplicate_overlimit_and_owner_ids_without_mutation(): void
+    {
+        $owner = $this->owner();
+        $targets = User::factory()->count(16)->create();
+        $ids = $targets->pluck('id')->all();
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/directory/users/bulk-delete', [
+                'user_ids' => [$ids[0], $ids[0]],
+            ])->assertSessionHasErrors('user_ids.1');
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/directory/users/bulk-delete', [
+                'user_ids' => $ids,
+            ])->assertSessionHasErrors('user_ids');
+
+        // Two prior requests reach this endpoint's strict 2/minute throttle.
+        // Test owner-target protection in its own request below.
+        $this->assertSame(17, DB::table('users')->count());
+        $this->assertSame(0, DB::table('operator_action_audits')
+            ->where('action', 'directory_customer_signup_graph_deleted')->count());
+    }
+
+    public function test_bulk_delete_rejects_owner_account_before_any_mutation(): void
+    {
+        $owner = $this->owner();
+        $target = User::factory()->create();
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/directory/users/bulk-delete', [
+                'user_ids' => [$target->id, $owner->id],
+            ])->assertSessionHasErrors('user_ids');
+
+        $this->assertDatabaseHas('users', ['id' => $target->id]);
+        $this->assertDatabaseHas('users', ['id' => $owner->id]);
+        $this->assertSame(0, DB::table('operator_action_audits')
+            ->where('action', 'directory_customer_signup_graph_deleted')->count());
+    }
+
     private function owner(): User
     {
         $owner = User::factory()->create([
