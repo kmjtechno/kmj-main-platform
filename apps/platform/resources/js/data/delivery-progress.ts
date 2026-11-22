@@ -130,6 +130,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-readiness-publisher-units-20261122',
+        title: 'Release readiness publisher: systemd units (source only)',
+        state: 'active',
+        detail: 'Source-only: a oneshot service and a 30 second timer template for the existing read-only root readiness publisher, so the Ops page can later show a fresh receipt instead of "no trusted root receipt". The service runs only the fixed publish mode, writes only the receipt directory, cannot start the release unit and treats a blocked decision as a published result, not a failure. Nothing is installed or enabled by this change.',
+        evidence:
+            'Static unit tests and exact-head CI only. Not installed on Elite, not enabled, no receipt produced yet.',
+    },
+    {
         id: 'release-center-nav-link-20261122',
         title: 'Release Center: sidebar link under Operations',
         state: 'active',
