@@ -5,6 +5,7 @@ namespace App\Services\Mail;
 use App\Events\DomainOutboxPublished;
 use App\Models\User;
 use App\Notifications\BrandedCustomerNotification;
+use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
@@ -42,6 +43,13 @@ final class BrandedCustomerEvents
 
         Event::listen(DomainOutboxPublished::class, static function (DomainOutboxPublished $event): void {
             if (! self::ready() || $event->message->aggregate_type !== 'commercial_order') {
+                return;
+            }
+
+            $activatedAt = self::activatedAt();
+            if ($activatedAt === null || $event->message->occurred_at === null
+                || $event->message->occurred_at->lessThan($activatedAt)) {
+                // Never replay old, unsent commerce outbox history into customer inboxes.
                 return;
             }
 
@@ -102,7 +110,25 @@ final class BrandedCustomerEvents
 
     private static function ready(): bool
     {
+        $activatedAt = self::activatedAt();
+
         return config('services.kmj_transactional_mail.enabled', false) === true
+            && $activatedAt !== null
+            && now()->greaterThanOrEqualTo($activatedAt)
             && app(RegistrationMailReadiness::class)->canAttemptDelivery();
+    }
+
+    private static function activatedAt(): ?CarbonImmutable
+    {
+        $value = config('services.kmj_transactional_mail.not_before', '');
+        if (! is_string($value) || preg_match('/\\A\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z\\z/D', $value) !== 1) {
+            return null;
+        }
+
+        try {
+            return CarbonImmutable::parse($value, 'UTC');
+        } catch (Throwable) {
+            return null;
+        }
     }
 }
