@@ -1,0 +1,31 @@
+name: Elite Activation Broker Installer QA
+
+on:
+  pull_request:
+    paths:
+      - "scripts/operations/install-elite-activation-broker-20261122.py"
+      - "scripts/test_install_elite_activation_broker_20261122.py"
+      - ".github/workflows/elite-activation-broker-installer-qa.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-pinned-installer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Compile installer and execute fail-closed offline tests (no root)
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m py_compile scripts/operations/install-elite-activation-broker-20261122.py
+          sha256sum scripts/operations/install-elite-activation-broker-20261122.py
+          python3 -B -m unittest discover \
+            -s scripts -p 'test_install_elite_activation_broker_20261122.py' -v
+          echo "ELITE_ACTIVATION_BROKER_INSTALLER_OFFLINE_QA=PASS"
+          echo "ROOT_INSTALL=NOT_EXECUTED"
+          echo "PRODUCTION_RELEASE=UNCHANGED"
