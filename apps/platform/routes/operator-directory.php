@@ -90,10 +90,19 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             abort_unless($actor instanceof User, 401);
             $access->require($actor);
 
+            // Validate the displayed value, not an untrimmed string whose
+            // whitespace would be removed only after the length check.
+            $requestedName = $request->input('name');
+            if (is_string($requestedName)) {
+                $request->merge(['name' => trim($requestedName)]);
+            }
+
             $values = $request->validate([
                 'name' => ['required', 'string', 'min:2', 'max:120'],
-                'phone' => ['sometimes', 'nullable', 'string', 'max:32'],
-                'country' => ['sometimes', 'nullable', 'string', 'max:80'],
+                // Existing profile columns are NOT NULL: an explicit blank
+                // must report validation error, not silently keep old data.
+                'phone' => ['sometimes', 'required', 'string', 'min:1', 'max:32'],
+                'country' => ['sometimes', 'required', 'string', 'min:1', 'max:80'],
                 'company_name' => ['sometimes', 'nullable', 'string', 'max:160'],
                 'service_interest' => ['sometimes', 'nullable', 'in:software,cloud,remote_access,calibration,cinema,other'],
             ]);
