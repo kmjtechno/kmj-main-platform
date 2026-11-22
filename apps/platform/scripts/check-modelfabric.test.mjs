@@ -190,7 +190,7 @@ void test('credit-limited approvals (ADR-004 rev 2) are capped, attested and enf
     assert.match(gateway, /\$cap <= 0/);
     // The owner form requires the cap and the hard-cap statement before saving.
     assert.match(page, /credit_hard_cap_attested/);
-    assert.match(page, /cannot bill me beyond the free\s+credits/);
+    assert.match(page, /cannot\s+bill\s+me\s+beyond\s+the\s+free\s+credits/);
     // Bulk approval and rules stay free-only and reset the class.
     assert.match(controller, /'cost_class' => 'free'/);
     assert.doesNotMatch(page, /enable[_ -]?paid fallback/i);
