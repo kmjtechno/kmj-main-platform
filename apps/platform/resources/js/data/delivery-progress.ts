@@ -90,6 +90,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Unit test pins the header; exact-head CI only. Not deployed and not yet proven against the live GitHub catalog.',
     },
     {
+        id: 'modelfabric-sticky-sessions-20261122',
+        title: 'ModelFabric: sticky sessions keep a conversation on the route that last answered it',
+        state: 'active',
+        detail: 'Source-only: an optional X-ModelFabric-Session header (opaque id, 30 minute memory, hashed with the organization) moves the last answering route to the front of the already-admitted plan. Evidence, cooldowns, owner caps and credit caps are still checked on every request, so stickiness can never admit a route, and a missing or malformed id changes nothing.',
+        evidence:
+            'Feature test (preference stored on success, malformed id ignored, 503 still returned with no provider call once evidence is gone), static check and exact-head CI only. Not deployed.',
+    },
+    {
         id: 'modelfabric-openai-sse-streaming-20261122',
         title: 'ModelFabric: OpenAI-compatible streaming (stream=true) for IDE and SDK clients',
         state: 'active',

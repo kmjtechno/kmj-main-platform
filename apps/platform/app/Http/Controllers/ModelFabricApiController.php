@@ -63,7 +63,7 @@ final class ModelFabricApiController extends Controller
 
         // The caller's "model" field is ignored on purpose: it cannot pick a paid or unverified model.
         $capability = $token->private_source ? 'code' : 'chat';
-        $result = $this->gateway->complete($token->organization_id, $messages, $capability, $token->private_source);
+        $result = $this->gateway->complete($token->organization_id, $messages, $capability, $token->private_source, $this->sessionKey($request));
         if (! $result['ok']) {
             $code = (string) $result['error_code'];
 
@@ -116,6 +116,14 @@ final class ModelFabricApiController extends Controller
             'Cache-Control' => 'no-cache',
             'X-Accel-Buffering' => 'no',
         ]);
+    }
+
+    /** Optional opaque conversation id; it only biases ordering among already-admitted routes. */
+    private function sessionKey(Request $request): ?string
+    {
+        $key = trim((string) $request->header('X-ModelFabric-Session'));
+
+        return preg_match('/^[A-Za-z0-9._:-]{1,64}$/', $key) === 1 ? $key : null;
     }
 
     private function token(Request $request): AiModelToken

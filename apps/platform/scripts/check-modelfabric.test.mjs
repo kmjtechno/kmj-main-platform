@@ -78,6 +78,15 @@ void test('API endpoint is bearer-hashed, throttled, replays streams after routi
     assert.match(read('routes/model-fabric.php'), /tokens\.store/);
 });
 
+void test('sticky sessions only reorder routes the plan already admitted', () => {
+    const gateway = read('app/Services/AiProviders/ModelFabricGateway.php');
+    const api = read('app/Http/Controllers/ModelFabricApiController.php');
+    assert.match(gateway, /preferSticky\(\$plan\['routes'\]/);
+    assert.match(gateway, /never admits anything/);
+    assert.match(api, /X-ModelFabric-Session/);
+    assert.match(api, /\[A-Za-z0-9\._:-\]\{1,64\}/);
+});
+
 void test('owner daily caps and priority are enforced before provider limits and stay owner-only', () => {
     const gateway = read('app/Services/AiProviders/ModelFabricGateway.php');
     const scorer = read('app/Services/AiProviders/RouteScorer.php');
