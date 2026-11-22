@@ -14,7 +14,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         title: 'KMJ Mail: guarded external address sending via own Elite Postfix',
         state: 'active',
         detail: 'Source-only: owner and explicitly authorized staff can type a single Gmail, Outlook or any valid email address in KMJ Compose, save drafts and view real queued/failed/mail-server-accepted submission state in Sent. The sender identity is bound to KMJ domain (owner existing sender; staff unique owner-granted alias), with rate limits, idempotency and security audit. External delivery flag is default OFF; mailer is restricted to the existing Elite sendmail transport. Gmail OAuth/sync is not used.',
-        evidence: 'PR #1022 exact-head CI, database rollback, guarded signed Elite release, Mail Center authenticated QA and independent external pilot inbox/header proof are prerequisites for production enablement. Local Postfix acceptance is not proof of recipient Inbox delivery; inbound Internet mail, MX changes, attachments and anti-spam remain pending.',
+        evidence:
+            'PR #1022 exact-head CI, database rollback, guarded signed Elite release, Mail Center authenticated QA and independent external pilot inbox/header proof are prerequisites for production enablement. Local Postfix acceptance is not proof of recipient Inbox delivery; inbound Internet mail, MX changes, attachments and anti-spam remain pending.',
     },
     {
         id: 'kmj-owner-team-mail-center-20261122',
