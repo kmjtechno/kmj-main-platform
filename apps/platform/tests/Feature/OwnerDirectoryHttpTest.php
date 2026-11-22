@@ -553,13 +553,25 @@ final class OwnerDirectoryHttpTest extends TestCase
                 'user_ids' => $ids,
             ])->assertSessionHasErrors('user_ids');
 
+        // Two prior requests reach this endpoint's strict 2/minute throttle.
+        // Test owner-target protection in its own request below.
+        $this->assertSame(17, DB::table('users')->count());
+        $this->assertSame(0, DB::table('operator_action_audits')
+            ->where('action', 'directory_customer_signup_graph_deleted')->count());
+    }
+
+    public function test_bulk_delete_rejects_owner_account_before_any_mutation(): void
+    {
+        $owner = $this->owner();
+        $target = User::factory()->create();
         $this->actingAs($owner)
             ->withSession(['auth.password_confirmed_at' => time()])
             ->post('/operator/directory/users/bulk-delete', [
-                'user_ids' => [$ids[0], $owner->id],
+                'user_ids' => [$target->id, $owner->id],
             ])->assertSessionHasErrors('user_ids');
 
-        $this->assertSame(17, DB::table('users')->count());
+        $this->assertDatabaseHas('users', ['id' => $target->id]);
+        $this->assertDatabaseHas('users', ['id' => $owner->id]);
         $this->assertSame(0, DB::table('operator_action_audits')
             ->where('action', 'directory_customer_signup_graph_deleted')->count());
     }
