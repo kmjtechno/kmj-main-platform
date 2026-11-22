@@ -21,7 +21,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])->group(function (): 
         ->name('kmj-mail.send');
     Route::post('{portal}/mail/send-external', [NativeMailController::class, 'sendExternal'])
         ->whereIn('portal', ['operator', 'team'])
-        ->middleware('throttle:2,1')
+        ->middleware('throttle:5,1')
         ->name('kmj-mail.send-external');
 
     Route::post('{portal}/mail/drafts', [NativeMailController::class, 'draft'])
