@@ -57,6 +57,34 @@ class WriterIdentityTests(unittest.TestCase):
             ):
                 mod.pool_identity(4321, master(), group, 1001)
 
+    def test_mixed_pool_uid_mismatch_is_only_bounded_counts_and_remains_blocked(self):
+        actors = [
+            worker(pid=4322, uid=1001, pool="php-fpm: pool kmjprod"),
+            worker(pid=4323, uid=33, pool="php-fpm: pool www"),
+            worker(pid=4324, uid=1002, pool="php-fpm: pool kmjstage"),
+            worker(pid=4325, uid=1002, pool="php-fpm: pool PRIVATE_SECRET_POOL"),
+        ]
+        with patch("builtins.print") as emitted, self.assertRaisesRegex(
+            mod.Blocked, "FPM_WRITER_UID_MISMATCH"
+        ):
+            mod.pool_identity(4321, master(), actors, 1001)
+        lines = [str(c.args[0]) for c in emitted.call_args_list]
+        self.assertIn("KMJ_FPM_POOL_KMJPROD_OWNER_UID_COUNT=1", lines)
+        self.assertIn("KMJ_FPM_POOL_WWW_OTHER_UID_COUNT=1", lines)
+        self.assertIn("KMJ_FPM_POOL_STAGING_OTHER_UID_COUNT=1", lines)
+        self.assertIn("KMJ_FPM_POOL_OTHER_OTHER_UID_COUNT=1", lines)
+        self.assertNotIn("PRIVATE_SECRET_POOL", " ".join(lines))
+        self.assertNotIn("1002", " ".join(lines))
+        self.assertNotIn("1001", " ".join(lines))
+
+    def test_untrusted_child_shape_is_rejected_before_any_uid_aggregate(self):
+        group = [worker(uid=33), worker(pid=4323, uid=1001, pool="BAD_PROCESS secrets")]
+        with patch("builtins.print") as emitted, self.assertRaisesRegex(
+            mod.Blocked, "BLOCKED_UNKNOWN_FPM_CHILD"
+        ):
+            mod.pool_identity(4321, master(), group, 1001)
+        emitted.assert_not_called()
+
     def test_unexpected_direct_child_or_wrong_parent_is_not_accepted(self):
         examples = [
             worker(parent=9876),
