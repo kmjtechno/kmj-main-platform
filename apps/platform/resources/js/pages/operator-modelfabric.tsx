@@ -133,6 +133,27 @@ const REASONS: Record<string, string> = {
 const reasonText = (reason: string) =>
     REASONS[reason] ?? reason.replaceAll('_', ' ');
 
+/** Plain-language meaning and next step for a provider's last error code. */
+const errorHelp = (code: string): string => {
+    if (code.startsWith('invalid_catalog')) {
+        return 'The provider answered with something that is not a model list. This is usually a token permission problem (for GitHub Models the token needs the models:read permission) or a provider-side outage. Other providers keep working; fix the key and run Test connection.';
+    }
+    switch (code) {
+        case 'auth_failed':
+            return 'The provider rejected the key. Create a new key, reconnect the provider and run Test connection. It is not used until then.';
+        case 'rate_limited':
+            return 'The provider is rate-limiting. ModelFabric pauses it and retries on its own, so no action is needed.';
+        case 'connection_failed':
+        case 'provider_unavailable':
+            return 'The provider could not be reached or had an outage. ModelFabric retries other routes automatically; run Test connection later.';
+        case 'unexpected_status':
+        case 'response_too_large':
+            return 'The provider returned an unexpected answer. Run Test connection; if it repeats, check the provider status page.';
+        default:
+            return '';
+    }
+};
+
 const fieldClass =
     'bg-background/45 border-border focus-visible:ring-ring/60 mt-1 min-h-10 w-full rounded-xl border px-3 text-sm outline-none focus-visible:ring-2';
 const primaryButton =
@@ -1134,6 +1155,15 @@ export default function OperatorModelFabric({
                                             <p className="mt-1 text-xs text-red-500">
                                                 Last error:{' '}
                                                 {provider.error_code}
+                                            </p>
+                                        ) : null}
+                                        {provider.error_code &&
+                                        errorHelp(provider.error_code) ? (
+                                            <p
+                                                className="text-muted-foreground mt-1 text-xs"
+                                                data-testid="modelfabric-error-help"
+                                            >
+                                                {errorHelp(provider.error_code)}
                                             </p>
                                         ) : null}
                                         <ProviderLimits

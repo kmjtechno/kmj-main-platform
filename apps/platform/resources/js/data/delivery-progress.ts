@@ -106,6 +106,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Unit test pins the header; exact-head CI only. Not deployed and not yet proven against the live GitHub catalog.',
     },
     {
+        id: 'modelfabric-error-help-20261122',
+        title: 'ModelFabric: plain-language help under each provider error',
+        state: 'active',
+        detail: 'Source-only, frontend only: a provider card that shows a last error code now also says what it means and what to do (rejected key, rate limit, outage, and for an invalid model catalog the models:read token permission hint). Static copy only; no provider is contacted and routing is unchanged.',
+        evidence:
+            'Static check and exact-head CI only. Not deployed and not yet verified in a browser by the owner.',
+    },
+    {
         id: 'modelfabric-token-private-warning-20261122',
         title: 'ModelFabric: token form no longer defaults into a private-source token that cannot route',
         state: 'active',
