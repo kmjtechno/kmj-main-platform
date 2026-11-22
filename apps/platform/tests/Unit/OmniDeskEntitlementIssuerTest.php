@@ -117,6 +117,38 @@ final class OmniDeskEntitlementIssuerTest extends TestCase
         app(OmniDeskEntitlementIssuer::class)->issue($claims, $this->vectorSigner());
     }
 
+    public function test_future_not_before_matches_rust_verified_entitlement_temporal_order(): void
+    {
+        $claims = $this->claims();
+        $claims['nbf'] = $claims['iat'] + 60;
+
+        $result = app(OmniDeskEntitlementIssuer::class)
+            ->issue($claims, $this->vectorSigner());
+
+        $verifiedClaims = json_decode($result['canonical_payload'], true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame($claims['iat'], $verifiedClaims['iat']);
+        self::assertSame($claims['nbf'], $verifiedClaims['nbf']);
+        self::assertLessThan($verifiedClaims['lease_expires_at'], $verifiedClaims['nbf']);
+        self::assertSame(SODIUM_CRYPTO_SIGN_BYTES, strlen(base64_decode($result['signature_base64'], true)));
+    }
+
+    public function test_backdated_not_before_and_expired_lease_window_fail_closed(): void
+    {
+        $base = $this->claims();
+
+        foreach ([$base['iat'] - 1, $base['lease_expires_at'], $base['exp'] + 1] as $invalidNotBefore) {
+            $claims = $base;
+            $claims['nbf'] = $invalidNotBefore;
+
+            try {
+                app(OmniDeskEntitlementIssuer::class)->issue($claims, $this->vectorSigner());
+                self::fail('The signer must reject temporal claims that the Rust client would refuse.');
+            } catch (DomainException $exception) {
+                self::assertSame('OMNIDESK_ENTITLEMENT_PAYLOAD_INVALID', $exception->getMessage());
+            }
+        }
+    }
+
     public function test_invalid_signature_length_from_signer_is_rejected(): void
     {
         $signer = new class implements OmniDeskSigner
