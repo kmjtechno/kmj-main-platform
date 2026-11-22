@@ -481,7 +481,10 @@ export default function OperatorKslp({
                             tools
                         </summary>
                         <div className="mt-3">
-                            <DeveloperAppsWorkspace {...developerWorkspace} embedded />
+                            <DeveloperAppsWorkspace
+                                {...developerWorkspace}
+                                embedded
+                            />
                         </div>
                     </details>
                 </section>
@@ -1126,8 +1129,8 @@ export default function OperatorKslp({
                                 className="text-muted-foreground rounded-lg border border-dashed p-4 text-xs"
                                 role="status"
                             >
-                                No license lifecycle events have been recorded in
-                                this view.
+                                No license lifecycle events have been recorded
+                                in this view.
                             </p>
                         )}
                     </div>
