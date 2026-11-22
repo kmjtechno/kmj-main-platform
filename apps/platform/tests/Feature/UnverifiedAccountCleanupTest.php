@@ -225,4 +225,40 @@ final class UnverifiedAccountCleanupTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $old->id]);
         $this->assertDatabaseHas('organizations', ['id' => $orgId]);
     }
+
+
+    public function test_postgresql_cleanup_refuses_concurrent_membership_writer_without_deletion(): void
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            $this->markTestSkipped('PostgreSQL transactional table locks are required.');
+        }
+
+        $old = User::factory()->create([
+            'email_verified_at' => null,
+            'created_at' => now()->subDays(12),
+        ]);
+        $cleanup = app(UnverifiedAccountCleanup::class);
+        $preview = $cleanup->preview();
+        $this->assertSame(1, $preview['eligible']);
+
+        // Separate PostgreSQL session holds a writer-intent table lock.
+        // The cleanup must fail NOWAIT before deleting the user.
+        config()->set('database.connections.cleanup_fence_writer', DB::connection()->getConfig());
+        $writer = DB::connection('cleanup_fence_writer');
+        $writer->beginTransaction();
+        try {
+            $writer->statement('LOCK TABLE organization_memberships IN ROW EXCLUSIVE MODE NOWAIT');
+            try {
+                $cleanup->purge(1, $preview['sha256']);
+                $this->fail('A concurrent organization writer must block the entire purge.');
+            } catch (RuntimeException $e) {
+                $this->assertSame('UNVERIFIED_CLEANUP_WRITER_FENCE_UNAVAILABLE', $e->getMessage());
+            }
+        } finally {
+            $writer->rollBack();
+            DB::purge('cleanup_fence_writer');
+        }
+
+        $this->assertDatabaseHas('users', ['id' => $old->id]);
+    }
 }
