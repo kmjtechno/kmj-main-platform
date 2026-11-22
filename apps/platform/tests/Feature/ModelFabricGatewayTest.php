@@ -71,6 +71,47 @@ final class ModelFabricGatewayTest extends TestCase
         $this->assertSame(1, AiModelRequest::query()->where('error_code', 'rate_limited')->count());
     }
 
+    public function test_groq_model_specific_daily_quota_falls_back_within_same_provider(): void
+    {
+        $groq = $this->provider('groq', 'A Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        $groq->models_cache = ['model-a', 'model-b'];
+        $groq->save();
+        AiModelEvidence::query()->create([
+            'organization_id' => $this->org,
+            'ai_provider_id' => $groq->id,
+            'model_id' => 'model-b',
+            'price_evidence_url' => 'https://example.com/pricing',
+            'price_evidence_note' => 'Second model independently verified free.',
+            'verified_at' => now(),
+            'expires_at' => now()->addDays(10),
+            'data_handling' => 'unknown',
+            'capabilities' => ['chat'],
+        ]);
+
+        Http::fake([
+            'api.groq.com/*' => Http::sequence()
+                ->push(['error' => 'model-a quota exhausted'], 429, [
+                    'x-ratelimit-remaining-requests' => '0',
+                    'Retry-After' => '90',
+                ])
+                ->push(['choices' => [['message' => ['content' => 'model-b reply']]]], 200)
+                ->push(['choices' => [['message' => ['content' => 'model-b again']]]], 200),
+        ]);
+
+        $first = app(ModelFabricGateway::class)->complete($this->org, [['role' => 'user', 'content' => 'hi']]);
+
+        $this->assertTrue($first['ok']);
+        $this->assertSame(2, $first['attempts']);
+        $this->assertSame('model-b', $first['model']);
+        $this->assertNull(ModelFabricGateway::coolingUntil($groq->id));
+
+        // Model-a is cooling down, but another already-attested Groq model is still usable.
+        $second = app(ModelFabricGateway::class)->complete($this->org, [['role' => 'user', 'content' => 'hi again']]);
+        $this->assertSame('model-b', $second['model']);
+        $this->assertSame(1, $second['attempts']);
+        $this->assertSame(3, AiModelRequest::query()->count());
+    }
+
     public function test_provider_is_deprioritised_before_its_limit_runs_out(): void
     {
         $this->provider('groq', 'A Groq', 'https://api.groq.com/openai/v1', 'llama-3.3-70b');

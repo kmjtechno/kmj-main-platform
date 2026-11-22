@@ -23,6 +23,11 @@ return [
         'huggingface' => ['label' => 'Hugging Face router', 'base_url' => 'https://router.huggingface.co/v1', 'free_tier' => 'allowlist'],
         'nvidia' => ['label' => 'NVIDIA NIM', 'base_url' => 'https://integrate.api.nvidia.com/v1', 'free_tier' => 'allowlist'],
         'github' => ['label' => 'GitHub Models', 'base_url' => 'https://models.github.ai/inference', 'free_tier' => 'allowlist'],
+        // Connect-only presets never activate inference without explicit zero-cost admission.
+        'cohere' => ['label' => 'Cohere (evaluation key)', 'base_url' => 'https://api.cohere.ai/compatibility/v1', 'free_tier' => 'allowlist'],
+        'qwen-sg' => ['label' => 'Alibaba Qwen (Singapore)', 'base_url' => 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1', 'free_tier' => 'none'],
+        'qwen-us' => ['label' => 'Alibaba Qwen (US)', 'base_url' => 'https://dashscope-us.aliyuncs.com/compatible-mode/v1', 'free_tier' => 'none'],
+        'fireworks' => ['label' => 'Fireworks AI', 'base_url' => 'https://api.fireworks.ai/inference/v1', 'free_tier' => 'none'],
         'together' => ['label' => 'Together AI', 'base_url' => 'https://api.together.xyz/v1', 'free_tier' => 'none'],
         'openai' => ['label' => 'OpenAI', 'base_url' => 'https://api.openai.com/v1', 'free_tier' => 'none'],
         'custom' => ['label' => 'Custom HTTPS endpoint', 'base_url' => null, 'free_tier' => 'none'],
@@ -38,5 +43,6 @@ return [
         'huggingface' => $csv('AI_PROVIDER_FREE_MODELS_HUGGINGFACE'),
         'nvidia' => $csv('AI_PROVIDER_FREE_MODELS_NVIDIA'),
         'github' => $csv('AI_PROVIDER_FREE_MODELS_GITHUB'),
+        'cohere' => $csv('AI_PROVIDER_FREE_MODELS_COHERE'),
     ],
 ];
