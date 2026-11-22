@@ -64,6 +64,11 @@ return [
         'link_secret' => env('CODEBRIDGE_OAUTH_LINK_SECRET'),
     ],
 
+    // Server-only installation token. Never sent to Inertia or the browser.
+    'codebridge_stage' => [
+        'github_token' => env('KMJ_CODEBRIDGE_STAGE_GITHUB_TOKEN', ''),
+    ],
+
     'codebridge_gateway' => [
         // Private upstream is operator-approved (usually same-host loopback).
         // An unconfigured upstream must fail closed, never send device/MCP
