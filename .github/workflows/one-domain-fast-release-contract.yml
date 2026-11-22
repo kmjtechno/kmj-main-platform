@@ -4,6 +4,8 @@ on:
     paths:
       - 'scripts/operations/stage-fast-main-candidate-no-activation.sh'
       - 'scripts/test_fast_main_candidate_contract.py'
+      - 'scripts/operations/owner-release-main-platform.sh'
+      - 'scripts/test_owner_release_one_command_contract.py'
       - 'docs/operations/ONE_PUBLIC_ORIGIN_FAST_RELEASE_20261025.md'
       - '.github/workflows/one-domain-fast-release-contract.yml'
   push:
@@ -11,6 +13,8 @@ on:
     paths:
       - 'scripts/operations/stage-fast-main-candidate-no-activation.sh'
       - 'scripts/test_fast_main_candidate_contract.py'
+      - 'scripts/operations/owner-release-main-platform.sh'
+      - 'scripts/test_owner_release_one_command_contract.py'
       - 'docs/operations/ONE_PUBLIC_ORIGIN_FAST_RELEASE_20261025.md'
       - '.github/workflows/one-domain-fast-release-contract.yml'
   workflow_dispatch:
@@ -34,5 +38,7 @@ jobs:
           set -Eeuo pipefail
           bash -n scripts/operations/stage-fast-main-candidate-no-activation.sh
           python3 -B -m unittest discover -s scripts -p test_fast_main_candidate_contract.py -v
+          bash -n scripts/operations/owner-release-main-platform.sh
+          python3 -B -m unittest discover -s scripts -p test_owner_release_one_command_contract.py -v
           echo 'KMJ_ONE_PUBLIC_ORIGIN_CONTRACT=PASS'
           echo 'KMJ_PRODUCTION_DEPLOYMENT=NOT_ATTEMPTED'
