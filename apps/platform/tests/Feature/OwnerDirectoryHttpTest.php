@@ -68,7 +68,7 @@ final class OwnerDirectoryHttpTest extends TestCase
         $response->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('operator-directory')
-                ->where('read_only', true)
+                ->where('read_only', false)
                 ->where('users.total', 1)
                 ->where('users.data.0.id', $matching->id)
                 ->where('users.data.0.name', 'UniqueDirectoryAlice')
@@ -85,6 +85,28 @@ final class OwnerDirectoryHttpTest extends TestCase
         $response->assertDontSee('remember_token');
         $response->assertDontSee('two_factor_secret');
         $response->assertDontSee('credential_id');
+    }
+
+    public function test_owner_can_filter_email_verified_and_unverified_customers(): void
+    {
+        $owner = $this->owner();
+        User::factory()->create(['email_verified_at' => null]);
+        User::factory()->create(['email_verified_at' => now()]);
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/directory?users_status=unverified')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('users.total', 1)
+                ->where('filters.users_status', 'unverified'));
+
+        $this->actingAs($owner)
+            ->get('/operator/directory?users_status=verified')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('users.total', 2)
+                ->where('filters.users_status', 'verified'));
     }
 
     public function test_user_directory_is_bounded_to_fifteen_per_page(): void
@@ -136,7 +158,7 @@ final class OwnerDirectoryHttpTest extends TestCase
                 ->get('/operator/directory?users_q='.urlencode($term))
                 ->assertOk()
                 ->assertInertia(fn (Assert $page) => $page
-                    ->where('read_only', true)
+                    ->where('read_only', false)
                     ->where('users.total', 1)
                     ->where('users.data.0.id', $client->id)
                     ->where('users.data.0.customer_profile.company_name', 'Acme Calibration Studio')
@@ -157,6 +179,96 @@ final class OwnerDirectoryHttpTest extends TestCase
                 ->where('users.total', 1)
                 ->where('users.data.0.id', $legacy->id)
                 ->where('users.data.0.customer_profile', null));
+    }
+
+    public function test_owner_can_update_contact_but_cannot_set_verification_or_privileges(): void
+    {
+        $owner = $this->owner();
+        $target = User::factory()->create([
+            'email_verified_at' => null,
+            'name' => 'Old User',
+        ]);
+        CustomerProfile::query()->create([
+            'user_id' => $target->id,
+            'account_type' => 'individual',
+            'phone' => '+91 1234567890',
+            'country' => 'India',
+        ]);
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->patch('/operator/directory/users/'.$target->id.'/contact', [
+                'name' => 'Updated User',
+                'phone' => '+91 2222222222',
+                'country' => 'India',
+                'email_verified_at' => now()->toIso8601String(),
+                'is_platform_owner' => true,
+            ])->assertRedirect('/operator/directory');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $target->id,
+            'name' => 'Updated User',
+            'email_verified_at' => null,
+            'is_platform_owner' => false,
+        ]);
+        $this->assertDatabaseHas('customer_profiles', [
+            'user_id' => $target->id, 'phone' => '+91 2222222222',
+        ]);
+        $this->assertDatabaseHas('operator_action_audits', [
+            'actor_user_id' => $owner->id,
+            'action' => 'directory_user_contact_updated',
+        ]);
+    }
+
+    public function test_regular_user_cannot_modify_or_delete_other_accounts(): void
+    {
+        $target = User::factory()->create();
+        $attacker = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($attacker)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->patch('/operator/directory/users/'.$target->id.'/contact', [
+                'name' => 'Compromised',
+            ])->assertForbidden();
+        $this->actingAs($attacker)
+            ->post('/operator/directory/users/'.$target->id.'/delete', [
+                'confirmation' => 'DELETE_USER_'.$target->id,
+            ])->assertForbidden();
+        $this->assertDatabaseHas('users', ['id' => $target->id]);
+    }
+
+    public function test_owner_cannot_delete_account_with_an_organization_or_their_own_account(): void
+    {
+        $owner = $this->owner();
+        $target = User::factory()->create(['email_verified_at' => null]);
+        app(OrganizationCreator::class)->create('Paid or provisional org', $target->id);
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/directory/users/'.$target->id.'/delete', [
+                'confirmation' => 'DELETE_USER_'.$target->id,
+            ])->assertSessionHasErrors('user');
+        $this->actingAs($owner)
+            ->post('/operator/directory/users/'.$owner->id.'/delete', [
+                'confirmation' => 'DELETE_USER_'.$owner->id,
+            ])->assertSessionHasErrors('user');
+        $this->assertDatabaseHas('users', ['id' => $target->id]);
+        $this->assertDatabaseHas('users', ['id' => $owner->id]);
+    }
+
+    public function test_owner_may_delete_only_a_standalone_user_with_explicit_confirmation_and_audit(): void
+    {
+        $owner = $this->owner();
+        $standalone = User::factory()->create(['email_verified_at' => null]);
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/directory/users/'.$standalone->id.'/delete', [
+                'confirmation' => 'DELETE_USER_'.$standalone->id,
+            ])->assertRedirect('/operator/directory');
+        $this->assertDatabaseMissing('users', ['id' => $standalone->id]);
+        $this->assertDatabaseHas('operator_action_audits', [
+            'actor_user_id' => $owner->id,
+            'action' => 'directory_standalone_user_deleted',
+        ]);
     }
 
     private function owner(): User

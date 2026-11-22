@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'owner-directory-guarded-management-20261122b',
+        title: 'Owner customer directory: edit, verification filters and guarded delete',
+        state: 'active',
+        detail: 'Super Admin account directory source includes verified/unverified filters, individual profile and contact edits, and explicit single-account deletion protected against owner identities and linked business records, with transaction/audit controls. No bulk deletion or email verification privilege override.',
+        evidence:
+            'Source-only candidate. Exact CI, security review, guarded Elite approval and authenticated UI click testing required before claiming this feature live.',
+    },
+    {
         id: 'unverified-signup-profile-org-audit-20261122',
         title: 'Accounts: second-stage privacy-safe unverified signup linkage audit',
         state: 'active',
