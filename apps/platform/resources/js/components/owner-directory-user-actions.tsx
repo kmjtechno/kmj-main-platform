@@ -28,7 +28,6 @@ export default function OwnerDirectoryUserActions({
     const [company, setCompany] = useState(
         user.customer_profile?.company_name ?? '',
     );
-    const [deletePhrase, setDeletePhrase] = useState('');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
 
@@ -57,7 +56,14 @@ export default function OwnerDirectoryUserActions({
     };
 
     const remove = () => {
-        if (busy || deletePhrase !== 'DELETE ' + user.email) return;
+        if (busy) return;
+        if (
+            !window.confirm(
+                'Permanently delete ' + user.name + ' (' + user.email +
+                ') and their private signup data? This cannot be undone. ' +
+                'Shared organizations, purchases and licenses will be protected.',
+            )
+        ) return;
         setBusy(true);
         setError('');
         router.post(
@@ -146,32 +152,22 @@ export default function OwnerDirectoryUserActions({
                     </button>
                 </form>
             </details>
-            <details className="rounded-xl border border-red-500/30 p-3">
-                <summary className="flex cursor-pointer items-center gap-2 text-xs text-red-300">
-                    <Trash2 className="size-4" aria-hidden="true" />
-                    Review deletion
-                </summary>
-                <p className="mt-3 text-xs text-red-200">
-                    This removes the account, private profile and any sole-owner
-                    empty signup organization. Shared organizations, purchases,
-                    licenses and audit records block deletion. Type
-                    <strong> DELETE {user.email}</strong>.
-                </p>
-                <input
-                    value={deletePhrase}
-                    onChange={(event) => setDeletePhrase(event.target.value)}
-                    aria-label="Type account deletion confirmation"
-                    className="bg-background mt-3 w-full rounded-lg border p-2 text-xs"
-                />
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-red-500/25 p-3">
                 <button
                     type="button"
-                    disabled={busy || deletePhrase !== 'DELETE ' + user.email}
+                    disabled={busy}
                     onClick={remove}
-                    className="mt-3 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold disabled:opacity-50"
+                    className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-500 disabled:opacity-50"
+                    aria-label={'Delete customer ' + user.name}
                 >
-                    Delete customer and signup data
+                    <Trash2 className="size-4" aria-hidden="true" />
+                    Delete
                 </button>
-            </details>
+                <p className="text-muted-foreground min-w-0 flex-1 text-xs">
+                    One confirmation. Private signup data removed only when
+                    no protected business or shared records are linked.
+                </p>
+            </div>
             {error && (
                 <p className="text-xs text-red-300" role="alert">
                     {error}
