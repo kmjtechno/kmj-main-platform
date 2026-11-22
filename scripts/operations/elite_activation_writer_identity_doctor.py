@@ -2,9 +2,9 @@
 """Read-only owner review gate for KMJ-elite activation-intent writer identity.
 
 Never installs broker, creates directories, reads request contents, changes
-permissions, starts units, approves a release or claims PHP-FPM pool routing.
-The preflight intentionally blocks if any worker under the fixed PHP-FPM master
-could write the queue with an unexpected identity.
+permissions, starts units, approves a release or changes pool configuration.
+It verifies the actual fixed production PHP-FPM listener and worker UIDs as a
+bounded read-only snapshot; unrelated pool workers are not reconfigured.
 """
 from __future__ import annotations
 
@@ -153,6 +153,97 @@ def pool_identity(master_pid: int, master: dict, children: list[dict], uid: int)
     return len(children)
 
 
+PRODUCTION_POOL = "php-fpm: pool kmj-elite-stage"
+PRODUCTION_LISTENER = "0100007F:525C"  # 127.0.0.1:21084
+
+
+def listener_inode() -> str:
+    """Prove one exact IPv4 LISTEN socket; never print inode or proc content."""
+    with Path("/proc/net/tcp").open("r", encoding="ascii") as stream:
+        data = stream.read(1048577)
+    require(len(data) <= 1048576, "BLOCKED_TCP_SNAPSHOT_OVERSIZE")
+    matches = []
+    for line in data.splitlines()[1:]:
+        fields = line.split()
+        require(len(fields) >= 10, "BLOCKED_TCP_SCHEMA")
+        if fields[1] == PRODUCTION_LISTENER and fields[3] == "0A":
+            inode = fields[9]
+            require(re.fullmatch(r"[0-9]{1,20}", inode) is not None
+                    and int(inode) > 0, "BLOCKED_TCP_INODE")
+            matches.append(inode)
+    require(len(matches) == 1, "BLOCKED_PRODUCTION_LISTENER_COUNT")
+    return matches[0]
+
+
+def host_network_namespace(pid: int) -> str:
+    """The process must be in the host init network namespace."""
+    require(1 <= pid <= 4194304, "BLOCKED_NETNS_PID")
+    return os.readlink(Path("/proc") / str(pid) / "ns/net")
+
+
+def holds_listener(pid: int, inode: str) -> bool:
+    """Read one process's fd symlinks only; fail closed on racing descriptors."""
+    require(1 <= pid <= 4194304, "BLOCKED_SOCKET_PID")
+    directory = Path("/proc") / str(pid) / "fd"
+    count = 0
+    for item in directory.iterdir():
+        count += 1
+        require(count <= 16384, "BLOCKED_FD_SCAN_OVERSIZE")
+        try:
+            if os.readlink(item) == "socket:[" + inode + "]":
+                return True
+        except FileNotFoundError:
+            raise Blocked("BLOCKED_SOCKET_FD_RACE") from None
+    return False
+
+
+def production_pool_binding(master_pid: int, master: dict,
+                            children: list[dict], uid: int) -> int:
+    """Only the exact production pool may hold its private listener.
+
+    Co-resident www/staging pools may run as their own users, but must never
+    hold the 21084 listener. This is bounded read-only snapshot evidence,
+    NOT a signed installation or durable permission to activate.
+    """
+    require(master["pid"] == master_pid and master["uids"] == (0, 0, 0, 0)
+            and master["exe"] == MASTER_EXE, "BLOCKED_FPM_MASTER_IDENTITY")
+    require(len(children) > 0 and len({w["pid"] for w in children}) == len(children),
+            "BLOCKED_FPM_WORKER_SNAPSHOT")
+    for w in children:
+        require(w["parent"] == master_pid
+                and w["exe"] == MASTER_EXE
+                and w["cmd"].startswith(WORKER_PREFIX)
+                and len(w["cmd"]) <= 100, "BLOCKED_UNKNOWN_FPM_CHILD")
+    prod = [w for w in children if w["cmd"] == PRODUCTION_POOL]
+    count = pool_identity(master_pid, master, prod, uid)
+    require(host_network_namespace(os.getpid()) == host_network_namespace(1),
+            "BLOCKED_NOT_HOST_NETNS")
+    host_ns = host_network_namespace(1)
+    require(host_network_namespace(master_pid) == host_ns,
+            "BLOCKED_MASTER_NETNS")
+    for w in children:
+        require(host_network_namespace(w["pid"]) == host_ns,
+                "BLOCKED_WORKER_NETNS")
+    inode = listener_inode()
+    require(holds_listener(master_pid, inode), "BLOCKED_MASTER_LISTENER_BINDING")
+    for w in children:
+        holds = holds_listener(w["pid"], inode)
+        if w["cmd"] == PRODUCTION_POOL:
+            require(holds, "BLOCKED_PRODUCTION_WORKER_LISTENER_BINDING")
+        else:
+            require(not holds, "BLOCKED_FOREIGN_POOL_LISTENER_BINDING")
+    # Bound both process identity and listening socket to a second snapshot.
+    require(listener_inode() == inode
+            and fixed_live_children(master_pid) == children,
+            "BLOCKED_PRODUCTION_BINDING_RACE")
+    require(holds_listener(master_pid, inode), "BLOCKED_MASTER_LISTENER_RACE")
+    for w in children:
+        holds = holds_listener(w["pid"], inode)
+        require(holds == (w["cmd"] == PRODUCTION_POOL),
+                "BLOCKED_WORKER_LISTENER_RACE")
+    return count
+
+
 def fixed_master_pid() -> int:
     p = subprocess.run(
         ["/usr/bin/systemctl", "show", "--no-pager", UNIT,
@@ -221,7 +312,7 @@ def inspect() -> int:
         phase = "FPM_CHILD_PROCESSES"
         children = fixed_live_children(master_pid)
         phase = "FPM_CHILD_IDENTITY"
-        count = pool_identity(master_pid, master, children, uid)
+        count = production_pool_binding(master_pid, master, children, uid)
         # Ensure the master did not change underneath the read-only scan.
         phase = "FPM_MASTER_RECHECK"
         require(fixed_master_pid() == master_pid
