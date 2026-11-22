@@ -50,6 +50,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Unit test pins the header; exact-head CI only. Not deployed and not yet proven against the live GitHub catalog.',
     },
     {
+        id: 'adr-004-rev2-credit-and-local-20261122',
+        title: 'ADR-004 revision 2: credit-limited cloud routes and owner-operated local routes',
+        state: 'active',
+        detail: 'Policy document only, owner-directed: credit-limited cloud routes become admissible under hard-cap rules (no overage possible, own usage counter, expiring evidence) and owner-registered local endpoints are no longer prohibited. Paid fallback stays prohibited and NO_FREE_ROUTE_AVAILABLE stays. No routing code changes: credit and local routes need their own reviewed slices.',
+        evidence:
+            'Docs-only change with exact-head CI; nothing deployed and no new route is admitted yet.',
+    },
+    {
         id: 'unverified-cleanup-empty-signup-org-20261122',
         title: 'Unverified-account cleanup: removable when the only link is an empty signup organization',
         state: 'active',
