@@ -5,7 +5,7 @@ KMJ TECHNO Main Platform is the clean-foundation enterprise operating platform f
 ## Locked boundaries
 - This repository is **not** KMJ Cloud Nexus. Cloud Nexus remains separate and untouched.
 - Git is the source of truth.
-- Cloud-only generative AI; no local LLM inference.
+- Zero-spend generative AI per ADR-004 rev 2: free and hard-capped credit-limited cloud routes, plus owner-operated local endpoints; no paid fallback.
 - Paid AI fallback is prohibited. Unknown cost is not free.
 - If no currently verified zero-cost AI route exists, return `NO_FREE_ROUTE_AVAILABLE` and keep deterministic workflows usable.
 - One authoritative writer per protected repository/worktree.
