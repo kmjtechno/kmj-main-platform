@@ -345,6 +345,7 @@ Route::get('oauth/clients/huggingface.json', [HuggingFaceConnectController::clas
     ->middleware('throttle:60,1')->name('ai-providers.huggingface.metadata');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    require __DIR__.'/kslp-customer.php';
     require __DIR__.'/ai-providers.php';
     require __DIR__.'/codebridge-workspace.php';
 

@@ -1,0 +1,55 @@
+name: KSLP Customer Hub source and formatter preview
+
+on:
+  pull_request:
+    paths:
+      - 'apps/platform/app/Services/Licensing/Kslp/KslpCustomerWorkspaceQuery.php'
+      - 'apps/platform/routes/kslp-customer.php'
+      - 'apps/platform/tests/Feature/KslpCustomerWorkspaceTest.php'
+      - 'apps/platform/resources/js/pages/licensing-hub.tsx'
+      - 'apps/platform/resources/js/components/app-sidebar.tsx'
+      - '.github/workflows/kslp-customer-hub-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  safe-source-and-format-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify PHP route, service and tenant isolation test syntax
+        run: |
+          php -l apps/platform/app/Services/Licensing/Kslp/KslpCustomerWorkspaceQuery.php
+          php -l apps/platform/routes/kslp-customer.php
+          php -l apps/platform/tests/Feature/KslpCustomerWorkspaceTest.php
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/platform/package-lock.json
+      - name: Print exact Vite Plus formatting diff without touching source branch
+        working-directory: apps/platform
+        run: |
+          set -Eeuo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          ./node_modules/.bin/vp fmt resources/js/pages/licensing-hub.tsx
+          git --no-pager diff -- resources/js/pages/licensing-hub.tsx
+      - name: Ensure source never calls release endpoints or stores secrets
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          route = Path('apps/platform/routes/kslp-customer.php').read_text()
+          svc = Path('apps/platform/app/Services/Licensing/Kslp/KslpCustomerWorkspaceQuery.php').read_text()
+          assert "middleware(['auth', 'verified'])" in Path('apps/platform/routes/web.php').read_text()
+          assert "'Cache-Control', 'private, no-store'" in route
+          assert "user->hasVerifiedEmail()" in route
+          assert "whereIn('customer_id', $customerIds)" in svc
+          assert "whereIn('e.organization_id', array_keys($organizationNames))" in svc
+          assert "'online_status' => 'not_verified'" in svc
+          for forbidden in ['systemctl', 'shell_exec', 'file_get_contents(', 'private_key', 'password_hash']:
+              assert forbidden not in svc
+          print('KSLP_CUSTOMER_SOURCE_ONLY=PASS_NO_PRODUCTION_MUTATION')
+          PY

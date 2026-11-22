@@ -42,7 +42,7 @@ const baseNavItems: NavItem[] = [
     },
     {
         title: 'Licensing Hub',
-        href: '/developer/apps',
+        href: '/licensing',
         icon: Code2,
     },
     {
@@ -141,7 +141,7 @@ export function AppSidebar() {
                     items={
                         operator?.enabled
                             ? baseNavItems.filter(
-                                  (item) => item.href !== '/developer/apps',
+                                  (item) => item.href !== '/licensing',
                               )
                             : baseNavItems
                     }
