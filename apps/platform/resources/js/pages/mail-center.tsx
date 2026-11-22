@@ -336,11 +336,7 @@ export default function MailCenter({
                                 KMJ Mail
                             </h1>
                             <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-6">
-                                Your independent, private KMJ mail workspace.
-                                Inbox, Sent, Drafts, threads, search and staff
-                                permissions are powered by KMJ Main Platform. No
-                                Gmail account, Google OAuth or external mail
-                                provider is required for internal messages.
+                                Your independent KMJ Mail workspace supports private team messages and guarded internet email to Gmail, Outlook, Yahoo and other addresses. No Gmail account linking, OAuth or third-party mailbox access.
                             </p>
                         </div>
                         <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs">
@@ -349,7 +345,7 @@ export default function MailCenter({
                                 {isOwner ? 'Super Admin' : 'Approved KMJ Staff'}
                             </span>
                             <span className="text-muted-foreground mt-1 block">
-                                Private internal delivery · On-platform
+                                Private internal delivery · Guarded external SMTP
                             </span>
                         </div>
                     </div>
@@ -367,7 +363,7 @@ export default function MailCenter({
                                 KMJ team recipients
                             </span>
                             <strong className="mt-1 block text-2xl font-bold tabular-nums">
-                                {directory.length}
+                                {directory.filter((person) => person.id !== myUserId).length}
                             </strong>
                         </div>
                         <div className="bg-background/45 rounded-xl border p-4">
@@ -375,13 +371,12 @@ export default function MailCenter({
                                 Internet mail
                             </span>
                             <strong className="mt-1 block text-sm font-semibold">
-                                {externalMailEnabled
-                                    ? 'Enabled'
-                                    : 'Not enabled yet'}
+                                {externalOutbound.state === 'ready_to_queue'
+                                    ? 'Postfix outbound ready'
+                                    : 'External sending not activated'}
                             </strong>
                             <span className="text-muted-foreground mt-1 block text-[11px]">
-                                Domain routing needs separate delivery
-                                verification
+                                External sending uses KMJ Postfix, no Gmail connection. Inbox reception requires a separate pilot.
                             </span>
                         </div>
                     </div>
@@ -742,36 +737,75 @@ export default function MailCenter({
                                           : 'Compose'}
                                 </h2>
                                 <p className="text-muted-foreground mt-2 text-xs leading-6">
-                                    Internal delivery only. Recipients must be
-                                    verified KMJ staff or the Platform Owner. No
-                                    external email address or SMTP relay is
-                                    involved.
+                                    Send to any valid email address through KMJ TECHNO's own Postfix mail server, or message approved internal teammates. A queued message is not proof of inbox delivery.
                                 </p>
                                 <div className="mt-6 space-y-4">
-                                    <label className="block text-xs font-semibold">
-                                        To · KMJ colleague
-                                        <select
-                                            aria-label="KMJ recipient"
-                                            value={recipientId}
-                                            onChange={(e) =>
-                                                setRecipientId(e.target.value)
-                                            }
-                                            className="bg-background mt-2 min-h-12 w-full rounded-xl border px-3 text-sm"
-                                        >
-                                            <option value="">
-                                                Select a verified recipient
-                                            </option>
-                                            {directory.map((person) => (
-                                                <option
-                                                    key={person.id}
-                                                    value={person.id}
-                                                >
-                                                    {person.name} ·{' '}
-                                                    {person.role}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </label>
+                                    <div role="group" aria-label="Recipient type">
+                                        <p className="mb-2 text-xs font-semibold">Send to</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            <button
+                                                type="button"
+                                                aria-pressed={recipientType === 'external'}
+                                                onClick={() => setRecipientType('external')}
+                                                className={'min-h-11 rounded-xl border px-4 text-sm font-semibold ' +
+                                                    (recipientType === 'external' ? 'border-red-500 bg-red-500/10 text-red-500' : 'text-muted-foreground hover:text-foreground')}
+                                            >
+                                                Email address · Gmail / Outlook / Any
+                                            </button>
+                                            <button
+                                                type="button"
+                                                aria-pressed={recipientType === 'internal'}
+                                                onClick={() => setRecipientType('internal')}
+                                                className={'min-h-11 rounded-xl border px-4 text-sm font-semibold ' +
+                                                    (recipientType === 'internal' ? 'border-red-500 bg-red-500/10 text-red-500' : 'text-muted-foreground hover:text-foreground')}
+                                            >
+                                                KMJ colleague
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {recipientType === 'external' ? (
+                                        <div className="space-y-2">
+                                            <label className="block text-xs font-semibold">
+                                                To · external email address
+                                                <input
+                                                    type="email"
+                                                    aria-label="External recipient email address"
+                                                    inputMode="email"
+                                                    autoComplete="email"
+                                                    maxLength={254}
+                                                    placeholder="someone@gmail.com"
+                                                    value={recipientEmail}
+                                                    onChange={(event) => setRecipientEmail(event.target.value)}
+                                                    className="bg-background mt-2 min-h-12 w-full rounded-xl border px-3 text-sm"
+                                                />
+                                            </label>
+                                            <div className="text-muted-foreground rounded-xl border border-dashed px-4 py-3 text-xs leading-5">
+                                                <strong className="block text-foreground">
+                                                    From: {externalOutbound.from ?? 'KMJ domain sender (not activated)'}
+                                                </strong>
+                                                {externalOutbound.state === 'ready_to_queue'
+                                                    ? 'You can queue one external email. Postfix acceptance will appear in Sent; recipient Inbox delivery is not guaranteed.'
+                                                    : 'External sending is not activated for this mailbox. You can save an external draft, but the Send action is disabled until KMJ mail transport and sender authorization are approved.'}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <label className="block text-xs font-semibold">
+                                            To · verified KMJ colleague
+                                            <select
+                                                aria-label="KMJ recipient"
+                                                value={recipientId}
+                                                onChange={(event) => setRecipientId(event.target.value)}
+                                                className="bg-background mt-2 min-h-12 w-full rounded-xl border px-3 text-sm"
+                                            >
+                                                <option value="">Select an approved team member</option>
+                                                {directory.map((person) => (
+                                                    <option key={person.id} value={person.id}>
+                                                        {person.name} · {person.role}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                    )}
                                     <label className="block text-xs font-semibold">
                                         Subject
                                         <input
