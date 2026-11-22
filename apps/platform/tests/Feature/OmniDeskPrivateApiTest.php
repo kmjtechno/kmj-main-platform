@@ -57,6 +57,39 @@ final class OmniDeskPrivateApiTest extends TestCase
             ->assertHeader('Cache-Control', 'no-store, private');
     }
 
+    public function test_future_entitlement_never_reports_active_license_status(): void
+    {
+        $fixture = $this->fixture();
+        DB::table('entitlements')
+            ->where('id', $fixture['entitlement_id'])
+            ->update(['starts_at' => now()->addHour()]);
+        $this->bindPrincipal($fixture['organization_id']);
+
+        $this->getJson(
+            '/api/v1/licensing/omnidesk/activations/'.$fixture['activation_id'].'/status',
+        )
+            ->assertOk()
+            ->assertJsonPath('state', 'RESTRICTED')
+            ->assertJsonPath('reason_codes.0', 'ENTITLEMENT_NOT_YET_ACTIVE')
+            ->assertJsonPath('current_sequence', 1);
+    }
+
+    public function test_retargeted_entitlement_capability_is_not_valid_for_omnidesk(): void
+    {
+        $fixture = $this->fixture();
+        DB::table('entitlements')
+            ->where('id', $fixture['entitlement_id'])
+            ->update(['capability' => 'unrelated.capability']);
+        $this->bindPrincipal($fixture['organization_id']);
+
+        $this->getJson(
+            '/api/v1/licensing/omnidesk/activations/'.$fixture['activation_id'].'/status',
+        )
+            ->assertOk()
+            ->assertJsonPath('state', 'RESTRICTED')
+            ->assertJsonPath('reason_codes.0', 'ENTITLEMENT_INACTIVE');
+    }
+
     public function test_cross_tenant_activation_lookup_does_not_disclose_binding(): void
     {
         $fixture = $this->fixture();
