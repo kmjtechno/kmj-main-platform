@@ -114,6 +114,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Unit test pins the header; exact-head CI only. Not deployed and not yet proven against the live GitHub catalog.',
     },
     {
+        id: 'release-center-live-status-20261122',
+        title: 'Release Center phase 3a: advisory live status for Main Platform',
+        state: 'active',
+        detail: 'Source-only: the read-only Release Center shows, for Main Platform only, this server\'s own deployed SHA and the root preflight receipt state (ready, already live, blocked or no fresh receipt). It is labelled advisory: it is not proof of a release, cannot start one, and other projects stay "not connected". No auto-stage and no approval path were added.',
+        evidence:
+            'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
+    },
+    {
         id: 'release-center-list-20261122',
         title: 'Release Center phase 2: read-only /operator/release-center list',
         state: 'active',

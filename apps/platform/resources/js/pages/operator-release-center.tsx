@@ -16,6 +16,20 @@ type Contract = {
     signing: string;
 };
 
+type Live = {
+    deployed_sha: string | null;
+    readiness_status: string;
+    readiness_reason: string;
+    approved_sha: string | null;
+};
+
+const readinessLabel: Record<string, string> = {
+    preflight_ready_only: 'Approved release is ready for activation',
+    already_live_observed: 'Approved release is already live',
+    blocked: 'Blocked',
+    unavailable: 'No fresh root receipt',
+};
+
 type Catalog = {
     status: string;
     contracts: Contract[];
@@ -30,8 +44,10 @@ const riskTone: Record<string, string> = {
 
 export default function OperatorReleaseCenter({
     catalog,
+    live,
 }: {
     catalog: Catalog;
+    live: Record<string, Live>;
 }) {
     return (
         <>
@@ -157,10 +173,46 @@ export default function OperatorReleaseCenter({
                                     ))}
                                 </ul>
                             </details>
-                            <p className="text-muted-foreground mt-3 text-xs">
-                                Live status: not connected yet (stage and
-                                approval come in a later phase).
-                            </p>
+                            {live[contract.project] ? (
+                                <div
+                                    className="bg-muted mt-3 rounded-xl p-3 text-xs"
+                                    data-testid="release-live-status"
+                                >
+                                    <p className="font-bold">
+                                        Live now:{' '}
+                                        <span className="font-mono">
+                                            {live[contract.project].deployed_sha
+                                                ? live[
+                                                      contract.project
+                                                  ].deployed_sha!.slice(0, 12)
+                                                : 'unknown'}
+                                        </span>
+                                    </p>
+                                    <p className="text-muted-foreground mt-1">
+                                        Preflight:{' '}
+                                        {readinessLabel[
+                                            live[contract.project]
+                                                .readiness_status
+                                        ] ?? 'Unknown'}{' '}
+                                        (
+                                        {
+                                            live[contract.project]
+                                                .readiness_reason
+                                        }
+                                        )
+                                    </p>
+                                    <p className="text-muted-foreground mt-1">
+                                        Advisory view from this server&apos;s
+                                        own state. It is not proof of a release
+                                        and cannot start one.
+                                    </p>
+                                </div>
+                            ) : (
+                                <p className="text-muted-foreground mt-3 text-xs">
+                                    Live status: not connected yet for this
+                                    project.
+                                </p>
+                            )}
                         </article>
                     ))}
                 </section>
