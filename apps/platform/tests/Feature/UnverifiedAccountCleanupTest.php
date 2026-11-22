@@ -226,7 +226,6 @@ final class UnverifiedAccountCleanupTest extends TestCase
         $this->assertDatabaseHas('organizations', ['id' => $orgId]);
     }
 
-
     public function test_postgresql_cleanup_refuses_concurrent_membership_writer_without_deletion(): void
     {
         if (DB::getDriverName() !== 'pgsql') {
