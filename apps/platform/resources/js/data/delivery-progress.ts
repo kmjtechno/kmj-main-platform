@@ -19,11 +19,11 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     },
     {
         id: 'kmj-native-external-postfix-compose-20261122',
-        title: 'KMJ Mail: independent guarded external sending through Elite Postfix',
+        title: 'KMJ Mail: guarded independent external sending through Elite Postfix',
         state: 'active',
-        detail: 'Source-only draft PR #1035 replaces the sandbox-incompatible sendmail/postdrop submission path with timeout-bounded Postfix SMTP over fixed 127.0.0.1:25. Native outbound requires both owner-enabled external mail and a separate explicit loopback_smtp transport setting; default transport is disabled even when the previous activation flag survives deployment. Existing owner and authorized staff sender policy, daily quotas and idempotency remain. The earlier production sendmail job is still blocked by NoNewPrivileges and must not be blindly retried.',
+        detail: 'Postfix loopback SMTP (fixed 127.0.0.1:25, 8-second timeout) is LIVE on platform-4e3becf36eb2 but real acceptance is NOT working: the first actual native-mail job failed with transport_error. Owner no-send SMTP handshake isolated a TLS failure under the native Symfony transport. Follow-up source PR changes only the credential-free, loopback-pinned native mailer to auto_tls=false; the ordinary transactional and Internet mail transports retain their TLS settings. Native SMTP requires explicit owner activation and preserves user authorization, quotas and idempotency.',
         evidence:
-            'P0 incident #1029: postdrop effective GID 1000 rather than group 125, 295 Permission denied errors, worker stuck in pipe_read, old message ID1 submitting and ID2 queued. Draft PR #1035 is not merged, deployed or activated. CI exact-head, loopback SMTP listener/relay-safety inspection, queue reconciliation, owner-signed Elite release and actual recipient inbox/authentication proof are required. MTA acceptance is not delivery; inbound mail and full JMAP remain pending.',
+            '2026-11-22 P0 #1029: production worker restarted successfully, no blocked postdrop children; ID1 submitting UNKNOWN (do not resend); ID2 failed/transport_error without MTA acceptance; 0 pending native jobs; Postfix queue contains only older Nov 21 deferred message. Owner local no-send handshake reported FAIL/TLS; Postfix smtpd 4 localhost connections, 0 rejects. Source change requires exact-head CI, owner-signed Elite deploy, no-send handshake PASS after release, a NEW consented test and independent recipient inbox authentication evidence. Real outbound delivery remains unverified.',
     },
     {
         id: 'kmj-owner-team-mail-center-20261122',
