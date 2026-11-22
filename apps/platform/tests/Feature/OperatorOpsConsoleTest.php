@@ -82,6 +82,31 @@ final class OperatorOpsConsoleTest extends TestCase
         ]);
     }
 
+    public function test_codebridge_stage_is_owner_only_with_password_confirmation_and_passkey(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/ops/actions/codebridge-stage', [
+                'confirmation' => 'STAGE_CODEBRIDGE_MAIN',
+            ])->assertForbidden();
+    }
+
+    public function test_codebridge_stage_fails_closed_without_server_side_github_credentials(): void
+    {
+        config()->set('services.codebridge_stage.github_token', '');
+        $owner = $this->platformOwner();
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/ops/actions/codebridge-stage', [
+                'confirmation' => 'STAGE_CODEBRIDGE_MAIN',
+            ])->assertStatus(409);
+
+        $this->assertDatabaseMissing('operator_action_audits', [
+            'action' => 'codebridge.stage',
+        ]);
+    }
+
     private function platformOwner(): User
     {
         $user = User::factory()->create([

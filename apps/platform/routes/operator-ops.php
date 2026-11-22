@@ -3,6 +3,7 @@
 use App\Models\OperatorActionAudit;
 use App\Models\User;
 use App\Services\Events\OutboxHealthSnapshot;
+use App\Services\Operations\CodeBridgeStageDispatcher;
 use App\Services\Operations\DeliveryControlRequestQueue;
 use App\Services\Operations\EliteActivationIntentQueue;
 use App\Services\Operations\EliteReleaseReadinessSnapshot;
@@ -24,6 +25,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             ServerMetricsSnapshot $metrics,
             OperationalReadinessSnapshot $readiness,
             EliteReleaseReadinessSnapshot $eliteRelease,
+            CodeBridgeStageDispatcher $codebridgeStage,
             OutboxHealthSnapshot $outboxHealth,
         ) {
             $user = $request->user();
@@ -164,10 +166,35 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 'snapshot' => $snapshot,
                 'readiness' => $readinessSnapshot,
                 'eliteRelease' => $eliteReleaseSnapshot,
+                'codebridgeStage' => $codebridgeStage->snapshot(),
                 'outbox' => $outboxSnapshot,
                 'recentActions' => $recentActions,
             ]);
         })->name('ops.index');
+
+        Route::post('ops/actions/codebridge-stage', function (
+            Request $request,
+            PlatformOwnerAccess $access,
+            CodeBridgeStageDispatcher $dispatcher,
+        ) {
+            $user = $request->user();
+            abort_unless($user instanceof User, 401);
+            $access->require($user);
+            $request->validate([
+                'confirmation' => ['required', 'in:STAGE_CODEBRIDGE_MAIN'],
+            ]);
+
+            try {
+                $dispatcher->request($user);
+            } catch (RuntimeException $exception) {
+                // No upstream response contents, tokens or bearer headers
+                // are ever reflected in a web error.
+                abort(409, 'CodeBridge staging blocked. Check signed Release Center status and configuration.');
+            }
+
+            return redirect()->route('operator.ops.index')
+                ->with('success', 'Staging request accepted. CI and receipt verification remain pending.');
+        })->middleware('throttle:2,1')->name('ops.codebridge-stage');
 
         Route::post('ops/actions/queue-restart', function (
             Request $request,

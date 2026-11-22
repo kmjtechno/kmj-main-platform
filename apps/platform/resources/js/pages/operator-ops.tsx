@@ -1,5 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
+import CodeBridgeStageControl from '@/components/codebridge/codebridge-stage-control';
 import {
     Activity,
     ArchiveRestore,
@@ -143,6 +144,7 @@ type EliteRelease = {
 };
 
 type Props = {
+    codebridgeStage: { status: string; configured: boolean; workflow_url: string };
     snapshot: OpsSnapshot;
     eliteRelease: EliteRelease;
     readiness: OperationalReadiness;
@@ -282,6 +284,7 @@ function backupDetail(backup: BackupStatus): string {
 }
 
 export default function OperatorOps({
+    codebridgeStage,
     snapshot,
     readiness,
     recentActions,
@@ -723,6 +726,8 @@ export default function OperatorOps({
                         </div>
                     ) : null}
                 </section>
+
+                <CodeBridgeStageControl stage={codebridgeStage} />
 
                 <section
                     id="owner-backup-freshness"
