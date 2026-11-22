@@ -56,7 +56,6 @@ final class KslpCustomerWorkspaceTest extends TestCase
 
         $response = $this->actingAs($user)->get('/licensing?customer_id='.$other->id);
         $response->assertOk()
-            ->assertHeader('Cache-Control', 'private, no-store')
             ->assertInertia(fn (Assert $page) => $page
                 ->component('licensing-hub')
                 ->where('authorization_source', 'authenticated_verified_membership')
@@ -70,6 +69,10 @@ final class KslpCustomerWorkspaceTest extends TestCase
                 ->where('licenses.0.signed_download_verified', false)
                 ->where('device_reset_enabled', false)
                 ->where('paid_issuance_enabled', false));
+
+        $cacheControl = strtolower((string) $response->headers->get('Cache-Control'));
+        self::assertStringContainsString('private', $cacheControl);
+        self::assertStringContainsString('no-store', $cacheControl);
 
         $json = $response->getContent();
         self::assertIsString($json);
