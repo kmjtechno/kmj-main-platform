@@ -181,6 +181,7 @@ final class BrandedTransactionalSuiteTest extends TestCase
         // Notification::fake prevents a real send. Config is test-only.
         config()->set('services.kmj_transactional_mail.enabled', true);
         config()->set('services.kmj_transactional_mail.send_payment_receipts', false);
+        config()->set('services.kmj_transactional_mail.not_before', now()->subDay()->utc()->format('Y-m-d\\TH:i:s\\Z'));
         config()->set('mail.default', 'sendmail');
         config()->set('mail.from.address', 'info@kmjtechno.com');
     }
