@@ -1,13 +1,13 @@
 # KMJ Mail: independent enterprise mail architecture (2026-11-22)
 
-Status: **design + guarded first code change**, **NOT live or fully tested**. Source of truth for implementation remains actual GitHub commits, CI and on-host runtime evidence. No Gmail OAuth, Google VPS, new paid services, DNS/MX cutover or blind resend.
+Status: **2026-11-22 incident active**. The first guarded loopback SMTP transport is LIVE on platform-4e3becf36eb2, but first attempted native message failed with TLS-related handshake classification. Follow-up source patch (not LIVE) disables only opportunistic STARTTLS for the credential-free, fixed loopback peer. Source of truth for implementation remains actual GitHub commits, CI and on-host runtime evidence. No Gmail OAuth, Google VPS, new paid services, DNS/MX cutover or blind resend.
 
 ## Current architecture and P0 incident
 
 - KMJ Main Platform (Laravel 13, PHP 8.4, PostgreSQL) has authenticated owner/staff internal mail, external compose, durable queued jobs, owner-granted sender aliases and quota/idempotency safeguards.
 - Postfix + OpenDKIM on KMJ-elite handle Internet outbound; the old transactional `sendmail` transport must remain untouched by this feature branch.
 - Existing native outbound job used `/usr/sbin/sendmail -t -i`; this spawned `postdrop`. The production queue systemd unit has `NoNewPrivileges=yes`; the live postdrop child inherited `NoNewPrivs:1` and effective GID 1000 rather than required group postdrop GID 125. `mail_queue_enter` logged 295 permission-denied failures and the PHP worker hung in `pipe_read`.
-- Mail message ID1 is `submitting` (uncertain, NEVER blindly resend), ID2 remains `queued`. A Nov 21 deferred Postfix queue entry is older than both. The precise outcomes need reconciliation without duplicate submission.
+- Mail message ID1 remains `submitting` (uncertain, NEVER blindly resend). After the old worker was restarted under the new release, mail ID2 became `failed` with `transport_error`, no MTA acceptance; native jobs=0. Postfix still holds only an older Nov21 deferred message. The first native SMTP handshake in a no-message diagnostic returned `FAIL / TLS` (Postfix advertises opportunistic STARTTLS, `smtpd_tls_security_level=may`). No recipient delivery has been established.
 - P0 incident issue: https://github.com/kmjtechno/kmj-main-platform/issues/1029
 
 ## P0 bounded local SMTP adapter
@@ -15,6 +15,7 @@ Status: **design + guarded first code change**, **NOT live or fully tested**. So
 Keep `NoNewPrivileges=yes` and the Postfix spool permissions unchanged. Use **Symfony/Laravel SMTP over pinned TCP 127.0.0.1:25**, avoiding a setgid postdrop subprocess inside the sandboxed worker.
 
 1. The `kmj_native_loopback` mailer has immutable host `127.0.0.1`, port `25`, no authentication secrets, no caller-controlled DSN or fallback and explicit `timeout=8` seconds. It is ONLY for native owner/staff external mail.
+   **P0 follow-up:** Symfony automatically attempts STARTTLS when advertised; Postfix's loopback 127.0.0.1 endpoint failed TLS handshake without a message. On this fixed, credential-free local-only hop only, set Symfony `auto_tls=false` (do not disable TLS peer verification; do not generalize to Internet SMTP, authenticated clients or other mailers). Re-run no-DATA SMTP handshake under `kmjprod` before any new send.
 2. Independent `KMJ_NATIVE_EXTERNAL_MAIL_TRANSPORT=loopback_smtp` must be explicitly owner-set. Its default is `disabled`, including when the earlier `KMJ_NATIVE_EXTERNAL_MAIL_ENABLED=true` survives. This deliberately fails closed on first deployment.
 3. The native mailer's transportEnabled guard checks the fixed values. It must not inherit the app's transactional `MAIL_MAILER` transport for message submission. Sender identity, quotas, actor permission, idempotency and `$tries=1` no-automatic-retry remain.
 4. `mta_accepted` means the local SMTP server responded successfully, **never** proof of delivery to recipient. A transport timeout can mean unknown handoff; do not automatically resend any `submitting` message.
