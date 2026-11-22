@@ -1,0 +1,29 @@
+name: Release Contracts
+
+on:
+  pull_request:
+    paths:
+      - "release/contracts/**"
+      - "scripts/validate_release_contracts.py"
+      - "scripts/test_validate_release_contracts.py"
+      - ".github/workflows/release-contracts.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Validate release contracts and run negative tests (no network, no secrets)
+        run: |
+          set -Eeuo pipefail
+          python3 -B scripts/validate_release_contracts.py
+          python3 -B -m unittest discover -s scripts -p 'test_validate_release_contracts.py' -v
+          echo "RELEASE_CONTRACTS_QA=PASS"
+          echo "RELEASE_EXECUTED=NO"

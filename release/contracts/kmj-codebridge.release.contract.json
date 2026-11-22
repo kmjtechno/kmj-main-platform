@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "project": "kmj-codebridge",
+  "kind": "node-service",
+  "repository": "kmjtechno/kmj-codebridge",
+  "default_branch": "main",
+  "required_checks": [
+    "verify (ubuntu-24.04)",
+    "verify (windows-latest)",
+    "distribution",
+    "clients",
+    "registry_manifest",
+    "gateway",
+    "public_oauth"
+  ],
+  "stage": { "gate": "ci-verify" },
+  "smoke": { "probe": "gateway-health" },
+  "health": { "probe": "device-updater-status" },
+  "rollback": { "strategy": "previous-signed-manifest" },
+  "data_risk": "none",
+  "approval": "owner-passkey",
+  "signing": "owner-signed-manifest"
+}
