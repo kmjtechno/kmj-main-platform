@@ -49,6 +49,11 @@ return [
         'not_before' => env('KMJ_TRANSACTIONAL_NOT_BEFORE', ''),
     ],
 
+    // Self-addressed workforce mail samples only; Gmail OAuth and mass-send are not configured.
+    'kmj_workforce_mail' => [
+        'preview_enabled' => (bool) env('KMJ_WORKFORCE_MAIL_PREVIEW_ENABLED', false),
+    ],
+
     'kmj_developer_licensing' => [
         'enabled' => (bool) env('KMJ_DEVELOPER_LICENSING_ENABLED', false),
     ],
