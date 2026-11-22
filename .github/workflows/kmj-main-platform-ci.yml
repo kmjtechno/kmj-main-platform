@@ -75,10 +75,17 @@ jobs:
             echo 'Frontend dependencies unavailable; no format preview.'
             exit 0
           fi
-          node_modules/.bin/vp fmt             resources/js/components/codebridge/device-policy-display.ts \
-            resources/js/components/codebridge/device-control-center.tsx             resources/js/pages/services/codebridge.tsx             scripts/check-codebridge-dashboard-truth.test.mjs || true
-          git diff --             resources/js/components/codebridge/device-policy-display.ts \
-            resources/js/components/codebridge/device-control-center.tsx             resources/js/pages/services/codebridge.tsx             scripts/check-codebridge-dashboard-truth.test.mjs
+          # Temporary ModelFabric format evidence probe; remove before merge.
+          node_modules/.bin/vp fmt \
+            resources/js/components/modelfabric-safe-playground.tsx \
+            resources/js/pages/operator-modelfabric.tsx \
+            scripts/check-modelfabric.test.mjs || true
+          echo KMJ_MODEL_FABRIC_FORMAT_DIFF_BEGIN
+          git --no-pager diff -- \
+            resources/js/components/modelfabric-safe-playground.tsx \
+            resources/js/pages/operator-modelfabric.tsx \
+            scripts/check-modelfabric.test.mjs
+          echo KMJ_MODEL_FABRIC_FORMAT_DIFF_END
 
   codebridge-windows-oneclick:
     name: Windows one-click PowerShell parser
