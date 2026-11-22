@@ -120,6 +120,12 @@ return [
             'scheme' => null,
             'host' => '127.0.0.1',
             'port' => 25,
+            // Symfony automatically upgrades SMTP with STARTTLS when Postfix
+            // advertises it. Local-only port 25 is uncredentialed and pinned
+            // to IPv4 loopback, so do not negotiate the host's externally
+            // mismatched TLS certificate inside this private hop.
+            // Never copy auto_tls=false to internet SMTP or credential mailers.
+            'auto_tls' => false,
             'username' => null,
             'password' => null,
             'timeout' => 8,
