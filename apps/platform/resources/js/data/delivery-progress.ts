@@ -138,6 +138,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-collect-all-and-broker-units-20261122',
+        title: 'Release evidence runner and admission broker units, plus intent cleanup',
+        state: 'active',
+        detail: 'Source-only owner-invoked runner that collects every non-owner receipt for the current protected approval in a fixed order from the approval file alone, and fixed systemd units for the admission broker that cannot start a release. The broker now removes each processed intent so a stale request can never block a retry.',
+        evidence:
+            'Unit tests and exact-head CI only. Nothing is installed on Elite yet; the pinned installer is the next slice.',
+    },
+    {
         id: 'ops-release-admission-intent-20261122',
         title: 'Ops: owner request for release admission with an explicit authenticated-QA attestation',
         state: 'active',
