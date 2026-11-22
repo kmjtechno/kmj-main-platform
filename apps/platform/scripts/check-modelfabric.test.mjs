@@ -112,6 +112,14 @@ void test('token form warns when a private-source token could not route anything
     assert.match(page, /Untick Private source/);
 });
 
+void test('provider errors are explained in plain language with a next step', () => {
+    const page = read('resources/js/pages/operator-modelfabric.tsx');
+    assert.match(page, /const errorHelp/);
+    assert.match(page, /models:read permission/);
+    assert.match(page, /modelfabric-error-help/);
+    assert.match(page, /startsWith\('invalid_catalog'\)/);
+});
+
 void test('owner daily caps and priority are enforced before provider limits and stay owner-only', () => {
     const gateway = read('app/Services/AiProviders/ModelFabricGateway.php');
     const scorer = read('app/Services/AiProviders/RouteScorer.php');
