@@ -145,7 +145,8 @@ export default function OperatorReleaseCenter({
                                         Staging QA
                                     </dt>
                                     <dd className="font-mono text-xs">
-                                        {contract.staging_qa_probe ?? 'not declared'}
+                                        {contract.staging_qa_probe ??
+                                            'not declared'}
                                     </dd>
                                 </div>
                                 <div>
@@ -153,7 +154,8 @@ export default function OperatorReleaseCenter({
                                         Restore proof
                                     </dt>
                                     <dd className="font-mono text-xs">
-                                        {contract.restore_probe ?? 'not declared'}
+                                        {contract.restore_probe ??
+                                            'not declared'}
                                     </dd>
                                 </div>
                                 <div>
