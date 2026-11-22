@@ -184,9 +184,7 @@ export default function MailCenter({
             (item) => item.folder === 'drafts',
         );
         if (!selected) return;
-        setRecipientId(
-            selected.to_id === null ? '' : String(selected.to_id),
-        );
+        setRecipientId(selected.to_id === null ? '' : String(selected.to_id));
         setSubject(selected.subject);
         setBody(selected.body);
         setDraftId(selected.id);
@@ -196,7 +194,10 @@ export default function MailCenter({
 
     const submit = (action: 'send' | 'draft') => {
         if (busy) return;
-        if (action === 'send' && (!recipientId || !subject.trim() || !body.trim()))
+        if (
+            action === 'send' &&
+            (!recipientId || !subject.trim() || !body.trim())
+        )
             return;
         setBusy(true);
         const params =
@@ -210,7 +211,9 @@ export default function MailCenter({
                   }
                 : {
                       ...(draftId ? { draft_id: draftId } : {}),
-                      ...(recipientId ? { recipient_id: Number(recipientId) } : {}),
+                      ...(recipientId
+                          ? { recipient_id: Number(recipientId) }
+                          : {}),
                       subject,
                       body,
                   };
@@ -284,8 +287,8 @@ export default function MailCenter({
                             <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-6">
                                 Your independent, private KMJ mail workspace.
                                 Inbox, Sent, Drafts, threads, search and staff
-                                permissions are powered by KMJ Main Platform.
-                                No Gmail account, Google OAuth or external mail
+                                permissions are powered by KMJ Main Platform. No
+                                Gmail account, Google OAuth or external mail
                                 provider is required for internal messages.
                             </p>
                         </div>
@@ -301,7 +304,9 @@ export default function MailCenter({
                     </div>
                     <div className="mt-5 grid gap-3 sm:grid-cols-3">
                         <div className="bg-background/45 rounded-xl border p-4">
-                            <span className="text-muted-foreground text-xs">Unread inbox</span>
+                            <span className="text-muted-foreground text-xs">
+                                Unread inbox
+                            </span>
                             <strong className="mt-1 block text-2xl font-bold tabular-nums">
                                 {mailbox.unread}
                             </strong>
@@ -319,22 +324,31 @@ export default function MailCenter({
                                 Internet mail
                             </span>
                             <strong className="mt-1 block text-sm font-semibold">
-                                {externalMailEnabled ? 'Enabled' : 'Not enabled yet'}
+                                {externalMailEnabled
+                                    ? 'Enabled'
+                                    : 'Not enabled yet'}
                             </strong>
                             <span className="text-muted-foreground mt-1 block text-[11px]">
-                                Domain routing needs separate delivery verification
+                                Domain routing needs separate delivery
+                                verification
                             </span>
                         </div>
                     </div>
                 </header>
 
                 {status && (
-                    <p role="status" className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm">
+                    <p
+                        role="status"
+                        className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm"
+                    >
                         {status}
                     </p>
                 )}
                 {typeof errorText === 'string' && (
-                    <p role="alert" className="rounded-xl border border-red-500/40 p-4 text-sm text-red-500">
+                    <p
+                        role="alert"
+                        className="rounded-xl border border-red-500/40 p-4 text-sm text-red-500"
+                    >
                         {errorText}
                     </p>
                 )}
@@ -351,13 +365,20 @@ export default function MailCenter({
                         >
                             <Pencil className="size-4" /> Compose
                         </button>
-                        <nav aria-label="Private mail folders" className="mt-4 grid grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-1">
+                        <nav
+                            aria-label="Private mail folders"
+                            className="mt-4 grid grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-1"
+                        >
                             {folderDefs.map(({ id, label, icon: Icon }) => (
                                 <button
                                     key={id}
                                     type="button"
                                     onClick={() => navigate(id, undefined, '')}
-                                    aria-current={folder === id && view === 'mail' ? 'page' : undefined}
+                                    aria-current={
+                                        folder === id && view === 'mail'
+                                            ? 'page'
+                                            : undefined
+                                    }
                                     className={
                                         'flex min-h-11 items-center gap-2 rounded-xl px-3 text-left text-sm transition ' +
                                         (folder === id && view === 'mail'
@@ -393,26 +414,35 @@ export default function MailCenter({
                                 </button>
                             )}
                         </div>
-                        <div className="mt-5 rounded-xl border border-dashed p-3 text-xs leading-5 text-muted-foreground">
-                            <p className="flex items-center gap-2 font-bold text-foreground">
+                        <div className="text-muted-foreground mt-5 rounded-xl border border-dashed p-3 text-xs leading-5">
+                            <p className="text-foreground flex items-center gap-2 font-bold">
                                 <KeyRound size={14} /> Privacy by default
                             </p>
                             <p className="mt-2">
-                                Only approved KMJ employees can receive internal mail.
-                                Customer organization membership alone grants no access.
-                                No customer inbox or external Gmail data is shared.
+                                Only approved KMJ employees can receive internal
+                                mail. Customer organization membership alone
+                                grants no access. No customer inbox or external
+                                Gmail data is shared.
                             </p>
                         </div>
                     </aside>
 
-                    <section aria-label="Mail list" className="bg-card min-w-0 overflow-hidden rounded-2xl border p-3">
+                    <section
+                        aria-label="Mail list"
+                        className="bg-card min-w-0 overflow-hidden rounded-2xl border p-3"
+                    >
                         <div className="flex items-center justify-between gap-2 px-2 pt-2">
                             <div>
                                 <h2 className="text-base font-bold">
-                                    {view === 'templates' ? 'Original KMJ templates'
-                                        : view === 'staff' ? 'Staff access'
-                                        : view === 'compose' ? 'New message'
-                                        : folderDefs.find((f) => f.id === folder)?.label}
+                                    {view === 'templates'
+                                        ? 'Original KMJ templates'
+                                        : view === 'staff'
+                                          ? 'Staff access'
+                                          : view === 'compose'
+                                            ? 'New message'
+                                            : folderDefs.find(
+                                                  (f) => f.id === folder,
+                                              )?.label}
                                 </h2>
                                 <p className="text-muted-foreground mt-1 text-xs">
                                     {view === 'mail'
@@ -434,14 +464,18 @@ export default function MailCenter({
                                 >
                                     <label className="relative min-w-0 flex-1">
                                         <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                                        <span className="sr-only">Search private messages</span>
+                                        <span className="sr-only">
+                                            Search private messages
+                                        </span>
                                         <input
                                             aria-label="Search private messages"
                                             value={search}
-                                            onChange={(e) => setSearch(e.target.value)}
+                                            onChange={(e) =>
+                                                setSearch(e.target.value)
+                                            }
                                             maxLength={80}
                                             placeholder="Search messages"
-                                            className="bg-background min-h-11 w-full rounded-xl border pl-9 pr-2 text-sm"
+                                            className="bg-background min-h-11 w-full rounded-xl border pr-2 pl-9 text-sm"
                                         />
                                     </label>
                                     <button
@@ -456,7 +490,9 @@ export default function MailCenter({
                                         <button
                                             type="button"
                                             key={item.id}
-                                            onClick={() => navigate(folder, item.id, q)}
+                                            onClick={() =>
+                                                navigate(folder, item.id, q)
+                                            }
                                             className={
                                                 'w-full rounded-xl border p-3 text-left transition hover:border-red-500/40 ' +
                                                 (selected?.id === item.id
@@ -466,10 +502,16 @@ export default function MailCenter({
                                         >
                                             <div className="flex items-center justify-between gap-2">
                                                 <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold">
-                                                    {item.unread && <span className="size-2 rounded-full bg-red-500" />}
+                                                    {item.unread && (
+                                                        <span className="size-2 rounded-full bg-red-500" />
+                                                    )}
                                                     {folder === 'inbox'
-                                                        ? contactName(item.sender_user_id)
-                                                        : contactName(item.recipient_user_id)}
+                                                        ? contactName(
+                                                              item.sender_user_id,
+                                                          )
+                                                        : contactName(
+                                                              item.recipient_user_id,
+                                                          )}
                                                 </span>
                                                 <span className="text-muted-foreground shrink-0 text-[10px]">
                                                     {item.at.slice(0, 16)}
@@ -486,9 +528,12 @@ export default function MailCenter({
                                     {mailbox.items.length === 0 && (
                                         <div className="rounded-xl border border-dashed px-4 py-12 text-center">
                                             <MailOpen className="text-muted-foreground mx-auto size-7" />
-                                            <p className="mt-2 text-sm font-semibold">No messages in this folder</p>
+                                            <p className="mt-2 text-sm font-semibold">
+                                                No messages in this folder
+                                            </p>
                                             <p className="text-muted-foreground mt-1 text-xs">
-                                                Compose a message to an approved KMJ colleague.
+                                                Compose a message to an approved
+                                                KMJ colleague.
                                             </p>
                                         </div>
                                     )}
@@ -498,10 +543,14 @@ export default function MailCenter({
                         {view === 'templates' && (
                             <>
                                 <label className="mt-3 block">
-                                    <span className="sr-only">Find templates</span>
+                                    <span className="sr-only">
+                                        Find templates
+                                    </span>
                                     <input
                                         value={templateQuery}
-                                        onChange={(e) => setTemplateQuery(e.target.value)}
+                                        onChange={(e) =>
+                                            setTemplateQuery(e.target.value)
+                                        }
                                         placeholder="Find a template"
                                         className="bg-background min-h-11 w-full rounded-xl border px-3 text-sm"
                                     />
@@ -511,16 +560,22 @@ export default function MailCenter({
                                         <button
                                             key={item.kind}
                                             type="button"
-                                            onClick={() => setTemplateKind(item.kind)}
+                                            onClick={() =>
+                                                setTemplateKind(item.kind)
+                                            }
                                             className={
                                                 'w-full rounded-xl border px-3 py-4 text-left ' +
-                                                (templateKind === item.kind ? 'border-red-500/50 bg-red-500/5' : '')
+                                                (templateKind === item.kind
+                                                    ? 'border-red-500/50 bg-red-500/5'
+                                                    : '')
                                             }
                                         >
                                             <span className="block text-[10px] font-bold tracking-wider text-red-500">
                                                 {item.category}
                                             </span>
-                                            <strong className="mt-1 block text-sm">{item.subject}</strong>
+                                            <strong className="mt-1 block text-sm">
+                                                {item.subject}
+                                            </strong>
                                         </button>
                                     ))}
                                 </div>
@@ -529,17 +584,26 @@ export default function MailCenter({
                         {view === 'staff' && isOwner && (
                             <div className="mt-4 space-y-4">
                                 <p className="text-muted-foreground text-xs leading-6">
-                                    Give an existing, email-verified KMJ user internal staff
-                                    mail access. This is not customer organization
-                                    administration or Gmail delegation.
+                                    Give an existing, email-verified KMJ user
+                                    internal staff mail access. This is not
+                                    customer organization administration or
+                                    Gmail delegation.
                                 </p>
-                                <Link href="/operator/directory" className="text-xs font-semibold text-red-500 underline">
-                                    Find the verified user ID in Customers &amp; Orgs
+                                <Link
+                                    href="/operator/directory"
+                                    className="text-xs font-semibold text-red-500 underline"
+                                >
+                                    Find the verified user ID in Customers &amp;
+                                    Orgs
                                 </Link>
                                 <form
                                     onSubmit={(e) => {
                                         e.preventDefault();
-                                        if (/^[1-9]\d*$/.test(staffId)) changeStaff('grant', Number(staffId));
+                                        if (/^[1-9]\d*$/.test(staffId))
+                                            changeStaff(
+                                                'grant',
+                                                Number(staffId),
+                                            );
                                     }}
                                     className="flex gap-2"
                                 >
@@ -547,16 +611,21 @@ export default function MailCenter({
                                         aria-label="Verified user ID"
                                         inputMode="numeric"
                                         value={staffId}
-                                        onChange={(e) => setStaffId(e.target.value)}
+                                        onChange={(e) =>
+                                            setStaffId(e.target.value)
+                                        }
                                         placeholder="Verified user ID"
                                         className="bg-background min-h-11 min-w-0 flex-1 rounded-xl border px-3 text-sm"
                                     />
                                     <button
                                         type="submit"
-                                        disabled={busy || !/^[1-9]\d*$/.test(staffId)}
+                                        disabled={
+                                            busy || !/^[1-9]\d*$/.test(staffId)
+                                        }
                                         className="min-h-11 rounded-xl bg-red-600 px-3 text-xs font-bold text-white disabled:opacity-40"
                                     >
-                                        <UserPlus className="inline size-4" /> Grant
+                                        <UserPlus className="inline size-4" />{' '}
+                                        Grant
                                     </button>
                                 </form>
                                 {staff.map((person) => (
@@ -565,17 +634,27 @@ export default function MailCenter({
                                         className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3"
                                     >
                                         <div>
-                                            <strong className="block text-sm">{person.name}</strong>
+                                            <strong className="block text-sm">
+                                                {person.name}
+                                            </strong>
                                             <span className="text-muted-foreground text-xs">
-                                                ID {person.user_id} · {person.email}
+                                                ID {person.user_id} ·{' '}
+                                                {person.email}
                                             </span>
                                         </div>
                                         <button
                                             type="button"
                                             disabled={busy}
                                             onClick={() => {
-                                                if (window.confirm('Revoke this staff member’s KMJ Mail access?'))
-                                                    changeStaff('revoke', person.user_id);
+                                                if (
+                                                    window.confirm(
+                                                        'Revoke this staff member’s KMJ Mail access?',
+                                                    )
+                                                )
+                                                    changeStaff(
+                                                        'revoke',
+                                                        person.user_id,
+                                                    );
                                             }}
                                             className="min-h-10 rounded-xl border px-3 text-xs font-semibold text-red-500"
                                         >
@@ -587,7 +666,10 @@ export default function MailCenter({
                         )}
                     </section>
 
-                    <section aria-label="KMJ private message" className="bg-card min-w-0 overflow-hidden rounded-2xl border">
+                    <section
+                        aria-label="KMJ private message"
+                        className="bg-card min-w-0 overflow-hidden rounded-2xl border"
+                    >
                         {view === 'compose' ? (
                             <div className="p-5 sm:p-6">
                                 <button
@@ -595,18 +677,24 @@ export default function MailCenter({
                                     onClick={() => setView('mail')}
                                     className="text-muted-foreground flex min-h-10 items-center gap-2 text-xs"
                                 >
-                                    <ChevronLeft className="size-4" /> Back to messages
+                                    <ChevronLeft className="size-4" /> Back to
+                                    messages
                                 </button>
                                 <p className="mt-3 text-[11px] font-bold tracking-widest text-red-500 uppercase">
                                     KMJ PRIVATE MESSAGE
                                 </p>
                                 <h2 className="mt-2 text-2xl font-black">
-                                    {draftId ? 'Edit your draft' : replyId ? 'Reply to conversation' : 'Compose'}
+                                    {draftId
+                                        ? 'Edit your draft'
+                                        : replyId
+                                          ? 'Reply to conversation'
+                                          : 'Compose'}
                                 </h2>
                                 <p className="text-muted-foreground mt-2 text-xs leading-6">
-                                    Internal delivery only. Recipients must be verified
-                                    KMJ staff or the Platform Owner. No external
-                                    email address or SMTP relay is involved.
+                                    Internal delivery only. Recipients must be
+                                    verified KMJ staff or the Platform Owner. No
+                                    external email address or SMTP relay is
+                                    involved.
                                 </p>
                                 <div className="mt-6 space-y-4">
                                     <label className="block text-xs font-semibold">
@@ -614,13 +702,21 @@ export default function MailCenter({
                                         <select
                                             aria-label="KMJ recipient"
                                             value={recipientId}
-                                            onChange={(e) => setRecipientId(e.target.value)}
+                                            onChange={(e) =>
+                                                setRecipientId(e.target.value)
+                                            }
                                             className="bg-background mt-2 min-h-12 w-full rounded-xl border px-3 text-sm"
                                         >
-                                            <option value="">Select a verified recipient</option>
+                                            <option value="">
+                                                Select a verified recipient
+                                            </option>
                                             {directory.map((person) => (
-                                                <option key={person.id} value={person.id}>
-                                                    {person.name} · {person.role}
+                                                <option
+                                                    key={person.id}
+                                                    value={person.id}
+                                                >
+                                                    {person.name} ·{' '}
+                                                    {person.role}
                                                 </option>
                                             ))}
                                         </select>
@@ -629,7 +725,9 @@ export default function MailCenter({
                                         Subject
                                         <input
                                             value={subject}
-                                            onChange={(e) => setSubject(e.target.value)}
+                                            onChange={(e) =>
+                                                setSubject(e.target.value)
+                                            }
                                             maxLength={180}
                                             aria-label="Mail subject"
                                             placeholder="What is this about?"
@@ -640,7 +738,9 @@ export default function MailCenter({
                                         Message
                                         <textarea
                                             value={body}
-                                            onChange={(e) => setBody(e.target.value)}
+                                            onChange={(e) =>
+                                                setBody(e.target.value)
+                                            }
                                             maxLength={12000}
                                             rows={11}
                                             aria-label="Message body"
@@ -655,10 +755,16 @@ export default function MailCenter({
                                         <button
                                             type="button"
                                             onClick={() => submit('send')}
-                                            disabled={busy || !recipientId || !subject.trim() || !body.trim()}
+                                            disabled={
+                                                busy ||
+                                                !recipientId ||
+                                                !subject.trim() ||
+                                                !body.trim()
+                                            }
                                             className="flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-40"
                                         >
-                                            <Send className="size-4" /> Send internally
+                                            <Send className="size-4" /> Send
+                                            internally
                                         </button>
                                         <button
                                             type="button"
@@ -674,8 +780,12 @@ export default function MailCenter({
                         ) : view === 'templates' && activeTemplate ? (
                             <>
                                 <div className="border-b p-5">
-                                    <span className="text-xs font-bold tracking-widest text-red-500 uppercase">EMAIL TEMPLATE PREVIEW</span>
-                                    <h2 className="mt-2 text-lg font-bold">{activeTemplate.subject}</h2>
+                                    <span className="text-xs font-bold tracking-widest text-red-500 uppercase">
+                                        EMAIL TEMPLATE PREVIEW
+                                    </span>
+                                    <h2 className="mt-2 text-lg font-bold">
+                                        {activeTemplate.subject}
+                                    </h2>
                                 </div>
                                 <div className="bg-[#edf0f4] p-5">
                                     <div className="mx-auto max-w-xl overflow-hidden rounded-xl border bg-white shadow-sm">
@@ -690,14 +800,19 @@ export default function MailCenter({
                                             </p>
                                         </div>
                                         <div className="space-y-5 p-6 text-[#172236]">
-                                            <h3 className="text-2xl font-black">{activeTemplate.heading}</h3>
-                                            <p className="text-sm leading-7">{activeTemplate.intro}</p>
+                                            <h3 className="text-2xl font-black">
+                                                {activeTemplate.heading}
+                                            </h3>
+                                            <p className="text-sm leading-7">
+                                                {activeTemplate.intro}
+                                            </p>
                                             <p className="border-l-4 border-[#d61f42] bg-[#fff6f8] p-4 text-xs leading-6">
                                                 {activeTemplate.notice}
                                             </p>
                                         </div>
                                         <p className="border-t bg-[#f9fafc] p-6 text-xs font-bold text-[#35445b]">
-                                            KMJ TECHNO · INNOVATE | BUILD | SCALE
+                                            KMJ TECHNO · INNOVATE | BUILD |
+                                            SCALE
                                         </p>
                                     </div>
                                 </div>
@@ -706,15 +821,19 @@ export default function MailCenter({
                             <div className="grid min-h-[430px] place-items-center p-8 text-center">
                                 <div>
                                     <ShieldCheck className="mx-auto size-8 text-red-500" />
-                                    <h2 className="mt-3 text-lg font-bold">Owner-controlled staff access</h2>
+                                    <h2 className="mt-3 text-lg font-bold">
+                                        Owner-controlled staff access
+                                    </h2>
                                     <p className="text-muted-foreground mt-2 max-w-sm text-sm leading-6">
-                                        Access is verified against the KMJ internal staff
-                                        authorization ledger on every request. Revoking
-                                        access immediately blocks the staff mailbox.
+                                        Access is verified against the KMJ
+                                        internal staff authorization ledger on
+                                        every request. Revoking access
+                                        immediately blocks the staff mailbox.
                                     </p>
                                 </div>
                             </div>
-                        ) : selectedThread && selectedThread.items.length > 0 ? (
+                        ) : selectedThread &&
+                          selectedThread.items.length > 0 ? (
                             <div className="p-5 sm:p-6">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
                                     <div>
@@ -738,7 +857,13 @@ export default function MailCenter({
                                                 <button
                                                     type="button"
                                                     disabled={busy || !selected}
-                                                    onClick={() => selected && actOnMessage('send-draft', selected.id)}
+                                                    onClick={() =>
+                                                        selected &&
+                                                        actOnMessage(
+                                                            'send-draft',
+                                                            selected.id,
+                                                        )
+                                                    }
                                                     className="min-h-10 rounded-xl bg-red-600 px-3 text-xs font-semibold text-white disabled:opacity-40"
                                                 >
                                                     Send draft
@@ -757,19 +882,33 @@ export default function MailCenter({
                                             <button
                                                 type="button"
                                                 disabled={busy || !selected}
-                                                onClick={() => selected && actOnMessage('restore', selected.id)}
+                                                onClick={() =>
+                                                    selected &&
+                                                    actOnMessage(
+                                                        'restore',
+                                                        selected.id,
+                                                    )
+                                                }
                                                 className="flex min-h-10 items-center gap-1 rounded-xl border px-3 text-xs"
                                             >
-                                                <RotateCcw className="size-3.5" /> Restore
+                                                <RotateCcw className="size-3.5" />{' '}
+                                                Restore
                                             </button>
                                         ) : (
                                             <button
                                                 type="button"
                                                 disabled={busy || !selected}
-                                                onClick={() => selected && actOnMessage('trash', selected.id)}
+                                                onClick={() =>
+                                                    selected &&
+                                                    actOnMessage(
+                                                        'trash',
+                                                        selected.id,
+                                                    )
+                                                }
                                                 className="flex min-h-10 items-center gap-1 rounded-xl border px-3 text-xs"
                                             >
-                                                <Trash2 className="size-3.5" /> Trash
+                                                <Trash2 className="size-3.5" />{' '}
+                                                Trash
                                             </button>
                                         )}
                                     </div>
@@ -778,24 +917,30 @@ export default function MailCenter({
                                     {selectedThread.items.map((item) => (
                                         <article
                                             key={item.id}
-                                            className="rounded-xl border bg-background/60 p-4"
+                                            className="bg-background/60 rounded-xl border p-4"
                                         >
                                             <div className="flex flex-wrap items-start justify-between gap-2 border-b pb-3">
                                                 <div className="text-xs">
                                                     <strong className="block">
-                                                        {item.from_id === myUserId
+                                                        {item.from_id ===
+                                                        myUserId
                                                             ? 'You'
-                                                            : contactName(item.from_id)}
+                                                            : contactName(
+                                                                  item.from_id,
+                                                              )}
                                                     </strong>
                                                     <span className="text-muted-foreground">
-                                                        To {contactName(item.to_id)}
+                                                        To{' '}
+                                                        {contactName(
+                                                            item.to_id,
+                                                        )}
                                                     </span>
                                                 </div>
                                                 <span className="text-muted-foreground text-[11px]">
                                                     {item.at.slice(0, 19)}
                                                 </span>
                                             </div>
-                                            <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-7">
+                                            <p className="mt-4 text-sm leading-7 break-words whitespace-pre-wrap">
                                                 {item.body}
                                             </p>
                                         </article>
@@ -810,12 +955,14 @@ export default function MailCenter({
                                         Private. Clear. In control.
                                     </h2>
                                     <p className="text-muted-foreground mt-2 max-w-sm text-sm leading-6">
-                                        Select a message to read a conversation or
-                                        compose a new one. Your private KMJ mail
-                                        is stored in the platform, not in Gmail.
+                                        Select a message to read a conversation
+                                        or compose a new one. Your private KMJ
+                                        mail is stored in the platform, not in
+                                        Gmail.
                                     </p>
                                     <div className="mt-4 inline-flex items-center gap-2 text-xs text-red-500">
-                                        <Check className="size-4" /> First-party access controls
+                                        <Check className="size-4" /> First-party
+                                        access controls
                                     </div>
                                 </div>
                             </div>
