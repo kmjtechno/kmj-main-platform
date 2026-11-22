@@ -55,9 +55,7 @@ export default function MailCenter({
     const [sending, setSending] = useState(false);
     const isOwner = audience === 'owner';
     const back = isOwner ? '/operator' : '/dashboard';
-    const endpoint = isOwner
-        ? '/operator/mail/preview'
-        : '/team/mail/preview';
+    const endpoint = isOwner ? '/operator/mail/preview' : '/team/mail/preview';
     const activeTemplate = templates.find((item) => item.kind === selected);
     const filtered = useMemo(() => {
         const needle = search.trim().toLowerCase();
@@ -78,12 +76,7 @@ export default function MailCenter({
             : null;
 
     const sendPreview = () => {
-        if (
-            !activeTemplate ||
-            !testEnabled ||
-            !transportCanAttempt ||
-            sending
-        )
+        if (!activeTemplate || !testEnabled || !transportCanAttempt || sending)
             return;
         setSending(true);
         router.post(
@@ -108,13 +101,13 @@ export default function MailCenter({
         >
             <Head title="KMJ Mail · Enterprise communications" />
             <div
-                className="owner-admin-page kmj-admin-shell mx-auto flex min-w-0 w-full max-w-[1500px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8"
+                className="owner-admin-page kmj-admin-shell mx-auto flex w-full max-w-[1500px] min-w-0 flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8"
                 data-test="kmj-mail-center"
             >
                 <header className="owner-admin-hero kmj-admin-hero overflow-hidden rounded-[1.6rem] border p-5 sm:p-7">
                     <Link
                         href={back}
-                        className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+                        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-xs"
                     >
                         <ArrowLeft size={15} aria-hidden="true" /> Back to
                         {isOwner ? ' Command Center' : ' dashboard'}
@@ -128,32 +121,32 @@ export default function MailCenter({
                             <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
                                 KMJ Mail
                             </h1>
-                            <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
+                            <p className="text-muted-foreground mt-3 max-w-2xl text-sm leading-7">
                                 A focused, Gmail-inspired communication
                                 workspace in the locked KMJ Command OS.
                                 Templates are original KMJ messages. Your
-                                personal Gmail or another employee’s mailbox
-                                is not connected or shared.
+                                personal Gmail or another employee’s mailbox is
+                                not connected or shared.
                             </p>
                         </div>
                         <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-semibold text-red-500">
                             {isOwner ? 'Platform Owner' : 'My organization'}
-                            <span className="mt-1 block font-normal text-muted-foreground">
+                            <span className="text-muted-foreground mt-1 block font-normal">
                                 Permission-scoped experience
                             </span>
                         </div>
                     </div>
                     <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                        <div className="rounded-xl border bg-background/50 p-4">
-                            <span className="text-xs text-muted-foreground">
+                        <div className="bg-background/50 rounded-xl border p-4">
+                            <span className="text-muted-foreground text-xs">
                                 Available templates
                             </span>
                             <strong className="mt-1 block text-2xl font-black tabular-nums">
                                 {templates.length}
                             </strong>
                         </div>
-                        <div className="rounded-xl border bg-background/50 p-4">
-                            <span className="text-xs text-muted-foreground">
+                        <div className="bg-background/50 rounded-xl border p-4">
+                            <span className="text-muted-foreground text-xs">
                                 Gmail mailbox
                             </span>
                             <strong className="mt-1 flex items-center gap-2 text-sm font-semibold">
@@ -163,8 +156,8 @@ export default function MailCenter({
                                     : 'Unknown'}
                             </strong>
                         </div>
-                        <div className="rounded-xl border bg-background/50 p-4">
-                            <span className="text-xs text-muted-foreground">
+                        <div className="bg-background/50 rounded-xl border p-4">
+                            <span className="text-muted-foreground text-xs">
                                 Outbound mailer
                             </span>
                             <strong className="mt-1 flex items-center gap-2 text-sm font-semibold">
@@ -175,16 +168,13 @@ export default function MailCenter({
                                         aria-hidden="true"
                                     />
                                 ) : (
-                                    <LockKeyhole
-                                        size={15}
-                                        aria-hidden="true"
-                                    />
+                                    <LockKeyhole size={15} aria-hidden="true" />
                                 )}
                                 {transportCanAttempt
                                     ? 'Configured to attempt'
                                     : 'Not ready to attempt'}
                             </strong>
-                            <span className="mt-1 block text-[11px] text-muted-foreground">
+                            <span className="text-muted-foreground mt-1 block text-[11px]">
                                 Not inbox-delivery proof
                             </span>
                         </div>
@@ -205,7 +195,7 @@ export default function MailCenter({
                         aria-label="KMJ Mail folders"
                         className="bg-card min-w-0 rounded-2xl border p-3"
                     >
-                        <p className="px-3 pb-3 text-[11px] font-bold tracking-[0.15em] text-muted-foreground uppercase">
+                        <p className="text-muted-foreground px-3 pb-3 text-[11px] font-bold tracking-[0.15em] uppercase">
                             Workspace
                         </p>
                         <div className="grid grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-1">
@@ -241,10 +231,10 @@ export default function MailCenter({
                                 <Users size={14} aria-hidden="true" />
                                 Privacy boundary
                             </p>
-                            <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                            <p className="text-muted-foreground mt-2 text-xs leading-5">
                                 Mailboxes require individual OAuth consent.
-                                Organization membership never grants access
-                                to the owner’s Gmail.
+                                Organization membership never grants access to
+                                the owner’s Gmail.
                             </p>
                         </div>
                     </nav>
@@ -260,7 +250,7 @@ export default function MailCenter({
                                     : folders.find((item) => item.id === folder)
                                           ?.label}
                             </h2>
-                            <p className="mt-1 text-xs text-muted-foreground">
+                            <p className="text-muted-foreground mt-1 text-xs">
                                 {folder === 'templates'
                                     ? 'Preview first. Send only to your own verified account when enabled.'
                                     : 'No Gmail connection or synchronized messages are available.'}
@@ -272,7 +262,7 @@ export default function MailCenter({
                                     <Search
                                         size={16}
                                         aria-hidden="true"
-                                        className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
+                                        className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
                                     />
                                     <span className="sr-only">
                                         Find a template
@@ -303,7 +293,7 @@ export default function MailCenter({
                                                 'flex w-full min-w-0 items-start gap-3 rounded-xl border p-3 text-left transition ' +
                                                 (selected === item.kind
                                                     ? 'border-red-500/50 bg-red-500/5'
-                                                    : 'hover:border-red-500/30 hover:bg-muted/30')
+                                                    : 'hover:bg-muted/30 hover:border-red-500/30')
                                             }
                                         >
                                             <span className="mt-1 grid size-8 shrink-0 place-items-center rounded-lg bg-red-500/10 text-red-500">
@@ -319,19 +309,19 @@ export default function MailCenter({
                                                 <span className="mt-1 block text-sm font-bold">
                                                     {item.subject}
                                                 </span>
-                                                <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                                                <span className="text-muted-foreground mt-1 block text-xs leading-5">
                                                     {item.heading}
                                                 </span>
                                             </span>
                                             <ChevronRight
                                                 size={14}
-                                                className="mt-2 shrink-0 text-muted-foreground"
+                                                className="text-muted-foreground mt-2 shrink-0"
                                                 aria-hidden="true"
                                             />
                                         </button>
                                     ))}
                                     {filtered.length === 0 && (
-                                        <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+                                        <p className="text-muted-foreground px-3 py-8 text-center text-sm">
                                             No templates match this search.
                                         </p>
                                     )}
@@ -347,11 +337,11 @@ export default function MailCenter({
                                 <h3 className="mt-3 font-semibold">
                                     No mailbox connected
                                 </h3>
-                                <p className="mt-2 text-xs leading-6 text-muted-foreground">
+                                <p className="text-muted-foreground mt-2 text-xs leading-6">
                                     Real Gmail Inbox, Sent and Drafts need
                                     per-user Google OAuth with least-privilege
-                                    scopes and protected token storage. No
-                                    fake messages are displayed.
+                                    scopes and protected token storage. No fake
+                                    messages are displayed.
                                 </p>
                             </div>
                         )}
@@ -404,7 +394,8 @@ export default function MailCenter({
                                         </div>
                                         <div className="space-y-5 p-6 text-[#172236] sm:p-8">
                                             <p className="text-xs font-bold tracking-[0.12em] text-[#c7193d] uppercase">
-                                                Test preview · No action required
+                                                Test preview · No action
+                                                required
                                             </p>
                                             <h3 className="text-2xl font-black tracking-tight sm:text-3xl">
                                                 {activeTemplate.heading}
@@ -427,18 +418,18 @@ export default function MailCenter({
                                                 INNOVATE | BUILD | SCALE
                                             </p>
                                             <p className="mt-3 text-xs">
-                                                kmjtechno.com · Official
-                                                service communications
+                                                kmjtechno.com · Official service
+                                                communications
                                             </p>
                                         </div>
                                     </div>
                                 </div>
                                 {!testEnabled && (
-                                    <p className="border-t px-5 py-4 text-xs leading-6 text-muted-foreground">
-                                        Self-test sending is disabled until
-                                        the owner approves a verified transport
-                                        and enables the private feature flag.
-                                        No mail was sent.
+                                    <p className="text-muted-foreground border-t px-5 py-4 text-xs leading-6">
+                                        Self-test sending is disabled until the
+                                        owner approves a verified transport and
+                                        enables the private feature flag. No
+                                        mail was sent.
                                     </p>
                                 )}
                             </>
@@ -447,7 +438,7 @@ export default function MailCenter({
                                 <div>
                                     <LockKeyhole
                                         size={33}
-                                        className="mx-auto text-muted-foreground"
+                                        className="text-muted-foreground mx-auto"
                                         aria-hidden="true"
                                     />
                                     <p className="mt-3 text-sm font-semibold">
@@ -455,10 +446,10 @@ export default function MailCenter({
                                             ? 'Select a message'
                                             : 'Gmail connection required'}
                                     </p>
-                                    <p className="mt-2 max-w-sm text-xs leading-6 text-muted-foreground">
+                                    <p className="text-muted-foreground mt-2 max-w-sm text-xs leading-6">
                                         No personal or staff mailbox data is
-                                        surfaced without an explicit,
-                                        authorized connection.
+                                        surfaced without an explicit, authorized
+                                        connection.
                                     </p>
                                 </div>
                             </div>
