@@ -391,6 +391,35 @@ final class OwnerDirectoryHttpTest extends TestCase
         ]);
     }
 
+    public function test_owner_may_delete_three_distinct_empty_signup_organizations_sequentially(): void
+    {
+        $owner = $this->owner();
+        $targets = [];
+        foreach (range(1, 3) as $index) {
+            $account = User::factory()->create(['email_verified_at' => null]);
+            $organization = app(OrganizationCreator::class)->create(
+                'Isolated customer '.$index,
+                $account->id,
+            );
+            $targets[] = ['user' => $account->id, 'org' => $organization->id];
+        }
+
+        foreach ($targets as $target) {
+            $this->actingAs($owner)
+                ->withSession(['auth.password_confirmed_at' => time()])
+                ->post('/operator/directory/users/'.$target['user'].'/delete', [
+                    'confirmation' => 'DELETE_USER_'.$target['user'],
+                ])->assertRedirect('/operator/directory');
+            $this->assertDatabaseMissing('users', ['id' => $target['user']]);
+            $this->assertDatabaseMissing('organizations', ['id' => $target['org']]);
+        }
+
+        $this->assertSame(3, DB::table('operator_action_audits')
+            ->where('actor_user_id', $owner->id)
+            ->where('action', 'directory_customer_signup_graph_deleted')->count());
+        $this->assertDatabaseHas('users', ['id' => $owner->id]);
+    }
+
     public function test_customer_with_business_organization_reference_is_never_cascade_deleted(): void
     {
         $owner = $this->owner();
