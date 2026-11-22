@@ -145,6 +145,31 @@ final class HuggingFaceConnectTest extends TestCase
         $response->assertSessionHasErrors(['provider' => 'Hugging Face sign-in failed: oauth_exchange_failed (http 400, invalid_grant)']);
     }
 
+    public function test_a_long_opaque_or_jwt_style_access_token_is_accepted(): void
+    {
+        $long = 'hf_oauth_'.str_repeat('Ab1-_.', 150);
+        Http::fake([
+            'huggingface.co/oauth/token' => Http::response(['access_token' => $long, 'token_type' => 'Bearer'], 200),
+            'router.huggingface.co/*' => Http::response(['data' => []], 200),
+        ]);
+        $this->confirmed($this->owner)->post(self::START, ['free_account_confirmed' => true]);
+
+        $this->actingAs($this->owner)->get($this->callbackUrl())->assertSessionHasNoErrors();
+
+        $this->assertSame($long, AiProvider::query()->firstOrFail()->api_key);
+    }
+
+    public function test_a_missing_access_token_reports_only_a_coarse_reason(): void
+    {
+        Http::fake(['huggingface.co/oauth/token' => Http::response(['access_token' => ['x' => 'y'], 'note' => 'private '.self::TOKEN], 200)]);
+        $this->confirmed($this->owner)->post(self::START, ['free_account_confirmed' => true]);
+
+        $this->actingAs($this->owner)->get($this->callbackUrl())
+            ->assertSessionHasErrors(['provider' => 'Hugging Face sign-in failed: oauth_exchange_failed (http 200, no_access_token)']);
+
+        $this->assertDatabaseCount('ai_providers', 0);
+    }
+
     public function test_a_pending_sign_in_cannot_be_redeemed_by_another_organization(): void
     {
         Http::fake();

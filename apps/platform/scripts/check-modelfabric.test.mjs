@@ -131,3 +131,11 @@ void test('ModelFabric connects OpenRouter and Hugging Face itself and returns t
     assert.match(service, /oauth_exchange_failed \(http/);
     assert.doesNotMatch(service, /oauth_exchange_failed \(.*body/);
 });
+
+void test('Hugging Face exchange accepts long opaque tokens and only reports a coarse failure shape', () => {
+    const service = read('app/Services/AiProviders/HuggingFaceConnect.php');
+    assert.match(service, /\{16,4096\}/);
+    assert.match(service, /no_access_token/);
+    assert.match(service, /bad_token_shape_len_/);
+    assert.doesNotMatch(service, /\{16,512\}/);
+});

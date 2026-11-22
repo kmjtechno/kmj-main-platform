@@ -85,10 +85,17 @@ final class HuggingFaceConnect
         }
 
         $token = $response->successful() ? $response->json('access_token') : null;
-        if (! is_string($token) || preg_match('/\A[A-Za-z0-9_.-]{16,512}\z/', $token) !== 1) {
-            // Only the HTTP status and the provider's short OAuth error code are surfaced, never the body or a token.
+        // Accept any printable, whitespace-free token up to 4096 chars (an OAuth access token may be a long opaque string or JWT).
+        if (! is_string($token) || preg_match('/\A[\x21-\x7E]{16,4096}\z/', $token) !== 1) {
+            // Only the HTTP status, the provider's short OAuth error code and a coarse shape are surfaced, never the body or a token.
             $error = $response->json('error');
-            $code = is_string($error) && preg_match('/\A[a-z_]{1,40}\z/', $error) === 1 ? $error : ($response->successful() ? 'bad_token_shape' : 'no_error_code');
+            if (is_string($error) && preg_match('/\A[a-z_]{1,40}\z/', $error) === 1) {
+                $code = $error;
+            } elseif (! $response->successful()) {
+                $code = 'no_error_code';
+            } else {
+                $code = is_string($token) ? 'bad_token_shape_len_'.strlen($token) : 'no_access_token';
+            }
 
             throw new InvalidArgumentException('oauth_exchange_failed (http '.$response->status().', '.$code.')');
         }
