@@ -71,6 +71,7 @@ final class NativeExternalMailFlowTest extends TestCase
             ['mail.mailers.kmj_native_loopback.host', 'localhost'],
             ['mail.mailers.kmj_native_loopback.port', 2525],
             ['mail.mailers.kmj_native_loopback.scheme', 'smtps'],
+            ['mail.mailers.kmj_native_loopback.auto_tls', true],
             ['mail.mailers.kmj_native_loopback.username', 'attacker'],
             ['mail.mailers.kmj_native_loopback.password', 'secret'],
             ['mail.mailers.kmj_native_loopback.timeout', 60],
@@ -86,6 +87,22 @@ final class NativeExternalMailFlowTest extends TestCase
         self::assertFalse($service->transportEnabled());
         Queue::assertNothingPushed();
         Mail::assertNothingOutgoing();
+    }
+
+    public function test_native_loopback_smtp_transport_has_automatic_starttls_disabled(): void
+    {
+        // No network or test email: inspect the real Symfony transport created
+        // by Laravel's MailManager from the pinned native-mail configuration.
+        $transport = app('mail.manager')->mailer('kmj_native_loopback')->getSymfonyTransport();
+        self::assertInstanceOf(\Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport::class, $transport);
+
+        $reflection = new \ReflectionProperty($transport, 'autoTls');
+        self::assertFalse($reflection->getValue($transport));
+
+        // Disabling opportunistic TLS on localhost does NOT disable
+        // verification if an explicit TLS transport is used elsewhere.
+        $ssl = $transport->getStream()->getStreamOptions()['ssl'] ?? [];
+        self::assertNotSame(false, $ssl['verify_peer'] ?? null);
     }
 
     public function test_owner_can_queue_email_to_external_gmail_without_google_account_and_get_truthful_transport_status(): void
@@ -311,6 +328,7 @@ final class NativeExternalMailFlowTest extends TestCase
         config()->set('mail.mailers.kmj_native_loopback.host', '127.0.0.1');
         config()->set('mail.mailers.kmj_native_loopback.port', 25);
         config()->set('mail.mailers.kmj_native_loopback.scheme', null);
+        config()->set('mail.mailers.kmj_native_loopback.auto_tls', false);
         config()->set('mail.mailers.kmj_native_loopback.username', null);
         config()->set('mail.mailers.kmj_native_loopback.password', null);
         config()->set('mail.mailers.kmj_native_loopback.timeout', 8);
