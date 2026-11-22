@@ -130,6 +130,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-admission-collector-design-20261122',
+        title: 'Release admission collector: design for real evidence behind one-click release',
+        state: 'active',
+        detail: 'Design document only: maps each flag of the fixed gate admission file to a fresh exact-SHA receipt from a fixed root collector (staged origin, owner and public QA, backup witness, disposable restore, rollback rehearsal, migration and storage continuity), with the owner passkey click as the only source of the standing authorization. It changes no gate and installs nothing.',
+        evidence:
+            'Document review and exact-head CI only. No collector, receipt or broker change exists yet; one-click activation stays blocked until they do.',
+    },
+    {
         id: 'release-helper-approval-0600-pin-20261122',
         title: 'Owner release helper: pin the private (0600) approval writer',
         state: 'active',
