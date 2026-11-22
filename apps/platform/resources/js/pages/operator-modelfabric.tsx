@@ -420,6 +420,95 @@ function PlanCard({
     );
 }
 
+function CopyRow({ label, value }: { label: string; value: string }) {
+    const [done, setDone] = useState(false);
+
+    return (
+        <div className="flex items-center justify-between gap-2 rounded-xl border p-2">
+            <span className="min-w-0 text-xs">
+                <span className="text-muted-foreground block">{label}</span>
+                <span className="font-mono break-all">{value}</span>
+            </span>
+            <button
+                type="button"
+                className={ghostButton}
+                aria-label={`Copy ${label}`}
+                onClick={async () => {
+                    try {
+                        await navigator.clipboard.writeText(value);
+                        setDone(true);
+                        window.setTimeout(() => setDone(false), 1500);
+                    } catch {
+                        setDone(false);
+                    }
+                }}
+            >
+                <Copy className="h-3 w-3" /> {done ? 'Copied' : 'Copy'}
+            </button>
+        </div>
+    );
+}
+
+/** Copy-ready connection settings. The token is only ever the one-time value already on screen. */
+function ConnectGuide({
+    origin,
+    token,
+}: {
+    origin: string;
+    token: string | null | undefined;
+}) {
+    const baseUrl = `${origin}/api/modelfabric/v1`;
+    const key = token ?? '<your token>';
+    const snippets: { id: string; label: string; code: string }[] = [
+        {
+            id: 'sdk',
+            label: 'Python (OpenAI SDK)',
+            code: `from openai import OpenAI\n\nclient = OpenAI(base_url="${baseUrl}", api_key="${key}")\nreply = client.chat.completions.create(\n    model="modelfabric-auto",\n    messages=[{"role": "user", "content": "ping"}],\n    stream=True,\n)`,
+        },
+        {
+            id: 'curl',
+            label: 'curl',
+            code: `curl ${baseUrl}/chat/completions \\\n  -H "Authorization: Bearer ${key}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"model":"modelfabric-auto","messages":[{"role":"user","content":"ping"}]}'`,
+        },
+    ];
+
+    return (
+        <div className="mt-4 space-y-3" data-testid="modelfabric-connect-guide">
+            <p className="text-sm font-black">Connect in 30 seconds</p>
+            <p className="text-muted-foreground text-xs">
+                Works with any OpenAI-compatible app or IDE (custom endpoint or
+                &ldquo;OpenAI-compatible&rdquo; provider). Paste these three
+                values; the model is always modelfabric-auto and streaming is
+                supported.
+            </p>
+            <div className="grid gap-2 md:grid-cols-3">
+                <CopyRow label="Base URL" value={baseUrl} />
+                <CopyRow label="Model" value="modelfabric-auto" />
+                <CopyRow
+                    label="API key"
+                    value={
+                        token ?? 'Create a token above, then copy it once here'
+                    }
+                />
+            </div>
+            {snippets.map((snippet) => (
+                <details key={snippet.id} className="rounded-xl border p-2">
+                    <summary className="cursor-pointer text-xs font-bold">
+                        {snippet.label}
+                    </summary>
+                    <pre className="bg-muted mt-2 overflow-x-auto rounded-xl p-3 text-xs">
+                        {snippet.code}
+                    </pre>
+                </details>
+            ))}
+            <p className="text-muted-foreground text-xs">
+                Optional: send an X-ModelFabric-Session header (any short id) to
+                keep one conversation on the same route.
+            </p>
+        </div>
+    );
+}
+
 export default function OperatorModelFabric({
     newToken,
     tokens,
@@ -1679,12 +1768,7 @@ export default function OperatorModelFabric({
                                 </div>
                             </form>
                         ) : null}
-                        <pre className="bg-muted mt-4 overflow-x-auto rounded-xl p-3 text-xs">
-                            {`curl ${origin}/api/modelfabric/v1/chat/completions \\
-  -H "Authorization: Bearer <your token>" \\
-  -H "Content-Type: application/json" \\
-  -d '{"messages":[{"role":"user","content":"ping"}]}'`}
-                        </pre>
+                        <ConnectGuide origin={origin} token={newToken} />
                         <ul className="mt-3 divide-y text-sm">
                             {tokens.length === 0 ? (
                                 <li className="py-2">No token created yet.</li>

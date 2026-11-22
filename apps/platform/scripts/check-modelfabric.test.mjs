@@ -87,6 +87,15 @@ void test('sticky sessions only reorder routes the plan already admitted', () =>
     assert.match(api, /\[A-Za-z0-9\._:-\]\{1,64\}/);
 });
 
+void test('API tokens tab shows a copy-ready connect guide without persisting the token', () => {
+    const page = read('resources/js/pages/operator-modelfabric.tsx');
+    assert.match(page, /function ConnectGuide/);
+    assert.match(page, /modelfabric-connect-guide/);
+    assert.match(page, /modelfabric-auto/);
+    assert.match(page, /<ConnectGuide origin=\{origin\} token=\{newToken\}/);
+    assert.doesNotMatch(page, /localStorage|sessionStorage/);
+});
+
 void test('owner daily caps and priority are enforced before provider limits and stay owner-only', () => {
     const gateway = read('app/Services/AiProviders/ModelFabricGateway.php');
     const scorer = read('app/Services/AiProviders/RouteScorer.php');
