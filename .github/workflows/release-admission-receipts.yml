@@ -21,6 +21,9 @@ on:
       - "scripts/test_elite_public_qa_and_migration_storage.py"
       - "scripts/operations/elite_admission_broker.py"
       - "scripts/test_elite_admission_broker.py"
+      - "scripts/operations/elite_collect_all_receipts.py"
+      - "scripts/test_elite_collect_all_and_broker_units.py"
+      - "infra/server/systemd/kmj-elite-release-admission-broker.*"
       - ".github/workflows/release-admission-receipts.yml"
   workflow_dispatch:
 
@@ -45,5 +48,6 @@ jobs:
           python3 -B scripts/test_elite_collect_rollback_rehearsal_receipt.py -v
           python3 -B scripts/test_elite_public_qa_and_migration_storage.py -v
           python3 -B scripts/test_elite_admission_broker.py -v
+          python3 -B scripts/test_elite_collect_all_and_broker_units.py -v
           echo "RELEASE_ADMISSION_RECEIPTS_QA=PASS"
           echo "INSTALLED=NO ADMISSION_WRITTEN=NO PRODUCTION_RELEASE=UNCHANGED"

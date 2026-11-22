@@ -185,6 +185,19 @@ def claim_once(intent, now, state_dir=STATE_DIR, uid=0):
         os.fsync(handle.fileno())
 
 
+def consume_intent(path, uid):
+    """Remove a processed or rejected intent so the owner can retry; never follows links."""
+    try:
+        parent = path.parent.lstat()
+        if (not stat.S_ISDIR(parent.st_mode) or parent.st_uid != uid
+                or stat.S_IMODE(parent.st_mode) & 0o022):
+            return False
+        os.unlink(path)
+        return True
+    except OSError:
+        return False
+
+
 def run(execute, now=None):
     if os.geteuid() != 0 or socket.gethostname().split(".")[0] != HOST:
         print("KMJ_ADMISSION_BROKER=BLOCKED_HOST_ROOT")
@@ -192,11 +205,24 @@ def run(execute, now=None):
     now = int(time.time()) if now is None else now
     try:
         uid = pwd.getpwnam(OWNER_USER).pw_uid
-        try:
-            intent, raw = read_intent(INTENT, uid, now)
-        except FileNotFoundError:
+        if not INTENT.exists() and not INTENT.is_symlink():
             print("KMJ_ADMISSION_BROKER=NO_PENDING_INTENT")
             return 0
+        try:
+            return decide_and_write(execute, uid, now)
+        finally:
+            # One attempt per intent, success or not: a stale file must never block a retry.
+            if execute:
+                consume_intent(INTENT, uid)
+    except (ValueError, OSError, KeyError) as exc:
+        code = str(exc) if str(exc).startswith("BLOCKED_") else "BLOCKED_TRUSTED_PREFLIGHT_ERROR"
+        print("KMJ_ADMISSION_BROKER=" + code[:95])
+        return 2
+
+
+def decide_and_write(execute, uid, now):
+    try:
+        intent, raw = read_intent(INTENT, uid, now)
         admission, blockers = decide(
             intent, raw, gate.protected_json(gate.APPROVAL), gate.live_release(),
             common.RECEIPT_DIR, now)
