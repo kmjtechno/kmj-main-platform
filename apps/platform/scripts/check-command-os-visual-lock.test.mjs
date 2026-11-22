@@ -277,13 +277,13 @@ void test('login and registration use the approved horizontal KMJ branding', () 
 
 void test('every owner header has an accessible profile menu with POST logout', () => {
     const shell = read('resources/js/layouts/owner-module-shell.tsx');
-    const menu = read('resources/js/components/user-menu-content.tsx');
+    const menu = read('resources/js/components/owner-account-menu.tsx');
     for (const source of [command, shell]) {
         assert.match(source, /<DropdownMenuTrigger asChild>/);
         assert.match(source, /data-test="owner-profile-menu-trigger"/);
         assert.match(source, /aria-label="Open profile and logout menu"/);
-        assert.match(source, /<UserMenuContent user=\{auth\.user\} \/>/);
+        assert.match(source, /<OwnerAccountMenu user=\{auth\.user\} \/>/);
     }
-    assert.match(menu, /href=\{logout\(\)\}[\s\S]*method="post"/);
+    assert.match(menu, /router\.post\('\/logout'\)/);
     assert.match(menu, /data-test="logout-button"/);
 });

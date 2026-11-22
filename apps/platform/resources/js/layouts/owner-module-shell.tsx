@@ -31,7 +31,7 @@ import {
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { UserMenuContent } from '@/components/user-menu-content';
+import OwnerAccountMenu from '@/components/owner-account-menu';
 import '../../css/owner-lock.css';
 import '../../css/owner-module-shell.css';
 
@@ -256,7 +256,7 @@ export default function OwnerModuleShell({
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="z-[150] w-64">
-                        {auth.user && <UserMenuContent user={auth.user} />}
+                        {auth.user && <OwnerAccountMenu user={auth.user} />}
                     </DropdownMenuContent>
                 </DropdownMenu>
             </header>
