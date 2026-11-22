@@ -130,6 +130,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-helper-approval-0600-pin-20261122',
+        title: 'Owner release helper: pin the private (0600) approval writer',
+        state: 'active',
+        detail: 'Source-only: the owner release helper now pins the kmj-codebridge approval writer that creates the release approval file private (0600). The autopublish gate, readiness receipt and one-click broker reject any group or world bit, so the previous 0644 file always read as an invalid approval. The gate itself is unchanged.',
+        evidence:
+            'Observed on KMJ-elite: with the file at 0600 the Supervisor still reported the approval ready and the readiness receipt moved from an invalid-approval block to a correct staging-drift block. The new helper is not yet run; the one-click request is not yet proven end to end.',
+    },
+    {
         id: 'release-readiness-publisher-installer-20261122',
         title: 'Release readiness publisher: pinned owner installer (source only)',
         state: 'active',

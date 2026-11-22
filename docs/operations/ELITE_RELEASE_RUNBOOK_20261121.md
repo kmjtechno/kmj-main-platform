@@ -40,7 +40,7 @@ The release chain downloads each script at the candidate SHA and refuses to cont
 | `scripts/operations/main_platform_storage_switch.py` | `281893b277fb4dfabf174b7baaa49801f6b0a4c2dc83c2c711115f45225ea8ef` |
 | `scripts/operations/materialize-main-platform-candidate-runtime.sh` | `fd29c4ebcf224c45786f8cedd0e0d42bbfd414d706678fe820e0ead4eea3984f` |
 | `scripts/operations/prepare-main-platform-local-recovery-exact.sh` | `d3f977dbd68bd986e888c720c2bcc49e1c02e884878bfc4e4c0903f53bdf3212` |
-| `owner_main_platform_production_approval.py` (kmj-codebridge commit `8cb6cce3`, `scripts/production`) | `e4c2b9d8f873f9bc7c7d9e78f248aa983b4c221a1d27a8fd520c16fb201b5ffe` |
+| `owner_main_platform_production_approval.py` (kmj-codebridge commit `51ef2734`, `scripts/production`) | `45b28a2d912c5e5b748ee4ec7c9df76e4b28e0ef32a23cc831169fe315136200` |
 
 Verify before handing the command over:
 
@@ -61,14 +61,14 @@ Set `SHA` to the candidate and `LIVE` to the current live release directory name
 bash -c 'set -Eeuo pipefail
 SHA=<40 hex candidate>; LIVE=platform-<12 hex current live>; S12=${SHA:0:12}
 MP=https://raw.githubusercontent.com/kmjtechno/kmj-main-platform/$SHA/scripts/operations
-CB=https://raw.githubusercontent.com/kmjtechno/kmj-codebridge/8cb6cce343c8e8f9fe0b6517362c95d0b61bc7d1/scripts/production
+CB=https://raw.githubusercontent.com/kmjtechno/kmj-codebridge/51ef2734ea5b77db044234aeaa7bcf9c73a5f1c9/scripts/production
 D=$(mktemp -d); trap "rm -rf $D" EXIT; cd $D
 get(){ curl -fsSL "$1/$2" -o "$2"; echo "$3  $2" | sha256sum -c - >/dev/null || { echo "HASH_MISMATCH $2"; exit 2; }; }
 get $MP stage-fast-main-candidate-no-activation.sh ebdb77fa56e8e48c32e21d7d1c53a28c56666dd0cc7c002d200706478e1e9a24
 get $MP main_platform_storage_switch.py 281893b277fb4dfabf174b7baaa49801f6b0a4c2dc83c2c711115f45225ea8ef
 get $MP materialize-main-platform-candidate-runtime.sh fd29c4ebcf224c45786f8cedd0e0d42bbfd414d706678fe820e0ead4eea3984f
 get $MP prepare-main-platform-local-recovery-exact.sh d3f977dbd68bd986e888c720c2bcc49e1c02e884878bfc4e4c0903f53bdf3212
-get $CB owner_main_platform_production_approval.py e4c2b9d8f873f9bc7c7d9e78f248aa983b4c221a1d27a8fd520c16fb201b5ffe
+get $CB owner_main_platform_production_approval.py 45b28a2d912c5e5b748ee4ec7c9df76e4b28e0ef32a23cc831169fe315136200
 bash stage-fast-main-candidate-no-activation.sh $SHA
 APP=/home/kmjprod/releases/platform-$S12/apps/platform; SH=/home/kmjprod/shared/storage
 PID=$(python3 main_platform_storage_switch.py plan --app-dir $APP --shared $SH | python3 -c "import sys,json;print(json.load(sys.stdin)[\"plan_id\"])")
