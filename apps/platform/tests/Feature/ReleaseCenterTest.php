@@ -45,7 +45,7 @@ final class ReleaseCenterTest extends TestCase
         ];
     }
 
-    private function put(string $name, mixed $data): void
+    private function writeContract(string $name, mixed $data): void
     {
         File::put($this->dir.'/'.$name, is_string($data) ? $data : json_encode($data, JSON_THROW_ON_ERROR));
     }
@@ -60,7 +60,7 @@ final class ReleaseCenterTest extends TestCase
 
     public function test_owner_sees_valid_contracts_and_nothing_else_is_exposed(): void
     {
-        $this->put('demo-app.release.contract.json', $this->contract());
+        $this->writeContract('demo-app.release.contract.json', $this->contract());
 
         $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()])
             ->get('/operator/release-center')
@@ -77,11 +77,11 @@ final class ReleaseCenterTest extends TestCase
     {
         $relaxed = $this->contract('relaxed');
         $relaxed['approval'] = 'auto';
-        $this->put('relaxed.release.contract.json', $relaxed);
-        $this->put('wrong-name.release.contract.json', $this->contract('other'));
-        $this->put('broken.release.contract.json', '{not json');
-        $this->put('big.release.contract.json', str_repeat(' ', 9000).json_encode($this->contract('big')));
-        $this->put('ok.release.contract.json', $this->contract('ok'));
+        $this->writeContract('relaxed.release.contract.json', $relaxed);
+        $this->writeContract('wrong-name.release.contract.json', $this->contract('other'));
+        $this->writeContract('broken.release.contract.json', '{not json');
+        $this->writeContract('big.release.contract.json', str_repeat(' ', 9000).json_encode($this->contract('big')));
+        $this->writeContract('ok.release.contract.json', $this->contract('ok'));
 
         $catalog = (new ReleaseContractCatalog)->load($this->dir);
 
