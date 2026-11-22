@@ -1,0 +1,23 @@
+name: KMJ Mail Center Formatter Preview (temporary)
+on:
+  push:
+    branches:
+      - feat/admin-staff-mail-center-roadmap-20261122
+permissions:
+  contents: read
+jobs:
+  format-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Get formatter
+        run: cd apps/platform && npm ci --no-audit --no-fund
+      - name: Print exact formatting patch (read-only CI workspace)
+        run: |
+          cd apps/platform
+          node_modules/.bin/vp fmt resources/js/pages/mail-center.tsx
+          git --no-pager diff --color=never -- resources/js/pages/mail-center.tsx
+          test -z "$(git status --porcelain -- resources/js/pages/mail-center.tsx)"
