@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'single-kslp-customer-licenses-devices-20261122',
+        title: 'Single Licensing Hub: verified customer products, licenses and masked device history',
+        state: 'active',
+        detail: 'Source-only verified-account customer Licensing Hub uses the same KSLP commercial tables as owner and developer workspaces, with membership-scoped organization entitlements and license records, readable expiry/grace, aggregate activation counts and existing entitlement-aware downloads. No device identity, plaintext keys or cross-tenant selection reaches the browser. Transfers, paid key issuance and reseller balances remain separate unapproved workflows.',
+        evidence:
+            'Customer workspace query, verified Inertia route, unified sidebar entry, premium page, cross-tenant negative tests. Not signed, staged, deployed, or a claim of full AuthSP workflow parity.',
+    },
+    {
         id: 'owner-one-command-release-helper-20261122',
         title: 'Owner release: one short command instead of a pasted multi-block script',
         state: 'active',
