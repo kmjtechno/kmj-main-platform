@@ -98,6 +98,99 @@ class WriterIdentityTests(unittest.TestCase):
             ):
                 mod.pool_identity(4321, master(), [item], 1001)
 
+    def test_production_only_binding_allows_isolated_www_worker(self):
+        prod = worker(pid=4322, uid=1001, pool=mod.PRODUCTION_POOL)
+        other = worker(pid=4323, uid=33, pool="php-fpm: pool www")
+        actors = [prod, other]
+        with patch.object(mod, "host_network_namespace", return_value="net:[1]"), patch.object(
+            mod, "listener_inode", return_value="987654"
+        ), patch.object(
+            mod, "holds_listener", side_effect=lambda pid, inode: pid in (4321, 4322)
+        ), patch.object(mod, "fixed_live_children", return_value=actors):
+            self.assertEqual(mod.production_pool_binding(4321, master(), actors, 1001), 1)
+
+    def test_production_binding_fails_on_unsafe_socket_ownership(self):
+        prod = worker(pid=4322, uid=1001, pool=mod.PRODUCTION_POOL)
+        other = worker(pid=4323, uid=33, pool="php-fpm: pool www")
+        actors = [prod, other]
+        examples = [
+            ("BLOCKED_MASTER_LISTENER_BINDING", {4322}),
+            ("BLOCKED_PRODUCTION_WORKER_LISTENER_BINDING", {4321}),
+            ("BLOCKED_FOREIGN_POOL_LISTENER_BINDING", {4321, 4322, 4323}),
+        ]
+        for expected, holders in examples:
+            with self.subTest(expected=expected), patch.object(
+                mod, "host_network_namespace", return_value="net:[1]"
+            ), patch.object(mod, "listener_inode", return_value="987654"), patch.object(
+                mod, "holds_listener", side_effect=lambda pid, inode: pid in holders
+            ), patch.object(mod, "fixed_live_children", return_value=actors):
+                with self.assertRaisesRegex(mod.Blocked, expected):
+                    mod.production_pool_binding(4321, master(), actors, 1001)
+
+    def test_production_binding_wrong_worker_uid_or_pool_denied(self):
+        bad = [
+            ([worker(uid=33, pool=mod.PRODUCTION_POOL)], "FPM_WRITER_UID_MISMATCH"),
+            ([worker(uid=1001, pool="php-fpm: pool www")], "NO_LIVE_FPM_WORKER"),
+            ([{**worker(pool=mod.PRODUCTION_POOL), "exe": "/tmp/php-fpm"}], "UNKNOWN_FPM_CHILD"),
+            ([{**worker(pool=mod.PRODUCTION_POOL), "parent": 123}], "UNKNOWN_FPM_CHILD"),
+        ]
+        with patch.object(mod, "listener_inode", side_effect=AssertionError("should fail early")):
+            for group, expected in bad:
+                with self.subTest(expected=expected), self.assertRaisesRegex(mod.Blocked, expected):
+                    mod.production_pool_binding(4321, master(), group, 1001)
+
+    def test_production_binding_race_or_wrong_netns_denied(self):
+        actors = [worker(pid=4322, pool=mod.PRODUCTION_POOL)]
+        with patch.object(
+            mod, "host_network_namespace", side_effect=lambda pid: "net:[2]" if pid == 4321 else "net:[1]"
+        ), patch.object(mod, "listener_inode", side_effect=AssertionError("should fail early")):
+            with self.assertRaisesRegex(mod.Blocked, "MASTER_NETNS"):
+                mod.production_pool_binding(4321, master(), actors, 1001)
+
+        def safe_holds(pid, inode):
+            return pid in (4321, 4322)
+
+        with patch.object(mod, "host_network_namespace", return_value="net:[1]"), patch.object(
+            mod, "listener_inode", side_effect=["987654", "999999"]
+        ), patch.object(mod, "holds_listener", side_effect=safe_holds), patch.object(
+            mod, "fixed_live_children", return_value=actors
+        ):
+            with self.assertRaisesRegex(mod.Blocked, "PRODUCTION_BINDING_RACE"):
+                mod.production_pool_binding(4321, master(), actors, 1001)
+
+        with patch.object(mod, "host_network_namespace", return_value="net:[1]"), patch.object(
+            mod, "listener_inode", return_value="987654"
+        ), patch.object(mod, "holds_listener", side_effect=safe_holds), patch.object(
+            mod, "fixed_live_children", return_value=[]
+        ):
+            with self.assertRaisesRegex(mod.Blocked, "PRODUCTION_BINDING_RACE"):
+                mod.production_pool_binding(4321, master(), actors, 1001)
+
+    def test_listener_inode_exact_tcp_state_and_unique_inode(self):
+        from unittest.mock import mock_open
+        def tcp_body(ports):
+            return "sl local_address rem_address st tx_queue tr tm->when retrnsmt uid timeout inode\n" + (
+                "\n".join(
+                    f"{i}: {p} 00000000:0000 {state} 0:0 0:0 00 00000000 0 {ino}"
+                    for i, (p, state, ino) in enumerate(ports)
+                )
+            ) + "\n"
+        accepted = tcp_body([
+            ("0100007F:525C", "0A", "987654"),
+            ("0100007F:525C", "01", "123456"),
+            ("00000000:0050", "0A", "42"),
+        ])
+        with patch.object(mod.Path, "open", mock_open(read_data=accepted)):
+            self.assertEqual(mod.listener_inode(), "987654")
+        for bad, reason in (
+            (tcp_body([]), "PRODUCTION_LISTENER_COUNT"),
+            (tcp_body([("0100007F:525C", "0A", "987654"), ("0100007F:525C", "0A", "777777")]), "PRODUCTION_LISTENER_COUNT"),
+            (tcp_body([("0100007F:525C", "0A", "0")]), "TCP_INODE"),
+        ):
+            with self.subTest(reason=reason), patch.object(mod.Path, "open", mock_open(read_data=bad)):
+                with self.assertRaisesRegex(mod.Blocked, reason):
+                    mod.listener_inode()
+
     def test_proc_status_parsing_real_effective_saved_and_fs_uids(self):
         raw = b"Name:\tphp-fpm8.4\nPPid:\t4321\nUid:\t1001\t1001\t1001\t1001\n"
         self.assertEqual(mod.parse_status(raw), (4321, (1001,) * 4))
@@ -241,7 +334,7 @@ class WriterIdentityTests(unittest.TestCase):
         ), patch.object(mod, "fixed_master_pid", return_value=4321), patch.object(
             mod, "process_identity", return_value=master()
         ), patch.object(mod, "fixed_live_children", return_value=[worker()]), patch.object(
-            mod, "pool_identity", return_value=1
+            mod, "production_pool_binding", return_value=1
         ), patch("builtins.print") as output:
             p.return_value.pw_uid = 1001
             self.assertEqual(mod.inspect(), 0)
