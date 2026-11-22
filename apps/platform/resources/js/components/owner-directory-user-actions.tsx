@@ -166,8 +166,8 @@ export default function OwnerDirectoryUserActions({
                     Delete
                 </button>
                 <p className="text-muted-foreground min-w-0 flex-1 text-xs">
-                    One confirmation. Private signup data removed only when
-                    no protected business or shared records are linked.
+                    One confirmation. Private signup data removed only when no
+                    protected business or shared records are linked.
                 </p>
             </div>
             {error && (
