@@ -59,6 +59,7 @@ final class NativeExternalMailService
             && config('mail.mailers.kmj_native_loopback.host') === '127.0.0.1'
             && config('mail.mailers.kmj_native_loopback.port') === 25
             && config('mail.mailers.kmj_native_loopback.scheme') === null
+            && config('mail.mailers.kmj_native_loopback.auto_tls') === false
             && config('mail.mailers.kmj_native_loopback.username') === null
             && config('mail.mailers.kmj_native_loopback.password') === null
             && config('mail.mailers.kmj_native_loopback.timeout') === 8
