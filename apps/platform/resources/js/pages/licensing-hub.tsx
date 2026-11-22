@@ -191,7 +191,10 @@ export default function LicensingHub({
                     className="border-border bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
                 >
                     <div className="flex items-start gap-3">
-                        <Boxes className="mt-0.5 size-5 text-red-500" aria-hidden="true" />
+                        <Boxes
+                            className="mt-0.5 size-5 text-red-500"
+                            aria-hidden="true"
+                        />
                         <div>
                             <h2
                                 id="products-heading"
@@ -200,8 +203,9 @@ export default function LicensingHub({
                                 My Products
                             </h2>
                             <p className="text-muted-foreground text-xs">
-                                Recorded organization entitlements. An entitlement
-                                record is not itself a signed license.
+                                Recorded organization entitlements. An
+                                entitlement record is not itself a signed
+                                license.
                             </p>
                         </div>
                     </div>
@@ -245,7 +249,10 @@ export default function LicensingHub({
                     className="border-border bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
                 >
                     <div className="flex items-start gap-3">
-                        <KeyRound className="mt-0.5 size-5 text-red-500" aria-hidden="true" />
+                        <KeyRound
+                            className="mt-0.5 size-5 text-red-500"
+                            aria-hidden="true"
+                        />
                         <div>
                             <h2
                                 id="licenses-heading"
@@ -306,9 +313,7 @@ export default function LicensingHub({
                                             Device bindings:{' '}
                                             {license.non_deactivated_devices}
                                         </span>
-                                        <span>
-                                            Online status: not verified
-                                        </span>
+                                        <span>Online status: not verified</span>
                                     </div>
                                 </article>
                             ))}
@@ -322,9 +327,15 @@ export default function LicensingHub({
                     className="border-border bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
                 >
                     <div className="flex items-start gap-3">
-                        <Laptop2 className="mt-0.5 size-5 text-red-500" aria-hidden="true" />
+                        <Laptop2
+                            className="mt-0.5 size-5 text-red-500"
+                            aria-hidden="true"
+                        />
                         <div>
-                            <h2 id="devices-heading" className="text-lg font-bold">
+                            <h2
+                                id="devices-heading"
+                                className="text-lg font-bold"
+                            >
                                 Devices & recovery
                             </h2>
                             <p className="text-muted-foreground text-xs">
@@ -359,7 +370,10 @@ export default function LicensingHub({
                     className="border-border bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
                 >
                     <div className="flex items-start gap-3">
-                        <Download className="mt-0.5 size-5 text-red-500" aria-hidden="true" />
+                        <Download
+                            className="mt-0.5 size-5 text-red-500"
+                            aria-hidden="true"
+                        />
                         <div>
                             <h2
                                 id="downloads-heading"
