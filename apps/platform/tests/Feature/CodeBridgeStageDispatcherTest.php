@@ -19,19 +19,20 @@ final class CodeBridgeStageDispatcherTest extends TestCase
     {
         parent::setUp();
         Cache::forget('kmj-codebridge-stage:owner-v1');
+        Http::preventStrayRequests();
         config()->set('services.codebridge_stage.github_token', 'test-only-github-token');
     }
 
     public function test_dispatch_pins_main_checks_active_workflow_and_audits_204_without_live_claim(): void
     {
         Http::fake([
-            'api.github.com/repos/kmjtechno/kmj-codebridge/commits/main' => Http::response(
+            'https://api.github.com/repos/kmjtechno/kmj-codebridge/commits/main' => Http::response(
                 ['sha' => str_repeat('a', 40)],
                 200,
             ),
-            'api.github.com/repos/kmjtechno/kmj-codebridge/actions/workflows/oneclick-stage.yml/runs*' =>
+            'https://api.github.com/repos/kmjtechno/kmj-codebridge/actions/workflows/oneclick-stage.yml/runs*' =>
                 Http::response(['workflow_runs' => []], 200),
-            'api.github.com/repos/kmjtechno/kmj-codebridge/actions/workflows/oneclick-stage.yml/dispatches' =>
+            'https://api.github.com/repos/kmjtechno/kmj-codebridge/actions/workflows/oneclick-stage.yml/dispatches' =>
                 Http::response('', 204),
         ]);
         $owner = User::factory()->create();
@@ -55,9 +56,9 @@ final class CodeBridgeStageDispatcherTest extends TestCase
     public function test_active_exact_sha_workflow_prevents_duplicate_dispatch(): void
     {
         Http::fake([
-            'api.github.com/repos/kmjtechno/kmj-codebridge/commits/main' =>
+            'https://api.github.com/repos/kmjtechno/kmj-codebridge/commits/main' =>
                 Http::response(['sha' => str_repeat('b', 40)], 200),
-            'api.github.com/repos/kmjtechno/kmj-codebridge/actions/workflows/oneclick-stage.yml/runs*' =>
+            'https://api.github.com/repos/kmjtechno/kmj-codebridge/actions/workflows/oneclick-stage.yml/runs*' =>
                 Http::response(['workflow_runs' => [
                     ['head_sha' => str_repeat('b', 40), 'status' => 'in_progress'],
                 ]], 200),
@@ -70,12 +71,16 @@ final class CodeBridgeStageDispatcherTest extends TestCase
     public function test_stale_source_or_invalid_api_result_does_not_dispatch(): void
     {
         Http::fake([
-            'api.github.com/repos/kmjtechno/kmj-codebridge/commits/main' =>
+            'https://api.github.com/repos/kmjtechno/kmj-codebridge/commits/main' =>
                 Http::response(['sha' => 'main'], 200),
         ]);
         $owner = User::factory()->create();
-        $this->expectException(RuntimeException::class);
-        app(CodeBridgeStageDispatcher::class)->request($owner);
-        $this->assertDatabaseCount('operator_action_audits', 0);
+        try {
+            app(CodeBridgeStageDispatcher::class)->request($owner);
+            $this->fail('Invalid source SHA must be refused.');
+        } catch (RuntimeException) {
+            $this->assertDatabaseCount('operator_action_audits', 0);
+            Http::assertNotSent(fn ($request): bool => $request->method() === 'POST');
+        }
     }
 }
