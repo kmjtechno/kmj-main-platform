@@ -175,12 +175,39 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             Request $request,
             PlatformOwnerAccess $access,
             ReleaseContractCatalog $catalog,
+            ServerMetricsSnapshot $metrics,
+            EliteReleaseReadinessSnapshot $eliteRelease,
         ) {
             $user = $request->user();
             abort_unless($user instanceof User, 401);
             $access->require($user);
 
-            return Inertia::render('operator-release-center', ['catalog' => $catalog->load()]);
+            // Advisory only: this server's own deployed SHA and the root preflight receipt. Neither is proof of
+            // a release and neither can start one.
+            try {
+                $deployedSha = $metrics->capture()['deployed_sha'] ?? null;
+            } catch (Throwable $exception) {
+                report($exception);
+                $deployedSha = null;
+            }
+            try {
+                $receipt = $eliteRelease->capture();
+            } catch (Throwable $exception) {
+                report($exception);
+                $receipt = ['status' => 'unavailable', 'reason' => 'RECEIPT_PROBE_FAILED'];
+            }
+
+            return Inertia::render('operator-release-center', [
+                'catalog' => $catalog->load(),
+                'live' => [
+                    'main-platform' => [
+                        'deployed_sha' => is_string($deployedSha) && preg_match('/\A[0-9a-f]{40}\z/D', $deployedSha) === 1 ? $deployedSha : null,
+                        'readiness_status' => (string) ($receipt['status'] ?? 'unavailable'),
+                        'readiness_reason' => (string) ($receipt['reason'] ?? 'unobserved'),
+                        'approved_sha' => $receipt['approved_sha'] ?? null,
+                    ],
+                ],
+            ]);
         })->name('release-center.index');
 
         Route::post('ops/actions/queue-restart', function (

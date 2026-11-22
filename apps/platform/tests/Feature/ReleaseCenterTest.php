@@ -73,6 +73,21 @@ final class ReleaseCenterTest extends TestCase
                 ->where('catalog.invalid', []));
     }
 
+    public function test_main_platform_live_status_is_advisory_and_degrades_without_a_receipt(): void
+    {
+        config(['kmj.ops.release_receipt_path' => $this->dir.'/no-such-receipt.json']);
+        $this->writeContract('main-platform.release.contract.json', $this->contract('main-platform'));
+
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/release-center')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('live.main-platform.readiness_status', 'unavailable')
+                ->where('live.main-platform.approved_sha', null)
+                ->has('live.main-platform.deployed_sha')
+                ->missing('live.demo-app'));
+    }
+
     public function test_relaxed_approval_wrong_filename_oversized_and_broken_files_are_listed_as_invalid(): void
     {
         $relaxed = $this->contract('relaxed');
