@@ -136,7 +136,6 @@ final class UnverifiedAccountCleanup
         }, 1);
     }
 
-
     /**
      * A candidate User row lock does not stop independent writers from adding
      * new organization memberships, license references or non-FK text links.
