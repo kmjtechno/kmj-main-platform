@@ -114,6 +114,22 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Unit test pins the header; exact-head CI only. Not deployed and not yet proven against the live GitHub catalog.',
     },
     {
+        id: 'universal-release-center-design-20261122',
+        title: 'Release Center: design for one one-click release system across KMJ projects',
+        state: 'active',
+        detail: 'Design document only: one release contract per project, three stages (auto stage and test, one owner passkey approval, auto release with health and rollback), adapters per project kind and a phased plan that starts with Main Platform and CodeBridge. The owner approval stays the only release gate; nothing is implemented, installed or approved by it.',
+        evidence:
+            'Docs-only change with exact-head CI. The Ops one-click activation is installed but not yet proven end to end, and Windows kinds need a code-signing certificate that does not exist yet.',
+    },
+    {
+        id: 'modelfabric-local-routes-design-20261122',
+        title: 'ModelFabric: design for owner-operated local routes (public HTTPS hostname, no SSRF exception)',
+        state: 'active',
+        detail: 'Design document only: a local model is reached through an owner-run tunnel with a public HTTPS hostname so the SSRF guard stays unchanged, plus an owner attestation, a concurrency limit, a timeout and a daily cap that fail closed. No code, endpoint or model is approved by it.',
+        evidence:
+            'Docs-only change with exact-head CI. Nothing is implemented and no local model exists yet.',
+    },
+    {
         id: 'elite-activation-broker-installer-20261122',
         title: 'Elite activation broker: pinned owner installer (one click needs the broker installed)',
         state: 'active',
