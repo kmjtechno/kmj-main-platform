@@ -63,8 +63,8 @@ final class BrandedCustomerEvents
                 return;
             }
 
-            $order = CommercialOrder::query()->find($event->message->aggregate_id);
-            if ($order === null) {
+            $order = CommercialOrder::query()->whereKey((string) $event->message->aggregate_id)->first();
+            if (! $order instanceof CommercialOrder) {
                 return;
             }
 
@@ -73,36 +73,39 @@ final class BrandedCustomerEvents
                 'order_confirmed' => 'confirmed',
                 default => 'cancelled',
             };
-            if ($order->status !== $expectedState) {
+            if ($order->getAttribute('status') !== $expectedState) {
                 // A historical outbox event must not send a stale status.
                 return;
             }
 
-            $user = User::query()->find($order->requester_user_id);
-            $product = Product::query()->find($order->product_id);
-            if ($user === null || ! $user->hasVerifiedEmail() || $product === null) {
+            $user = User::query()->whereKey((int) $order->getAttribute('requester_user_id'))->first();
+            $product = Product::query()->whereKey((string) $order->getAttribute('product_id'))->first();
+            if (! $user instanceof User || ! $user->hasVerifiedEmail() || ! $product instanceof Product) {
                 return;
             }
 
             $details = [
                 'state' => $expectedState,
                 'order' => (string) $order->getKey(),
-                'product' => (string) $product->name,
+                'product' => (string) $product->getAttribute('name'),
             ];
 
             // Queued notifications share the outbox dispatcher transaction.
             // Only one publish of the event schedules the notification.
             $user->notify(new BrandedCustomerNotification($kind, $details));
 
+            $amountMinor = $order->getAttribute('amount_minor');
+            $currency = $order->getAttribute('currency');
+            $confirmationReference = $order->getAttribute('confirmation_reference');
             if ($kind === 'order_confirmed'
                 && config('services.kmj_transactional_mail.send_payment_receipts', false) === true
-                && is_int($order->amount_minor) && $order->amount_minor > 0
-                && is_string($order->currency) && is_string($order->confirmation_reference)) {
+                && is_int($amountMinor) && $amountMinor > 0
+                && is_string($currency) && is_string($confirmationReference)) {
                 $user->notify(new BrandedCustomerNotification('payment_receipt', [
                     ...$details,
-                    'amount_minor' => $order->amount_minor,
-                    'currency' => $order->currency,
-                    'reference' => $order->confirmation_reference,
+                    'amount_minor' => $amountMinor,
+                    'currency' => $currency,
+                    'reference' => $confirmationReference,
                 ]));
             }
         });
