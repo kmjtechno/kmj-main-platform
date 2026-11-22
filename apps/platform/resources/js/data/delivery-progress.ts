@@ -114,6 +114,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Unit test pins the header; exact-head CI only. Not deployed and not yet proven against the live GitHub catalog.',
     },
     {
+        id: 'modelfabric-local-routes-design-20261122',
+        title: 'ModelFabric: design for owner-operated local routes (public HTTPS hostname, no SSRF exception)',
+        state: 'active',
+        detail: 'Design document only: a local model is reached through an owner-run tunnel with a public HTTPS hostname so the SSRF guard stays unchanged, plus an owner attestation, a concurrency limit, a timeout and a daily cap that fail closed. No code, endpoint or model is approved by it.',
+        evidence:
+            'Docs-only change with exact-head CI. Nothing is implemented and no local model exists yet.',
+    },
+    {
         id: 'elite-activation-broker-installer-20261122',
         title: 'Elite activation broker: pinned owner installer (one click needs the broker installed)',
         state: 'active',
