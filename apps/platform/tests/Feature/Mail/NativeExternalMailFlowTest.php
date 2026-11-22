@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
+use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
 use Tests\TestCase;
 
 final class NativeExternalMailFlowTest extends TestCase
@@ -94,7 +95,7 @@ final class NativeExternalMailFlowTest extends TestCase
         // No network or test email: inspect the real Symfony transport created
         // by Laravel's MailManager from the pinned native-mail configuration.
         $transport = app('mail.manager')->mailer('kmj_native_loopback')->getSymfonyTransport();
-        self::assertInstanceOf(\Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport::class, $transport);
+        self::assertInstanceOf(EsmtpTransport::class, $transport);
 
         $reflection = new \ReflectionProperty($transport, 'autoTls');
         self::assertFalse($reflection->getValue($transport));
