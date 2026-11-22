@@ -13,6 +13,11 @@ use RuntimeException;
  * Owner-only guarded cleanup. Email-not-verified alone is NEVER sufficient:
  * a linked business/user record blocks deletion even if an FK would cascade.
  * No bulk SQL and no caller-selected table, column, account or age threshold.
+ *
+ * The one exception to "a membership blocks deletion" is the empty signup organization: the account
+ * is the ONLY member of an organization that no other table references at all (no license, order,
+ * subscription, entitlement, outbox or audit row), and the only other row is its own signup contact
+ * profile. Any reference anywhere keeps the account protected. Purge removes that empty organization.
  */
 final class UnverifiedAccountCleanup
 {
@@ -29,6 +34,7 @@ final class UnverifiedAccountCleanup
     public function preview(): array
     {
         $tables = $this->relationColumns();
+        $orgTables = $this->organizationRelationColumns();
         $cutoff = now()->subDays(self::MIN_AGE_DAYS);
         // Never expose passwords, passkeys or verification tokens.
         $users = User::query()
@@ -48,7 +54,8 @@ final class UnverifiedAccountCleanup
 
         $eligible = [];
         foreach ($users as $user) {
-            if (! $this->hasLinkedRecords((int) $user->id, $tables, (int) $cutoff->timestamp)) {
+            if (! $this->hasLinkedRecords((int) $user->id, $tables, (int) $cutoff->timestamp)
+                && $this->ownsOnlyEmptySignupOrganizations((int) $user->id, $orgTables)) {
                 $eligible[] = (int) $user->id;
             }
         }
@@ -110,6 +117,13 @@ final class UnverifiedAccountCleanup
                 if (Schema::hasTable('password_reset_tokens')) {
                     DB::table('password_reset_tokens')->where('email', $account->email)->delete();
                 }
+                // Eligibility above proved these organizations have this account as their only member
+                // and no reference anywhere. A restrictive foreign key would abort the whole transaction.
+                $orgIds = DB::table('organization_memberships')->where('user_id', $id)->pluck('organization_id')->all();
+                DB::table('organization_memberships')->where('user_id', $id)->delete();
+                if ($orgIds !== []) {
+                    DB::table('organizations')->whereIn('id', $orgIds)->delete();
+                }
                 $account->delete();
                 $deleted++;
             }
@@ -128,7 +142,9 @@ final class UnverifiedAccountCleanup
             if (! is_string($table) || preg_match('/\A[a-z][a-z0-9_]*\z/D', $table) !== 1) {
                 throw new RuntimeException('UNVERIFIED_CLEANUP_UNRECOGNIZED_TABLE');
             }
-            if (in_array($table, ['users', 'password_reset_tokens', 'sessions'], true)) {
+            // organization_memberships is judged by ownsOnlyEmptySignupOrganizations(); customer_profiles
+            // is the account's own signup contact data and is removed with the account (cascade).
+            if (in_array($table, ['users', 'password_reset_tokens', 'sessions', 'organization_memberships', 'customer_profiles'], true)) {
                 continue;
             }
 
@@ -150,6 +166,89 @@ final class UnverifiedAccountCleanup
         }
 
         return $relations;
+    }
+
+    /**
+     * Tables and columns that can hold an organization id. Unknown column types fail closed.
+     *
+     * @return array<string, list<string>>
+     */
+    private function organizationRelationColumns(): array
+    {
+        $relations = [];
+        foreach (Schema::getTables() as $entry) {
+            $table = $entry['name'] ?? null;
+            if (! is_string($table) || preg_match('/\A[a-z][a-z0-9_]*\z/D', $table) !== 1) {
+                throw new RuntimeException('UNVERIFIED_CLEANUP_UNRECOGNIZED_TABLE');
+            }
+            if (in_array($table, ['organizations', 'organization_memberships'], true)) {
+                continue;
+            }
+            $refs = [];
+            foreach (Schema::getColumns($table) as $column) {
+                $name = (string) ($column['name'] ?? '');
+                if (preg_match('/organization|org_id|tenant|customer_id|issuer/i', $name) !== 1) {
+                    continue;
+                }
+                $type = strtolower((string) ($column['type_name'] ?? ''));
+                if (in_array($type, ['bigint', 'integer', 'smallint', 'int2', 'int4', 'int8', 'bool', 'boolean', 'timestamp', 'timestamptz', 'date', 'json', 'jsonb', 'float4', 'float8', 'numeric'], true)) {
+                    continue; // cannot hold a UUID organization id
+                }
+                if (! in_array($type, ['uuid', 'varchar', 'text', 'bpchar', 'char', 'citext'], true)) {
+                    throw new RuntimeException('UNVERIFIED_CLEANUP_ORG_REFERENCE_TYPE_UNKNOWN');
+                }
+                $refs[] = $name;
+            }
+            foreach (Schema::getForeignKeys($table) as $fk) {
+                if (($fk['foreign_table'] ?? '') !== 'organizations') {
+                    continue;
+                }
+                $fkColumns = $fk['columns'] ?? [];
+                if (count($fkColumns) !== 1) {
+                    throw new RuntimeException('UNVERIFIED_CLEANUP_COMPOSITE_FOREIGN_KEY');
+                }
+                $refs[] = $fkColumns[0];
+            }
+            if ($refs !== []) {
+                $relations[$table] = array_values(array_unique($refs));
+            }
+        }
+
+        return $relations;
+    }
+
+    /**
+     * True when every organization this account belongs to has this account as its only member
+     * and is referenced by no other table. No membership at all is also true.
+     *
+     * @param  array<string, list<string>>  $orgRelations
+     */
+    private function ownsOnlyEmptySignupOrganizations(int $id, array $orgRelations): bool
+    {
+        $orgIds = DB::table('organization_memberships')->where('user_id', $id)
+            ->pluck('organization_id')->map(fn ($org): string => (string) $org)->all();
+        if ($orgIds === []) {
+            return true;
+        }
+
+        $others = DB::table('organization_memberships')->whereIn('organization_id', $orgIds)
+            ->where('user_id', '!=', $id)->exists();
+        if ($others) {
+            return false;
+        }
+
+        foreach ($orgRelations as $table => $columns) {
+            foreach ($columns as $column) {
+                if (preg_match('/\A[a-z][a-z0-9_]*\z/D', $column) !== 1) {
+                    throw new RuntimeException('UNVERIFIED_CLEANUP_UNSAFE_REFERENCE_COLUMN');
+                }
+                if (DB::table($table)->whereIn($column, $orgIds)->exists()) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /** @param array<string, list<string>> $relations */
