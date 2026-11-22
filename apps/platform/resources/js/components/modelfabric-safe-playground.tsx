@@ -35,7 +35,9 @@ export default function ModelFabricSafePlayground({
     hasActiveToken,
 }: Props) {
     const [apiKey, setApiKey] = useState('');
-    const [prompt, setPrompt] = useState('Reply with one sentence: ModelFabric is ready.');
+    const [prompt, setPrompt] = useState(
+        'Reply with one sentence: ModelFabric is ready.',
+    );
     const [consent, setConsent] = useState(false);
     const [busy, setBusy] = useState<'check' | 'chat' | null>(null);
     const [verifiedRoutes, setVerifiedRoutes] = useState<number | null>(null);
@@ -46,9 +48,12 @@ export default function ModelFabricSafePlayground({
     const [elapsedMs, setElapsedMs] = useState<number | null>(null);
     const inFlight = useRef<AbortController | null>(null);
 
-    useEffect(() => () => {
-        inFlight.current?.abort();
-    }, []);
+    useEffect(
+        () => () => {
+            inFlight.current?.abort();
+        },
+        [],
+    );
 
     const canChat =
         canManage &&
@@ -72,17 +77,17 @@ export default function ModelFabricSafePlayground({
             case 503:
                 return 'NO_FREE_ROUTE_AVAILABLE. No provider was called.';
             default:
-                return 'ModelFabric request was not accepted (HTTP ' + status + ').';
+                return (
+                    'ModelFabric request was not accepted (HTTP ' +
+                    status +
+                    ').'
+                );
         }
     };
 
     const request = async (sendPrompt: boolean) => {
-        if (
-            busy ||
-            !canManage ||
-            !apiKey.trim() ||
-            (sendPrompt && !canChat)
-        ) return;
+        if (busy || !canManage || !apiKey.trim() || (sendPrompt && !canChat))
+            return;
         setBusy(sendPrompt ? 'chat' : 'check');
         setMessage('');
         setOutput('');
@@ -110,14 +115,18 @@ export default function ModelFabricSafePlayground({
                     headers: {
                         Authorization: 'Bearer ' + apiKey.trim(),
                         Accept: 'application/json',
-                        ...(sendPrompt ? { 'Content-Type': 'application/json' } : {}),
+                        ...(sendPrompt
+                            ? { 'Content-Type': 'application/json' }
+                            : {}),
                     },
                     ...(sendPrompt
                         ? {
                               body: JSON.stringify({
                                   model: 'modelfabric-auto',
                                   stream: false,
-                                  messages: [{ role: 'user', content: prompt.trim() }],
+                                  messages: [
+                                      { role: 'user', content: prompt.trim() },
+                                  ],
                               }),
                           }
                         : {}),
@@ -144,7 +153,9 @@ export default function ModelFabricSafePlayground({
                 setMessage(
                     routes === 0
                         ? 'Token accepted. No verified-zero chat routes available.'
-                        : 'Token accepted. ' + routes + ' verified-zero route(s) available.',
+                        : 'Token accepted. ' +
+                              routes +
+                              ' verified-zero route(s) available.',
                 );
                 return;
             }
@@ -154,16 +165,22 @@ export default function ModelFabricSafePlayground({
                 return;
             }
             setOutput(answer.slice(0, 6000));
-            setServedModel(typeof body.model === 'string' ? body.model.slice(0, 128) : '');
+            setServedModel(
+                typeof body.model === 'string' ? body.model.slice(0, 128) : '',
+            );
             setServedProvider(
                 typeof body.modelfabric?.provider === 'string'
                     ? body.modelfabric.provider.slice(0, 128)
                     : '',
             );
             setElapsedMs(Math.round(performance.now() - start));
-            setMessage('Verified route response received. This is not a deployment approval.');
+            setMessage(
+                'Verified route response received. This is not a deployment approval.',
+            );
         } catch {
-            setMessage('The request could not be completed. Check connectivity and retry.');
+            setMessage(
+                'The request could not be completed. Check connectivity and retry.',
+            );
             if (!sendPrompt) setVerifiedRoutes(null);
         } finally {
             window.clearTimeout(timeout);
@@ -179,8 +196,12 @@ export default function ModelFabricSafePlayground({
             data-testid="modelfabric-safe-playground"
         >
             <div className="owner-panel-title">
-                <h2><Play size={17} /> ModelFabric Playground</h2>
-                <span className="text-muted-foreground text-xs">Owner-initiated · verified-zero only</span>
+                <h2>
+                    <Play size={17} /> ModelFabric Playground
+                </h2>
+                <span className="text-muted-foreground text-xs">
+                    Owner-initiated · verified-zero only
+                </span>
             </div>
             <p className="text-muted-foreground text-sm leading-6">
                 The FreeLLMAPI-style workflow is: connect a provider, discover
@@ -197,8 +218,8 @@ export default function ModelFabricSafePlayground({
             ) : null}
             {!routeReady ? (
                 <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs">
-                    NO_FREE_ROUTE_AVAILABLE: approve a current free model
-                    before sending any prompt.
+                    NO_FREE_ROUTE_AVAILABLE: approve a current free model before
+                    sending any prompt.
                 </p>
             ) : null}
             <label className="block text-sm font-medium">
@@ -220,8 +241,8 @@ export default function ModelFabricSafePlayground({
                     disabled={!canManage || Boolean(busy)}
                 />
                 <span className="text-muted-foreground mt-1 block text-xs font-normal">
-                    Only held in this tab&apos;s memory. Never copied into a URL,
-                    localStorage, sessionStorage or request body.
+                    Only held in this tab&apos;s memory. Never copied into a
+                    URL, localStorage, sessionStorage or request body.
                 </span>
             </label>
             <div className="flex flex-wrap items-center gap-3">
@@ -233,7 +254,9 @@ export default function ModelFabricSafePlayground({
                     data-testid="modelfabric-check-token"
                 >
                     <ShieldCheck size={15} />
-                    {busy === 'check' ? 'Checking…' : '1. Check token and routes'}
+                    {busy === 'check'
+                        ? 'Checking…'
+                        : '1. Check token and routes'}
                 </button>
                 {verifiedRoutes !== null ? (
                     <span className="text-xs font-medium" role="status">
@@ -269,8 +292,8 @@ export default function ModelFabricSafePlayground({
                     I approve sending only this test prompt to a currently
                     verified-free provider. It contains no secrets, customer
                     data or private repository source. This consent does
-                    <strong> not</strong> enable unattended coding, private-source
-                    transfer or paid inference.
+                    <strong> not</strong> enable unattended coding,
+                    private-source transfer or paid inference.
                 </span>
             </label>
             <button
@@ -283,15 +306,26 @@ export default function ModelFabricSafePlayground({
                 <Activity size={15} />
                 {busy === 'chat' ? 'Testing…' : '2. Send one approved test'}
             </button>
-            {message ? <p role="status" className="text-xs">{message}</p> : null}
+            {message ? (
+                <p role="status" className="text-xs">
+                    {message}
+                </p>
+            ) : null}
             {output ? (
-                <div className="bg-muted/40 rounded-xl border p-4" data-testid="modelfabric-playground-result">
+                <div
+                    className="bg-muted/40 rounded-xl border p-4"
+                    data-testid="modelfabric-playground-result"
+                >
                     <p className="mb-2 text-xs font-bold">Response</p>
-                    <p className="whitespace-pre-wrap break-words text-sm">{output}</p>
+                    <p className="text-sm break-words whitespace-pre-wrap">
+                        {output}
+                    </p>
                     <p className="text-muted-foreground mt-3 text-xs">
                         {servedModel ? 'Model: ' + servedModel : ''}
                         {servedProvider ? ' · Provider: ' + servedProvider : ''}
-                        {elapsedMs !== null ? ' · Client elapsed: ' + elapsedMs + ' ms' : ''}
+                        {elapsedMs !== null
+                            ? ' · Client elapsed: ' + elapsedMs + ' ms'
+                            : ''}
                     </p>
                 </div>
             ) : null}
@@ -299,8 +333,8 @@ export default function ModelFabricSafePlayground({
                 <LockKeyhole size={15} className="mt-0.5 shrink-0" />
                 No keys or prompts are persisted here. KMJ ModelFabric checks
                 pricing evidence, data handling, quota and routing server-side;
-                requests may be refused even after a successful token check.
-                No response is proof of final provider billing or source-code
+                requests may be refused even after a successful token check. No
+                response is proof of final provider billing or source-code
                 authorization.
             </p>
         </section>
