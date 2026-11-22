@@ -26,11 +26,6 @@ final class KslpCustomerWorkspaceQuery
         $userId = (int) $actor->getKey();
         $organizationNames = [];
         foreach ($this->organizations->forUser($userId) as $organization) {
-            if (! is_array($organization)
-                || ! is_string($organization['id'] ?? null)
-                || ! is_string($organization['name'] ?? null)) {
-                continue;
-            }
             $organizationNames[$organization['id']] = $organization['name'];
         }
 
@@ -67,7 +62,7 @@ final class KslpCustomerWorkspaceQuery
                 'id' => (string) $license->id,
                 'product' => (string) $license->product,
                 'plan' => (string) $license->plan,
-                'state' => self::state($license, $now),
+                'state' => self::state((array) $license, $now),
                 'subject_label' => $organizationNames[$subject] ?? 'Personal license',
                 'starts_at' => $license->starts_at,
                 'expires_at' => $license->expires_at,
@@ -111,11 +106,11 @@ final class KslpCustomerWorkspaceQuery
             'license_count' => $total,
             'licenses_truncated' => $total > count($safeLicenses),
             'product_entitlements' => $entitlements,
-            'organizations' => array_values(array_map(
+            'organizations' => array_map(
                 fn (string $id, string $name): array => ['id' => $id, 'name' => $name],
                 array_keys($organizationNames),
                 array_values($organizationNames),
-            )),
+            ),
             'authorization_source' => 'authenticated_verified_membership',
             'device_reset_enabled' => false,
             'paid_issuance_enabled' => false,
@@ -123,22 +118,29 @@ final class KslpCustomerWorkspaceQuery
         ];
     }
 
-    public static function state(object $license, Carbon $now): string
+    /** @param array<string, mixed> $license */
+    public static function state(array $license, Carbon $now): string
     {
-        if ($license->revoked_at !== null) {
+        if (($license['revoked_at'] ?? null) !== null) {
             return 'REVOKED';
         }
-        if ($license->status !== 'active') {
+        if (($license['status'] ?? null) !== 'active') {
             return 'RESTRICTED';
         }
-        if ($now->lt(Carbon::parse($license->starts_at))) {
+        $startsAt = (string) ($license['starts_at'] ?? '');
+        $expiresAt = (string) ($license['expires_at'] ?? '');
+        if ($startsAt === '' || $expiresAt === '') {
+            return 'RESTRICTED';
+        }
+        if ($now->lt(Carbon::parse($startsAt))) {
             return 'NOT_STARTED';
         }
-        if ($now->lt(Carbon::parse($license->expires_at))) {
-            return $now->copy()->addDays(7)->gte(Carbon::parse($license->expires_at))
+        if ($now->lt(Carbon::parse($expiresAt))) {
+            return $now->copy()->addDays(7)->gte(Carbon::parse($expiresAt))
                 ? 'RENEWAL_DUE' : 'ACTIVE';
         }
-        if ($license->grace_until !== null && $now->lt(Carbon::parse($license->grace_until))) {
+        $graceUntil = $license['grace_until'] ?? null;
+        if (is_string($graceUntil) && $now->lt(Carbon::parse($graceUntil))) {
             return 'GRACE';
         }
 
