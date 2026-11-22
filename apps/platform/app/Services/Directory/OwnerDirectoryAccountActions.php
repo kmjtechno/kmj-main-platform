@@ -180,6 +180,7 @@ final class OwnerDirectoryAccountActions
                     if (in_array(($fk['foreign_table'] ?? ''), ['users', 'organizations'], true)) {
                         throw new RuntimeException('DIRECTORY_COMPOSITE_REFERENCE');
                     }
+
                     continue;
                 }
                 if (($fk['foreign_table'] ?? '') === 'users') {
