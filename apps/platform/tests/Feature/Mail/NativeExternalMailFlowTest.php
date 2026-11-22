@@ -271,7 +271,7 @@ final class NativeExternalMailFlowTest extends TestCase
     {
         $queued = Queue::pushed(SubmitNativeExternalMail::class);
         self::assertCount(1, $queued);
-        $queued[0]['job']->handle(app(NativeExternalMailService::class));
+        $queued[0]->handle(app(NativeExternalMailService::class));
     }
 
     private function owner(): User
