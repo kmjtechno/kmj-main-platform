@@ -9,6 +9,7 @@ use App\Mail\NativeExternalMailMessage;
 use App\Models\User;
 use App\Services\Mail\NativeExternalMailService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Mail\MailManager;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
@@ -94,7 +95,11 @@ final class NativeExternalMailFlowTest extends TestCase
     {
         // No network or test email: inspect the real Symfony transport created
         // by Laravel's MailManager from the pinned native-mail configuration.
-        $transport = app('mail.manager')->mailer('kmj_native_loopback')->getSymfonyTransport();
+        // The class uses Mail::fake() to protect all other tests. Construct
+        // an independent real MailManager for this transport-only test,
+        // without replacing the fake or attempting an SMTP connection.
+        $transport = (new MailManager(app()))
+            ->mailer('kmj_native_loopback')->getSymfonyTransport();
         self::assertInstanceOf(EsmtpTransport::class, $transport);
 
         $reflection = new \ReflectionProperty($transport, 'autoTls');
