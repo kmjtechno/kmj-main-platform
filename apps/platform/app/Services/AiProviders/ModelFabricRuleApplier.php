@@ -52,7 +52,7 @@ final class ModelFabricRuleApplier
         $regex = '/\A'.str_replace('\*', '[A-Za-z0-9._\/-]*', preg_quote($pattern, '/')).'\z/';
         $out = [];
         foreach ($models as $model) {
-            if (! is_string($model) || preg_match($regex, $model) !== 1) {
+            if (preg_match($regex, $model) !== 1) {
                 continue;
             }
             $lower = strtolower($model);

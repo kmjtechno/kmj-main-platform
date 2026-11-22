@@ -197,4 +197,28 @@ final class ModelFabricAutoApproveRulesTest extends TestCase
             'models_checked_at' => now(),
         ]);
     }
+
+    private function confirmed(User $user): static
+    {
+        return $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()]);
+    }
+
+    private function platformOwner(): User
+    {
+        $user = User::factory()->create([
+            'email_verified_at' => now(),
+            'is_platform_owner' => true,
+            'platform_owner_granted_at' => now(),
+        ]);
+        DB::table('passkeys')->insert([
+            'user_id' => $user->id,
+            'name' => 'ModelFabric test passkey',
+            'credential_id' => 'mf-'.Str::random(12),
+            'credential' => '{}',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $user;
+    }
 }
