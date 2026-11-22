@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'owner-one-command-release-helper-20261122',
+        title: 'Owner release: one short command instead of a pasted multi-block script',
+        state: 'active',
+        detail: 'Source-only: scripts/operations/owner-release-main-platform.sh takes only the exact candidate SHA, derives the live release from the current symlink, verifies five pinned helper hashes before running any of them, then runs stage, storage switch, materialize, recovery and the owner approval, and waits for the separate guarded activation before migrating. It never activates production itself and refuses a wrong host, an already-live SHA and a malformed argument. Replaces long pastes that were being corrupted by a dropping SSH connection.',
+        evidence:
+            'Local contract tests and exact-head CI only; not yet exercised on the Elite host. The helper hashes it pins must be updated whenever a pinned helper changes.',
+    },
+    {
         id: 'modelfabric-huggingface-token-shape-20261122',
         title: 'ModelFabric: accept the real Hugging Face access token format',
         state: 'active',
