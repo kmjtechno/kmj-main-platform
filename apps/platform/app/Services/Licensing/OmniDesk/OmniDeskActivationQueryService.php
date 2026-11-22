@@ -268,7 +268,7 @@ final class OmniDeskActivationQueryService
      * license -> activation -> binding. Non-locking lookups are identifiers
      * only and MUST be rechecked after the authoritative locks are held.
      *
-     * @return array{array<string, mixed>, array<string, mixed>, array<string, mixed>}
+     * @return array{array{activation_id:string,entitlement_id:string,organization_id:string,current_sequence:int|string},array{id:string,license_id:string,deactivated_at:mixed},array{id:string,status:string,revoked_at:mixed}}
      */
     private function lockedRecordsForPrincipal(
         string $activationId,
@@ -317,6 +317,13 @@ final class OmniDeskActivationQueryService
             throw new DomainException('OMNIDESK_ACTIVATION_NOT_FOUND');
         }
 
-        return [(array) $bindingRow, (array) $activationRow, (array) $licenseRow];
+        /** @var array{activation_id:string,entitlement_id:string,organization_id:string,current_sequence:int|string} $binding */
+        $binding = (array) $bindingRow;
+        /** @var array{id:string,license_id:string,deactivated_at:mixed} $activation */
+        $activation = (array) $activationRow;
+        /** @var array{id:string,status:string,revoked_at:mixed} $license */
+        $license = (array) $licenseRow;
+
+        return [$binding, $activation, $license];
     }
 }
