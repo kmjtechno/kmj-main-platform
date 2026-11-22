@@ -86,6 +86,61 @@ type Props = {
     };
 };
 
+const LIST_PAGE_SIZE = 10;
+
+type PageControlsProps = {
+    label: string;
+    page: number;
+    pageCount: number;
+    total: number;
+    onPageChange: (page: number) => void;
+};
+
+function PageControls({
+    label,
+    page,
+    pageCount,
+    total,
+    onPageChange,
+}: PageControlsProps) {
+    if (pageCount <= 1) return null;
+
+    const start = page * LIST_PAGE_SIZE + 1;
+    const end = Math.min((page + 1) * LIST_PAGE_SIZE, total);
+
+    return (
+        <nav
+            aria-label={label + ' pages'}
+            className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3"
+        >
+            <span role="status" className="text-muted-foreground text-xs">
+                Showing {start}–{end} of {total} loaded
+            </span>
+            <div className="flex items-center gap-2">
+                <button
+                    type="button"
+                    className="hover:bg-accent rounded-lg border px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                    disabled={page === 0}
+                    onClick={() => onPageChange(page - 1)}
+                >
+                    Previous
+                </button>
+                <span className="text-muted-foreground text-xs tabular-nums">
+                    Page {page + 1} / {pageCount}
+                </span>
+                <button
+                    type="button"
+                    className="hover:bg-accent rounded-lg border px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                    disabled={page >= pageCount - 1}
+                    onClick={() => onPageChange(page + 1)}
+                >
+                    Next
+                </button>
+            </div>
+        </nav>
+    );
+}
+
 export default function OperatorKslp({
     metrics,
     licenses,
@@ -104,6 +159,46 @@ export default function OperatorKslp({
     const [customerQuery, setCustomerQuery] = useState(filters.customer_q);
     const [planQuery, setPlanQuery] = useState(filters.plan);
     const [stateQuery, setStateQuery] = useState('all');
+    const [issuerSearch, setIssuerSearch] = useState('');
+    const [issuerPage, setIssuerPage] = useState(0);
+    const [entitlementPage, setEntitlementPage] = useState(0);
+    const [auditPage, setAuditPage] = useState(0);
+    const issuerNeedle = issuerSearch.trim().toLocaleLowerCase();
+    const filteredIssuers = issuerWorkspaces.filter((issuer) =>
+        [issuer.name, issuer.issuer_status, issuer.tier ?? ''].some((value) =>
+            value.toLocaleLowerCase().includes(issuerNeedle),
+        ),
+    );
+    const issuerPageCount = Math.max(
+        1,
+        Math.ceil(filteredIssuers.length / LIST_PAGE_SIZE),
+    );
+    const currentIssuerPage = Math.min(issuerPage, issuerPageCount - 1);
+    const issuerRows = filteredIssuers.slice(
+        currentIssuerPage * LIST_PAGE_SIZE,
+        (currentIssuerPage + 1) * LIST_PAGE_SIZE,
+    );
+    const entitlementPageCount = Math.max(
+        1,
+        Math.ceil(productEntitlements.length / LIST_PAGE_SIZE),
+    );
+    const currentEntitlementPage = Math.min(
+        entitlementPage,
+        entitlementPageCount - 1,
+    );
+    const entitlementRows = productEntitlements.slice(
+        currentEntitlementPage * LIST_PAGE_SIZE,
+        (currentEntitlementPage + 1) * LIST_PAGE_SIZE,
+    );
+    const auditPageCount = Math.max(
+        1,
+        Math.ceil(events.length / LIST_PAGE_SIZE),
+    );
+    const currentAuditPage = Math.min(auditPage, auditPageCount - 1);
+    const auditRows = events.slice(
+        currentAuditPage * LIST_PAGE_SIZE,
+        (currentAuditPage + 1) * LIST_PAGE_SIZE,
+    );
     const visibleLicenses = licenses.filter(
         (license) => stateQuery === 'all' || license.state === stateQuery,
     );
@@ -267,6 +362,23 @@ export default function OperatorKslp({
                             </p>
                         </div>
                     </div>
+                    <label
+                        className="mt-4 block max-w-lg text-xs font-semibold"
+                        htmlFor="issuer-workspace-search"
+                    >
+                        Search loaded issuer organizations
+                    </label>
+                    <input
+                        id="issuer-workspace-search"
+                        type="search"
+                        className="bg-background mt-2 h-10 w-full max-w-lg rounded-lg border px-3 text-sm"
+                        placeholder="Organization, issuer status or tier"
+                        value={issuerSearch}
+                        onChange={(event) => {
+                            setIssuerSearch(event.target.value);
+                            setIssuerPage(0);
+                        }}
+                    />
                     <div className="mt-4 overflow-x-auto">
                         <table className="w-full min-w-[740px] text-left text-xs">
                             <thead className="text-muted-foreground">
@@ -289,7 +401,7 @@ export default function OperatorKslp({
                                 </tr>
                             </thead>
                             <tbody>
-                                {issuerWorkspaces.map((issuer) => (
+                                {issuerRows.map((issuer) => (
                                     <tr
                                         className="border-b last:border-0"
                                         key={issuer.id}
@@ -317,12 +429,24 @@ export default function OperatorKslp({
                                 ))}
                             </tbody>
                         </table>
-                        {issuerWorkspaces.length === 0 && (
-                            <p className="text-muted-foreground p-4 text-xs">
-                                No issuer organizations available.
+                        {filteredIssuers.length === 0 && (
+                            <p
+                                className="text-muted-foreground p-4 text-xs"
+                                role="status"
+                            >
+                                {issuerSearch.trim()
+                                    ? 'No matching issuer organizations in the loaded records.'
+                                    : 'No issuer organizations available.'}
                             </p>
                         )}
                     </div>
+                    <PageControls
+                        label="Developer issuer organizations"
+                        page={currentIssuerPage}
+                        pageCount={issuerPageCount}
+                        total={filteredIssuers.length}
+                        onPageChange={setIssuerPage}
+                    />
                     <p className="text-muted-foreground mt-3 text-xs">
                         Read-only, first 60 organizations. Subscription
                         approval, reseller quotas, commercial settlement, and
@@ -345,7 +469,24 @@ export default function OperatorKslp({
                         developer view. Global commercial licensing policy and
                         paid entitlements remain owner-only.
                     </p>
-                    <DeveloperAppsWorkspace {...developerWorkspace} embedded />
+                    <details
+                        className="rounded-xl border p-3"
+                        open={
+                            developerWorkspace.newKey !== null ||
+                            (developerWorkspace.newKeys?.length ?? 0) > 0
+                        }
+                    >
+                        <summary className="cursor-pointer rounded-lg px-2 py-3 text-sm font-bold focus-visible:outline-2 focus-visible:outline-red-500">
+                            Open application registration, license keys and SDK
+                            tools
+                        </summary>
+                        <div className="mt-3">
+                            <DeveloperAppsWorkspace
+                                {...developerWorkspace}
+                                embedded
+                            />
+                        </div>
+                    </details>
                 </section>
                 <section
                     id="unverified-accounts"
@@ -499,6 +640,7 @@ export default function OperatorKslp({
                         <input
                             className="bg-background h-10 rounded-lg border px-3 text-sm"
                             placeholder="Customer / organization ID"
+                            aria-label="Customer or organization ID"
                             value={issue.data.customer_id}
                             onChange={(e) =>
                                 issue.setData('customer_id', e.target.value)
@@ -507,6 +649,7 @@ export default function OperatorKslp({
                         />
                         <select
                             className="bg-background h-10 rounded-lg border px-3 text-sm"
+                            aria-label="License plan"
                             value={issue.data.plan}
                             onChange={(e) =>
                                 issue.setData('plan', e.target.value)
@@ -526,6 +669,7 @@ export default function OperatorKslp({
                         </select>
                         <input
                             className="bg-background h-10 rounded-lg border px-3 text-sm"
+                            aria-label="Reason for license issuance"
                             value={issue.data.reason}
                             onChange={(e) =>
                                 issue.setData('reason', e.target.value)
@@ -905,7 +1049,7 @@ export default function OperatorKslp({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {productEntitlements.map((entitlement) => (
+                                    {entitlementRows.map((entitlement) => (
                                         <tr
                                             key={entitlement.id}
                                             className="border-b last:border-0"
@@ -944,6 +1088,13 @@ export default function OperatorKslp({
                                     ))}
                                 </tbody>
                             </table>
+                            <PageControls
+                                label="Product entitlements"
+                                page={currentEntitlementPage}
+                                pageCount={entitlementPageCount}
+                                total={productEntitlements.length}
+                                onPageChange={setEntitlementPage}
+                            />
                         </div>
                     )}
                 </section>
@@ -958,7 +1109,7 @@ export default function OperatorKslp({
                         </h2>
                     </div>
                     <div className="mt-4 grid gap-2">
-                        {events.map((e) => (
+                        {auditRows.map((e) => (
                             <div
                                 key={e.id}
                                 className="grid gap-1 rounded-xl border p-3 text-xs md:grid-cols-[1fr_.8fr_1fr_1.5fr]"
@@ -973,7 +1124,23 @@ export default function OperatorKslp({
                                 </span>
                             </div>
                         ))}
+                        {events.length === 0 && (
+                            <p
+                                className="text-muted-foreground rounded-lg border border-dashed p-4 text-xs"
+                                role="status"
+                            >
+                                No license lifecycle events have been recorded
+                                in this view.
+                            </p>
+                        )}
                     </div>
+                    <PageControls
+                        label="License lifecycle audit trail"
+                        page={currentAuditPage}
+                        pageCount={auditPageCount}
+                        total={events.length}
+                        onPageChange={setAuditPage}
+                    />
                 </section>
             </div>
         </>

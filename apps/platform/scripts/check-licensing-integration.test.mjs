@@ -105,11 +105,7 @@ void test('one KMJ Licensing Hub embeds developer workflow and retains owner aut
         'resources/js/components/operator-workspace-map.tsx',
     );
 
-    assert.ok(
-        owner.includes(
-            '<DeveloperAppsWorkspace {...developerWorkspace} embedded />',
-        ),
-    );
+    assert.match(owner, /<DeveloperAppsWorkspace[\s\S]*?embedded\s*\/>/);
     assert.ok(developer.includes('export function DeveloperAppsWorkspace'));
     assert.ok(
         developerRoutes.includes(
@@ -139,4 +135,37 @@ void test('account cleanup is an owner-only exact-snapshot action, disabled by d
     assert.match(cleanup, /UNVERIFIED_CLEANUP_STALE_PREVIEW/);
     assert.match(ownerUi, /unverifiedEmailCleanup\.enabled/);
     assert.doesNotMatch(cleanup, /whereNull\('email_verified_at'\)->delete\(/);
+});
+
+void test('owner Licensing Hub renders bounded searchable registers and accessible actions', () => {
+    const owner = read('resources/js/pages/operator-kslp.tsx');
+    const required = [
+        'const LIST_PAGE_SIZE = 10',
+        'issuerWorkspaces.filter',
+        'issuerRows.map',
+        'entitlementRows.map',
+        'auditRows.map',
+        'label="Developer issuer organizations"',
+        'label="Product entitlements"',
+        'label="License lifecycle audit trail"',
+        'onPageChange={setIssuerPage}',
+        'onPageChange={setEntitlementPage}',
+        'onPageChange={setAuditPage}',
+        'setIssuerPage(0)',
+        'disabled={page === 0}',
+        'disabled={page >= pageCount - 1}',
+        '<details',
+        '<DeveloperAppsWorkspace',
+        '{...developerWorkspace}',
+        'embedded',
+        'aria-label="Customer or organization ID"',
+        'aria-label="License plan"',
+        'aria-label="Reason for license issuance"',
+        'unverifiedEmailCleanup.enabled',
+        '/operator/kslp/licenses',
+    ];
+
+    for (const fragment of required) {
+        assert.ok(owner.includes(fragment), fragment);
+    }
 });

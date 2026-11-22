@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'owner-licensing-register-pagination-20261122',
+        title: 'Owner Licensing Hub: searchable compact registers and accessible license forms',
+        state: 'active',
+        detail: 'Source-only UI fix for the excessive owner-page scroll: ten-row paginated issuer organizations with search, ten-row paginated product entitlements and lifecycle audit, accessible previous/next controls, and an expandable embedded Apps/Keys/SDK workspace. The existing registered developer workflow stays in the one owner Hub; the release never changes signed issuance, account-cleanup permissions, entitlement scope, or backend limits.',
+        evidence:
+            'Screenshot-led review and new static regression gate; exact-head CI and owner authenticated browser acceptance pending. Not live until protected Elite release and migration receipt are independently verified.',
+    },
+    {
         id: 'single-kslp-customer-licenses-devices-20261122',
         title: 'Single Licensing Hub: verified customer products, licenses and masked device history',
         state: 'active',
