@@ -46,6 +46,38 @@ final class NativeExternalMailFlowTest extends TestCase
         Mail::assertNothingOutgoing();
     }
 
+    public function test_exact_elite_postfix_sendmail_modes_pass_but_unsafe_invocations_fail_closed(): void
+    {
+        $this->activateOutbound();
+        $service = app(NativeExternalMailService::class);
+
+        // The real KMJ-elite Postfix installation uses "-t -i"; the Symfony
+        // mailer also supports "-bs -i". Both require every other mail gate.
+        foreach (['/usr/sbin/sendmail -t -i', '/usr/sbin/sendmail -bs -i'] as $path) {
+            config()->set('mail.mailers.sendmail.path', $path);
+            self::assertTrue($service->transportEnabled(), $path);
+        }
+
+        // Do not weaken exact binary/argument or explicit owner activation.
+        foreach ([
+            '/bin/true',
+            '/usr/sbin/sendmail -t -i -f attacker@example.com',
+            '/usr/sbin/sendmail -t -i; true',
+            '/usr/sbin/sendmail -t',
+            '/usr/local/sbin/sendmail -t -i',
+            '',
+        ] as $path) {
+            config()->set('mail.mailers.sendmail.path', $path);
+            self::assertFalse($service->transportEnabled(), $path);
+        }
+
+        config()->set('mail.mailers.sendmail.path', '/usr/sbin/sendmail -t -i');
+        config()->set('services.kmj_native_external_mail.enabled', false);
+        self::assertFalse($service->transportEnabled());
+        Queue::assertNothingPushed();
+        Mail::assertNothingOutgoing();
+    }
+
     public function test_owner_can_queue_email_to_external_gmail_without_google_account_and_get_truthful_transport_status(): void
     {
         $owner = $this->owner();
