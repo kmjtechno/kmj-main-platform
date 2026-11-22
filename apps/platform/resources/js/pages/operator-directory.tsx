@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Building2, Search, ShieldCheck, Users } from 'lucide-react';
+import { Building2, Pencil, Search, ShieldCheck, Trash2, Users } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
 
@@ -40,7 +40,7 @@ type Props = {
     users: Paginated<DirectoryUser>;
     organizations: Paginated<DirectoryOrganization>;
     filters: { users_q: string; orgs_q: string };
-    read_only: true;
+    read_only: boolean;
 };
 
 function Pager({ data }: { data: Paginated<unknown> }) {
@@ -95,6 +95,61 @@ export default function OperatorDirectory({
 }: Props) {
     const [usersQuery, setUsersQuery] = useState(filters.users_q);
     const [orgsQuery, setOrgsQuery] = useState(filters.orgs_q);
+    const [editing, setEditing] = useState<number | null>(null);
+    const [deleting, setDeleting] = useState<number | null>(null);
+    const [deletePhrase, setDeletePhrase] = useState('');
+    const [actionError, setActionError] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [form, setForm] = useState({
+        name: '',
+        phone: '',
+        country: '',
+        company_name: '',
+        service_interest: '',
+    });
+
+    const editUser = (user: DirectoryUser) => {
+        setEditing(user.id);
+        setDeleting(null);
+        setActionError('');
+        setForm({
+            name: user.name,
+            phone: user.customer_profile?.phone ?? '',
+            country: user.customer_profile?.country ?? '',
+            company_name: user.customer_profile?.company_name ?? '',
+            service_interest: user.customer_profile?.service_interest ?? '',
+        });
+    };
+
+    const saveUser = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (editing === null) return;
+        setSaving(true);
+        setActionError('');
+        router.patch('/operator/directory/users/' + editing + '/contact', form, {
+            preserveScroll: true,
+            onSuccess: () => setEditing(null),
+            onError: (errors) => setActionError(Object.values(errors).join(' ')),
+            onFinish: () => setSaving(false),
+        });
+    };
+
+    const deleteUser = (user: DirectoryUser) => {
+        if (deletePhrase !== 'DELETE ' + user.email || saving) return;
+        setSaving(true);
+        setActionError('');
+        router.post(
+            '/operator/directory/users/' + user.id + '/delete',
+            { confirmation: 'DELETE_USER_' + user.id },
+            {
+                preserveScroll: true,
+                onSuccess: () => { setDeleting(null); setDeletePhrase(''); },
+                onError: (errors) => setActionError(Object.values(errors).join(' ')),
+                onFinish: () => setSaving(false),
+            },
+        );
+    };
+
 
     const search = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -126,12 +181,13 @@ export default function OperatorDirectory({
                         Review verified identities, signup contact details and
                         customer organizations from one owner-only workspace.
                         Contact fields appear only when customers supplied them.
-                        This module cannot grant permissions, licenses or
-                        account invitations.
+                        Contact details can be updated by the passkey-verified owner.
+                        Deletion is limited to standalone accounts; linked
+                        organizations, licenses and audit history are protected.
                     </p>
                     <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-blue-500/20 px-3 py-1.5 text-xs font-bold text-blue-200">
                         <ShieldCheck className="size-4" aria-hidden="true" />
-                        Owner only · Read-only
+                        Owner only · Password-confirmed actions
                     </div>
                 </header>
 
@@ -274,13 +330,80 @@ export default function OperatorDirectory({
                                                 </dl>
                                             )}
                                         </div>
-                                        <span className="text-muted-foreground rounded-full border border-white/15 px-2.5 py-1 text-[11px]">
-                                            {user.is_platform_owner
-                                                ? 'Platform owner'
-                                                : user.email_verified_at
-                                                  ? 'Verified user'
-                                                  : 'Email unverified'}
-                                        </span>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="text-muted-foreground rounded-full border border-white/15 px-2.5 py-1 text-[11px]">
+                                                {user.is_platform_owner
+                                                    ? 'Platform owner'
+                                                    : user.email_verified_at
+                                                      ? 'Verified user'
+                                                      : 'Email unverified'}
+                                            </span>
+                                            {!user.is_platform_owner && (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => editUser(user)}
+                                                        className="inline-flex items-center gap-1 rounded-lg border border-white/20 px-3 py-1.5 text-xs hover:bg-white/10"
+                                                        aria-label={'Edit ' + user.name}
+                                                    >
+                                                        <Pencil className="size-3.5" /> Edit
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setDeleting(user.id);
+                                                            setEditing(null);
+                                                            setDeletePhrase('');
+                                                            setActionError('');
+                                                        }}
+                                                        className="inline-flex items-center gap-1 rounded-lg border border-red-500/40 px-3 py-1.5 text-xs text-red-300 hover:bg-red-500/10"
+                                                        aria-label={'Review deletion of ' + user.name}
+                                                    >
+                                                        <Trash2 className="size-3.5" /> Delete
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                        {editing === user.id && (
+                                            <form onSubmit={saveUser} className="w-full rounded-xl border border-white/15 p-4" aria-label="Edit account contact">
+                                                <p className="mb-3 text-xs text-muted-foreground">Email and verified status are read-only. Identity changes require a separate verification workflow.</p>
+                                                <div className="grid gap-3 sm:grid-cols-2">
+                                                    <label className="text-xs">Name
+                                                        <input required maxLength={120} minLength={2} value={form.name} onChange={(e) => setForm({...form, name:e.target.value})} className="mt-1 w-full rounded-lg border bg-background p-2" />
+                                                    </label>
+                                                    {user.customer_profile && (
+                                                        <>
+                                                            <label className="text-xs">Phone
+                                                                <input maxLength={32} value={form.phone} onChange={(e) => setForm({...form, phone:e.target.value})} className="mt-1 w-full rounded-lg border bg-background p-2" />
+                                                            </label>
+                                                            <label className="text-xs">Country
+                                                                <input maxLength={80} value={form.country} onChange={(e) => setForm({...form, country:e.target.value})} className="mt-1 w-full rounded-lg border bg-background p-2" />
+                                                            </label>
+                                                            <label className="text-xs">Company
+                                                                <input maxLength={160} value={form.company_name} onChange={(e) => setForm({...form, company_name:e.target.value})} className="mt-1 w-full rounded-lg border bg-background p-2" />
+                                                            </label>
+                                                        </>
+                                                    )}
+                                                </div>
+                                                <div className="mt-3 flex gap-2">
+                                                    <button type="submit" disabled={saving} className="rounded-lg bg-red-600 px-4 py-2 text-xs font-bold disabled:opacity-50">Save changes</button>
+                                                    <button type="button" onClick={() => setEditing(null)} className="rounded-lg border px-4 py-2 text-xs">Cancel</button>
+                                                </div>
+                                            </form>
+                                        )}
+                                        {deleting === user.id && (
+                                            <div className="w-full rounded-xl border border-red-500/40 p-4" role="group" aria-label="Confirm account deletion">
+                                                <p className="text-xs text-red-200">Permanent deletion requires a standalone account with no organization, license, purchase, identity grants or audit links. Linked accounts are blocked. Type <strong>DELETE {user.email}</strong> to confirm.</p>
+                                                <input value={deletePhrase} onChange={(e) => setDeletePhrase(e.target.value)} aria-label="Type deletion confirmation" className="mt-3 w-full rounded-lg border bg-background p-2 text-xs" />
+                                                <div className="mt-3 flex gap-2">
+                                                    <button type="button" disabled={saving || deletePhrase !== 'DELETE ' + user.email} onClick={() => deleteUser(user)} className="rounded-lg bg-red-600 px-4 py-2 text-xs font-bold disabled:opacity-50">Delete standalone account</button>
+                                                    <button type="button" onClick={() => setDeleting(null)} className="rounded-lg border px-4 py-2 text-xs">Cancel</button>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {actionError && (editing === user.id || deleting === user.id) && (
+                                            <p className="w-full text-xs text-red-300" role="alert">{actionError}</p>
+                                        )}
                                     </div>
                                 ))}
                             </div>

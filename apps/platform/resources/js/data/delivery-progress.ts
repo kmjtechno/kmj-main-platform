@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'owner-directory-guarded-customer-account-actions-20261122',
+        title: 'Owner directory: guarded user contact editing and standalone account deletion',
+        state: 'active',
+        detail: 'Source-only owner passkey and recent password-confirmed customer management. Allows editing non-auth customer contacts without changing email verification, roles or grants. Individually confirmed deletion refuses platform owners, organizations, licenses and any detected business or security identity links, preserving those records and logging a scoped audit event. Organization-linked unverified cleanup is a separate protected task.',
+        evidence:
+            'Draft security review and exact-head CI required. No production deletion, account edit or activation is implied by source merge.',
+    },
+    {
         id: 'owner-licensing-register-pagination-20261122',
         title: 'Owner Licensing Hub: searchable compact registers and accessible license forms',
         state: 'active',

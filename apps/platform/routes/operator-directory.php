@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Services\Directory\OwnerDirectoryAccountActions;
+use Illuminate\Validation\ValidationException;
+use RuntimeException;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -69,7 +72,62 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 ],
                 'users' => $users,
                 'organizations' => $organizations,
-                'read_only' => true,
+                'read_only' => false,
             ]);
         })->name('directory.index');
+
+        Route::patch('directory/users/{user}/contact', function (
+            Request $request,
+            User $user,
+            PlatformOwnerAccess $access,
+            OwnerDirectoryAccountActions $actions,
+        ) {
+            $actor = $request->user();
+            abort_unless($actor instanceof User, 401);
+            $access->require($actor);
+
+            $values = $request->validate([
+                'name' => ['required', 'string', 'min:2', 'max:120'],
+                'phone' => ['sometimes', 'nullable', 'string', 'max:32'],
+                'country' => ['sometimes', 'nullable', 'string', 'max:80'],
+                'company_name' => ['sometimes', 'nullable', 'string', 'max:160'],
+                'service_interest' => ['sometimes', 'nullable', 'in:software,cloud,remote_access,calibration,cinema,other'],
+            ]);
+            try {
+                $actions->updateContact((int) $user->id, (int) $actor->id, $values);
+            } catch (RuntimeException) {
+                throw ValidationException::withMessages([
+                    'user' => 'This account is protected and cannot be edited here.',
+                ]);
+            }
+
+            return redirect()->route('operator.directory.index');
+        })->middleware('throttle:8,1')->name('directory.user-contact');
+
+        Route::post('directory/users/{user}/delete', function (
+            Request $request,
+            User $user,
+            PlatformOwnerAccess $access,
+            OwnerDirectoryAccountActions $actions,
+        ) {
+            $actor = $request->user();
+            abort_unless($actor instanceof User, 401);
+            $access->require($actor);
+            $values = $request->validate([
+                'confirmation' => ['required', 'string', 'max:80'],
+            ]);
+            abort_unless(
+                hash_equals('DELETE_USER_'.(int) $user->id, (string) $values['confirmation']),
+                422,
+            );
+            try {
+                $actions->deleteStandalone((int) $user->id, (int) $actor->id);
+            } catch (RuntimeException) {
+                throw ValidationException::withMessages([
+                    'user' => 'Deletion blocked: this user is an owner or has linked organization, identity, payment, license or audit records. No data was removed.',
+                ]);
+            }
+
+            return redirect()->route('operator.directory.index');
+        })->middleware('throttle:2,1')->name('directory.user-delete');
     });
