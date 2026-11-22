@@ -138,6 +138,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-collector-backup-restore-20261122',
+        title: 'Release collectors 2 and 3: backup-witness and disposable-restore receipts',
+        state: 'active',
+        detail: 'Source-only collector that re-verifies, read-only, the root-protected pre-deploy witness (bound to the exact SHA and live predecessor), recomputes the bundle SHA-256, and requires the existing uploads restore verifier to pass before writing private receipts. It runs no backup, restores nowhere live and touches no approval or pointer.',
+        evidence:
+            'Unit tests and exact-head CI only. Not installed or run on Elite. The PostgreSQL restore claim comes from the existing exact-release recovery run that publishes the witness; this collector does not re-run it.',
+    },
+    {
         id: 'release-collector-staging-origin-20261122',
         title: 'Release collector 1: staging-origin exact-SHA receipt',
         state: 'active',

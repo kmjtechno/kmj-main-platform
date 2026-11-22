@@ -68,7 +68,7 @@ def write_receipt(receipt, directory=RECEIPT_DIR, trusted_uid=0):
     if (not stat.S_ISDIR(info.st_mode) or info.st_uid != trusted_uid
             or stat.S_IMODE(info.st_mode) & 0o077):
         raise ValueError("BLOCKED_RECEIPT_DIR")
-    final = directory / "{}-{}.json".format(KIND, receipt["approvedSha"][:12])
+    final = directory / "{}-{}.json".format(receipt["kind"], receipt["approvedSha"][:12])
     tmp = directory / ("." + final.name + ".tmp")
     data = (json.dumps(receipt, sort_keys=True, separators=(",", ":")) + "\n").encode()
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
