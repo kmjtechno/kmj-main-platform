@@ -271,6 +271,74 @@ final class OwnerDirectoryHttpTest extends TestCase
         ]);
     }
 
+    public function test_owner_cannot_save_whitespace_or_trimmed_short_name(): void
+    {
+        $owner = $this->owner();
+        $target = User::factory()->create(['name' => 'Existing Name']);
+
+        foreach (['   ', ' a '] as $invalidName) {
+            $this->actingAs($owner)
+                ->withSession(['auth.password_confirmed_at' => time()])
+                ->patch('/operator/directory/users/'.$target->id.'/contact', [
+                    'name' => $invalidName,
+                ])->assertSessionHasErrors('name');
+        }
+
+        $this->assertDatabaseHas('users', [
+            'id' => $target->id,
+            'name' => 'Existing Name',
+        ]);
+    }
+
+    public function test_owner_can_edit_legacy_user_without_a_contact_profile(): void
+    {
+        $owner = $this->owner();
+        $legacy = User::factory()->create(['name' => 'Legacy Account']);
+
+        $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->patch('/operator/directory/users/'.$legacy->id.'/contact', [
+                'name' => 'Updated Legacy Account',
+            ])->assertRedirect('/operator/directory');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $legacy->id,
+            'name' => 'Updated Legacy Account',
+        ]);
+        $this->assertDatabaseMissing('customer_profiles', ['user_id' => $legacy->id]);
+    }
+
+    public function test_owner_cannot_silently_clear_required_phone_or_country(): void
+    {
+        $owner = $this->owner();
+        $target = User::factory()->create(['name' => 'Valid Contact']);
+        CustomerProfile::query()->create([
+            'user_id' => $target->id,
+            'account_type' => 'individual',
+            'phone' => '+91 1111111111',
+            'country' => 'India',
+        ]);
+
+        foreach ([
+            ['phone' => '', 'country' => 'India'],
+            ['phone' => '+91 1111111111', 'country' => ''],
+        ] as $contact) {
+            $this->actingAs($owner)
+                ->withSession(['auth.password_confirmed_at' => time()])
+                ->patch('/operator/directory/users/'.$target->id.'/contact', [
+                    'name' => 'Changed Invalidly',
+                    ...$contact,
+                ])->assertSessionHasErrors();
+        }
+
+        $this->assertDatabaseHas('users', ['id' => $target->id, 'name' => 'Valid Contact']);
+        $this->assertDatabaseHas('customer_profiles', [
+            'user_id' => $target->id,
+            'phone' => '+91 1111111111',
+            'country' => 'India',
+        ]);
+    }
+
     private function owner(): User
     {
         $owner = User::factory()->create([
