@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-select-models-20261121',
+        title: 'ModelFabric: approve only the models you tick',
+        state: 'active',
+        detail: 'Source-only: the bulk approval now acts on models the owner explicitly ticks from the provider discovery list instead of every listed model, because a provider list can include paid-only or non-chat models. Server rules are unchanged: models must be in the last discovery, one explicit attestation, maximum 50, audited.',
+        evidence:
+            'Static test and exact-head CI only; no change to evidence expiry or to which providers can be unlocked.',
+    },
+    {
         id: 'modelfabric-bulk-evidence-renew-20261121',
         title: 'ModelFabric: approve many models at once and renew evidence in one click',
         state: 'active',
