@@ -113,6 +113,10 @@ export default function OperatorDirectory({
         visibleIds.length > 0 &&
         visibleIds.every((id) => selectedVisibleIds.includes(id));
 
+    const togglePageSelection = (checked: boolean) => {
+        setSelectedIds(checked ? visibleIds : []);
+    };
+
     const toggleSelected = (id: number) => {
         setSelectedIds((current) => {
             const visible = current.filter((item) => visibleIds.includes(item));
@@ -123,16 +127,17 @@ export default function OperatorDirectory({
     };
 
     const deleteSelected = () => {
-        if (bulkBusy || selectedVisibleIds.length === 0) return;
+        if (bulkBusy || selectedVisibleIds.length === 0) {
+            return;
+        }
         const ids = [...selectedVisibleIds].sort((a, b) => a - b);
-        if (
-            !window.confirm(
-                'Permanently delete ' + ids.length +
-                ' selected customer(s) and their private signup data? ' +
-                'This cannot be undone. If any account is protected, ' +
-                'nothing in this selection will be deleted.',
-            )
-        ) return;
+        const prompt = [
+            `Delete ${ids.length} selected customer(s) and their private signup data?`,
+            'This cannot be undone. If any account is protected, no selected account is deleted.',
+        ].join(' ');
+        if (!window.confirm(prompt)) {
+            return;
+        }
 
         setBulkBusy(true);
         setBulkError('');
@@ -277,9 +282,7 @@ export default function OperatorDirectory({
                                     disabled={bulkBusy || visibleIds.length === 0}
                                     aria-label="Select all customers on this page"
                                     onChange={(event) =>
-                                        setSelectedIds(
-                                            event.target.checked ? visibleIds : [],
-                                        )
+                                        togglePageSelection(event.target.checked)
                                     }
                                     className="size-4 accent-red-500"
                                 />
@@ -290,20 +293,26 @@ export default function OperatorDirectory({
                             </span>
                             <button
                                 type="button"
-                                disabled={bulkBusy || selectedVisibleIds.length === 0}
+                                disabled={
+                                    bulkBusy || selectedVisibleIds.length === 0
+                                }
                                 onClick={deleteSelected}
                                 className="ml-auto min-h-10 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {bulkBusy
                                     ? 'Deleting...'
-                                    : 'Delete selected (' + selectedVisibleIds.length + ')'}
+                                    : `Delete selected (${selectedVisibleIds.length})`}
                             </button>
                             <p className="text-muted-foreground w-full text-xs">
-                                Only checked customers on this page. One confirmation;
-                                protected accounts block the entire selection.
+                                Only checked customers on this page. One
+                                confirmation; protected accounts block the entire
+                                selection.
                             </p>
                             {bulkError && (
-                                <p role="alert" className="w-full text-xs text-red-300">
+                                <p
+                                    role="alert"
+                                    className="w-full text-xs text-red-300"
+                                >
                                     {bulkError}
                                 </p>
                             )}
@@ -323,10 +332,17 @@ export default function OperatorDirectory({
                                             <label className="inline-flex min-h-8 items-center gap-2 text-xs">
                                                 <input
                                                     type="checkbox"
-                                                    checked={selectedVisibleIds.includes(user.id)}
+                                                    checked={selectedVisibleIds.includes(
+                                                        user.id,
+                                                    )}
                                                     disabled={bulkBusy}
-                                                    onChange={() => toggleSelected(user.id)}
-                                                    aria-label={'Select customer ' + user.name}
+                                                    onChange={() =>
+                                                        toggleSelected(user.id)
+                                                    }
+                                                    aria-label={
+                                                        'Select customer ' +
+                                                        user.name
+                                                    }
                                                     className="size-4 accent-red-500"
                                                 />
                                                 Select
