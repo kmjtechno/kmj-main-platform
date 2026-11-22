@@ -54,7 +54,13 @@ final class NativeExternalMailService
         return config('services.kmj_native_external_mail.enabled', false) === true
             && config('mail.default') === 'sendmail'
             && config('mail.mailers.sendmail.transport') === 'sendmail'
-            && config('mail.mailers.sendmail.path') === '/usr/sbin/sendmail -bs -i'
+            // Symfony Mailer supports both Postfix sendmail invocation modes.
+            // Keep an exact allowlist: no alternate binaries, shells, arbitrary
+            // argv, injected envelope senders or third-party transports.
+            && in_array(config('mail.mailers.sendmail.path'), [
+                '/usr/sbin/sendmail -t -i',
+                '/usr/sbin/sendmail -bs -i',
+            ], true)
             && $this->readiness->canAttemptDelivery();
     }
 
