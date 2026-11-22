@@ -170,7 +170,6 @@ void test('owner Licensing Hub renders bounded searchable registers and accessib
     }
 });
 
-
 void test('disabled cleanup reports unknown eligibility instead of misleading zero counts', () => {
     const owner = read('resources/js/pages/operator-kslp.tsx');
     const routes = read('routes/kslp-admin.php');
@@ -179,9 +178,17 @@ void test('disabled cleanup reports unknown eligibility instead of misleading ze
         owner,
         /unverifiedEmailCleanup\.status === 'PREVIEW_ONLY'/,
     );
-    assert.match(owner, /cleanupPreviewAvailable\\s*\?\s*unverifiedEmailCleanup\.eligible\s*:\s*'—'/);
-    assert.match(owner, /cleanupPreviewAvailable\\s*\?\s*unverifiedEmailCleanup\.protected\s*:\s*'—'/);
-    assert.ok(owner.includes('counts were not assessed. No deletion is authorized.'));
+    assert.match(
+        owner,
+        /cleanupPreviewAvailable\s*\?\s*unverifiedEmailCleanup\.eligible\s*:\s*'—'/,
+    );
+    assert.match(
+        owner,
+        /cleanupPreviewAvailable\s*\?\s*unverifiedEmailCleanup\.protected\s*:\s*'—'/,
+    );
+    assert.ok(
+        owner.includes('counts were not assessed. No deletion is authorized.'),
+    );
     assert.ok(owner.includes('!cleanupPreviewAvailable'));
     assert.match(routes, /'status' => 'ROLLOUT_BLOCKED'/);
     assert.match(routes, /'status' => 'PREVIEW_ONLY'/);
