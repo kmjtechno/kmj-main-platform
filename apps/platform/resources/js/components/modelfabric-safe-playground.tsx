@@ -131,12 +131,16 @@ export default function ModelFabricSafePlayground({
             const body = (await response.json()) as ApiReply;
             if (!sendPrompt) {
                 const routes = body.modelfabric?.routes;
-                if (!Number.isSafeInteger(routes) || (routes ?? -1) < 0) {
+                if (
+                    typeof routes !== 'number' ||
+                    !Number.isSafeInteger(routes) ||
+                    routes < 0
+                ) {
                     setVerifiedRoutes(null);
                     setMessage('Invalid ModelFabric catalog response.');
                     return;
                 }
-                setVerifiedRoutes(routes as number);
+                setVerifiedRoutes(routes);
                 setMessage(
                     routes === 0
                         ? 'Token accepted. No verified-zero chat routes available.'
