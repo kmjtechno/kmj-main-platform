@@ -34,6 +34,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Local contract tests and exact-head CI only; not yet exercised on the Elite host. The helper hashes it pins must be updated whenever a pinned helper changes.',
     },
     {
+        id: 'modelfabric-github-catalog-shape-20261122',
+        title: 'ModelFabric: GitHub catalog errors show response shape only',
+        state: 'active',
+        detail: 'Source-only diagnostic: when the GitHub Models catalog is not a JSON list, the provider error now carries the content type, JSON type and top-level key names (never values or body text) so the cause can be fixed from evidence instead of guessing.',
+        evidence:
+            'Unit test pins the shape code; exact-head CI only. Not deployed.',
+    },
+    {
         id: 'modelfabric-github-catalog-accept-20261122',
         title: 'ModelFabric: GitHub Models catalog request uses the documented Accept header',
         state: 'active',

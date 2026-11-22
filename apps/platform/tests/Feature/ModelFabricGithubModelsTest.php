@@ -63,4 +63,25 @@ final class ModelFabricGithubModelsTest extends TestCase
         $this->assertSame('ok', $tested->health);
         $this->assertSame(['meta/llama-3.3-70b-instruct', 'openai/gpt-4.1'], $tested->models_cache);
     }
+
+    public function test_a_non_list_github_catalog_reports_its_shape_but_never_its_values(): void
+    {
+        Http::fake(['models.github.ai/*' => Http::response('OK', 200, ['Content-Type' => 'text/plain'])]);
+        $provider = AiProvider::query()->create([
+            'organization_id' => $this->org,
+            'name' => 'GitHub',
+            'preset' => 'github',
+            'kind' => 'openai-compatible',
+            'base_url' => 'https://models.github.ai/inference',
+            'api_key' => 'github_pat_test_key_123456',
+            'key_last4' => '3456',
+            'enabled' => true,
+            'free_only' => true,
+        ]);
+
+        $tested = app(ProviderManager::class)->test($provider);
+
+        $this->assertSame('unreachable', $tested->health);
+        $this->assertSame('invalid_catalog:text/plain|txt:2', $tested->last_error_code);
+    }
 }
