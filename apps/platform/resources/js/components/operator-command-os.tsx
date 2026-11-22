@@ -34,6 +34,12 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import LockedBrand from '@/components/locked-brand';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { UserMenuContent } from '@/components/user-menu-content';
 import ProductArtwork from '@/components/product-artwork';
 import KristiOwnerAssistant from '@/components/kristi-owner-assistant';
 import { ownerGreetingForHour } from '@/components/owner-greeting.mjs';
@@ -289,14 +295,26 @@ export default function OperatorCommandOs({
                     <span />
                     System Status
                 </Link>
-                <div className="owner-identity">
-                    <span className="owner-initials">{initials}</span>
-                    <div>
-                        <strong>{name}</strong>
-                        <small>Platform Owner / Super Admin</small>
-                    </div>
-                    <ChevronRight size={13} />
-                </div>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button
+                            type="button"
+                            className="owner-identity"
+                            aria-label="Open profile and logout menu"
+                            data-test="owner-profile-menu-trigger"
+                        >
+                            <span className="owner-initials">{initials}</span>
+                            <span className="owner-identity-details">
+                                <strong>{name}</strong>
+                                <small>Platform Owner / Super Admin</small>
+                            </span>
+                            <ChevronRight size={13} aria-hidden="true" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="z-[150] w-64">
+                        {auth.user && <UserMenuContent user={auth.user} />}
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </header>
             <aside
                 className={'owner-sidebar ' + (navOpen ? 'is-open' : '')}
