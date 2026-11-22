@@ -152,8 +152,9 @@ export default function OwnerDirectoryUserActions({
                     Review deletion
                 </summary>
                 <p className="mt-3 text-xs text-red-200">
-                    Linked organizations, purchases, licenses and audit records
-                    block deletion. To delete a standalone account type
+                    This removes the account, private profile and any sole-owner
+                    empty signup organization. Shared organizations, purchases,
+                    licenses and audit records block deletion. Type
                     <strong> DELETE {user.email}</strong>.
                 </p>
                 <input
@@ -168,7 +169,7 @@ export default function OwnerDirectoryUserActions({
                     onClick={remove}
                     className="mt-3 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold disabled:opacity-50"
                 >
-                    Permanently delete standalone account
+                    Delete customer and signup data
                 </button>
             </details>
             {error && (

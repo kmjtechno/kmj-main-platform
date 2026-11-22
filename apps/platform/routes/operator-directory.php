@@ -134,13 +134,13 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 422,
             );
             try {
-                $actions->deleteStandalone((int) $user->id, (int) $actor->id);
+                $actions->deleteCustomerAndSignupData((int) $user->id, (int) $actor->id);
             } catch (RuntimeException) {
                 throw ValidationException::withMessages([
-                    'user' => 'Deletion blocked: this user is an owner or has linked organization, identity, payment, license or audit records. No data was removed.',
+                    'user' => 'Deletion blocked: this customer has a shared organization or linked payment, license, identity or audit records. No data was removed.',
                 ]);
             }
 
             return redirect()->route('operator.directory.index');
-        })->middleware('throttle:2,1')->name('directory.user-delete');
+        })->middleware('throttle:8,1')->name('directory.user-delete');
     });

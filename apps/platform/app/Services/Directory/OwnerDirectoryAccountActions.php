@@ -55,7 +55,15 @@ final class OwnerDirectoryAccountActions
         });
     }
 
-    public function deleteStandalone(int $id, int $actorId): void
+    /**
+     * Delete one customer's private signup graph, not merely their users row.
+     *
+     * The linked organization may be deleted only if this customer is its
+     * sole owner/member and no business/identity table references it.
+     * Unknown relations fail closed. Nothing outside this transaction is
+     * mutated and external files are NOT claimed as erased.
+     */
+    public function deleteCustomerAndSignupData(int $id, int $actorId): void
     {
         DB::transaction(function () use ($id, $actorId): void {
             $user = User::query()->whereKey($id)->lockForUpdate()->first();
@@ -65,66 +73,152 @@ final class OwnerDirectoryAccountActions
                 throw new RuntimeException('DIRECTORY_ACCOUNT_PROTECTED');
             }
 
-            // A user's organization, passkey, license, invoice, entitlement,
-            // access grant or audit history must NEVER be deleted by cascade.
-            foreach (Schema::getTables() as $entry) {
-                $table = $entry['name'] ?? null;
-                if (! is_string($table) ||
-                    preg_match('/\A[a-z][a-z0-9_]*\z/D', $table) !== 1) {
-                    throw new RuntimeException('DIRECTORY_SCHEMA_UNRECOGNIZED');
-                }
-                if (in_array($table, [
-                    'users', 'customer_profiles', 'sessions', 'password_reset_tokens',
-                ], true)) {
-                    continue;
-                }
+            if (! Schema::hasTable('organization_memberships') ||
+                ! Schema::hasTable('organizations') ||
+                ! Schema::hasTable('customer_profiles') ||
+                ! Schema::hasTable('operator_action_audits')) {
+                throw new RuntimeException('DIRECTORY_REQUIRED_SCHEMA_MISSING');
+            }
 
-                $columns = Schema::getColumnListing($table);
-                $refs = array_values(array_intersect($columns, self::POSSIBLE_REFERENCES));
-                foreach (Schema::getForeignKeys($table) as $fk) {
-                    if (($fk['foreign_table'] ?? null) !== 'users') {
-                        continue;
-                    }
-                    if (count($fk['columns'] ?? []) !== 1) {
-                        throw new RuntimeException('DIRECTORY_SCHEMA_UNRECOGNIZED');
-                    }
-                    $refs[] = $fk['columns'][0];
-                }
-                foreach (array_unique($refs) as $column) {
-                    if (! is_string($column) ||
-                        preg_match('/\A[a-z][a-z0-9_]*\z/D', $column) !== 1) {
-                        throw new RuntimeException('DIRECTORY_SCHEMA_UNRECOGNIZED');
-                    }
-                    $type = Schema::getColumnType($table, $column);
-                    if ($type === 'uuid') {
-                        // UUID foreign identities do not equal a bigint user ID.
-                        // The organization membership is separately protected.
-                        continue;
-                    }
-                    if (! in_array($type, [
-                        'integer', 'bigint', 'smallint', 'int2', 'int4', 'int8',
-                        'string', 'varchar', 'character varying', 'text',
-                        'char', 'character', 'bpchar', 'citext', 'decimal', 'numeric',
-                    ], true)) {
-                        throw new RuntimeException('DIRECTORY_UNKNOWN_REFERENCE_TYPE');
-                    }
-                    if (DB::table($table)->where($column, (string) $id)->exists()) {
-                        throw new RuntimeException('DIRECTORY_ACCOUNT_LINKED');
-                    }
+            // Lock every personal organization before checking dependents.
+            // Shared, non-owner, and commercially-used organizations must not
+            // be deleted or cause an implicit transfer of other people's data.
+            $memberships = DB::table('organization_memberships')
+                ->where('user_id', $id)->orderBy('organization_id')
+                ->lockForUpdate()->get(['organization_id', 'role']);
+            $orgIds = $memberships->pluck('organization_id')
+                ->map(static fn ($org): string => (string) $org)->unique()->values()->all();
+
+            if ($memberships->contains(static fn ($membership): bool => $membership->role !== 'owner')) {
+                throw new RuntimeException('DIRECTORY_SHARED_ORGANIZATION');
+            }
+            if ($orgIds !== []) {
+                $lockedOrganizations = DB::table('organizations')
+                    ->whereIn('id', $orgIds)->orderBy('id')->lockForUpdate()->get(['id']);
+                if ($lockedOrganizations->count() !== count($orgIds) ||
+                    DB::table('organization_memberships')
+                        ->whereIn('organization_id', $orgIds)
+                        ->where('user_id', '!=', $id)->exists()) {
+                    throw new RuntimeException('DIRECTORY_SHARED_ORGANIZATION');
                 }
             }
 
-            // Stale sessions and reset tokens are credentials, not commercial
-            // records; remove them only inside the exact account transaction.
+            // Refuse every discovered business/identity FK or potential
+            // untyped cross-service link. Do not trust FK cascades as proof
+            // that a purchase, license, audit or linked identity can be lost.
+            $this->assertNoLinkedBusinessRecords($id, $orgIds);
+
             if (Schema::hasTable('sessions')) {
                 DB::table('sessions')->where('user_id', $id)->delete();
             }
             if (Schema::hasTable('password_reset_tokens')) {
                 DB::table('password_reset_tokens')->where('email', $user->email)->delete();
             }
+            // Delete *only* signup-owned records. Profile and membership
+            // also cascade, but explicit deletion makes the intent testable.
+            DB::table('customer_profiles')->where('user_id', $id)->delete();
+            DB::table('organization_memberships')->where('user_id', $id)->delete();
+            if ($orgIds !== []) {
+                DB::table('organizations')->whereIn('id', $orgIds)->delete();
+            }
             $user->delete();
-            $this->recordAudit($actorId, 'directory_standalone_user_deleted', $id);
-        });
+
+            // Retain a minimal owner operation receipt, without a customer's
+            // email/name/contact, so the destructive action is auditable.
+            $this->recordAudit($actorId, 'directory_customer_signup_graph_deleted', $id);
+        }, 1);
+    }
+
+    /**
+     * @param  array<int, string>  $orgIds
+     */
+    private function assertNoLinkedBusinessRecords(int $id, array $orgIds): void
+    {
+        foreach (Schema::getTables() as $entry) {
+            $table = $entry['name'] ?? null;
+            if (! is_string($table) ||
+                preg_match('/\A[a-z][a-z0-9_]*\z/D', $table) !== 1) {
+                throw new RuntimeException('DIRECTORY_SCHEMA_UNRECOGNIZED');
+            }
+
+            if (in_array($table, [
+                'users', 'organizations', 'organization_memberships',
+                'customer_profiles', 'sessions', 'password_reset_tokens',
+            ], true)) {
+                continue;
+            }
+
+            $columns = Schema::getColumnListing($table);
+            $userRefs = array_values(array_intersect($columns, self::POSSIBLE_REFERENCES));
+            $orgRefs = [];
+            foreach (Schema::getColumns($table) as $column) {
+                $name = (string) ($column['name'] ?? '');
+                if (preg_match('/\A[a-z][a-z0-9_]*\z/D', $name) !== 1) {
+                    throw new RuntimeException('DIRECTORY_UNSAFE_COLUMN_NAME');
+                }
+                if (preg_match('/organization|org_id|tenant|customer_id|issuer/i', $name) !== 1) {
+                    continue;
+                }
+                $type = strtolower((string) ($column['type_name'] ?? ''));
+                if (in_array($type, [
+                    'bigint', 'integer', 'smallint', 'int2', 'int4', 'int8',
+                    'bool', 'boolean', 'timestamp', 'timestamptz', 'date',
+                    'float4', 'float8', 'numeric',
+                ], true)) {
+                    continue;
+                }
+                if (! in_array($type, [
+                    'uuid', 'varchar', 'text', 'bpchar', 'char', 'citext',
+                    'character varying', 'string',
+                ], true)) {
+                    throw new RuntimeException('DIRECTORY_UNREVIEWED_ORGANIZATION_REFERENCE');
+                }
+                $orgRefs[] = $name;
+            }
+            foreach (Schema::getForeignKeys($table) as $fk) {
+                if (count($fk['columns'] ?? []) !== 1) {
+                    if (in_array(($fk['foreign_table'] ?? ''), ['users', 'organizations'], true)) {
+                        throw new RuntimeException('DIRECTORY_COMPOSITE_REFERENCE');
+                    }
+
+                    continue;
+                }
+                if (($fk['foreign_table'] ?? '') === 'users') {
+                    $userRefs[] = $fk['columns'][0];
+                }
+                if (($fk['foreign_table'] ?? '') === 'organizations') {
+                    $orgRefs[] = $fk['columns'][0];
+                }
+            }
+
+            foreach (array_unique($userRefs) as $column) {
+                if (! is_string($column) ||
+                    preg_match('/\A[a-z][a-z0-9_]*\z/D', $column) !== 1) {
+                    throw new RuntimeException('DIRECTORY_UNSAFE_REFERENCE');
+                }
+                $type = Schema::getColumnType($table, $column);
+                if ($type === 'uuid') {
+                    // A bigint users.id is not representable as a native UUID.
+                    continue;
+                }
+                if (! in_array($type, [
+                    'bigint', 'integer', 'smallint', 'int2', 'int4', 'int8',
+                    'string', 'varchar', 'character varying', 'character',
+                    'bpchar', 'char', 'text', 'citext', 'decimal', 'numeric',
+                ], true)) {
+                    throw new RuntimeException('DIRECTORY_UNKNOWN_USER_REFERENCE_TYPE');
+                }
+                if (DB::table($table)->where($column, (string) $id)->exists()) {
+                    throw new RuntimeException('DIRECTORY_ACCOUNT_LINKED');
+                }
+            }
+
+            foreach (array_unique($orgRefs) as $column) {
+                if ($orgIds !== [] && DB::table($table)->whereIn($column, $orgIds)->exists()) {
+                    throw new RuntimeException('DIRECTORY_ORGANIZATION_LINKED');
+                }
+            }
+        }
     }
 
     private function recordAudit(int $actorId, string $action, int $targetId): void

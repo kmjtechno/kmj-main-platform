@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'owner-customer-account-signup-graph-delete-20261122',
+        title: 'Owner Customers: complete private signup data deletion',
+        state: 'active',
+        detail: 'Owner-only single-customer deletion now removes user authentication, customer profile, reset tokens, sessions, memberships and an empty sole-member signup organization together. Shared organizations, active providers, orders, licenses, audit/issuer references and unknown foreign links block the operation without partial data loss. Authenticated delete retains explicit typed confirmation.',
+        evidence:
+            'Source candidate only. Exact-head CI, independent security review, full Elite release and authenticated browser QA required before claiming LIVE. This does not run bulk cleanup.',
+    },
+    {
         id: 'owner-directory-contact-validation-20261122',
         title: 'Owner customer contact editing: trim names and validate required profile fields',
         state: 'active',
