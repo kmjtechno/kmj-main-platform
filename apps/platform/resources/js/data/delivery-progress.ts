@@ -10,6 +10,13 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'auth-brand-owner-profile-dropdown-20261122',
+        title: 'Auth logo and owner account profile/logout menu',
+        state: 'active',
+        detail: 'Source-only UI fix: sign-in, registration and all shared auth pages use the existing locked horizontal KMJ TECHNO logo instead of the tiny glyph. Super Admin Command Center and all owner module headers use accessible profile dropdowns, reusing the existing Settings and explicit POST Logout menu.',
+        evidence: 'Screenshot-reported defects; source regression checks. Requires exact-head CI and protected Elite release before any live claim.',
+    },
+    {
         id: 'owner-licensing-register-pagination-20261122',
         title: 'Owner Licensing Hub: searchable compact registers and accessible license forms',
         state: 'active',

@@ -266,3 +266,24 @@ void test('locked dashboard product and Kristi controls remain legible and click
     );
     assert.match(rule('.owner-assistant label'), /font-size: 11px/);
 });
+
+void test('login and registration use the approved horizontal KMJ branding', () => {
+    const auth = read('resources/js/layouts/auth/auth-simple-layout.tsx');
+    assert.match(auth, /import LockedBrand/);
+    assert.match(auth, /<LockedBrand className=/);
+    assert.match(auth, /KMJ TECHNO home/);
+    assert.doesNotMatch(auth, /AppLogoIcon|size-9 fill-current/);
+});
+
+void test('every owner header has an accessible profile menu with POST logout', () => {
+    const shell = read('resources/js/layouts/owner-module-shell.tsx');
+    const menu = read('resources/js/components/user-menu-content.tsx');
+    for (const source of [command, shell]) {
+        assert.match(source, /<DropdownMenuTrigger asChild>/);
+        assert.match(source, /data-test="owner-profile-menu-trigger"/);
+        assert.match(source, /aria-label="Open profile and logout menu"/);
+        assert.match(source, /<UserMenuContent user=\{auth\.user\} \/>/);
+    }
+    assert.match(menu, /href=\{logout\(\)\}[\s\S]*method="post"/);
+    assert.match(menu, /data-test="logout-button"/);
+});
