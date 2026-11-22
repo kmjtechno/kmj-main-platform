@@ -115,6 +115,54 @@ final class KslpCustomerDeviceTransferTest extends TestCase
         ]);
     }
 
+    public function test_foreign_verified_user_cannot_complete_an_owner_challenge(): void
+    {
+        [$owner, $licenseId, $original] = $this->activeAccount();
+        $this->signedIn($owner);
+        [$identity, $secret] = $this->identity();
+
+        // A real, authorized owner issues the proof before the account switches.
+        $challenge = $this->postJson("/licensing/devices/transfer/{$licenseId}/challenge", [
+            'server_identity' => $identity,
+        ])->assertOk()->json();
+        $signature = rtrim(strtr(base64_encode(sodium_crypto_sign_detached(
+            'KSLP-ACTIVATE-v1|'.$licenseId.'|'.$challenge['nonce'],
+            $secret,
+        )), '+/', '-_'), '=');
+        $payload = [
+            'server_identity' => $identity,
+            'machine_hash' => str_repeat('b', 64),
+            'request_id' => (string) Str::uuid(),
+            'challenge_id' => $challenge['challenge_id'],
+            'nonce' => $challenge['nonce'],
+            'signature' => $signature,
+            'reason' => 'Authorized owner workstation replacement',
+        ];
+
+        // Device proof never replaces current customer/tenant authorization.
+        $other = User::factory()->create(['email_verified_at' => now()]);
+        $this->signedIn($other);
+        $this->postJson("/licensing/devices/transfer/{$licenseId}/complete", $payload)
+            ->assertStatus(409)
+            ->assertJsonPath('error', 'KSLP_DEVICE_TRANSFER_DENIED');
+
+        $this->assertDatabaseCount('kslp_activations', 1);
+        $this->assertDatabaseHas('kslp_activations', [
+            'id' => $original, 'license_id' => $licenseId, 'deactivated_at' => null,
+        ]);
+        $this->assertDatabaseHas('kslp_licenses', ['id' => $licenseId, 'sequence' => 1]);
+        $this->assertDatabaseHas('kslp_activation_challenges', [
+            'id' => $challenge['challenge_id'], 'used_at' => null,
+        ]);
+        self::assertSame(0, DB::table('kslp_license_events')
+            ->where('license_id', $licenseId)->where('action', 'transferred')->count());
+
+        // The denied foreign request must not destroy the genuine owner's proof.
+        $this->signedIn($owner);
+        $this->postJson("/licensing/devices/transfer/{$licenseId}/complete", $payload)
+            ->assertOk()->assertJsonPath('status', 'device_transfer_recorded_pending_signed_lease');
+    }
+
     public function test_signed_proof_transfers_one_seat_and_retry_never_redebits_sequence(): void
     {
         [$user, $licenseId, $original] = $this->activeAccount();
