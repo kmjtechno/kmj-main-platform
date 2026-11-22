@@ -138,6 +138,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-collector-public-qa-migration-storage-20261122',
+        title: 'Release collectors 5 and 6: public HTTP smoke and derived migration-storage receipt',
+        state: 'active',
+        detail: 'Source-only. The public QA collector smoke-tests fixed public routes on the staged origin for one final 200 and the exact deploy SHA without redirects; it is not a browser or viewport test. The migration-storage receipt is derived only when valid rollback-rehearsal and disposable-restore receipts both exist for the same SHA and predecessor, per the owner-accepted definition; it inspects no live storage layout.',
+        evidence:
+            'Unit tests and exact-head CI only. Not installed or run on Elite. Authenticated QA remains an owner passkey click and is not built.',
+    },
+    {
         id: 'release-collector-rollback-rehearsal-20261122',
         title: 'Release collector 4: rollback-rehearsal receipt from the isolated rehearsal',
         state: 'active',
