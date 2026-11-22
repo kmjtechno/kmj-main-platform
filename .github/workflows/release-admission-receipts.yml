@@ -8,6 +8,9 @@ on:
       - "scripts/test_release_admission_receipts.py"
       - "scripts/operations/release_receipt_store.py"
       - "scripts/test_release_receipt_store.py"
+      - "scripts/operations/elite_collect_staging_origin_receipt.py"
+      - "scripts/operations/check-staging-readback.py"
+      - "scripts/test_elite_collect_staging_origin_receipt.py"
       - ".github/workflows/release-admission-receipts.yml"
   workflow_dispatch:
 
@@ -27,5 +30,6 @@ jobs:
           set -Eeuo pipefail
           python3 -B scripts/test_release_admission_receipts.py -v
           python3 -B scripts/test_release_receipt_store.py -v
+          python3 -B scripts/test_elite_collect_staging_origin_receipt.py -v
           echo "RELEASE_ADMISSION_RECEIPTS_QA=PASS"
           echo "INSTALLED=NO ADMISSION_WRITTEN=NO PRODUCTION_RELEASE=UNCHANGED"

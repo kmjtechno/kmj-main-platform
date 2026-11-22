@@ -138,6 +138,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-collector-staging-origin-20261122',
+        title: 'Release collector 1: staging-origin exact-SHA receipt',
+        state: 'active',
+        detail: 'Source-only collector that reads the fixed staging HTTPS origin with no redirects, requires one final 200 and exactly one deploy-SHA header equal to the approved SHA, and writes a private root-owned receipt for the admission logic. It is not installed, deploys nothing and touches no production data, approval or pointer.',
+        evidence:
+            'Unit tests and exact-head CI only. Not installed on Elite and not run against the real staged origin; staging currently serves an older SHA, so the receipt will not pass until an owner-approved staging deploy.',
+    },
+    {
         id: 'release-receipt-store-20261122',
         title: 'Release receipt store: strict root-protected reader for evidence receipts',
         state: 'active',
