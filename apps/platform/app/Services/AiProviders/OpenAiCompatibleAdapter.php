@@ -201,11 +201,6 @@ final class OpenAiCompatibleAdapter
     }
 
     /**
-     * @param  list<string>  $models
-     * @param  array<string, mixed>  $rate
-     * @return array{health: string, models: list<string>, rate_limit: array<string, mixed>, error_code: ?string, retry_after: ?int}
-     */
-    /**
      * Shape-only diagnostic for a GitHub catalog that is not a JSON list: content type, JSON type and key
      * names (never values or body text), cut to the 48-character error-code column.
      */
@@ -216,9 +211,14 @@ final class OpenAiCompatibleAdapter
             ? 'obj:'.implode(',', array_slice(array_map('strval', array_keys($data)), 0, 3))
             : 'txt:'.$length;
 
-        return substr('invalid_catalog:'.preg_replace('/[^a-z0-9:,_+.\/|-]/', '', strtolower($type.'|'.$shape)), 0, 48);
+        return substr('invalid_catalog:'.(string) preg_replace('/[^a-z0-9:,_+.\/|-]/', '', strtolower($type.'|'.$shape)), 0, 48);
     }
 
+    /**
+     * @param  list<string>  $models
+     * @param  array<string, mixed>  $rate
+     * @return array{health: string, models: list<string>, rate_limit: array<string, mixed>, error_code: ?string, retry_after: ?int}
+     */
     private function result(string $health, array $models, array $rate, ?string $code, ?int $retryAfter = null): array
     {
         return [
