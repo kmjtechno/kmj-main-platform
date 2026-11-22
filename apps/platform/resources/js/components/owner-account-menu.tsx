@@ -19,13 +19,19 @@ export default function OwnerAccountMenu({ user }: { user: User }) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-                <Link href="/settings/profile" className="flex cursor-pointer items-center gap-2">
+                <Link
+                    href="/settings/profile"
+                    className="flex cursor-pointer items-center gap-2"
+                >
                     <Settings className="size-4" aria-hidden="true" />
                     My profile
                 </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-                <Link href="/settings/security" className="flex cursor-pointer items-center gap-2">
+                <Link
+                    href="/settings/security"
+                    className="flex cursor-pointer items-center gap-2"
+                >
                     <ShieldCheck className="size-4" aria-hidden="true" />
                     Security settings
                 </Link>
