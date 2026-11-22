@@ -35,19 +35,29 @@ final class OmniDeskActivationQueryService
             $reasonCodes[] = 'LICENSE_REVOKED';
         }
 
-        $entitlementRow = DB::table('entitlements')
+        // Revocation/plan changes after activation must not turn a stale
+        // binding into an apparently ACTIVE OmniDesk license.
+        $productId = Product::query()
+            ->where('slug', OmniDeskLicenseContract::PRODUCT_SLUG)
+            ->value('id');
+        $entitlementRow = $productId === null ? null : DB::table('entitlements')
             ->where('id', $binding['entitlement_id'])
             ->where('organization_id', $principal->organizationId)
-            ->first();
+            ->where('product_id', $productId)
+            ->where('capability', OmniDeskLicenseContract::CAPABILITY)
+            ->first(['status', 'starts_at', 'ends_at']);
 
         if ($entitlementRow === null) {
             $reasonCodes[] = 'ENTITLEMENT_INACTIVE';
         } else {
-            /** @var array{status:string,ends_at:mixed} $entitlement */
+            /** @var array{status:string,starts_at:mixed,ends_at:mixed} $entitlement */
             $entitlement = (array) $entitlementRow;
+            $now = now();
             if ((string) $entitlement['status'] !== 'active') {
                 $reasonCodes[] = 'ENTITLEMENT_REVOKED';
-            } elseif ($entitlement['ends_at'] !== null && now()->gte($entitlement['ends_at'])) {
+            } elseif ($entitlement['starts_at'] === null || $now->lt($entitlement['starts_at'])) {
+                $reasonCodes[] = 'ENTITLEMENT_NOT_YET_ACTIVE';
+            } elseif ($entitlement['ends_at'] !== null && $now->gte($entitlement['ends_at'])) {
                 $reasonCodes[] = 'ENTITLEMENT_EXPIRED';
             }
         }
