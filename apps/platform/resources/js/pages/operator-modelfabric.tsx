@@ -528,7 +528,9 @@ export default function OperatorModelFabric({
     const [tab, setTab] = useState<Tab>(newToken ? 'tokens' : 'start');
     const [tokenName, setTokenName] = useState('');
     const [tokenDays, setTokenDays] = useState('30');
-    const [tokenPrivate, setTokenPrivate] = useState(true);
+    const privateReady =
+        plans.privateSource.status !== 'NO_FREE_ROUTE_AVAILABLE';
+    const [tokenPrivate, setTokenPrivate] = useState(privateReady);
     const [copied, setCopied] = useState(false);
     const [providerId, setProviderId] = useState(
         allowlistProviders[0]?.id ?? '',
@@ -1896,6 +1898,18 @@ export default function OperatorModelFabric({
                                         Create token
                                     </button>
                                 </div>
+                                {tokenPrivate && !privateReady ? (
+                                    <p
+                                        className="text-xs font-bold text-amber-600 md:col-span-4 dark:text-amber-300"
+                                        data-testid="modelfabric-private-warning"
+                                    >
+                                        No model has no-training proof yet, so a
+                                        private-source token would answer
+                                        NO_FREE_ROUTE_AVAILABLE for every
+                                        request. Untick Private source to use
+                                        your approved free models.
+                                    </p>
+                                ) : null}
                             </form>
                         ) : null}
                         <ConnectGuide origin={origin} token={newToken} />

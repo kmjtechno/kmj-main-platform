@@ -105,6 +105,13 @@ void test('Overview lists expiring approvals, unhealthy providers and expiring t
     assert.doesNotMatch(page, /localStorage|sessionStorage/);
 });
 
+void test('token form warns when a private-source token could not route anything', () => {
+    const page = read('resources/js/pages/operator-modelfabric.tsx');
+    assert.match(page, /useState\(privateReady\)/);
+    assert.match(page, /modelfabric-private-warning/);
+    assert.match(page, /Untick Private source/);
+});
+
 void test('owner daily caps and priority are enforced before provider limits and stay owner-only', () => {
     const gateway = read('app/Services/AiProviders/ModelFabricGateway.php');
     const scorer = read('app/Services/AiProviders/RouteScorer.php');
