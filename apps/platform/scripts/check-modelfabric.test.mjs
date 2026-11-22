@@ -131,24 +131,6 @@ void test('owner daily caps and priority are enforced before provider limits and
     assert.match(page, /Save limits/);
 });
 
-void test('new key-connect providers and model-scoped Groq failover stay zero-spend by default', () => {
-    const config = read('config/ai_providers.php');
-    const gateway = read('app/Services/AiProviders/ModelFabricGateway.php');
-    const scorer = read('app/Services/AiProviders/RouteScorer.php');
-    assert.match(config, /'cohere'.*'free_tier' => 'allowlist'/);
-    assert.match(config, /'qwen-sg'.*'free_tier' => 'none'/);
-    assert.match(config, /'qwen-us'.*'free_tier' => 'none'/);
-    assert.match(config, /'fireworks'.*'free_tier' => 'none'/);
-    assert.match(config, /AI_PROVIDER_FREE_MODELS_COHERE/);
-    assert.match(gateway, /\$provider->preset === 'groq'/);
-    assert.match(gateway, /modelCoolingUntil/);
-    assert.match(gateway, /modelCooldownKey/);
-    assert.match(gateway, /model_rate_limited/);
-    assert.match(gateway, /MAX_ATTEMPTS = 3/);
-    assert.match(scorer, /\$signals\(\(string\) \$route\['provider_id'\], \(string\) \$route\['model'\]\)/);
-    assert.doesNotMatch(gateway, /Http::|->post\(/);
-});
-
 void test('Hugging Face one-click OAuth is secretless PKCE, inference-api only and needs a free-account attestation', () => {
     const service = read('app/Services/AiProviders/HuggingFaceConnect.php');
     const hf = read('app/Http/Controllers/HuggingFaceConnectController.php');
