@@ -82,6 +82,8 @@ final class ReleaseContractCatalog
         $smoke = $this->text($this->inner($data['smoke'] ?? null, 'probe'));
         $health = $this->text($this->inner($data['health'] ?? null, 'probe'));
         $rollback = $this->text($this->inner($data['rollback'] ?? null, 'strategy'));
+        $stagingQa = $this->text($this->inner($data['staging_qa'] ?? null, 'probe'));
+        $restore = $this->text($this->inner($data['restore'] ?? null, 'probe'));
         if ($project === null || $kind === null || $repository === null || $dataRisk === null || $signing === null
             || $gate === null || $smoke === null || $health === null || $rollback === null) {
             return null;
@@ -96,6 +98,8 @@ final class ReleaseContractCatalog
             'smoke_probe' => $smoke,
             'health_probe' => $health,
             'rollback_strategy' => $rollback,
+            'staging_qa_probe' => $stagingQa,
+            'restore_probe' => $restore,
             'data_risk' => $dataRisk,
             'approval' => 'owner-passkey',
             'signing' => $signing,

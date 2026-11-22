@@ -70,7 +70,22 @@ final class ReleaseCenterTest extends TestCase
                 ->where('catalog.status', 'ok')
                 ->where('catalog.contracts.0.project', 'demo-app')
                 ->where('catalog.contracts.0.approval', 'owner-passkey')
+                ->where('catalog.contracts.0.staging_qa_probe', null)
+                ->where('catalog.contracts.0.restore_probe', null)
                 ->where('catalog.invalid', []));
+    }
+
+    public function test_declared_staging_qa_and_restore_probes_are_listed(): void
+    {
+        $this->writeContract('demo-app.release.contract.json', $this->contract() + [
+            'staging_qa' => ['probe' => 'authenticated-surfaces'],
+            'restore' => ['probe' => 'disposable-pg-restore'],
+        ]);
+
+        $catalog = (new ReleaseContractCatalog)->load($this->dir);
+
+        $this->assertSame('authenticated-surfaces', $catalog['contracts'][0]['staging_qa_probe']);
+        $this->assertSame('disposable-pg-restore', $catalog['contracts'][0]['restore_probe']);
     }
 
     public function test_main_platform_live_status_is_advisory_and_degrades_without_a_receipt(): void

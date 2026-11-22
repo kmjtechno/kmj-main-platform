@@ -11,6 +11,8 @@ type Contract = {
     smoke_probe: string;
     health_probe: string;
     rollback_strategy: string;
+    staging_qa_probe: string | null;
+    restore_probe: string | null;
     data_risk: string;
     approval: string;
     signing: string;
@@ -136,6 +138,22 @@ export default function OperatorReleaseCenter({
                                     </dt>
                                     <dd className="font-mono text-xs">
                                         {contract.rollback_strategy}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt className="text-muted-foreground text-xs">
+                                        Staging QA
+                                    </dt>
+                                    <dd className="font-mono text-xs">
+                                        {contract.staging_qa_probe ?? 'not declared'}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt className="text-muted-foreground text-xs">
+                                        Restore proof
+                                    </dt>
+                                    <dd className="font-mono text-xs">
+                                        {contract.restore_probe ?? 'not declared'}
                                     </dd>
                                 </div>
                                 <div>

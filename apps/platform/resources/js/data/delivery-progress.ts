@@ -122,6 +122,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-contract-attestations-20261122',
+        title: 'Release Center: staging QA and restore attestation names in release contracts',
+        state: 'active',
+        detail: 'Source-only: release contracts may now name a staging QA probe and a restore probe, and any contract whose release can change data must name a restore probe. The Release Center list shows both, or "not declared". These are names only: nothing runs a QA or a restore and nothing is proven by them.',
+        evidence:
+            'Offline validator tests, a Feature test of the list fields, tsc and exact-head CI only. Not deployed.',
+    },
+    {
         id: 'release-center-list-20261122',
         title: 'Release Center phase 2: read-only /operator/release-center list',
         state: 'active',
