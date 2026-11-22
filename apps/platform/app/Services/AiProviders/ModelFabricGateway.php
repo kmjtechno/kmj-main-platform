@@ -230,7 +230,7 @@ final class ModelFabricGateway
         $first = [];
         $rest = [];
         foreach ($routes as $route) {
-            if ($route['provider_id'].'|'.$route['model'] === $last) {
+            if ($last === $route['provider_id'].'|'.$route['model']) {
                 $first[] = $route;
             } else {
                 $rest[] = $route;
