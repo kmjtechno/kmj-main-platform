@@ -69,13 +69,15 @@ final class NativeMailService
             $query->where(function ($builder) use ($search): void {
                 $escaped = addcslashes($search, '%_\\');
                 $builder->where('subject', 'like', '%'.$escaped.'%')
-                    ->orWhere('body', 'like', '%'.$escaped.'%');
+                    ->orWhere('body', 'like', '%'.$escaped.'%')
+                    ->orWhere('recipient_email', 'like', '%'.$escaped.'%');
             });
         }
 
         $page = $query->orderByDesc('id')->limit(40)
             ->get(['id', 'thread_id', 'folder', 'subject', 'body', 'sender_user_id',
-                'recipient_user_id', 'read_at', 'sent_at', 'created_at']);
+                'recipient_user_id', 'recipient_email', 'sender_email', 'delivery_state',
+                'read_at', 'sent_at', 'created_at']);
 
         $items = $page->map(static fn (object $row): array => [
             'id' => (int) $row->id,
@@ -85,6 +87,9 @@ final class NativeMailService
             'snippet' => mb_strimwidth((string) $row->body, 0, 160, '…'),
             'sender_user_id' => (int) $row->sender_user_id,
             'recipient_user_id' => $row->recipient_user_id === null ? null : (int) $row->recipient_user_id,
+            'recipient_email' => $row->recipient_email,
+            'sender_email' => $row->sender_email,
+            'delivery_state' => $row->delivery_state,
             'unread' => $row->read_at === null && $row->folder === 'inbox',
             'at' => (string) ($row->sent_at ?? $row->created_at),
         ])->all();
@@ -109,7 +114,8 @@ final class NativeMailService
             ->where('thread_id', (string) $anchor->thread_id)
             ->orderBy('id')->limit(100)
             ->get(['id', 'sender_user_id', 'recipient_user_id', 'folder',
-                'subject', 'body', 'sent_at', 'created_at']);
+                'subject', 'body', 'recipient_email', 'sender_email', 'delivery_state',
+                'sent_at', 'created_at']);
 
         DB::table('kmj_mail_messages')
             ->where('mailbox_user_id', (int) $user->getKey())
@@ -123,6 +129,9 @@ final class NativeMailService
                 'id' => (int) $row->id,
                 'from_id' => (int) $row->sender_user_id,
                 'to_id' => $row->recipient_user_id === null ? null : (int) $row->recipient_user_id,
+                'recipient_email' => $row->recipient_email,
+                'sender_email' => $row->sender_email,
+                'delivery_state' => $row->delivery_state,
                 'folder' => (string) $row->folder,
                 'subject' => (string) $row->subject,
                 'body' => (string) $row->body,
@@ -145,6 +154,8 @@ final class NativeMailService
                     ->where('id', $draftId)->where('mailbox_user_id', (int) $user->getKey())
                     ->where('folder', 'drafts')
                     ->update(['recipient_user_id' => $recipientId,
+                        'recipient_email' => null, 'sender_email' => null,
+                        'delivery_state' => null,
                         'subject' => $subject, 'body' => $body, 'updated_at' => $now]);
                 abort_unless($updated === 1, 404);
 
@@ -176,6 +187,12 @@ final class NativeMailService
             $existing = DB::table('kmj_mail_messages')
                 ->where('mailbox_user_id', $senderId)->where('client_key', $clientKey)->first(['id']);
             if ($existing !== null) {
+                if ($existing->recipient_email !== null
+                    || (int) $existing->recipient_user_id !== $recipientId
+                    || $existing->subject !== $subject || $existing->body !== $body) {
+                    throw ValidationException::withMessages(['client_key' => 'This submission key was already used for a different message.']);
+                }
+
                 return (int) $existing->id;
             }
 
@@ -238,7 +255,7 @@ final class NativeMailService
                 return $draftId; // Idempotent retry: never duplicate inbox delivery.
             }
             abort_unless($draft->folder === 'drafts', 409);
-            abort_if($draft->recipient_user_id === null, 422);
+            abort_if($draft->recipient_email !== null || $draft->recipient_user_id === null, 422);
             $recipientId = (int) $draft->recipient_user_id;
             $this->validRecipient($recipientId);
             abort_if(trim((string) $draft->subject) === '' || trim((string) $draft->body) === '', 422);
@@ -311,7 +328,7 @@ final class NativeMailService
         abort_unless($this->ownerAccess->allows($owner), 403);
         DB::transaction(function () use ($owner, $targetId): void {
             $count = DB::table('kmj_mail_staff')->where('user_id', $targetId)
-                ->whereNull('revoked_at')->update(['revoked_at' => now(), 'updated_at' => now()]);
+                ->whereNull('revoked_at')->update(['revoked_at' => now(), 'sender_alias' => null, 'updated_at' => now()]);
             abort_unless($count === 1, 404);
             $this->audit((int) $owner->getKey(), 'kmj_mail_staff_revoked', ['user_id' => $targetId]);
         });
@@ -323,11 +340,12 @@ final class NativeMailService
         return array_values(DB::table('kmj_mail_staff')->join('users', 'users.id', '=', 'kmj_mail_staff.user_id')
             ->whereNull('kmj_mail_staff.revoked_at')->whereNotNull('users.email_verified_at')
             ->orderBy('users.name')->limit(100)
-            ->get(['users.id', 'users.name', 'users.email'])
+            ->get(['users.id', 'users.name', 'users.email', 'kmj_mail_staff.sender_alias'])
             ->map(static fn (object $row): array => [
                 'user_id' => (int) $row->id,
                 'name' => (string) $row->name,
                 'email' => (string) $row->email,
+                'sender_alias' => $row->sender_alias === null ? null : (string) $row->sender_alias,
             ])->all());
     }
 
