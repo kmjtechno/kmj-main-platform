@@ -34,12 +34,13 @@
 ## Runtime integration and owner gates
 
 1. Keep `KMJ_TRANSACTIONAL_NOTIFICATIONS_ENABLED=false` and `KMJ_TRANSACTIONAL_PAYMENT_RECEIPTS_ENABLED=false` until all required gates pass.
-2. Verify actual production `config('mail.default')` is the intended Elite `sendmail` transport, with `info@kmjtechno.com` sender, Postfix direct-to-MX primary, Brevo fallback only and OpenDKIM. Do NOT change Cloudflare Email Routing/MX, signing material, other accounts or Google VPS.
-3. Ensure queue worker and database queue are healthy. `BrandedCustomerNotification` implements `ShouldQueue` and schedules only after DB commit.
-4. Verify source CI and staging MailMessage templates; run actual authorized owner-inbox **Laravel verification + password reset** tests with real signed-link action/expiry/security evidence. No production email is proven by template tests or `Notification::fake()`.
-5. With owner approval, signed release via `docs/operations/FAST_RELEASE_GUIDE_ELITE.md`. The deploy process must show exact SHA approval, zero activation blockers, real pointer switch, migrations and health. No release bypass.
-6. After live signed deployment and actual inbox acceptance, turn on the main flag privately on Elite using the reviewed runtime configuration path. Payment receipts require an additional independent approval.
-7. Monitor mail job failures, bounce/expiry and actual recipient receipts; disabling these flags provides the rollback for *new* notices (already enqueued jobs need separate approved handling).
+2. Set `KMJ_TRANSACTIONAL_NOT_BEFORE` to the approved fresh UTC cutover instant, e.g. `2026-11-22T10:00:00Z`, so old pending outbox events are never emailed retroactively. A blank/malformed timestamp keeps the feature disabled.
+3. Verify actual production `config('mail.default')` is the intended Elite `sendmail` transport, with `info@kmjtechno.com` sender, Postfix direct-to-MX primary, Brevo fallback only and OpenDKIM. Do NOT change Cloudflare Email Routing/MX, signing material, other accounts or Google VPS.
+4. Ensure queue worker and database queue are healthy. `BrandedCustomerNotification` implements `ShouldQueue` and schedules only after DB commit.
+5. Verify source CI and staging MailMessage templates; run actual authorized owner-inbox **Laravel verification + password reset** tests with real signed-link action/expiry/security evidence. No production email is proven by template tests or `Notification::fake()`.
+6. With owner approval, signed release via `docs/operations/FAST_RELEASE_GUIDE_ELITE.md`. The deploy process must show exact SHA approval, zero activation blockers, real pointer switch, migrations and health. No release bypass.
+7. After live signed deployment and actual inbox acceptance, turn on the main flag privately on Elite using the reviewed runtime configuration path. Payment receipts require an additional independent approval.
+8. Monitor mail job failures, bounce/expiry and actual recipient receipts; disabling these flags provides the rollback for *new* notices (already enqueued jobs need separate approved handling).
 
 ## Test command
 
