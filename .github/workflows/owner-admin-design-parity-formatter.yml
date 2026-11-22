@@ -29,12 +29,16 @@ jobs:
           ./node_modules/.bin/vp fmt \
             resources/css/owner-module-shell.css \
             resources/js/layouts/owner-module-shell.tsx \
+            resources/js/components/owner-directory-user-actions.tsx \
+            resources/js/pages/operator-directory.tsx \
             resources/js/pages/services/ai-providers.tsx \
             resources/js/pages/services/codebridge.tsx \
             scripts/check-owner-design-parity.test.mjs
           git diff --no-ext-diff -- \
             resources/css/owner-module-shell.css \
             resources/js/layouts/owner-module-shell.tsx \
+            resources/js/components/owner-directory-user-actions.tsx \
+            resources/js/pages/operator-directory.tsx \
             resources/js/pages/services/ai-providers.tsx \
             resources/js/pages/services/codebridge.tsx \
             scripts/check-owner-design-parity.test.mjs
