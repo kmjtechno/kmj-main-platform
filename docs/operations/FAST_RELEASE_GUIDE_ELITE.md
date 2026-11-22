@@ -35,7 +35,7 @@ plus the approval tool, each pinned by sha256 (a mismatch aborts before anything
 ```bash
 SHA=<SHA>
 curl -fsSL "https://raw.githubusercontent.com/kmjtechno/kmj-main-platform/$SHA/scripts/operations/owner-release-main-platform.sh" -o /root/orm.sh \
- && echo "440e6de22e8a7173717b06d0f39db6e8ac17e71b54ced8b27f8c375820085947  /root/orm.sh" | sha256sum -c - \
+ && echo "71f77d40d32e46fdf1f62172c49187dfe24171bef92bafdb8adc08cac904b538  /root/orm.sh" | sha256sum -c - \
  && bash /root/orm.sh "$SHA"
 ```
 
@@ -76,7 +76,7 @@ If the activation call is refused by the tool, stop and ask the owner. Do not re
 | main_platform_storage_switch.py | `281893b277fb4dfabf174b7baaa49801f6b0a4c2dc83c2c711115f45225ea8ef` |
 | materialize-main-platform-candidate-runtime.sh | `fd29c4ebcf224c45786f8cedd0e0d42bbfd414d706678fe820e0ead4eea3984f` |
 | prepare-main-platform-local-recovery-exact.sh | `d3f977dbd68bd986e888c720c2bcc49e1c02e884878bfc4e4c0903f53bdf3212` |
-| owner_main_platform_production_approval.py (kmj-codebridge @8cb6cce3) | `e4c2b9d8f873f9bc7c7d9e78f248aa983b4c221a1d27a8fd520c16fb201b5ffe` |
+| owner_main_platform_production_approval.py (kmj-codebridge @51ef2734) | `45b28a2d912c5e5b748ee4ec7c9df76e4b28e0ef32a23cc831169fe315136200` |
 
 A change to any helper is a security-relevant change: it needs owner review and new pins in the same PR.
 
