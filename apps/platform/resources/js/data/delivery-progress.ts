@@ -130,6 +130,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-admission-receipts-20261122',
+        title: 'Release admission receipts: pure fail-closed receipt-to-admission logic',
+        state: 'active',
+        detail: 'Source-only module that derives the gate admission flags solely from fresh, exact-SHA, passing evidence receipts and the literal owner authorization, with tests that feed the result to the real gate decision. It reads, writes and runs nothing.',
+        evidence:
+            'Unit tests and exact-head CI only. No collector, broker or admission file exists yet; one-click activation stays blocked until they do.',
+    },
+    {
         id: 'release-admission-collector-design-20261122',
         title: 'Release admission collector: design for real evidence behind one-click release',
         state: 'active',
