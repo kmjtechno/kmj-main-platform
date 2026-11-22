@@ -446,7 +446,12 @@ export default function MailCenter({
                     </p>
                 )}
 
-                <div className="grid min-h-[570px] gap-3 lg:grid-cols-[195px_minmax(240px,360px)_minmax(0,1fr)]">
+                <div className={
+                    'grid min-h-[570px] min-w-0 gap-3 ' +
+                    (view === 'compose'
+                        ? 'lg:grid-cols-[195px_minmax(0,1fr)]'
+                        : 'lg:grid-cols-[195px_minmax(240px,360px)_minmax(0,1fr)]')
+                }>
                     <aside
                         aria-label="Mail folders"
                         className="bg-card min-w-0 rounded-2xl border p-3"
@@ -522,7 +527,10 @@ export default function MailCenter({
 
                     <section
                         aria-label="Mail list"
-                        className="bg-card min-w-0 overflow-hidden rounded-2xl border p-3"
+                        className={
+                            'bg-card min-w-0 overflow-hidden rounded-2xl border p-3 ' +
+                            (view === 'compose' ? 'hidden' : '')
+                        }
                     >
                         <div className="flex items-center justify-between gap-2 px-2 pt-2">
                             <div>
