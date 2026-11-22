@@ -548,11 +548,13 @@ final class OwnerDirectoryHttpTest extends TestCase
             ])->assertSessionHasErrors('user_ids.1');
 
         $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
             ->post('/operator/directory/users/bulk-delete', [
                 'user_ids' => $ids,
             ])->assertSessionHasErrors('user_ids');
 
         $this->actingAs($owner)
+            ->withSession(['auth.password_confirmed_at' => time()])
             ->post('/operator/directory/users/bulk-delete', [
                 'user_ids' => [$ids[0], $owner->id],
             ])->assertSessionHasErrors('user_ids');
