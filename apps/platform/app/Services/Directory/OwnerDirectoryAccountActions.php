@@ -56,6 +56,49 @@ final class OwnerDirectoryAccountActions
     }
 
     /**
+     * Explicitly selected page-only customer accounts: all delete or none.
+     * This is NOT the paused unverified-account cleanup or a background sweep.
+     *
+     * @param  array<int, int>  $ids
+     */
+    public function deleteSelectedCustomers(array $ids, int $actorId): void
+    {
+        if (count($ids) < 2 || count($ids) > 15 ||
+            count(array_unique($ids)) !== count($ids)) {
+            throw new RuntimeException('DIRECTORY_INVALID_SELECTION');
+        }
+        if (in_array($actorId, $ids, true)) {
+            throw new RuntimeException('DIRECTORY_ACCOUNT_PROTECTED');
+        }
+
+        sort($ids, SORT_NUMERIC);
+
+        DB::transaction(function () use ($ids, $actorId): void {
+            // Lock all selected account rows in canonical ID order before
+            // touching any data. Missing/owner accounts fail the entire batch.
+            $locked = User::query()->whereKey($ids)->orderBy('id')
+                ->lockForUpdate()->get(['id', 'is_platform_owner', 'platform_owner_granted_at']);
+
+            if ($locked->count() !== count($ids)) {
+                throw new RuntimeException('DIRECTORY_ACCOUNT_PROTECTED');
+            }
+            foreach ($locked as $candidate) {
+                if ((bool) $candidate->is_platform_owner ||
+                    $candidate->platform_owner_granted_at !== null ||
+                    (int) $candidate->id === $actorId) {
+                    throw new RuntimeException('DIRECTORY_ACCOUNT_PROTECTED');
+                }
+            }
+
+            foreach ($ids as $id) {
+                // Nested DB transactions use savepoints; any exception
+                // rolls back EVERY customer and their private signup graph.
+                $this->deleteCustomerAndSignupData($id, $actorId);
+            }
+        }, 1);
+    }
+
+    /**
      * Delete one customer's private signup graph, not merely their users row.
      *
      * The linked organization may be deleted only if this customer is its
