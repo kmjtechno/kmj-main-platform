@@ -174,10 +174,7 @@ void test('disabled cleanup reports unknown eligibility instead of misleading ze
     const owner = read('resources/js/pages/operator-kslp.tsx');
     const routes = read('routes/kslp-admin.php');
 
-    assert.match(
-        owner,
-        /unverifiedEmailCleanup\.status === 'PREVIEW_ONLY'/,
-    );
+    assert.match(owner, /unverifiedEmailCleanup\.status === 'PREVIEW_ONLY'/);
     assert.match(
         owner,
         /cleanupPreviewAvailable\s*\?\s*unverifiedEmailCleanup\.eligible\s*:\s*'—'/,
