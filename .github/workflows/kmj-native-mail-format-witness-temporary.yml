@@ -24,7 +24,7 @@ jobs:
         run: |
           set -euo pipefail
           cd apps/platform
-          composer install --no-interaction --no-progress --prefer-dist --no-scripts --no-audit
+          composer install --no-interaction --no-progress --prefer-dist --no-scripts
           vendor/bin/pint app/Services/Mail/NativeMailService.php app/Http/Controllers/NativeMailController.php tests/Feature/Mail/NativeMailFlowTest.php tests/Feature/Mail/WorkforceMailCenterTest.php database/migrations/2026_11_22_100000_create_kmj_native_mail_tables.php || true
           git --no-pager diff --color=never -- app/Services/Mail/NativeMailService.php app/Http/Controllers/NativeMailController.php tests/Feature/Mail/NativeMailFlowTest.php tests/Feature/Mail/WorkforceMailCenterTest.php database/migrations/2026_11_22_100000_create_kmj_native_mail_tables.php
       - name: Exact frontend formatter patch
