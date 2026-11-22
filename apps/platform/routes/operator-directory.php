@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Models\User;
 use App\Services\Directory\OwnerDirectoryAccountActions;
 use Illuminate\Validation\ValidationException;
-use RuntimeException;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
