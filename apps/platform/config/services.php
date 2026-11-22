@@ -50,6 +50,13 @@ return [
     ],
 
     // Self-addressed workforce mail samples only; Gmail OAuth and mass-send are not configured.
+    // Native KMJ external correspondence requires independent owner activation.
+    // DO NOT switch on until the current Elite Postfix, sender DNS/DKIM and
+    // one real recipient inbox acceptance have been reviewed. Default OFF.
+    'kmj_native_external_mail' => [
+        'enabled' => (bool) env('KMJ_NATIVE_EXTERNAL_MAIL_ENABLED', false),
+    ],
+
     'kmj_workforce_mail' => [
         'preview_enabled' => (bool) env('KMJ_WORKFORCE_MAIL_PREVIEW_ENABLED', false),
     ],
