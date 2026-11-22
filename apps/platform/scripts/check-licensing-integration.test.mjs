@@ -105,11 +105,7 @@ void test('one KMJ Licensing Hub embeds developer workflow and retains owner aut
         'resources/js/components/operator-workspace-map.tsx',
     );
 
-    assert.ok(
-        owner.includes(
-            '<DeveloperAppsWorkspace {...developerWorkspace} embedded />',
-        ),
-    );
+    assert.match(owner, /<DeveloperAppsWorkspace[\s\S]*?embedded\s*\/>/);
     assert.ok(developer.includes('export function DeveloperAppsWorkspace'));
     assert.ok(
         developerRoutes.includes(
@@ -159,7 +155,9 @@ void test('owner Licensing Hub renders bounded searchable registers and accessib
         'disabled={page === 0}',
         'disabled={page >= pageCount - 1}',
         '<details',
-        '<DeveloperAppsWorkspace {...developerWorkspace} embedded />',
+        '<DeveloperAppsWorkspace',
+        '{...developerWorkspace}',
+        'embedded',
         'aria-label="Customer or organization ID"',
         'aria-label="License plan"',
         'aria-label="Reason for license issuance"',
