@@ -219,34 +219,43 @@ export default function MailCenter({
 
     const submit = (action: 'send' | 'draft') => {
         if (busy) return;
+        const external = recipientType === 'external';
         if (
             action === 'send' &&
-            (!recipientId || !subject.trim() || !body.trim())
-        )
-            return;
+            (!subject.trim() || !body.trim() ||
+                (external ? (!recipientEmail.trim() || externalOutbound.state !== 'ready_to_queue') : !recipientId))
+        ) return;
+
+        const key = clientKey || crypto.randomUUID();
+        setClientKey(key);
         setBusy(true);
-        const params =
-            action === 'send'
-                ? {
-                      recipient_id: Number(recipientId),
-                      subject,
-                      body,
-                      client_key: crypto.randomUUID(),
-                      ...(replyId ? { reply_to_id: replyId } : {}),
-                  }
-                : {
-                      ...(draftId ? { draft_id: draftId } : {}),
-                      ...(recipientId
-                          ? { recipient_id: Number(recipientId) }
-                          : {}),
-                      subject,
-                      body,
-                  };
-        router.post(base + (action === 'send' ? '/send' : '/drafts'), params, {
-            preserveScroll: true,
-            onFinish: () => setBusy(false),
-            onSuccess: () => setView('mail'),
-        });
+        const destination = external
+            ? { recipient_email: recipientEmail.trim() }
+            : recipientId ? { recipient_id: Number(recipientId) } : {};
+        const params = action === 'send'
+            ? {
+                  ...destination,
+                  subject,
+                  body,
+                  client_key: key,
+                  ...(replyId ? { reply_to_id: replyId } : {}),
+              }
+            : {
+                  ...destination,
+                  recipient_type: recipientType,
+                  ...(draftId ? { draft_id: draftId } : {}),
+                  subject,
+                  body,
+              };
+        router.post(
+            base + (action === 'draft' ? '/drafts' : external ? '/send-external' : '/send'),
+            params,
+            {
+                preserveScroll: true,
+                onFinish: () => setBusy(false),
+                onSuccess: () => setView('mail'),
+            },
+        );
     };
 
     const actOnMessage = (
@@ -276,6 +285,26 @@ export default function MailCenter({
             action === 'grant' ? { target_user_id: id } : {},
             { onFinish: () => setBusy(false), preserveScroll: true },
         );
+    };
+
+    const updateStaffSenderAlias = (staffId: number, currentAlias: string | null) => {
+        if (!isOwner || busy) return;
+        setBusy(true);
+        router.post(
+            '/operator/mail/staff/' + staffId + '/sender-alias',
+            { sender_alias: (aliasDrafts[staffId] ?? currentAlias ?? '').trim() || null },
+            { preserveScroll: true, onFinish: () => setBusy(false) },
+        );
+    };
+    const deliveryLabel = (state: string | null) => {
+        switch (state) {
+            case 'queued': return 'Queued for SMTP';
+            case 'submitting': return 'Submission status unknown';
+            case 'mta_accepted': return 'Accepted by mail server';
+            case 'failed': return 'Submission failed';
+            case 'blocked': return 'Blocked by security policy';
+            default: return null;
+        }
     };
 
     const selected = selectedThread?.items.at(-1);
