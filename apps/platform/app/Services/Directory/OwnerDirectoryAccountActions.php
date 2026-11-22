@@ -130,7 +130,7 @@ final class OwnerDirectoryAccountActions
     }
 
     /**
-     * @param  list<string>  $orgIds
+     * @param  array<int, string>  $orgIds
      */
     private function assertNoLinkedBusinessRecords(int $id, array $orgIds): void
     {
