@@ -113,8 +113,8 @@ const groups: { title: string; items: Workspace[] }[] = [
                 icon: FileText,
             },
             {
-                label: 'Communication (Mail/SMS)',
-                href: '/operator/ops',
+                label: 'Communication (Mail)',
+                href: '/operator/mail',
                 icon: Mail,
             },
         ],

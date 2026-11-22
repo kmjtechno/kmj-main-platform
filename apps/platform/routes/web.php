@@ -1145,4 +1145,5 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 require __DIR__.'/developer-licenses.php';
 require __DIR__.'/payments-console.php';
+require __DIR__.'/workforce-mail.php';
 require __DIR__.'/settings.php';
