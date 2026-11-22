@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kslp-omnidesk-scoped-key-security-20261122',
+        title: 'KSLP: OmniDesk product-scoped verification keys and membership isolation',
+        state: 'active',
+        detail: 'Source-only successor to conflicting PR #967 on the unified Licensing Hub main: product-scoped Ed25519 public-key discovery with finite UTC expiry, fail-closed rollback if any scoped key exists, and an UNBOUND verified-member OmniDesk organization authorizer. No online issuer key, license activation/renewal endpoint, signing authority, token/session binding or customer device transfer is enabled by this source change.',
+        evidence:
+            'Draft PR #979 security/migration/negative tests require new exact-head CI and independent CODEOWNER review. Not deployed; any future rollout requires protected Elite staging, disposable restore, rollback attestation and owner activation.',
+    },
+    {
         id: 'single-kslp-customer-licenses-devices-20261122',
         title: 'Single Licensing Hub: verified customer products, licenses and masked device history',
         state: 'active',
