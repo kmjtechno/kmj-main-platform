@@ -1,0 +1,29 @@
+[Unit]
+Description=KMJ TECHNO read-only Elite release readiness receipt (no deploy, no approval, no unit start)
+Documentation=https://github.com/kmjtechno/kmj-main-platform/blob/main/docs/operations/ELITE_ONECLICK_RELEASE_PROOF.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/
+# Exit 2 only means "not ready / blocked": the receipt is still published, so it is not a unit failure.
+SuccessExitStatus=2
+ExecStart=/usr/bin/python3 -I -B /opt/kmj-main-platform-release-readiness/elite_release_readiness_receipt.py --publish
+RuntimeDirectory=kmj-main-platform
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+UMask=0022
+TimeoutStartSec=60
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=false
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictSUIDSGID=true
+ReadWritePaths=/run/kmj-main-platform

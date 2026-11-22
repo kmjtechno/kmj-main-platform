@@ -1,0 +1,28 @@
+name: Release Readiness Publisher Units
+
+on:
+  pull_request:
+    paths:
+      - "infra/server/systemd/kmj-elite-release-readiness-publisher.*"
+      - "scripts/test_release_readiness_publisher_units.py"
+      - "scripts/operations/elite_release_readiness_receipt.py"
+      - ".github/workflows/release-readiness-publisher-units.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-unit-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Static safety tests for the read-only publisher units (no root, nothing installed)
+        run: |
+          set -Eeuo pipefail
+          python3 -B scripts/test_release_readiness_publisher_units.py -v
+          echo "READINESS_PUBLISHER_UNITS_STATIC_QA=PASS"
+          echo "INSTALLED=NO PRODUCTION_RELEASE=UNCHANGED"

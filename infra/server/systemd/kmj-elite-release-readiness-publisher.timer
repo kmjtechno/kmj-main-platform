@@ -1,0 +1,12 @@
+[Unit]
+Description=KMJ TECHNO refresh the read-only release readiness receipt (Elite-only)
+
+[Timer]
+OnBootSec=45s
+OnUnitInactiveSec=30s
+AccuracySec=5s
+Persistent=false
+Unit=kmj-elite-release-readiness-publisher.service
+
+[Install]
+WantedBy=timers.target
