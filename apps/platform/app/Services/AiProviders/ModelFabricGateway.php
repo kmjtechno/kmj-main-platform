@@ -28,6 +28,8 @@ final class ModelFabricGateway
 
     private const CIRCUIT_THRESHOLD = 3;
 
+    private const STICKY_TTL = 1800;
+
     public function __construct(
         private readonly ModelFabricRouter $router,
         private readonly ProviderManager $manager,
@@ -39,7 +41,7 @@ final class ModelFabricGateway
      * @param  list<array{role: string, content: string}>  $messages
      * @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string}
      */
-    public function complete(string $organizationId, array $messages, string $capability = 'chat', bool $privateSource = false): array
+    public function complete(string $organizationId, array $messages, string $capability = 'chat', bool $privateSource = false, ?string $sessionKey = null): array
     {
         $profile = $this->profiler->classify($messages, $capability);
         $plan = $this->router->plan($organizationId, $capability, $privateSource);
@@ -57,6 +59,10 @@ final class ModelFabricGateway
         // a mis-stated provider limit can never spend the owner's money. A missing or zero cap fails closed.
         $creditUsed = $this->creditUsage($organizationId, $plan['routes']);
         $plan['routes'] = $this->sinkNearCreditCap($plan['routes'], $creditUsed);
+
+        // Sticky session: prefer the route that last answered this conversation, but only among routes the plan
+        // already admitted; cooldowns, caps and evidence are still checked below, so stickiness never admits anything.
+        $plan['routes'] = $this->preferSticky($plan['routes'], $organizationId, $sessionKey);
 
         $attempts = 0;
         $last = 'all_routes_cooling_down';
@@ -96,6 +102,9 @@ final class ModelFabricGateway
             $this->learnLimits($providerId, $result['rate'] ?? null);
             if ($result['ok']) {
                 Cache::forget($this->failKey($providerId));
+                if ($sessionKey !== null) {
+                    Cache::put($this->stickyKey($organizationId, $sessionKey), $providerId.'|'.(string) $route['model'], self::STICKY_TTL);
+                }
 
                 return [
                     'ok' => true,
@@ -200,6 +209,37 @@ final class ModelFabricGateway
     }
 
     /** @param  array{priority: int, cap: ?int, used: int}|null  $limit */
+    private function stickyKey(string $organizationId, string $sessionKey): string
+    {
+        return 'modelfabric:sticky:'.hash('sha256', $organizationId.'|'.$sessionKey);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $routes
+     * @return list<array<string, mixed>>
+     */
+    private function preferSticky(array $routes, string $organizationId, ?string $sessionKey): array
+    {
+        if ($sessionKey === null) {
+            return $routes;
+        }
+        $last = Cache::get($this->stickyKey($organizationId, $sessionKey));
+        if (! is_string($last)) {
+            return $routes;
+        }
+        $first = [];
+        $rest = [];
+        foreach ($routes as $route) {
+            if ($route['provider_id'].'|'.$route['model'] === $last) {
+                $first[] = $route;
+            } else {
+                $rest[] = $route;
+            }
+        }
+
+        return array_values([...$first, ...$rest]);
+    }
+
     private function nearDailyCap(?array $limit): bool
     {
         return $limit !== null && $limit['cap'] !== null && $limit['cap'] > 0 && $limit['used'] * 10 >= $limit['cap'] * 8;

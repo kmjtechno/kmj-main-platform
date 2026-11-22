@@ -122,6 +122,25 @@ final class ModelFabricApiTest extends TestCase
             ->assertStatus(503)->assertJsonPath('error.code', 'NO_FREE_ROUTE_AVAILABLE');
     }
 
+    public function test_sticky_session_prefers_the_last_answering_route_but_never_admits_anything(): void
+    {
+        $plain = $this->token(['private_source' => false]);
+        $headers = ['Authorization' => 'Bearer '.$plain, 'X-ModelFabric-Session' => 'conv-1'];
+        $this->evidenced('llama-free');
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'pong']]]], 200)]);
+        $body = ['messages' => [['role' => 'user', 'content' => 'ping']]];
+
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)->assertOk();
+        $this->assertNotNull(Cache::get('modelfabric:sticky:'.hash('sha256', $this->org.'|conv-1')));
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, ['Authorization' => 'Bearer '.$plain, 'X-ModelFabric-Session' => 'bad session!'])->assertOk();
+        $this->assertNull(Cache::get('modelfabric:sticky:'.hash('sha256', $this->org.'|bad session!')));
+
+        DB::table('ai_model_evidence')->delete();
+        Http::fake();
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)->assertStatus(503)->assertJsonPath('error.code', 'NO_FREE_ROUTE_AVAILABLE');
+        Http::assertNothingSent();
+    }
+
     public function test_invalid_roles_fail_validation(): void
     {
         $headers = ['Authorization' => 'Bearer '.$this->token()];
