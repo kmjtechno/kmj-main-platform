@@ -123,12 +123,31 @@ def pool_identity(master_pid: int, master: dict, children: list[dict], uid: int)
     require(len(children) > 0, "BLOCKED_NO_LIVE_FPM_WORKER")
     require(len({w["pid"] for w in children}) == len(children),
             "BLOCKED_DUPLICATE_WORKER_SNAPSHOT")
+    # Validate the shape of ALL children before classifying any UID mismatch.
+    # Only emit a bounded count of known pool categories, never raw process
+    # titles, UID numbers, paths, command lines or environment.
     for worker in children:
         require(worker["parent"] == master_pid
                 and worker["exe"] == MASTER_EXE
                 and worker["cmd"].startswith(WORKER_PREFIX)
                 and len(worker["cmd"]) <= 100, "BLOCKED_UNKNOWN_FPM_CHILD")
-        require(worker["uids"] == (uid, uid, uid, uid), "BLOCKED_FPM_WRITER_UID_MISMATCH")
+    if any(worker["uids"] != (uid, uid, uid, uid) for worker in children):
+        digest = {category: [0, 0] for category in ("KMJPROD", "WWW", "STAGING", "OTHER")}
+        for worker in children:
+            title = worker["cmd"][len(WORKER_PREFIX):]
+            category = (
+                "KMJPROD" if title == "kmjprod" else
+                "WWW" if title == "www" else
+                "STAGING" if title in ("kmjstage", "kmjstage-a979") else
+                "OTHER"
+            )
+            own = worker["uids"] == (uid, uid, uid, uid)
+            digest[category][0 if own else 1] += 1
+        for category in ("KMJPROD", "WWW", "STAGING", "OTHER"):
+            own_count, other_count = digest[category]
+            print(f"KMJ_FPM_POOL_{category}_OWNER_UID_COUNT={own_count}")
+            print(f"KMJ_FPM_POOL_{category}_OTHER_UID_COUNT={other_count}")
+        raise Blocked("BLOCKED_FPM_WRITER_UID_MISMATCH")
     # Deliberately conservative: all direct master children must use kmjprod.
     # It does not prove Nginx's selected FastCGI listener or worker quiescence.
     return len(children)
