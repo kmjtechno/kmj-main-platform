@@ -57,6 +57,39 @@ final class OmniDeskPrivateApiTest extends TestCase
             ->assertHeader('Cache-Control', 'no-store, private');
     }
 
+    public function test_future_entitlement_never_reports_active_license_status(): void
+    {
+        $fixture = $this->fixture();
+        DB::table('entitlements')
+            ->where('id', $fixture['entitlement_id'])
+            ->update(['starts_at' => now()->addHour()]);
+        $this->bindPrincipal($fixture['organization_id']);
+
+        $this->getJson(
+            '/api/v1/licensing/omnidesk/activations/'.$fixture['activation_id'].'/status',
+        )
+            ->assertOk()
+            ->assertJsonPath('state', 'RESTRICTED')
+            ->assertJsonPath('reason_codes.0', 'ENTITLEMENT_NOT_YET_ACTIVE')
+            ->assertJsonPath('current_sequence', 1);
+    }
+
+    public function test_retargeted_entitlement_capability_is_not_valid_for_omnidesk(): void
+    {
+        $fixture = $this->fixture();
+        DB::table('entitlements')
+            ->where('id', $fixture['entitlement_id'])
+            ->update(['capability' => 'unrelated.capability']);
+        $this->bindPrincipal($fixture['organization_id']);
+
+        $this->getJson(
+            '/api/v1/licensing/omnidesk/activations/'.$fixture['activation_id'].'/status',
+        )
+            ->assertOk()
+            ->assertJsonPath('state', 'RESTRICTED')
+            ->assertJsonPath('reason_codes.0', 'ENTITLEMENT_INACTIVE');
+    }
+
     public function test_cross_tenant_activation_lookup_does_not_disclose_binding(): void
     {
         $fixture = $this->fixture();
@@ -169,6 +202,28 @@ final class OmniDeskPrivateApiTest extends TestCase
                 ->where('action', 'omnidesk_activation_deactivated')
                 ->count(),
         );
+    }
+
+    public function test_deactivation_rechecks_license_tenant_after_preview_without_mutation(): void
+    {
+        $fixture = $this->fixture();
+        $other = Organization::query()->create(['name' => 'Reassigned license tenant']);
+        DB::table('kslp_licenses')
+            ->where('id', $fixture['license_id'])
+            ->update(['customer_id' => $other->getKey()]);
+        $this->bindPrincipal($fixture['organization_id'], true);
+
+        $this->postJson(
+            '/api/v1/licensing/omnidesk/activations/'.$fixture['activation_id'].'/deactivate',
+            ['reason' => 'refuse stale tenant ownership'],
+        )
+            ->assertStatus(404)
+            ->assertExactJson(['error' => 'ACTIVATION_REVOKED']);
+
+        $this->assertDatabaseHas('kslp_activations', [
+            'id' => $fixture['activation_id'],
+            'deactivated_at' => null,
+        ]);
     }
 
     public function test_invalid_deactivation_reason_maps_to_deterministic_invalid_request(): void
