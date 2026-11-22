@@ -95,7 +95,6 @@ export default function MailCenter({
     directory,
     staff,
     myUserId,
-    externalMailEnabled,
     externalOutbound,
 }: Props) {
     const page = usePage();
@@ -552,17 +551,18 @@ export default function MailCenter({
                                                         <span className="size-2 rounded-full bg-red-500" />
                                                     )}
                                                     {folder === 'inbox'
-                                                        ? contactName(
-                                                              item.sender_user_id,
-                                                          )
-                                                        : contactName(
-                                                              item.recipient_user_id,
-                                                          )}
+                                                        ? (item.sender_email ?? contactName(item.sender_user_id))
+                                                        : (item.recipient_email ?? contactName(item.recipient_user_id))}
                                                 </span>
                                                 <span className="text-muted-foreground shrink-0 text-[10px]">
                                                     {item.at.slice(0, 16)}
                                                 </span>
                                             </div>
+                                            {deliveryLabel(item.delivery_state) && (
+                                                <span className="mt-1 inline-block rounded-md border border-red-500/20 px-2 py-0.5 text-[10px] font-semibold text-red-500">
+                                                    {deliveryLabel(item.delivery_state)}
+                                                </span>
+                                            )}
                                             <div className="mt-1 truncate text-sm font-bold">
                                                 {item.subject || '(No subject)'}
                                             </div>
@@ -842,14 +842,16 @@ export default function MailCenter({
                                             onClick={() => submit('send')}
                                             disabled={
                                                 busy ||
-                                                !recipientId ||
+                                                (recipientType === 'external'
+                                                    ? !recipientEmail.trim() || externalOutbound.state !== 'ready_to_queue'
+                                                    : !recipientId) ||
                                                 !subject.trim() ||
                                                 !body.trim()
                                             }
                                             className="flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-40"
                                         >
-                                            <Send className="size-4" /> Send
-                                            internally
+                                            <Send className="size-4" />{' '}
+                                            {recipientType === 'external' ? 'Queue external email' : 'Send internally'}
                                         </button>
                                         <button
                                             type="button"
@@ -1007,19 +1009,18 @@ export default function MailCenter({
                                             <div className="flex flex-wrap items-start justify-between gap-2 border-b pb-3">
                                                 <div className="text-xs">
                                                     <strong className="block">
-                                                        {item.from_id ===
-                                                        myUserId
-                                                            ? 'You'
-                                                            : contactName(
-                                                                  item.from_id,
-                                                              )}
+                                                        {item.from_id === myUserId ? 'You' : (item.sender_email ?? contactName(item.from_id))}
                                                     </strong>
                                                     <span className="text-muted-foreground">
                                                         To{' '}
-                                                        {contactName(
-                                                            item.to_id,
-                                                        )}
+                                                        {item.recipient_email ?? contactName(item.to_id)}
                                                     </span>
+                                                    {deliveryLabel(item.delivery_state) && (
+                                                        <span className="mt-2 block text-[11px] font-semibold text-red-500">
+                                                            {deliveryLabel(item.delivery_state)}
+                                                            {item.delivery_state === 'mta_accepted' ? ' · Not inbox delivery proof' : ''}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <span className="text-muted-foreground text-[11px]">
                                                     {item.at.slice(0, 19)}
