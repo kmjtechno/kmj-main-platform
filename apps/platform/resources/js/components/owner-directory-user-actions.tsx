@@ -152,8 +152,8 @@ export default function OwnerDirectoryUserActions({
                     Review deletion
                 </summary>
                 <p className="mt-3 text-xs text-red-200">
-                    This removes the account, private profile and any sole-owner empty
-                    signup organization. Shared organizations, purchases,
+                    This removes the account, private profile and any sole-owner
+                    empty signup organization. Shared organizations, purchases,
                     licenses and audit records block deletion. Type
                     <strong> DELETE {user.email}</strong>.
                 </p>

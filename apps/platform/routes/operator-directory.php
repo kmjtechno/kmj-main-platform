@@ -142,5 +142,5 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             }
 
             return redirect()->route('operator.directory.index');
-        })->middleware('throttle:2,1')->name('directory.user-delete');
+        })->middleware('throttle:8,1')->name('directory.user-delete');
     });
