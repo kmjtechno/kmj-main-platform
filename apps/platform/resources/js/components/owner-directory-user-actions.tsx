@@ -56,14 +56,16 @@ export default function OwnerDirectoryUserActions({
     };
 
     const remove = () => {
-        if (busy) return;
-        if (
-            !window.confirm(
-                'Permanently delete ' + user.name + ' (' + user.email +
-                ') and their private signup data? This cannot be undone. ' +
-                'Shared organizations, purchases and licenses will be protected.',
-            )
-        ) return;
+        if (busy) {
+            return;
+        }
+        const prompt = [
+            `Delete ${user.name} (${user.email}) and their private signup data?`,
+            'This cannot be undone. Shared organizations and active licenses stay protected.',
+        ].join(' ');
+        if (!window.confirm(prompt)) {
+            return;
+        }
         setBusy(true);
         setError('');
         router.post(
