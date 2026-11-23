@@ -205,14 +205,14 @@ final class OmniDeskOfferCatalog
         }, 3);
     }
 
-    /** @return list<array{code:string,name:string,amount_minor:?int,currency:?string,billing_interval:?string,trial_days:int,licensed_users:int,managed_devices:int,concurrent_sessions:int,available:bool}> */
+    /** @return list<array{code:string,name:string,amount_minor:?int,currency:?string,billing_interval:?string,trial_days:int,licensed_users:int,managed_devices:int,concurrent_sessions:int,unattended_devices:int,relay_bytes_monthly:int,relay_policy:string,commercial_use:bool,available:bool}> */
     public function preview(): array
     {
         $product = Product::query()->where('slug', OmniDeskLicenseContract::PRODUCT_SLUG)->first();
         $activeProduct = $product instanceof Product
             && $product->getAttribute('status') === 'active'
-            && $product->getAttribute('licensing_enabled') === true
-            && $product->getAttribute('purchase_enabled') === true
+            && (bool) $product->getAttribute('licensing_enabled')
+            && (bool) $product->getAttribute('is_public')
             && in_array($product->getAttribute('lifecycle'), ['available', 'public-beta'], true);
 
         $plans = Plan::query()->whereIn('code', array_keys(self::offers()))
@@ -232,10 +232,16 @@ final class OmniDeskOfferCatalog
                 'licensed_users' => (int) $limits['licensed_users'],
                 'managed_devices' => (int) $limits['managed_devices'],
                 'concurrent_sessions' => (int) $limits['concurrent_sessions'],
+                'unattended_devices' => (int) $limits['unattended_devices'],
+                'relay_bytes_monthly' => (int) $limits['relay_bytes_monthly'],
+                'relay_policy' => (string) $limits['relay_policy'],
+                'commercial_use' => $offer['features']['commercial_use'],
                 'available' => $activeProduct
+                    && ($offer['pricing_model'] !== 'subscription'
+                        || (bool) $product?->getAttribute('purchase_enabled'))
                     && $plan instanceof Plan
                     && $plan->getAttribute('status') === 'active'
-                    && $plan->getAttribute('product_id') === $product?->getKey(),
+                    && (string) $plan->getAttribute('product_id') === (string) $product?->getKey(),
             ];
         }
 
