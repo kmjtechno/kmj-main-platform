@@ -21,6 +21,8 @@ final class EliteReleasePrepareIntentTest extends TestCase
 
     private string $sha;
 
+    private mixed $mainResponse = null;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -52,7 +54,17 @@ final class EliteReleasePrepareIntentTest extends TestCase
 
     private function fakeMain(string $sha): void
     {
-        Http::fake(['api.github.com/*' => Http::response(['sha' => $sha], 200)]);
+        $this->useMainResponse(Http::response(['sha' => $sha], 200));
+    }
+
+    /** Laravel keeps the first matching fake, so the stub reads a mutable response instead of re-faking. */
+    private function useMainResponse(mixed $response): void
+    {
+        $first = $this->mainResponse === null;
+        $this->mainResponse = $response;
+        if ($first) {
+            Http::fake(['api.github.com/*' => fn () => $this->mainResponse]);
+        }
     }
 
     /** @return array<string, mixed> */
@@ -161,12 +173,13 @@ final class EliteReleasePrepareIntentTest extends TestCase
     public function test_unverifiable_main_head_fails_closed(): void
     {
         $owner = $this->owner();
-        Http::fake(['api.github.com/*' => Http::response('boom', 500)]);
+        $this->useMainResponse(Http::response('boom', 500));
 
         $this->submit($owner, $this->request())->assertStatus(409);
         $this->assertFileDoesNotExist($this->requestPath);
 
-        Http::fake(['api.github.com/*' => Http::response(['sha' => 'not-a-sha'], 200)]);
+        Cache::flush();
+        $this->useMainResponse(Http::response(['sha' => 'not-a-sha'], 200));
         $this->submit($owner, $this->request())->assertStatus(409);
         $this->assertFileDoesNotExist($this->requestPath);
     }
