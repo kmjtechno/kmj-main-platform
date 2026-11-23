@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Services\Licensing\Kslp\KslpKeyRegistry;
+use App\Services\Licensing\OmniDesk\OmniDeskActivationProof;
 use App\Services\Licensing\OmniDesk\OmniDeskApiAuthorizer;
 use App\Services\Licensing\OmniDesk\OmniDeskApiPrincipal;
 use App\Services\Licensing\OmniDesk\OmniDeskRenewalChallengeStore;
+use App\Services\Licensing\OmniDesk\OmniDeskSigner;
 use App\Services\Licensing\OmniDeskDeviceRenewalProof;
 use App\Services\Licensing\OmniDeskLicenseContract;
 use DomainException;
@@ -604,6 +607,222 @@ final class OmniDeskPrivateApiTest extends TestCase
         } catch (DomainException $e) {
             self::assertSame('OMNIDESK_RENEWAL_CHALLENGE_DENIED', $e->getMessage());
         }
+    }
+
+    public function test_protected_signed_activation_and_one_time_renewal_are_atomic(): void
+    {
+        [$f, $deviceSecret, $body, $idempotency] = $this->protectedIssuerFixture();
+        $this->bindPrincipal($f['organization_id'], true);
+
+        $activation = $this->postJson(
+            '/api/v1/licensing/omnidesk/activations',
+            $body,
+            ['Idempotency-Key' => $idempotency],
+        )->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->json();
+
+        $activationId = $activation['activation_id'];
+        $firstClaims = $this->decodeProtectedToken($activation['signed_entitlement']);
+        self::assertSame(1, $firstClaims['sequence']);
+        self::assertSame($activationId, $firstClaims['activation_id']);
+        self::assertSame($f['license_id'], $firstClaims['license_id']);
+        self::assertSame($f['entitlement_id'], $firstClaims['entitlement_id']);
+        self::assertSame($f['organization_id'], $firstClaims['organization_id']);
+        self::assertSame(['remote.interactive'], $firstClaims['capabilities']);
+        self::assertSame(0, $firstClaims['limits']['unattended_devices']);
+        self::assertSame('direct_only', $firstClaims['limits']['relay_policy']);
+        self::assertGreaterThan(time(), $activation['lease_expires_at']);
+        $this->assertDatabaseHas('omnidesk_activation_bindings', [
+            'activation_id' => $activationId,
+            'organization_id' => $f['organization_id'],
+            'current_sequence' => 1,
+            'current_jti' => $firstClaims['jti'],
+        ]);
+
+        $challenge = $this->postJson(
+            '/api/v1/licensing/omnidesk/activations/'.$activationId.'/renewal-challenge',
+            [],
+        )->assertOk()->json();
+        $proof = [
+            'activation_id' => $activationId,
+            'current_jti' => $firstClaims['jti'],
+            'current_sequence' => 1,
+            'server_challenge' => $challenge['server_challenge'],
+            'client_nonce' => 'nonce-protected-renew-0123456789',
+            'client_version' => '0.0.1',
+            'proof_scheme' => 'KMJ-OMNIDESK-RENEW-v1',
+            'device_signature' => 'unsigned',
+        ];
+        $message = app(OmniDeskDeviceRenewalProof::class)->canonicalMessage($proof);
+        $proof['device_signature'] = $this->testUrlBase64(
+            sodium_crypto_sign_detached($message, $deviceSecret),
+        );
+        $renewal = $this->postJson(
+            '/api/v1/licensing/omnidesk/leases/renew',
+            $proof,
+        )->assertOk()->assertHeader('Cache-Control', 'no-store, private')->json();
+
+        $renewedClaims = $this->decodeProtectedToken($renewal['signed_entitlement']);
+        self::assertSame(2, $renewedClaims['sequence']);
+        self::assertNotSame($firstClaims['jti'], $renewedClaims['jti']);
+        self::assertSame($activationId, $renewedClaims['activation_id']);
+        self::assertLessThanOrEqual($renewal['lease_expires_at'], $renewal['next_renewal_at']);
+        $this->assertDatabaseHas('omnidesk_activation_bindings', [
+            'activation_id' => $activationId,
+            'current_sequence' => 2,
+            'current_jti' => $renewedClaims['jti'],
+        ]);
+
+        $this->postJson('/api/v1/licensing/omnidesk/leases/renew', $proof)
+            ->assertStatus(409)
+            ->assertJsonPath('error', 'REPLAY_DETECTED');
+        $this->assertDatabaseHas('kslp_license_events', [
+            'license_id' => $f['license_id'],
+            'action' => 'omnidesk_signed_renewal',
+            'actor_id' => 'test-user',
+        ]);
+
+        // An activation replay must not mint a fresh signature or cursor.
+        $this->postJson(
+            '/api/v1/licensing/omnidesk/activations',
+            $body,
+            ['Idempotency-Key' => $idempotency],
+        )->assertStatus(409)->assertJsonPath('error', 'ACTIVATION_CONFLICT');
+        $this->assertDatabaseCount('kslp_activations', 1);
+    }
+
+    public function test_unpublished_signing_key_rolls_back_activation_and_binding(): void
+    {
+        [$f, $secret, $body, $idempotency] = $this->protectedIssuerFixture(false);
+        unset($secret);
+        $this->bindPrincipal($f['organization_id'], true);
+
+        $this->postJson(
+            '/api/v1/licensing/omnidesk/activations',
+            $body,
+            ['Idempotency-Key' => $idempotency],
+        )->assertStatus(503)->assertJsonPath('error', 'ISSUANCE_NOT_CONFIGURED');
+        $this->assertDatabaseCount('kslp_activations', 0);
+        $this->assertDatabaseCount('omnidesk_activation_bindings', 0);
+        $this->assertDatabaseCount('kslp_license_events', 0);
+    }
+
+    public function test_tampered_device_proof_cannot_activate_or_create_binding(): void
+    {
+        [$f, $secret, $body, $idempotency] = $this->protectedIssuerFixture();
+        unset($secret);
+        $this->bindPrincipal($f['organization_id'], true);
+        $body['client_nonce'] = 'nonce-tampered-0123456789';
+
+        $this->postJson(
+            '/api/v1/licensing/omnidesk/activations',
+            $body,
+            ['Idempotency-Key' => $idempotency],
+        )->assertStatus(403)->assertJsonPath('error', 'FORBIDDEN');
+        $this->assertDatabaseCount('kslp_activations', 0);
+        $this->assertDatabaseCount('omnidesk_activation_bindings', 0);
+    }
+
+    /**
+     * Creates an isolated pre-activation license and binds a private signer
+     * only for the test container, never in a production provider.
+     *
+     * @return array{array<string,string>,non-empty-string,array<string,string>,string}
+     */
+    private function protectedIssuerFixture(bool $publishSigner = true): array
+    {
+        $f = $this->fixture();
+        DB::table('omnidesk_activation_bindings')
+            ->where('activation_id', $f['activation_id'])
+            ->delete();
+        DB::table('kslp_activations')
+            ->where('id', $f['activation_id'])
+            ->delete();
+
+        $signerPair = sodium_crypto_sign_seed_keypair(
+            hash('sha256', 'omnidesk-protected-issuer-test-only', true),
+        );
+        $signerSecret = sodium_crypto_sign_secretkey($signerPair);
+        $signerPublic = sodium_crypto_sign_publickey($signerPair);
+        $kid = 'omnidesk-protected-test-01';
+        if ($publishSigner) {
+            app(KslpKeyRegistry::class)->publish(
+                $kid,
+                'license',
+                $this->testUrlBase64($signerPublic),
+            );
+        }
+        $this->app->instance(OmniDeskSigner::class, new class($signerSecret, $kid) implements OmniDeskSigner
+        {
+            public function __construct(
+                private readonly string $secret,
+                private readonly string $signerKid,
+            ) {}
+
+            public function kid(): string
+            {
+                return $this->signerKid;
+            }
+
+            public function sign(string $canonicalPayload): string
+            {
+                return sodium_crypto_sign_detached($canonicalPayload, $this->secret);
+            }
+        });
+
+        $devicePair = sodium_crypto_sign_seed_keypair(
+            hash('sha256', 'omnidesk-protected-device-test-only', true),
+        );
+        $devicePublic = sodium_crypto_sign_publickey($devicePair);
+        $deviceSecret = sodium_crypto_sign_secretkey($devicePair);
+        $idempotency = 'omnidesk-test-'.Str::random(32);
+        $body = [
+            'license_or_entitlement_reference' => $f['license_id'],
+            'device_public_key' => $this->testUrlBase64($devicePublic),
+            'device_public_key_fingerprint' => 'sha256:'.hash('sha256', $devicePublic),
+            'installation_id' => 'install-protected-test-p520',
+            'client_version' => '0.0.1',
+            'protocol_version' => OmniDeskLicenseContract::PROTOCOL_VERSION,
+            'platform' => 'windows',
+            'architecture' => 'x86_64',
+            'client_nonce' => 'nonce-protected-activate-0123456789',
+            'proof_scheme' => 'KMJ-OMNIDESK-ACTIVATE-v1',
+        ];
+        $message = app(OmniDeskActivationProof::class)->canonicalMessage($body, $idempotency);
+        $body['device_signature'] = $this->testUrlBase64(
+            sodium_crypto_sign_detached($message, $deviceSecret),
+        );
+
+        return [$f, $deviceSecret, $body, $idempotency];
+    }
+
+    /** @return array<string, mixed> */
+    private function decodeProtectedToken(string $token): array
+    {
+        $parts = explode('.', $token);
+        self::assertCount(2, $parts);
+        $encoded = static function (string $input): string {
+            $padding = (4 - strlen($input) % 4) % 4;
+            $decoded = base64_decode(
+                strtr($input, '-_', '+/').str_repeat('=', $padding),
+                true,
+            );
+            self::assertIsString($decoded);
+
+            return $decoded;
+        };
+        $payload = $encoded($parts[0]);
+        $signature = $encoded($parts[1]);
+        $public = app(KslpKeyRegistry::class)->publicKey('omnidesk-protected-test-01', 'license');
+        self::assertTrue(sodium_crypto_sign_verify_detached($signature, $payload, $public));
+
+        return json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
+    }
+
+    private function testUrlBase64(string $bytes): string
+    {
+        return rtrim(strtr(base64_encode($bytes), '+/', '-_'), '=');
     }
 
     /**
