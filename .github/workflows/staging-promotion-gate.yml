@@ -142,27 +142,27 @@ jobs:
     timeout-minutes: 5
     outputs:
       ref_advanced: ${{ steps.promoted.outputs.performed == 'true' }}
-      owner_sha_missing: ${{ steps.skipped.outputs.performed == 'false' }}
+      auto_promotion_skipped: ${{ steps.skipped.outputs.performed == 'false' }}
 
     steps:
-      - name: Record blocked staging promotion when exact owner SHA is absent
-        if: ${{ github.ref != 'refs/heads/main' || vars.KMJ_STAGING_PROMOTION_APPROVED_SHA != github.sha }}
+      - name: Record blocked staging promotion when not a main push or auto-advance is switched off
+        if: ${{ github.ref != 'refs/heads/main' || vars.KMJ_STAGING_AUTO_PROMOTION == 'off' }}
         id: skipped
         shell: bash
         run: |
           set -euo pipefail
-          echo 'STAGING_PROMOTION=SKIPPED_NO_EXACT_OWNER_SHA'
+          echo 'STAGING_PROMOTION=SKIPPED_NOT_MAIN_OR_AUTO_OFF'
           echo 'performed=false' >> "$GITHUB_OUTPUT"
           {
             echo '### Staging promotion NOT performed'
             echo ''
-            echo 'Exact owner-approved main SHA was absent or this was not a main-branch push.'
+            echo 'This was not a main-branch run, or the owner kill-switch KMJ_STAGING_AUTO_PROMOTION=off is set.'
             echo 'No staging-approved ref was moved and no staging deployment occurred.'
             echo ''
-            echo 'STAGING_PROMOTION=SKIPPED_NO_EXACT_OWNER_SHA'
+            echo 'STAGING_PROMOTION=SKIPPED_NOT_MAIN_OR_AUTO_OFF'
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Move staging-approved only after all verification passes
-        if: ${{ github.ref == 'refs/heads/main' && vars.KMJ_STAGING_PROMOTION_APPROVED_SHA == github.sha }}
+        if: ${{ github.ref == 'refs/heads/main' && vars.KMJ_STAGING_AUTO_PROMOTION != 'off' }}
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
@@ -203,10 +203,10 @@ jobs:
           {
             echo '### Staging-approved source ref advanced'
             echo ''
-            echo 'The exact owner-approved SHA was verified after moving the staging-approved Git ref.'
-            echo 'This does NOT attest deployment to a staging server or approval for production.'
+            echo 'This main SHA passed every verification job above; the staging-approved ref was fast-forwarded to it (never forced).'
+            echo 'This does NOT attest staging deployment, owner QA, backup/rollback attestation or production approval; those stay owner-gated.'
             echo ''
-            echo 'STAGING_PROMOTION=REF_ADVANCED_EXACT_OWNER_SHA'
+            echo 'STAGING_PROMOTION=REF_ADVANCED_AFTER_GREEN_CI'
             echo 'STAGING_SERVER_DEPLOYMENT=NOT_ATTESTED_BY_THIS_JOB'
           } >> "$GITHUB_STEP_SUMMARY"
         id: promoted

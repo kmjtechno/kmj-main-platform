@@ -154,6 +154,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'staging-auto-advance-after-green-ci-20261123',
+        title: 'Staging ref advances by itself after green CI, so the one-click flow stops sticking',
+        state: 'active',
+        detail: 'After every verification job passes on a main push, the staging-approved ref is fast-forwarded to that exact commit. It is never forced. The owner can stop it by setting KMJ_STAGING_AUTO_PROMOTION to off. Production approval, attestation and activation stay owner gated.',
+        evidence:
+            'Contract tests and exact-head CI only. The first real advance has not run yet.',
+    },
+    {
         id: 'release-installer-v3-prepare-broker-20261123',
         title: 'Evidence installer v3: installs the release prepare broker with its own timer approval flag',
         state: 'active',
