@@ -45,6 +45,7 @@ final class NativeMailController
             'folder' => $folder,
             'q' => $search,
             'selectedThread' => $thread,
+            'selectedMessageId' => isset($values['message']) ? (int) $values['message'] : null,
             'directory' => $this->mail->directory(),
             'staff' => $portal === 'operator' ? $this->mail->activeStaff() : [],
             'myUserId' => (int) $user->getKey(),
