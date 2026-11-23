@@ -1,8 +1,11 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import {
+    Archive,
     ArrowLeft,
     Check,
+    ChevronRight,
+    Forward,
     ChevronLeft,
     FileText,
     Inbox,
@@ -13,6 +16,8 @@ import {
     RotateCcw,
     Search,
     Send,
+    Star,
+    RefreshCw,
     ShieldCheck,
     Trash2,
     UserPlus,
@@ -36,6 +41,7 @@ type MailItem = {
     sender_email: string | null;
     delivery_state: string | null;
     unread: boolean;
+    starred: boolean;
     at: string;
 };
 type ThreadItem = {
@@ -45,6 +51,7 @@ type ThreadItem = {
     recipient_email: string | null;
     sender_email: string | null;
     delivery_state: string | null;
+    starred: boolean;
     folder: string;
     subject: string;
     body: string;
@@ -58,17 +65,25 @@ type Template = {
     intro: string;
     notice: string;
 };
-type Folder = 'inbox' | 'sent' | 'drafts' | 'trash';
+type Folder = 'inbox' | 'sent' | 'drafts' | 'archive' | 'starred' | 'trash';
 type View = 'mail' | 'compose' | 'templates' | 'staff';
 
 type Props = {
     audience: 'owner' | 'staff';
     workspaceMode: 'native_internal';
     templates: Template[];
-    mailbox: { items: MailItem[]; unread: number };
+    mailbox: {
+        items: MailItem[];
+        unread: number;
+        total: number;
+        page: number;
+        page_size: number;
+        has_more: boolean;
+    };
     folder: Folder;
     q: string;
     selectedThread: { items: ThreadItem[]; thread_id: string } | null;
+    selectedMessageId: number | null;
     directory: Contact[];
     staff: {
         user_id: number;
@@ -90,6 +105,8 @@ const folderDefs: { id: Folder; label: string; icon: typeof Inbox }[] = [
     { id: 'inbox', label: 'Inbox', icon: Inbox },
     { id: 'sent', label: 'Sent', icon: Send },
     { id: 'drafts', label: 'Drafts', icon: FileText },
+    { id: 'archive', label: 'Archive', icon: Archive },
+    { id: 'starred', label: 'Starred', icon: Star },
     { id: 'trash', label: 'Trash', icon: Trash2 },
 ];
 
@@ -100,6 +117,7 @@ export default function MailCenter({
     folder,
     q,
     selectedThread,
+    selectedMessageId,
     directory,
     staff,
     myUserId,
@@ -125,6 +143,7 @@ export default function MailCenter({
     const [view, setView] = useState<View>('mail');
     const [search, setSearch] = useState(q);
     const [busy, setBusy] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [recipientId, setRecipientId] = useState('');
     const [recipientType, setRecipientType] = useState<'external' | 'internal'>(
         'external',
@@ -157,14 +176,17 @@ export default function MailCenter({
         nextFolder: Folder,
         message?: number,
         searchTerm: string = search,
+        nextPage = 1,
     ) => {
         setView('mail');
+        setSelectedIds([]);
         router.get(
             base,
             {
                 folder: nextFolder,
                 ...(searchTerm.trim() ? { q: searchTerm.trim() } : {}),
                 ...(message ? { message } : {}),
+                ...(nextPage > 1 ? { page: nextPage } : {}),
             },
             { preserveScroll: true },
         );
@@ -299,6 +321,57 @@ export default function MailCenter({
         );
     };
 
+    const manageMessages = (
+        action: 'star' | 'unstar' | 'read' | 'unread' | 'archive' | 'unarchive' | 'trash' | 'restore',
+        ids: number[] = selectedIds,
+    ) => {
+        if (busy || ids.length === 0) return;
+        setBusy(true);
+        router.post(
+            base + '/messages/manage',
+            { ids, action, folder },
+            {
+                preserveScroll: true,
+                onFinish: () => setBusy(false),
+                onSuccess: () => setSelectedIds([]),
+            },
+        );
+    };
+
+    const forwardMessage = () => {
+        const current =
+            selectedThread?.items.find((item) => item.id === selectedMessageId) ??
+            selectedThread?.items.at(-1);
+        if (!current) return;
+        setRecipientType('external');
+        setRecipientEmail('');
+        setRecipientId('');
+        setClientKey(crypto.randomUUID());
+        setSubject(
+            current.subject.toLowerCase().startsWith('fwd:')
+                ? current.subject
+                : 'Fwd: ' + current.subject,
+        );
+        setBody(
+            [
+                '',
+                '',
+                '---------- Forwarded KMJ message ----------',
+                'From: ' +
+                    (current.sender_email ?? contactName(current.from_id)),
+                'Date: ' + current.at,
+                'Subject: ' + current.subject,
+                '',
+                current.body,
+            ]
+                .join('\n')
+                .slice(0, 12000),
+        );
+        setDraftId(null);
+        setReplyId(null);
+        setView('compose');
+    };
+
     const changeStaff = (action: 'grant' | 'revoke', id: number) => {
         if (!isOwner || busy) return;
         setBusy(true);
@@ -343,7 +416,12 @@ export default function MailCenter({
         }
     };
 
-    const selected = selectedThread?.items.at(-1);
+    const selected =
+        selectedThread?.items.find((item) => item.id === selectedMessageId) ??
+        selectedThread?.items.at(-1);
+    const allPageSelected =
+        mailbox.items.length > 0 &&
+        mailbox.items.every((item) => selectedIds.includes(item.id));
     const back = isOwner ? '/operator' : '/dashboard';
 
     // app.tsx already mounts AppLayout (owner: OwnerModuleShell; staff: sidebar).
