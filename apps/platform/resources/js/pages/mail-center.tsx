@@ -449,6 +449,9 @@ export default function MailCenter({
     const selected =
         selectedThread?.items.find((item) => item.id === selectedMessageId) ??
         selectedThread?.items.at(-1);
+    const latestSent = recentSent?.items[0] ?? null;
+    const sentRecipientName = (item: MailItem) =>
+        item.recipient_email ?? contactName(item.recipient_user_id);
     // These are UI filters on the current page only, not invented server-side
     // priority or spam classifiers. The actual full mailbox remains accessible.
     const visibleItems = useMemo(() => {
@@ -1132,28 +1135,45 @@ export default function MailCenter({
                                                 <div className="kmj-mail-recent-sent-head">
                                                     <strong>Recent Sent</strong>
                                                     <small>
-                                                        {recentSent.total} in Sent · Not inbox mail
+                                                        {recentSent.total} in
+                                                        Sent · Not inbox mail
                                                     </small>
                                                 </div>
-                                                {recentSent.items.map((item) => (
-                                                    <button
-                                                        key={item.id}
-                                                        type="button"
-                                                        className="kmj-mail-recent-sent-row"
-                                                        onClick={() =>
-                                                            navigate('sent', item.id, '')
-                                                        }
-                                                    >
-                                                        <span className="kmj-mail-sender-avatar" aria-hidden="true">
-                                                            {(item.recipient_email ?? contactName(item.recipient_user_id)).slice(0, 1).toUpperCase()}
-                                                        </span>
-                                                        <span className="min-w-0 flex-1">
-                                                            <strong>{item.subject || '(No subject)'}</strong>
-                                                            <small>{item.snippet}</small>
-                                                        </span>
-                                                        <ChevronRight className="size-4 shrink-0 text-slate-500" />
-                                                    </button>
-                                                ))}
+                                                {recentSent.items.map(
+                                                    (item) => (
+                                                        <button
+                                                            key={item.id}
+                                                            type="button"
+                                                            className="kmj-mail-recent-sent-row"
+                                                            onClick={() =>
+                                                                navigate(
+                                                                    'sent',
+                                                                    item.id,
+                                                                    '',
+                                                                )
+                                                            }
+                                                        >
+                                                            <span
+                                                                className="kmj-mail-sender-avatar"
+                                                                aria-hidden="true"
+                                                            >
+                                                                {sentRecipientName(item)
+                                                                    .slice(0, 1)
+                                                                    .toUpperCase()}
+                                                            </span>
+                                                            <span className="min-w-0 flex-1">
+                                                                <strong>
+                                                                    {item.subject ||
+                                                                        '(No subject)'}
+                                                                </strong>
+                                                                <small>
+                                                                    {item.snippet}
+                                                                </small>
+                                                            </span>
+                                                            <ChevronRight className="size-4 shrink-0 text-slate-500" />
+                                                        </button>
+                                                    ),
+                                                )}
                                             </section>
                                         )}
                                 </div>
@@ -2069,57 +2089,68 @@ export default function MailCenter({
                                                 ? 'Choose a message to view its full thread, sender details and delivery status.'
                                                 : 'This folder has no matching private messages. Compose a new message or choose another folder.'}
                                         </p>
-                                        {folder === 'inbox' &&
-                                            recentSent &&
-                                            recentSent.items.length > 0 && (
-                                                <section
-                                                    className="kmj-mail-recent-sent-reader mt-6"
-                                                    aria-label="Real recent sent message preview"
-                                                >
-                                                    <div className="kmj-mail-message-brand flex items-center justify-between gap-3 p-3">
-                                                        <img
-                                                            src="/assets/brand/kmj-logo-horizontal-readable.svg"
-                                                            width="168"
-                                                            height="44"
-                                                            alt="KMJ TECHNO"
-                                                            className="h-8 w-auto object-contain"
-                                                        />
-                                                        <span className="text-right text-[11px] font-bold">
-                                                            Official Correspondence
-                                                        </span>
-                                                    </div>
-                                                    <div className="p-4">
-                                                        <span className="text-[10px] font-bold tracking-wider text-rose-400 uppercase">
-                                                            From your Sent folder · Not Inbox
-                                                        </span>
-                                                        <h3 className="mt-2 text-base font-extrabold text-white">
-                                                            {recentSent.items[0].subject || '(No subject)'}
-                                                        </h3>
-                                                        <p className="mt-1 text-xs text-slate-300">
-                                                            To: {recentSent.items[0].recipient_email ??
-                                                                contactName(recentSent.items[0].recipient_user_id)}
-                                                        </p>
-                                                        <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-200">
-                                                            {recentSent.items[0].snippet}
-                                                        </p>
-                                                        {deliveryLabel(recentSent.items[0].delivery_state) && (
-                                                            <p className="mt-2 text-[11px] font-semibold text-amber-200">
-                                                                {deliveryLabel(recentSent.items[0].delivery_state)}
-                                                            </p>
+                                        {folder === 'inbox' && latestSent && (
+                                            <section
+                                                className="kmj-mail-recent-sent-reader mt-6"
+                                                aria-label="Real recent sent message preview"
+                                            >
+                                                <div className="kmj-mail-message-brand flex items-center justify-between gap-3 p-3">
+                                                    <img
+                                                        src="/assets/brand/kmj-logo-horizontal-readable.svg"
+                                                        width="168"
+                                                        height="44"
+                                                        alt="KMJ TECHNO"
+                                                        className="h-8 w-auto object-contain"
+                                                    />
+                                                    <span className="text-right text-[11px] font-bold">
+                                                        Official Correspondence
+                                                    </span>
+                                                </div>
+                                                <div className="p-4">
+                                                    <span className="text-[10px] font-bold tracking-wider text-rose-400 uppercase">
+                                                        From your Sent folder
+                                                        · Not Inbox
+                                                    </span>
+                                                    <h3 className="mt-2 text-base font-extrabold text-white">
+                                                        {latestSent.subject ||
+                                                            '(No subject)'}
+                                                    </h3>
+                                                    <p className="mt-1 text-xs text-slate-300">
+                                                        To:{' '}
+                                                        {sentRecipientName(
+                                                            latestSent,
                                                         )}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                navigate('sent', recentSent.items[0].id, '')
-                                                            }
-                                                            className="mt-4 inline-flex min-h-9 items-center gap-2 rounded-lg border border-rose-400/35 bg-rose-500/15 px-3 text-xs font-bold text-white hover:bg-rose-500/25"
-                                                        >
-                                                            <MailOpen className="size-4" />
-                                                            Open real Sent conversation
-                                                        </button>
-                                                    </div>
-                                                </section>
-                                            )}
+                                                    </p>
+                                                    <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-200">
+                                                        {latestSent.snippet}
+                                                    </p>
+                                                    {deliveryLabel(
+                                                        latestSent.delivery_state,
+                                                    ) && (
+                                                        <p className="mt-2 text-[11px] font-semibold text-amber-200">
+                                                            {deliveryLabel(
+                                                                latestSent.delivery_state,
+                                                            )}
+                                                        </p>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            navigate(
+                                                                'sent',
+                                                                latestSent.id,
+                                                                '',
+                                                            )
+                                                        }
+                                                        className="mt-4 inline-flex min-h-9 items-center gap-2 rounded-lg border border-rose-400/35 bg-rose-500/15 px-3 text-xs font-bold text-white hover:bg-rose-500/25"
+                                                    >
+                                                        <MailOpen className="size-4" />
+                                                        Open real Sent
+                                                        conversation
+                                                    </button>
+                                                </div>
+                                            </section>
+                                        )}
                                         <div className="mt-6 flex flex-wrap gap-3">
                                             {mailbox.items.length > 0 && (
                                                 <button
