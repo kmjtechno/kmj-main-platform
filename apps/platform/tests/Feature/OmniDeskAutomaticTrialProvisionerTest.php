@@ -9,6 +9,7 @@ use App\Services\Licensing\OmniDesk\OmniDeskAutomaticTrialProvisioner;
 use App\Services\Licensing\OmniDeskLicenseContract;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use KMJ\MainPlatform\Catalog\Models\Plan;
 use KMJ\MainPlatform\Catalog\Models\Product;
@@ -106,8 +107,8 @@ final class OmniDeskAutomaticTrialProvisionerTest extends TestCase
         // PostgreSQL timestamps may serialize with an explicit UTC offset,
         // while the KSLP legacy timestamp is offset-naive.
         self::assertSame(
-            \Illuminate\Support\Carbon::parse((string) $expiresAt)->getTimestamp(),
-            \Illuminate\Support\Carbon::parse((string) $entitlementEnds)->getTimestamp(),
+            Carbon::parse((string) $expiresAt)->getTimestamp(),
+            Carbon::parse((string) $entitlementEnds)->getTimestamp(),
         );
     }
 
