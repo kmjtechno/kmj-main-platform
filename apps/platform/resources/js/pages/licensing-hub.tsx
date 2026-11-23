@@ -124,10 +124,10 @@ export default function LicensingHub({
                         Licensing Hub
                     </h1>
                     <p className="relative mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-                        Your product entitlements, license records and
-                        recorded device bindings in one verified KMJ account.
-                        Issuance, payments and device transfers still require
-                        their independent server-side security gates.
+                        Your product entitlements, license records and recorded
+                        device bindings in one verified KMJ account. Issuance,
+                        payments and device transfers still require their
+                        independent server-side security gates.
                     </p>
                     <div className="relative mt-6 flex flex-wrap gap-3">
                         <a
@@ -204,8 +204,7 @@ export default function LicensingHub({
                             {
                                 number: '04',
                                 title: 'Devices & downloads',
-                                detail:
-                                    'Device transfer and signed releases require verification',
+                                detail: 'Device transfer and signed releases require verification',
                                 href: '#my-devices',
                                 action: 'Review device records',
                             },
@@ -280,7 +279,10 @@ export default function LicensingHub({
                                 className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-bold text-white hover:bg-red-700"
                             >
                                 Review entitlements
-                                <ArrowRight className="size-4" aria-hidden="true" />
+                                <ArrowRight
+                                    className="size-4"
+                                    aria-hidden="true"
+                                />
                             </a>
                         ) : (
                             <Link
@@ -288,7 +290,10 @@ export default function LicensingHub({
                                 className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-bold text-white hover:bg-red-700"
                             >
                                 Explore products
-                                <ArrowRight className="size-4" aria-hidden="true" />
+                                <ArrowRight
+                                    className="size-4"
+                                    aria-hidden="true"
+                                />
                             </Link>
                         )}
                     </div>
