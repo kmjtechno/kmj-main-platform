@@ -4,7 +4,6 @@ import {
     BadgeCheck,
     Boxes,
     Clock3,
-    Code2,
     Download,
     KeyRound,
     Laptop2,
@@ -125,27 +124,190 @@ export default function LicensingHub({
                         Licensing Hub
                     </h1>
                     <p className="relative mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-                        Your products, signed-license records and device-seat
-                        history in one verified KMJ account. Issuance, payments
-                        and device transfers still require their independent
-                        server-side security gates.
+                        Your product entitlements, license records and recorded
+                        device bindings in one verified KMJ account. Issuance,
+                        payments and device transfers still require their
+                        independent server-side security gates.
                     </p>
                     <div className="relative mt-6 flex flex-wrap gap-3">
-                        <Link
-                            href="/developer/apps"
+                        <a
+                            href="#getting-started"
                             className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-500"
                         >
-                            <Code2 className="size-4" aria-hidden="true" />
-                            Developer Apps & Keys
+                            My next step
                             <ArrowRight className="size-4" aria-hidden="true" />
-                        </Link>
+                        </a>
                         <Link
                             href="/purchase"
                             className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/20 px-4 py-2 text-xs font-semibold text-white hover:bg-white/10"
                         >
-                            Plans & purchases
+                            Explore product plans
                         </Link>
                     </div>
+                </section>
+
+                <section
+                    id="getting-started"
+                    aria-labelledby="getting-started-heading"
+                    className="border-border bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
+                >
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                            <p className="text-xs font-bold tracking-wider text-red-500 uppercase">
+                                Your licensing journey
+                            </p>
+                            <h2
+                                id="getting-started-heading"
+                                className="mt-1 text-lg font-bold"
+                            >
+                                Find the right next step
+                            </h2>
+                            <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
+                                Follow your actual account records. A purchase,
+                                entitlement, recorded activation and signed
+                                license are different checks.
+                            </p>
+                        </div>
+                        <span className="bg-muted rounded-full px-3 py-1 text-xs font-semibold">
+                            Guided view · No automatic charges
+                        </span>
+                    </div>
+                    <ol className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        {[
+                            {
+                                number: '01',
+                                title: 'Account',
+                                detail:
+                                    organizations.length > 0
+                                        ? `${organizations.length} linked organization(s)`
+                                        : 'No linked organization recorded',
+                                href: '/dashboard',
+                                action: 'Open account dashboard',
+                            },
+                            {
+                                number: '02',
+                                title: 'Products',
+                                detail:
+                                    product_entitlements.length > 0
+                                        ? `${product_entitlements.length} entitlement record(s)`
+                                        : 'No entitlement recorded',
+                                href: '#my-products',
+                                action: 'Review products',
+                            },
+                            {
+                                number: '03',
+                                title: 'Licenses',
+                                detail: `${license_count} KSLP license record(s)`,
+                                href: '#my-licenses',
+                                action: 'Check license status',
+                            },
+                            {
+                                number: '04',
+                                title: 'Devices & downloads',
+                                detail: 'Device transfer and signed releases require verification',
+                                href: '#my-devices',
+                                action: 'Review device records',
+                            },
+                        ].map((step) => (
+                            <li
+                                key={step.number}
+                                className="border-border rounded-xl border p-4"
+                            >
+                                <span className="text-xs font-extrabold text-red-500">
+                                    STEP {step.number}
+                                </span>
+                                <h3 className="mt-2 text-sm font-bold">
+                                    {step.title}
+                                </h3>
+                                <p className="text-muted-foreground mt-2 min-h-10 text-xs leading-5">
+                                    {step.detail}
+                                </p>
+                                {step.href.startsWith('#') ? (
+                                    <a
+                                        href={step.href}
+                                        className="mt-3 inline-flex min-h-10 items-center gap-1 text-xs font-semibold text-red-600 hover:underline"
+                                    >
+                                        {step.action}
+                                        <ArrowRight
+                                            className="size-3.5"
+                                            aria-hidden="true"
+                                        />
+                                    </a>
+                                ) : (
+                                    <Link
+                                        href={step.href}
+                                        className="mt-3 inline-flex min-h-10 items-center gap-1 text-xs font-semibold text-red-600 hover:underline"
+                                    >
+                                        {step.action}
+                                        <ArrowRight
+                                            className="size-3.5"
+                                            aria-hidden="true"
+                                        />
+                                    </Link>
+                                )}
+                            </li>
+                        ))}
+                    </ol>
+                    <div className="border-border mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
+                        <div>
+                            <p className="text-sm font-bold">
+                                {license_count > 0
+                                    ? 'Your next action: verify your license'
+                                    : product_entitlements.length > 0
+                                      ? 'Your next action: review your product'
+                                      : 'Your next action: explore KMJ products'}
+                            </p>
+                            <p className="text-muted-foreground mt-1 text-xs">
+                                This guidance does not enable checkout, signed
+                                keys or device reset.
+                            </p>
+                        </div>
+                        {license_count > 0 ? (
+                            <a
+                                href="#my-licenses"
+                                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-bold text-white hover:bg-red-700"
+                            >
+                                Review licenses
+                                <ArrowRight
+                                    className="size-4"
+                                    aria-hidden="true"
+                                />
+                            </a>
+                        ) : product_entitlements.length > 0 ? (
+                            <a
+                                href="#my-products"
+                                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-bold text-white hover:bg-red-700"
+                            >
+                                Review entitlements
+                                <ArrowRight
+                                    className="size-4"
+                                    aria-hidden="true"
+                                />
+                            </a>
+                        ) : (
+                            <Link
+                                href="/purchase"
+                                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-bold text-white hover:bg-red-700"
+                            >
+                                Explore products
+                                <ArrowRight
+                                    className="size-4"
+                                    aria-hidden="true"
+                                />
+                            </Link>
+                        )}
+                    </div>
+                    <p className="text-muted-foreground mt-4 text-xs">
+                        Building licensed software? The{' '}
+                        <Link
+                            href="/developer/apps"
+                            className="font-semibold text-red-600 hover:underline"
+                        >
+                            Developer Apps &amp; Keys
+                        </Link>{' '}
+                        workspace has separate issuer-subscription permissions.
+                        It does not grant customer licenses or purchases.
+                    </p>
                 </section>
 
                 <section
@@ -224,6 +386,7 @@ export default function LicensingHub({
                     className="flex flex-wrap gap-2"
                 >
                     {[
+                        ['Getting started', '#getting-started'],
                         ['My products', '#my-products'],
                         ['Licenses', '#my-licenses'],
                         ['Devices', '#my-devices'],
