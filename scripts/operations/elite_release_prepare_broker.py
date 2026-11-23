@@ -241,6 +241,29 @@ def real_helper(sha):
     return http_get("https://raw.githubusercontent.com/{}/{}/{}".format(REPO, sha, HELPER_PATH))
 
 
+MARKER_RE = re.compile(r"[A-Z][A-Z0-9_]{2,40}=(?:BLOCKED|HASH_MISMATCH)_[A-Za-z0-9_.]{1,60}")
+HELPER_LOG = "last-helper-output.log"
+
+
+def helper_markers(text):
+    """Only fixed BLOCKED/HASH_MISMATCH tokens leave the root log; free text never reaches the Ops status."""
+    found = MARKER_RE.findall(text or "")
+    return " ".join(found[-2:])
+
+
+def persist_helper_log(stdout, stderr, code, state_dir=STATE_DIR):
+    """Root-only bounded record of the last helper run, so a failure is diagnosable without a rerun."""
+    body = "exit={}\n--- stdout ---\n{}\n--- stderr ---\n{}\n".format(code, (stdout or "")[-8000:], (stderr or "")[-8000:])
+    path = Path(state_dir) / HELPER_LOG
+    tmp = Path(str(path) + ".tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8", errors="replace") as handle:
+        handle.write(body)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(tmp, path)
+
+
 def real_run(helper_bytes, args, timeout):
     with tempfile.TemporaryDirectory(prefix="kmj-release-prepare-") as workdir:
         os.chmod(workdir, 0o700)
@@ -249,6 +272,10 @@ def real_run(helper_bytes, args, timeout):
         os.chmod(script, 0o700)
         done = subprocess.run(["/bin/bash", str(script), *args], cwd=workdir, env=SAFE_ENV,
                               capture_output=True, text=True, timeout=timeout, check=False)
+        try:
+            persist_helper_log(done.stdout, done.stderr, done.returncode)
+        except OSError:
+            pass  # the log is a diagnostic aid; never let it change the release decision
         return done.returncode, (done.stdout or "")[-4000:]
 
 
@@ -274,7 +301,8 @@ def prepare(intent, uid, now, deps=Deps, state_dir=STATE_DIR, status_path=STATUS
     write_status("preparing", sha, "helper running", uid, status_path, now)
     code, output = deps.run(data, ["--prepare-only", sha], PREPARE_TIMEOUT)
     if code != 0 or PREPARE_OK not in output or "BLOCKED" in output:
-        write_status("prepare_failed", sha, "helper did not finish; read the root log", uid, status_path, now)
+        write_status("prepare_failed", sha, ("helper failed: " + (helper_markers(output) or "no marker") +
+                     " exit=" + str(code) + "; root log " + HELPER_LOG)[:120], uid, status_path, now)
         raise ValueError("BLOCKED_HELPER_FAILED")
     write_prepared(sha, now, state_dir)
     write_status("prepared_awaiting_activation", sha, "approval written; activate, then migrate runs", uid,
@@ -297,7 +325,8 @@ def post_activation(uid, now, deps=Deps, state_dir=STATE_DIR, status_path=STATUS
     write_status("migrating", sha, "candidate is live; migrating", uid, status_path, now)
     code, output = deps.run(data, ["--post-activation", sha], MIGRATE_TIMEOUT)
     if code != 0 or MIGRATE_OK not in output or "BLOCKED" in output:
-        write_status("migrate_failed", sha, "migrate did not finish; owner must investigate", uid, status_path, now)
+        write_status("migrate_failed", sha, ("migrate failed: " + (helper_markers(output) or "no marker") +
+                     " exit=" + str(code) + "; root log " + HELPER_LOG)[:120], uid, status_path, now)
         raise ValueError("BLOCKED_MIGRATE_FAILED")
     write_prepared(sha, now, state_dir, migrate_pending=False)
     write_status("live_and_migrated", sha, "candidate live; migrate finished; verify the site", uid, status_path, now)

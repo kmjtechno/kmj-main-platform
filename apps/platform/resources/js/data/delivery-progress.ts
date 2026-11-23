@@ -154,6 +154,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'prepare-broker-helper-log-20261123',
+        title: 'Prepare broker keeps the helper output in a root-only log and names the failed step',
+        state: 'active',
+        detail: 'The first Ops click run failed in the helper after four seconds and the output was thrown away. The broker now stores a bounded root-only log and shows only the fixed BLOCKED marker and exit code in the Ops status.',
+        evidence:
+            'Offline broker tests and exact-head CI only. Needs a new owner install on Elite to take effect.',
+    },
+    {
         id: 'staging-auto-advance-after-green-ci-20261123',
         title: 'Staging ref advances by itself after green CI, so the one-click flow stops sticking',
         state: 'active',

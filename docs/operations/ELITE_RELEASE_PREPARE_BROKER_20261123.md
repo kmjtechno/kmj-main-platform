@@ -41,3 +41,7 @@ separate activation step. The owner's passkey step-up happens in the web request
 
 Later PR: pinned installer update. Until the owner runs it, nothing here exists on Elite.
 Tests: `python3 scripts/test_elite_release_prepare_broker.py -v` (offline; no helper, network or root).
+
+## Helper log (added after the first live run)
+
+The first Ops click run failed inside the helper and its output was discarded. The broker now writes `/var/lib/kmj-main-platform/release-prepare/last-helper-output.log` (root only, mode 0600, last 8000 characters each of stdout and stderr). The Ops status shows only fixed `NAME=BLOCKED_REASON` tokens plus the exit code, never free text. The log is a diagnostic aid and cannot change the release decision. Taking effect needs a new owner install of the broker.
