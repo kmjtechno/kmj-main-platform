@@ -164,7 +164,7 @@ class PrepareTests(unittest.TestCase):
         old = b.HELPER_SHA256
         b.HELPER_SHA256 = hashlib.sha256(self.good).hexdigest()
         try:
-            return b.prepare(intent, self.uid, NOW, fake, self.state, self.status, execute)
+            return b.prepare(intent, self.uid, NOW, fake, self.state, self.status, execute, self.uid)
         finally:
             b.HELPER_SHA256 = old
 
@@ -199,14 +199,14 @@ class PrepareTests(unittest.TestCase):
     def test_same_intent_cannot_run_twice(self):
         fake = self.deps()
         intent = b.parse_intent(raw(intent_body()), NOW)
-        b.claim_once(intent, NOW, self.state)
+        b.claim_once(intent, NOW, self.state, self.uid)
         with self.assertRaisesRegex(ValueError, "BLOCKED_INTENT_ALREADY_CLAIMED"):
-            b.claim_once(intent, NOW, self.state)
+            b.claim_once(intent, NOW, self.state, self.uid)
         old = b.HELPER_SHA256
         b.HELPER_SHA256 = hashlib.sha256(self.good).hexdigest()
         try:
             with self.assertRaisesRegex(ValueError, "BLOCKED_INTENT_ALREADY_CLAIMED"):
-                b.prepare(intent, self.uid, NOW, fake, self.state, self.status, True)
+                b.prepare(intent, self.uid, NOW, fake, self.state, self.status, True, self.uid)
         finally:
             b.HELPER_SHA256 = old
         self.assertEqual(fake.runs, [])

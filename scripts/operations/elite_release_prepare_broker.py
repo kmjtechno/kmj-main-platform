@@ -260,7 +260,7 @@ class Deps:
     live = staticmethod(live_release)
 
 
-def prepare(intent, uid, now, deps=Deps, state_dir=STATE_DIR, status_path=STATUS, execute=True):
+def prepare(intent, uid, now, deps=Deps, state_dir=STATE_DIR, status_path=STATUS, execute=True, state_uid=0):
     sha = intent["approved_sha"]
     verify_candidate(sha, deps.main_head(), deps.checks(sha))
     data = deps.helper(sha)
@@ -270,7 +270,7 @@ def prepare(intent, uid, now, deps=Deps, state_dir=STATE_DIR, status_path=STATUS
         raise ValueError("BLOCKED_ALREADY_LIVE")
     if not execute:
         return "PREPARE_PREFLIGHT_PASS"
-    claim_once(intent, now, state_dir)
+    claim_once(intent, now, state_dir, state_uid)
     write_status("preparing", sha, "helper running", uid, status_path, now)
     code, output = deps.run(data, ["--prepare-only", sha], PREPARE_TIMEOUT)
     if code != 0 or PREPARE_OK not in output or "BLOCKED" in output:
