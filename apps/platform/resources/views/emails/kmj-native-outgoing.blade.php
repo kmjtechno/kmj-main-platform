@@ -32,7 +32,8 @@
             </a>
         </td>
     </tr>
-</table>p style="margin:25px 0 0;color:#bec8d7;font-size:11px;font-weight:bold;letter-spacing:2px">KMJ MAIL · PROFESSIONAL CORRESPONDENCE</p>
+</table>
+<p style="margin:25px 0 0;color:#bec8d7;font-size:11px;font-weight:bold;letter-spacing:2px">KMJ MAIL · PROFESSIONAL CORRESPONDENCE</p>
 </td></tr>
 <tr><td class="kmj-pad" style="padding:35px 40px 40px;background:#fff;border:1px solid #dfe4ea">
 <h1 style="margin:0 0 24px;font-size:27px;line-height:35px;color:#172236">{{ $heading }}</h1>
