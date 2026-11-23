@@ -19,6 +19,8 @@ import {
     Package,
     Rocket,
     Search,
+    HelpCircle,
+    Sparkles,
     Settings,
     ShieldCheck,
     ShoppingCart,
@@ -169,7 +171,13 @@ export default function OwnerModuleShell({
     children: ReactNode;
 }) {
     const { auth } = usePage().props;
-    const url = usePage().url.split('?')[0];
+    const pageUrl = usePage().url;
+    const url = pageUrl.split('?')[0];
+    const isMailPage = url === '/operator/mail';
+    const [mailSearch, setMailSearch] = useState(
+        new URLSearchParams(pageUrl.split('?')[1] ?? '').get('q') ?? '',
+    );
+    const searchRef = useRef<HTMLInputElement>(null);
     const name = auth.user?.name?.trim() || 'Platform Owner';
     const parts = name.split(/\s+/);
     const initials = (
@@ -187,6 +195,21 @@ export default function OwnerModuleShell({
     }, [url]);
 
     useEffect(() => {
+        if (!isMailPage) return;
+        const shortcut = (event: KeyboardEvent) => {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+                event.preventDefault();
+                searchRef.current?.focus();
+            }
+            if (event.key === 'Escape' && document.activeElement === searchRef.current) {
+                searchRef.current?.blur();
+            }
+        };
+        window.addEventListener('keydown', shortcut);
+        return () => window.removeEventListener('keydown', shortcut);
+    }, [isMailPage]);
+
+    useEffect(() => {
         if (!navOpen) return;
 
         const closeOnEscape = (event: KeyboardEvent) => {
@@ -202,6 +225,7 @@ export default function OwnerModuleShell({
         <div
             className="owner-lock owner-module-shell"
             data-owner-design="command-center-v1"
+            data-owner-mail={isMailPage ? 'true' : undefined}
         >
             <a className="owner-skip" href="#owner-main">
                 Skip to owner module
@@ -229,22 +253,76 @@ export default function OwnerModuleShell({
                 >
                     <Menu aria-hidden="true" />
                 </button>
-                <Link
-                    href="/operator"
-                    className="owner-search"
-                    aria-label="Open Command Center search"
-                >
-                    <Search size={17} aria-hidden="true" />
-                    <span>Search in Command Center</span>
-                </Link>
-                <Link
-                    href="/operator/ops"
-                    className="owner-status"
-                    aria-current={url === '/operator/ops' ? 'page' : undefined}
-                >
-                    <span />
-                    System Status
-                </Link>
+                {isMailPage ? (
+                    <>
+                        <form
+                            action="/operator/mail"
+                            method="get"
+                            role="search"
+                            className="owner-mail-global-search"
+                        >
+                            <Search size={18} aria-hidden="true" />
+                            <input
+                                ref={searchRef}
+                                type="search"
+                                name="q"
+                                maxLength={80}
+                                value={mailSearch}
+                                onChange={(event) => setMailSearch(event.target.value)}
+                                placeholder="Search mail, people or subject"
+                                aria-label="Search your private KMJ mailbox"
+                            />
+                            <kbd>Ctrl + K</kbd>
+                        </form>
+                        <a
+                            href="#kmj-ai-copilot"
+                            className="owner-mail-ai-link"
+                            aria-label="Open KMJ Mail AI Copilot"
+                        >
+                            <Sparkles size={15} aria-hidden="true" /> KMJ AI
+                        </a>
+                        <Link
+                            href="/operator/ops#owner-guardrail-signals"
+                            aria-label="Open notification and monitoring alerts"
+                            className="owner-mail-header-icon"
+                        >
+                            <Bell size={19} aria-hidden="true" />
+                        </Link>
+                        <Link
+                            href="/operator/modelfabric"
+                            aria-label="Configure KMJ AI providers"
+                            className="owner-mail-header-icon"
+                        >
+                            <Settings size={19} aria-hidden="true" />
+                        </Link>
+                        <a
+                            href="#kmj-mail-help"
+                            aria-label="KMJ Mail help and limitations"
+                            className="owner-mail-header-icon"
+                        >
+                            <HelpCircle size={19} aria-hidden="true" />
+                        </a>
+                    </>
+                ) : (
+                    <>
+                        <Link
+                            href="/operator"
+                            className="owner-search"
+                            aria-label="Open Command Center search"
+                        >
+                            <Search size={17} aria-hidden="true" />
+                            <span>Search in Command Center</span>
+                        </Link>
+                        <Link
+                            href="/operator/ops"
+                            className="owner-status"
+                            aria-current={url === '/operator/ops' ? 'page' : undefined}
+                        >
+                            <span />
+                            System Status
+                        </Link>
+                    </>
+                )}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <button
