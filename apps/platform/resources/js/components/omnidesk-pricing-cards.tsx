@@ -79,9 +79,9 @@ export default function OmniDeskPricingCards({
                     </h2>
                     <p className="text-muted-foreground mt-2 text-xs leading-6">
                         Personal use without a card, a one-time 14-day business
-                        trial, and affordable team plans. Direct connections
-                        are prioritized to manage infrastructure cost. These
-                        are planned offers, not a claim that remote control or
+                        trial, and affordable team plans. Direct connections are
+                        prioritized to manage infrastructure cost. These are
+                        planned offers, not a claim that remote control or
                         checkout is live.
                     </p>
                 </div>
@@ -140,32 +140,46 @@ export default function OmniDeskPricingCards({
                             </p>
                             <p className="mt-4 text-2xl font-black tabular-nums">
                                 {offerPrice(offer)}
-                                {isPaid && offer.billing_interval === 'yearly' && (
-                                    <span className="text-muted-foreground ml-1 text-xs font-medium">
-                                        /year
-                                    </span>
-                                )}
-                                {isPaid && offer.billing_interval === 'monthly' && (
-                                    <span className="text-muted-foreground ml-1 text-xs font-medium">
-                                        /month
-                                    </span>
-                                )}
+                                {isPaid &&
+                                    offer.billing_interval === 'yearly' && (
+                                        <span className="text-muted-foreground ml-1 text-xs font-medium">
+                                            /year
+                                        </span>
+                                    )}
+                                {isPaid &&
+                                    offer.billing_interval === 'monthly' && (
+                                        <span className="text-muted-foreground ml-1 text-xs font-medium">
+                                            /month
+                                        </span>
+                                    )}
                             </p>
-                            {isPaid && billing === 'yearly' && offer.amount_minor !== null && (
-                                <p className="mt-1 text-xs font-semibold text-emerald-600">
-                                    ≈ {offerPrice({
-                                        ...offer,
-                                        amount_minor: Math.round(
-                                            offer.amount_minor / 12,
-                                        ),
-                                    })}
-                                    /month equivalent
-                                </p>
-                            )}
+                            {isPaid &&
+                                billing === 'yearly' &&
+                                offer.amount_minor !== null && (
+                                    <p className="mt-1 text-xs font-semibold text-emerald-600">
+                                        ≈{' '}
+                                        {offerPrice({
+                                            ...offer,
+                                            amount_minor: Math.round(
+                                                offer.amount_minor / 12,
+                                            ),
+                                        })}
+                                        /month equivalent
+                                    </p>
+                                )}
                             <div className="text-muted-foreground mt-4 space-y-1.5 text-xs">
-                                <p>{offer.licensed_users} users · {offer.managed_devices} managed devices</p>
-                                <p>{offer.concurrent_sessions} concurrent session(s)</p>
-                                <p>{offer.unattended_devices} unattended devices</p>
+                                <p>
+                                    {offer.licensed_users} users ·{' '}
+                                    {offer.managed_devices} managed devices
+                                </p>
+                                <p>
+                                    {offer.concurrent_sessions} concurrent
+                                    session(s)
+                                </p>
+                                <p>
+                                    {offer.unattended_devices} unattended
+                                    devices
+                                </p>
                                 <p>
                                     {offer.relay_bytes_monthly === 0
                                         ? 'Direct connection only'
@@ -183,15 +197,25 @@ export default function OmniDeskPricingCards({
                                         href="/licensing"
                                         className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-3 text-xs font-bold text-white hover:bg-red-500"
                                     >
-                                        <BadgeCheck className="size-4" aria-hidden="true" />
+                                        <BadgeCheck
+                                            className="size-4"
+                                            aria-hidden="true"
+                                        />
                                         Start no-card trial
                                     </Link>
                                 ) : (
                                     <p
                                         className="bg-muted flex min-h-11 items-center justify-center rounded-xl px-3 text-center text-xs font-semibold"
-                                        aria-label={ready ? 'Checkout reviewed separately' : 'Not available yet'}
+                                        aria-label={
+                                            ready
+                                                ? 'Checkout reviewed separately'
+                                                : 'Not available yet'
+                                        }
                                     >
-                                        <ShieldCheck className="mr-1.5 size-4" aria-hidden="true" />
+                                        <ShieldCheck
+                                            className="mr-1.5 size-4"
+                                            aria-hidden="true"
+                                        />
                                         {ready
                                             ? 'Checkout approval required'
                                             : 'Coming after release checks'}
@@ -203,12 +227,12 @@ export default function OmniDeskPricingCards({
                 })}
             </div>
             <p className="text-muted-foreground mt-4 text-xs leading-5">
-                Prices shown before applicable taxes. Yearly plans charge a
-                full annual amount in advance; no hidden monthly collection.
-                Trial does not auto-renew or charge without a separate
-                authorized purchase. Relay traffic, devices and sessions are
-                capped by plan. Production payment and signing are subject to
-                merchant verification and KMJ release approval.
+                Prices shown before applicable taxes. Yearly plans charge a full
+                annual amount in advance; no hidden monthly collection. Trial
+                does not auto-renew or charge without a separate authorized
+                purchase. Relay traffic, devices and sessions are capped by
+                plan. Production payment and signing are subject to merchant
+                verification and KMJ release approval.
             </p>
         </section>
     );
