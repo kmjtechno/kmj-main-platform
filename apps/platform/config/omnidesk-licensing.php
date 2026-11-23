@@ -12,4 +12,7 @@ return [
     // Paid plan selection requires explicit approved product/merchant rollout.
     // A plan snapshot alone NEVER authorizes a charge or signed license.
     'paid_plan_binding_enabled' => (bool) env('KMJ_OMNIDESK_PAID_PLAN_BINDING_ENABLED', false),
+    // Cannot activate from a sandbox payment or manually confirmed order.
+    // Real server-to-server live PSP adapter is intentionally UNBOUND.
+    'live_paid_fulfillment_enabled' => (bool) env('KMJ_OMNIDESK_LIVE_PAID_FULFILLMENT_ENABLED', false),
 ];
