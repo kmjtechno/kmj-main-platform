@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'PR #1086 branch design/kmj-mail-approved-visual-parity-20261123, Laravel owner mailbox metrics isolation test and actual owner-browser/CI acceptance gates pending. Explicit owner screenshot approval and exact SHA owner-pinned production release required.',
     },
     {
+        id: 'codebridge-hosted-monthly-ledger-20261123',
+        title: 'CodeBridge: source-only monthly hosted remote tool-call reservation ledger',
+        state: 'active',
+        detail: 'SOURCE ONLY: introduces two bounded PostgreSQL tables and an internal, currently uncalled service to reserve one UTC-monthly call per owner-authorized account/seat and finalize once only after separately verified device-completion proof. Community 10k, Pro 100k and Team 300k/user are proposed, not active production limits. Immutable month/plan snapshot, idempotent replay, per-seat isolation and exhaustion fail closed; Business and trial require real approved plan contracts. No new public API, live gateway quota, user purchase, automatic paid licensing or payment activation.',
+        evidence:
+            'P0 issue #1085 and CodeBridge product-contract PR #1156 (merged source only). New PostgreSQL migration, service and isolated regression feature tests. Atomic accounting is NOT yet integrated with real tenant grants, signer evidence, device jobs, usage UI, pending-outcome reconciliation or deployed hosted gateway. Exact-head CI, authenticated staging, owner review and Elite release remain separate requirements.',
+    },
+    {
         id: 'kmj-mail-ai-copilot-20261123',
         title: 'KMJ Mail: AI-assisted Hinglish compose, Hindi explain and smart reply',
         state: 'active',
