@@ -768,3 +768,112 @@
         max-width: 100%;
     }
 }
+
+/*
+ * Owner-approved reference: keep all four mail panels structured even when
+ * the real Inbox is empty. Only the authenticated user's actual Sent records
+ * may populate the labeled cross-folder preview. Never add demo messages.
+ */
+.kmj-mail-approved-shell .kmj-mail-recent-sent-list {
+    margin: 12px 8px;
+    padding: 9px;
+    border: 1px solid #34445d;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #121c2f, #0a1322);
+}
+.kmj-mail-approved-shell .kmj-mail-recent-sent-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 3px 8px;
+    padding: 5px 5px 10px;
+    border-bottom: 1px solid #36445b;
+}
+.kmj-mail-approved-shell .kmj-mail-recent-sent-head strong {
+    font-size: 12px;
+    color: #fff;
+}
+.kmj-mail-approved-shell .kmj-mail-recent-sent-head small {
+    font-size: 10px;
+    color: #a8b9cf;
+}
+.kmj-mail-approved-shell .kmj-mail-message-list .kmj-mail-recent-sent-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 64px;
+    padding: 8px 5px;
+    text-align: left;
+    border-bottom: 1px solid #2a3951;
+    border-radius: 0;
+}
+.kmj-mail-approved-shell .kmj-mail-recent-sent-row strong,
+.kmj-mail-approved-shell .kmj-mail-recent-sent-row small {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.kmj-mail-approved-shell .kmj-mail-recent-sent-row strong {
+    font-size: 12px;
+    color: #f1f5fc;
+}
+.kmj-mail-approved-shell .kmj-mail-recent-sent-row small {
+    margin-top: 3px;
+    font-size: 11px;
+    color: #9aabc5;
+}
+.kmj-mail-approved-shell .kmj-mail-recent-sent-reader {
+    overflow: hidden;
+    border: 1px solid #9d315e;
+    border-radius: 13px;
+    background: linear-gradient(145deg, #111b2d, #0b1422);
+    box-shadow: 0 0 26px #d423541c;
+}
+.kmj-mail-approved-shell .kmj-mail-recent-sent-reader .kmj-mail-message-brand {
+    border-bottom: 2px solid #f02b55;
+    background: linear-gradient(102deg, #0a1020 40%, #5b1734 100%);
+}
+.kmj-mail-approved-shell .kmj-mail-ai-readiness-stack {
+    display: grid;
+    gap: 9px;
+}
+.kmj-mail-approved-shell .kmj-mail-ai-readiness-card {
+    padding: 12px;
+    border: 1px solid #8f3d7d;
+    border-radius: 12px;
+    background: linear-gradient(130deg, #3b1e3d, #241e34);
+    box-shadow: inset 0 1px #ffffff12;
+}
+.kmj-mail-approved-shell .kmj-mail-ai-readiness-card h3 {
+    color: #ffd9ed;
+    font-size: 12px;
+    font-weight: 800;
+}
+.kmj-mail-approved-shell .kmj-mail-ai-readiness-card p {
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #e7d7e9;
+}
+/* Original approved owner navigation is compact enough to show Kristi.
+ * Scope these density refinements only to the Mail route. */
+.owner-module-shell[data-owner-mail='true'] .owner-sidebar > a:not(.owner-sidebar-kristi),
+.owner-module-shell[data-owner-mail='true'] .owner-sidebar nav > a {
+    min-height: 34px;
+    font-size: 12px;
+}
+.owner-module-shell[data-owner-mail='true'] .owner-sidebar nav h2 {
+    font-size: 10px;
+}
+@media (max-width: 700px) {
+    .kmj-mail-approved-shell .kmj-mail-recent-sent-list {
+        margin: 12px 0;
+    }
+    .kmj-mail-approved-shell .kmj-mail-recent-sent-reader {
+        max-width: 100%;
+    }
+}
