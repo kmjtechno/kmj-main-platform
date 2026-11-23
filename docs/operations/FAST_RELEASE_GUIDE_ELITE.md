@@ -27,6 +27,18 @@ owner has not approved.
    below, preferably inside `tmux`.
 5. Do not put tokens, keys or customer data into chat, PR text or logs.
 
+## Split modes (2026-11-23)
+
+The helper also has two bounded modes so nobody has to keep one terminal open for the activation wait:
+
+- `bash orm.sh --prepare-only <SHA>`: stage, storage switch, materialize, recovery and the owner approval, then stop
+  with `APPROVAL_DONE_PREPARE_ONLY_ACTIVATE_THEN_RUN_POST_ACTIVATION`. It never waits for or triggers activation.
+- `bash orm.sh --post-activation <SHA>`: runs only `migrate --force` on the live app and refuses with
+  `BLOCKED_CANDIDATE_NOT_LIVE` unless `current` is exactly `platform-<sha12>`. It downloads, stages and approves nothing.
+
+The no-flag form is unchanged (full chain with the 15 minute wait). The helper's sha256 changes with this edit; always
+use the hash from the exact merge commit you are releasing.
+
 ## Release (owner, root, one command)
 
 Replace `<SHA>` with the 40-hex `main` commit. The helper is pinned by sha256 and downloads four hardened helpers
