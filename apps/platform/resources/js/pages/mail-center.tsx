@@ -1,6 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import MailAiCopilot from '@/components/mail-ai-copilot';
-import '@/../css/kmj-mail-approved.css';
+import '../../css/kmj-mail-approved.css';
 import { useMemo, useState } from 'react';
 import {
     Archive,
@@ -455,7 +455,7 @@ export default function MailCenter({
             <Head title="KMJ Mail · Enterprise inbox and correspondence" />
             <div
                 data-test="kmj-native-mail"
-                className="owner-admin-page kmj-admin-shell mx-auto flex w-full max-w-[1720px] min-w-0 flex-col gap-3 px-3 py-4 sm:px-5 lg:px-6"
+                className="owner-admin-page kmj-admin-shell kmj-mail-approved-shell mx-auto flex w-full max-w-[1720px] min-w-0 flex-col gap-3 px-3 py-4 sm:px-5 lg:px-6"
             >
                 <header className="kmj-mail-hero" aria-label="KMJ Mail Enterprise">
                     <div className="kmj-mail-globe" aria-hidden="true" />
@@ -543,7 +543,7 @@ export default function MailCenter({
 
                 <div
                     className={
-                        'grid min-h-[640px] min-w-0 gap-3 ' +
+                        'kmj-mail-workspace-grid grid min-h-[640px] min-w-0 gap-3 ' +
                         (view === 'compose'
                             ? 'lg:grid-cols-[205px_minmax(0,1fr)] 2xl:grid-cols-[205px_minmax(0,1fr)_330px]'
                             : 'lg:grid-cols-[205px_minmax(285px,390px)_minmax(0,1fr)] 2xl:grid-cols-[205px_335px_minmax(0,1fr)_330px]')
@@ -551,7 +551,7 @@ export default function MailCenter({
                 >
                     <aside
                         aria-label="Mail folders"
-                        className="from-card to-background min-w-0 rounded-2xl border border-slate-700/40 bg-gradient-to-b p-3 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)]"
+                        className="kmj-mail-folders from-card to-background min-w-0 rounded-2xl border border-slate-700/40 bg-gradient-to-b p-3 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)]"
                     >
                         <button
                             type="button"
@@ -570,13 +570,13 @@ export default function MailCenter({
                                     type="button"
                                     onClick={() => navigate(id, undefined, '')}
                                     aria-current={
-                                        folder === id && view === 'mail'
+                                        folder === id && (view === 'mail' || view === 'compose')
                                             ? 'page'
                                             : undefined
                                     }
                                     className={
                                         'flex min-h-11 items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium transition focus-visible:outline-2 focus-visible:outline-red-500 ' +
-                                        (folder === id && view === 'mail'
+                                        (folder === id && (view === 'mail' || view === 'compose')
                                             ? 'border border-red-500/25 bg-red-500/10 font-bold text-red-400 shadow-[inset_3px_0_0_0_#e52945]'
                                             : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground border border-transparent')
                                     }
@@ -627,8 +627,7 @@ export default function MailCenter({
                     <section
                         aria-label="Mail list"
                         className={
-                            'bg-card/90 min-w-0 overflow-hidden rounded-2xl border border-slate-700/40 p-3 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)] ' +
-                            (view === 'compose' ? 'hidden' : '')
+                            'kmj-mail-list bg-card/90 min-w-0 overflow-hidden rounded-2xl border border-slate-700/40 p-3 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)] '
                         }
                     >
                         <div className="flex items-center justify-between gap-2 px-2 pt-2">
@@ -645,7 +644,7 @@ export default function MailCenter({
                                               )?.label}
                                 </h2>
                                 <p className="text-muted-foreground mt-1 text-xs">
-                                    {view === 'mail'
+                                    {view === 'mail' || view === 'compose'
                                         ? 'Your private mailbox · ' +
                                           mailbox.total +
                                           ' messages'
@@ -655,7 +654,7 @@ export default function MailCenter({
                                 </p>
                             </div>
                         </div>
-                        {view === 'mail' && (
+                        {(view === 'mail' || view === 'compose') && (
                             <>
                                 <form
                                     className="mt-3 flex gap-2"
@@ -1181,7 +1180,7 @@ export default function MailCenter({
 
                     <section
                         aria-label="KMJ private message"
-                        className="bg-card/95 min-w-0 overflow-hidden rounded-2xl border border-slate-700/40 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)]"
+                        className="kmj-mail-reader bg-card/95 min-w-0 overflow-hidden rounded-2xl border border-slate-700/40 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)]"
                     >
                         {view === 'compose' ? (
                             <div className="p-5 sm:p-6">
