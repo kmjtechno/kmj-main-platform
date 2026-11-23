@@ -25,7 +25,6 @@ final class OmniDeskRenewalChallengeStore
     {
         return DB::transaction(function () use ($activationId, $organizationId): array {
             $binding = $this->lockedBinding($activationId, $organizationId);
-            $this->requireLiveBinding($binding, $organizationId);
 
             $challenge = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
             $now = now();
@@ -60,7 +59,6 @@ final class OmniDeskRenewalChallengeStore
 
         DB::transaction(function () use ($request, $organizationId, $activationId): void {
             $binding = $this->lockedBinding($activationId, $organizationId);
-            $this->requireLiveBinding($binding, $organizationId);
 
             if (! is_string($request['current_jti'] ?? null)
                 || ! hash_equals((string) $binding['current_jti'], $request['current_jti'])
@@ -100,67 +98,89 @@ final class OmniDeskRenewalChallengeStore
         }, 3);
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Lock in the same order as OmniDeskActivationBindingStore::advanceLease():
+     * license -> activation -> entitlement -> binding. These preliminary
+     * unlocked lookups are identity hints ONLY; every identity and entitlement
+     * invariant is rechecked under its authoritative row lock.
+     *
+     * @return array<string, mixed>
+     */
     private function lockedBinding(string $activationId, string $organizationId): array
     {
-        $row = DB::table('omnidesk_activation_bindings')
+        $preview = DB::table('omnidesk_activation_bindings')
             ->where('activation_id', $activationId)
             ->where('organization_id', $organizationId)
-            ->lockForUpdate()
-            ->first();
-        if ($row === null) {
-            throw new DomainException('OMNIDESK_RENEWAL_CHALLENGE_DENIED');
-        }
-
-        $binding = (array) $row;
-        if ($binding['current_jti'] === null || (int) $binding['current_sequence'] < 1) {
-            throw new DomainException('OMNIDESK_RENEWAL_CHALLENGE_DENIED');
-        }
-
-        return $binding;
-    }
-
-    /** @param  array<string, mixed>  $binding */
-    private function requireLiveBinding(array $binding, string $organizationId): void
-    {
-        $activation = DB::table('kslp_activations')
-            ->where('id', $binding['activation_id'])
-            ->whereNull('deactivated_at')
+            ->first(['entitlement_id']);
+        $activationPreview = DB::table('kslp_activations')
+            ->where('id', $activationId)
             ->first(['license_id']);
-        if ($activation === null) {
+        if ($preview === null || $activationPreview === null) {
             throw new DomainException('OMNIDESK_RENEWAL_CHALLENGE_DENIED');
         }
 
         $license = DB::table('kslp_licenses')
-            ->where('id', $activation->license_id)
+            ->where('id', $activationPreview->license_id)
             ->where('customer_id', $organizationId)
             ->where('product', OmniDeskLicenseContract::PRODUCT_ID)
-            ->where('status', 'active')
-            ->whereNull('revoked_at')
-            ->where('starts_at', '<=', now())
-            ->where('expires_at', '>', now())
-            ->exists();
-        if (! $license) {
+            ->lockForUpdate()
+            ->first();
+        if ($license === null
+            || (string) $license->status !== 'active'
+            || $license->revoked_at !== null
+            || now()->lt($license->starts_at)
+            || now()->gte($license->expires_at)) {
+            throw new DomainException('OMNIDESK_RENEWAL_CHALLENGE_DENIED');
+        }
+
+        $activation = DB::table('kslp_activations')
+            ->where('id', $activationId)
+            ->where('license_id', $license->id)
+            ->whereNull('deactivated_at')
+            ->lockForUpdate()
+            ->first();
+        if ($activation === null) {
             throw new DomainException('OMNIDESK_RENEWAL_CHALLENGE_DENIED');
         }
 
         $product = DB::table('products')
             ->where('slug', OmniDeskLicenseContract::PRODUCT_SLUG)
             ->first(['id']);
-        if ($product === null
-            || ! DB::table('entitlements')
-                ->where('id', $binding['entitlement_id'])
-                ->where('organization_id', $organizationId)
-                ->where('product_id', $product->id)
-                ->where('capability', OmniDeskLicenseContract::CAPABILITY)
-                ->where('status', 'active')
-                ->where('starts_at', '<=', now())
-                ->where(static function ($query): void {
-                    $query->whereNull('ends_at')->orWhere('ends_at', '>', now());
-                })
-                ->exists()) {
+        if ($product === null) {
             throw new DomainException('OMNIDESK_RENEWAL_CHALLENGE_DENIED');
         }
+
+        $entitlement = DB::table('entitlements')
+            ->where('id', $preview->entitlement_id)
+            ->where('organization_id', $organizationId)
+            ->where('product_id', $product->id)
+            ->where('capability', OmniDeskLicenseContract::CAPABILITY)
+            ->where('status', 'active')
+            ->where('starts_at', '<=', now())
+            ->where(static function ($query): void {
+                $query->whereNull('ends_at')->orWhere('ends_at', '>', now());
+            })
+            ->lockForUpdate()
+            ->first();
+        if ($entitlement === null) {
+            throw new DomainException('OMNIDESK_RENEWAL_CHALLENGE_DENIED');
+        }
+
+        $row = DB::table('omnidesk_activation_bindings')
+            ->where('activation_id', $activationId)
+            ->where('organization_id', $organizationId)
+            ->where('entitlement_id', $entitlement->id)
+            ->lockForUpdate()
+            ->first();
+        if ($row === null) {
+            throw new DomainException('OMNIDESK_RENEWAL_CHALLENGE_DENIED');
+        }
+        $binding = (array) $row;
+        if ($binding['current_jti'] === null || (int) $binding['current_sequence'] < 1) {
+            throw new DomainException('OMNIDESK_RENEWAL_CHALLENGE_DENIED');
+        }
+
+        return $binding;
     }
 
     /** @return non-empty-string */
