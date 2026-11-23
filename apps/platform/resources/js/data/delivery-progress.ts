@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-workspace-receipt-readiness-20261123',
+        title: 'CodeBridge: tenant-scoped device job completion audit, explicitly not signed billing proof',
+        state: 'active',
+        detail: 'SOURCE ONLY: read-only job-event consistency guard checks exact tenant/user/device/ULID identity, claim hash, real started/finished transitions, terminal outcome, and excludes pre-start refusal, lease expiry, cancelled or revoked grants. It never returns event details or secrets, writes to a quota counter, verifies a device signature or authorizes billing. Actual gateway receipt signatures, trusted KSLP seat/plan grant, cross-chat reservation mapping and protected production activation remain REQUIRED.',
+        evidence:
+            'P0 #1085: PHP read-only inspector with isolated database regression tests for successful and failed device reports, cross-tenant access, replay-like event inconsistency, invalid claim hash and no quota settlement. Any status remains untrusted for commercial accounting without cryptographic attestation and exact-head CI/owner review.',
+    },
+    {
         id: 'codebridge-usage-preview-unified-hub-20261123',
         title: 'CodeBridge: truthful proposed hosted usage tiers in the ONE customer Licensing Hub',
         state: 'active',
