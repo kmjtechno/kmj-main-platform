@@ -164,7 +164,7 @@ final class WorkforceMailCenterTest extends TestCase
                 $html = view('emails.kmj-transactional', $notice->viewData)->render();
                 $text = view('emails.kmj-transactional-text', $notice->viewData)->render();
 
-                self::assertStringContainsString('kmj-email-lockup-dark-trim.png', $html);
+                self::assertStringContainsString('kmj-sender-avatar.png', $html);
                 self::assertStringContainsString('KMJ TECHNO', $html);
                 self::assertStringContainsString('INNOVATE | BUILD | SCALE', $text);
                 self::assertStringContainsString('TEST PREVIEW', $text);
