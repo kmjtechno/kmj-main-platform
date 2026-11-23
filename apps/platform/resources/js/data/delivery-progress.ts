@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-usage-preview-unified-hub-20261123',
+        title: 'CodeBridge: truthful proposed hosted usage tiers in the ONE customer Licensing Hub',
+        state: 'active',
+        detail: 'SOURCE ONLY: customer Licensing Hub adds Community 10k Free, Pro 100k at INR 299/month, Team 300k/user at INR 699/month, and custom Business proposals. Explicit not-live labels, null active plan/usage/remaining/reset, no checkout or trial activation, and no meter query or cross-tenant ledger disclosure. Self-hosted Apache-2.0 stays unmetered by KMJ. No standalone licensing service or invented payment/signing.',
+        evidence:
+            'CodeBridge proposal #1156 and Main Platform ledger #1088 are merged source. New static catalog, existing authenticated KSLP customer workspace injection, React Hub preview and isolation/verification feature tests. Exact-head CI, protected review, post-merge staging, real receipt-verified gateway integration, and owner-pinned Elite release still required.',
+    },
+    {
         id: 'kmj-mail-locked-reference-visual-parity-20261123',
         title: 'KMJ Mail approved owner screenshot: actual four-pane visual implementation',
         state: 'active',
