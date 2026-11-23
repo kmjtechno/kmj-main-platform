@@ -1157,7 +1157,9 @@ export default function MailCenter({
                                                                 className="kmj-mail-sender-avatar"
                                                                 aria-hidden="true"
                                                             >
-                                                                {sentRecipientName(item)
+                                                                {sentRecipientName(
+                                                                    item,
+                                                                )
                                                                     .slice(0, 1)
                                                                     .toUpperCase()}
                                                             </span>
@@ -1167,7 +1169,9 @@ export default function MailCenter({
                                                                         '(No subject)'}
                                                                 </strong>
                                                                 <small>
-                                                                    {item.snippet}
+                                                                    {
+                                                                        item.snippet
+                                                                    }
                                                                 </small>
                                                             </span>
                                                             <ChevronRight className="size-4 shrink-0 text-slate-500" />
@@ -2108,8 +2112,8 @@ export default function MailCenter({
                                                 </div>
                                                 <div className="p-4">
                                                     <span className="text-[10px] font-bold tracking-wider text-rose-400 uppercase">
-                                                        From your Sent folder
-                                                        · Not Inbox
+                                                        From your Sent folder ·
+                                                        Not Inbox
                                                     </span>
                                                     <h3 className="mt-2 text-base font-extrabold text-white">
                                                         {latestSent.subject ||
