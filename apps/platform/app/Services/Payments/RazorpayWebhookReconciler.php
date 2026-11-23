@@ -107,6 +107,12 @@ final class RazorpayWebhookReconciler
             return ['bucket' => 'retry_later', 'status' => 'awaiting_link', 'note' => 'LINK_PENDING'];
         }
 
+        // Never use a sandbox provider adapter to confirm a real/live order.
+        // Signature-verified webhook receipt is not independent settlement.
+        if ((string) $link->environment !== 'sandbox') {
+            return ['bucket' => 'rejected', 'status' => 'rejected', 'note' => 'PROVIDER_ENVIRONMENT_MISMATCH'];
+        }
+
         try {
             $evidence = $this->adapter->confirmationForProviderOrder($paymentRef, $orderRef);
         } catch (InvalidArgumentException) {
