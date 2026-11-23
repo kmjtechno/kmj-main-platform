@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Mail;
 
+use App\Models\AiModelEvidence;
+use App\Models\AiProvider;
 use App\Models\User;
+use App\Services\AiProviders\EndpointGuard;
 use App\Services\AiProviders\ResolvesAiProviderScope;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Mockery;
@@ -39,6 +43,75 @@ final class NativeMailAiTest extends TestCase
     private function authenticated(User $user): static
     {
         return $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()]);
+    }
+
+    public function test_verified_private_free_model_generates_editable_draft_without_sending_mail(): void
+    {
+        Mail::fake();
+        $owner = $this->owner();
+        $tenant = (string) Str::uuid();
+        DB::table('organizations')->insert([
+            'id' => $tenant, 'name' => 'KMJ AI Mail test',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $scope = Mockery::mock(ResolvesAiProviderScope::class);
+        $scope->shouldReceive('for')->once()->andReturn([
+            'organization_id' => $tenant, 'can_manage' => true,
+        ]);
+        $this->app->instance(ResolvesAiProviderScope::class, $scope);
+        $this->app->instance(EndpointGuard::class, new EndpointGuard(fn (): array => ['93.184.216.34']));
+
+        $provider = AiProvider::query()->create([
+            'organization_id' => $tenant,
+            'name' => 'Test Verified Private Zero-Cost Model',
+            'preset' => 'groq',
+            'kind' => 'openai-compatible',
+            'base_url' => 'https://api.groq.com/openai/v1',
+            'api_key' => 'sk-test-only',
+            'key_last4' => 'only',
+            'enabled' => true,
+            'free_only' => true,
+            'health' => 'ok',
+            'health_checked_at' => now(),
+            'models_cache' => ['private-free-test'],
+            'models_checked_at' => now(),
+        ]);
+        AiModelEvidence::query()->create([
+            'organization_id' => $tenant,
+            'ai_provider_id' => $provider->id,
+            'model_id' => 'private-free-test',
+            'price_evidence_url' => 'https://example.com/pricing',
+            'price_evidence_note' => 'Verified free model for this test only.',
+            'verified_at' => now(),
+            'expires_at' => now()->addDays(3),
+            'data_handling' => 'no-training-documented',
+            'capabilities' => ['chat'],
+        ]);
+        Http::fake([
+            'api.groq.com/*' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'content' => '{"subject":"Delivery Update","body":"Dear Client,\\nWe have completed the work.\\nRegards, KMJ TECHNO"}',
+                    ],
+                ]],
+            ], 200),
+        ]);
+
+        $this->authenticated($owner)->postJson('/operator/mail/ai/generate', [
+            'mode' => 'compose',
+            'instruction' => 'Client ko politely project completion batao, English mein.',
+            'tone' => 'professional',
+            'language' => 'english',
+            'consent_to_ai_processing' => true,
+        ])->assertOk()
+            ->assertJsonPath('mode', 'compose')
+            ->assertJsonPath('subject', 'Delivery Update')
+            ->assertJsonPath('needs_review', true);
+
+        Http::assertSentCount(1);
+        Mail::assertNothingOutgoing();
+        $this->assertDatabaseCount('kmj_mail_messages', 0);
     }
 
     public function test_guest_unverified_and_unauthorized_user_cannot_use_mail_ai(): void
