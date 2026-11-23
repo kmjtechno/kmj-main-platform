@@ -154,6 +154,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-installer-v4-broker-log-20261123',
+        title: 'Evidence installer v4: replaces only the known earlier prepare broker with the logging version',
+        state: 'active',
+        detail: 'The owner installer is pinned to the merge commit that adds the helper log. It may replace the prepare broker only when the installed bytes match the exact earlier reviewed hash.',
+        evidence:
+            'Offline installer tests and exact-head CI only. Not run on Elite yet.',
+    },
+    {
         id: 'prepare-broker-helper-log-20261123',
         title: 'Prepare broker keeps the helper output in a root-only log and names the failed step',
         state: 'active',
