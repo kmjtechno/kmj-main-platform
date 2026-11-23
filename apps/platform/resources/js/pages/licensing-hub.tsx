@@ -1,4 +1,5 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import { useState } from 'react';
 import {
     ArrowRight,
     BadgeCheck,
@@ -46,6 +47,11 @@ type Props = {
     licenses_truncated: boolean;
     product_entitlements: CustomerEntitlement[];
     organizations: { id: string; name: string }[];
+    omnidesk_trial_organizations: {
+        organization_id: string;
+        organization_name: string;
+        trial_days: number;
+    }[];
     authorization_source: 'authenticated_verified_membership';
     device_reset_enabled: false;
     paid_issuance_enabled: false;
@@ -79,8 +85,32 @@ export default function LicensingHub({
     licenses_truncated,
     product_entitlements,
     organizations,
+    omnidesk_trial_organizations,
     trusted_download_source,
 }: Props) {
+    const [trialSubmitting, setTrialSubmitting] = useState(false);
+    const [trialFeedback, setTrialFeedback] = useState<string | null>(null);
+
+    const requestTrial = (organizationId: string) => {
+        setTrialSubmitting(true);
+        setTrialFeedback(null);
+        router.post(
+            '/licensing/omnidesk/trial',
+            { organization_id: organizationId },
+            {
+                preserveScroll: true,
+                onSuccess: () =>
+                    setTrialFeedback(
+                        'Trial recorded in your Licensing Hub. A signed device activation is still required.',
+                    ),
+                onError: () =>
+                    setTrialFeedback(
+                        'Trial cannot be started under the current product or organization policy.',
+                    ),
+                onFinish: () => setTrialSubmitting(false),
+            },
+        );
+    };
     const activeLicenses = licenses.filter((license) =>
         ['ACTIVE', 'RENEWAL_DUE', 'GRACE'].includes(license.state),
     ).length;
@@ -125,6 +155,65 @@ export default function LicensingHub({
                         </Link>
                     </div>
                 </section>
+
+                {omnidesk_trial_organizations.length > 0 && (
+                    <section
+                        aria-labelledby="omnidesk-trial-heading"
+                        className="border-border bg-card rounded-2xl border p-5 sm:p-6"
+                    >
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div className="max-w-2xl">
+                                <h2
+                                    id="omnidesk-trial-heading"
+                                    className="text-lg font-bold"
+                                >
+                                    OmniDesk · First-party trial
+                                </h2>
+                                <p className="text-muted-foreground mt-2 text-xs leading-5">
+                                    Eligible verified organizations can create
+                                    one no-charge trial record automatically.
+                                    A trial is not a signed remote-access lease,
+                                    and device activation remains separately
+                                    verified by KMJ Main Platform.
+                                </p>
+                            </div>
+                            <ShieldCheck
+                                className="size-5 text-red-500"
+                                aria-hidden="true"
+                            />
+                        </div>
+                        <div className="mt-4 flex flex-wrap gap-3">
+                            {omnidesk_trial_organizations.map((organization) => (
+                                <button
+                                    key={organization.organization_id}
+                                    type="button"
+                                    disabled={trialSubmitting}
+                                    onClick={() =>
+                                        requestTrial(organization.organization_id)
+                                    }
+                                    className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <BadgeCheck
+                                        className="size-4"
+                                        aria-hidden="true"
+                                    />
+                                    {trialSubmitting
+                                        ? 'Submitting…'
+                                        : `Start ${organization.trial_days}-day trial · ${organization.organization_name}`}
+                                </button>
+                            ))}
+                        </div>
+                        {trialFeedback && (
+                            <p
+                                className="text-muted-foreground mt-3 text-xs"
+                                role="status"
+                                aria-live="polite"
+                            >
+                                {trialFeedback}
+                            </p>
+                        )}
+                    </section>
+                )}
 
                 <nav
                     aria-label="Licensing workflow sections"
