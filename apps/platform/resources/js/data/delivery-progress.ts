@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kslp-reseller-credit-evidence-20261123',
+        title: 'ONE Licensing Hub: reseller evidence ledger foundation without credited funds',
+        state: 'active',
+        detail: 'SOURCE ONLY: new KSLP reseller evidence ledger schema and app-internal service accept only organization-authorized, commercial-order-bound, idempotent, zero-credit PENDING records; reject cross-tenant and cancelled-order evidence. Read-side reports pending counts only, never spendable credits, verified settlements or paid issuance. No customer route, live merchant charges, signer or entitlement side effects.',
+        evidence:
+            'Migration 2026_11_23_000510, KslpResellerCreditEvidenceLedger, tenant/idempotency/cancel/manual-confirm feature tests and source contract. Must pass exact-head CI and independent review. Phase 2 needs independently confirmed provider settlement, approved reseller grants and refund reconciliation before positive credit, debit or paid license paths.',
+    },
+    {
         id: 'kslp-customer-renewal-guidance-20261123',
         title: 'KSLP customer renewal and restricted-license recovery guidance (source only)',
         state: 'active',
