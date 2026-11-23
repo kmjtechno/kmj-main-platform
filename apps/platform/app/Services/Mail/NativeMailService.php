@@ -53,17 +53,23 @@ final class NativeMailService
             ])->values()->all());
     }
 
-    /** @return array{items:array<int,array<string,mixed>>,unread:int} */
-    public function mailbox(User $user, string $folder, string $search = ''): array
+    /** @return array{items:array<int,array<string,mixed>>,unread:int,total:int,page:int,page_size:int,has_more:bool} */
+    public function mailbox(User $user, string $folder, string $search = '', int $page = 1): array
     {
         $this->requireAllowed($user);
-        if (! in_array($folder, ['inbox', 'sent', 'drafts', 'trash'], true)) {
+        if (! in_array($folder, ['inbox', 'sent', 'drafts', 'archive', 'starred', 'trash'], true)) {
             throw ValidationException::withMessages(['folder' => 'Unknown mailbox folder.']);
         }
 
+        abort_unless($page >= 1 && $page <= 1000, 422);
         $query = DB::table('kmj_mail_messages')
-            ->where('mailbox_user_id', (int) $user->getKey())
-            ->where('folder', $folder);
+            ->where('mailbox_user_id', (int) $user->getKey());
+
+        if ($folder === 'starred') {
+            $query->where('is_starred', true)->whereNotIn('folder', ['trash', 'drafts']);
+        } else {
+            $query->where('folder', $folder);
+        }
 
         if ($search !== '') {
             $query->where(function ($builder) use ($search): void {
@@ -74,12 +80,15 @@ final class NativeMailService
             });
         }
 
-        $page = $query->orderByDesc('id')->limit(40)
+        $total = (clone $query)->count();
+        $limit = 40;
+        $rows = $query->orderByDesc('id')->offset(($page - 1) * $limit)->limit($limit + 1)
             ->get(['id', 'thread_id', 'folder', 'subject', 'body', 'sender_user_id',
                 'recipient_user_id', 'recipient_email', 'sender_email', 'delivery_state',
-                'read_at', 'sent_at', 'created_at']);
+                'is_starred', 'read_at', 'sent_at', 'created_at']);
+        $hasMore = $rows->count() > $limit;
 
-        $items = $page->map(static fn (object $row): array => [
+        $items = $rows->take($limit)->map(static fn (object $row): array => [
             'id' => (int) $row->id,
             'thread_id' => (string) $row->thread_id,
             'folder' => (string) $row->folder,
@@ -90,7 +99,8 @@ final class NativeMailService
             'recipient_email' => $row->recipient_email,
             'sender_email' => $row->sender_email,
             'delivery_state' => $row->delivery_state,
-            'unread' => $row->read_at === null && $row->folder === 'inbox',
+            'unread' => $row->read_at === null && in_array($row->folder, ['inbox', 'archive'], true),
+            'starred' => (bool) $row->is_starred,
             'at' => (string) ($row->sent_at ?? $row->created_at),
         ])->all();
 
@@ -98,7 +108,8 @@ final class NativeMailService
             ->where('mailbox_user_id', (int) $user->getKey())
             ->where('folder', 'inbox')->whereNull('read_at')->count();
 
-        return ['items' => array_values($items), 'unread' => $unread];
+        return ['items' => array_values($items), 'unread' => $unread,
+            'total' => (int) $total, 'page' => $page, 'page_size' => $limit, 'has_more' => $hasMore];
     }
 
     /** @return array{items:list<array<string,mixed>>,thread_id:string} */
@@ -295,7 +306,7 @@ final class NativeMailService
 
             if ($restore) {
                 abort_unless($record->folder === 'trash', 409);
-                $folder = in_array($record->previous_folder, ['inbox', 'sent', 'drafts'], true)
+                $folder = in_array($record->previous_folder, ['inbox', 'sent', 'drafts', 'archive'], true)
                     ? $record->previous_folder : 'inbox';
                 DB::table('kmj_mail_messages')->where('id', $messageId)
                     ->update(['folder' => $folder, 'previous_folder' => null, 'updated_at' => now()]);
@@ -304,6 +315,73 @@ final class NativeMailService
                     ->update(['folder' => 'trash', 'previous_folder' => $record->folder,
                         'updated_at' => now()]);
             }
+        });
+    }
+
+    /**
+     * Atomic, mailbox-scoped organization actions. Never mutates a recipient's
+     * independent copy, triggers email delivery, or permanently deletes records.
+     *
+     * @param list<int> $ids
+     */
+    public function manage(User $user, array $ids, string $action): int
+    {
+        $this->requireAllowed($user);
+        abort_unless(in_array($action, [
+            'star', 'unstar', 'read', 'unread', 'archive', 'unarchive', 'trash', 'restore',
+        ], true), 422);
+
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        abort_unless(count($ids) >= 1 && count($ids) <= 40 && min($ids) > 0, 422);
+        $ownerId = (int) $user->getKey();
+
+        return DB::transaction(function () use ($ownerId, $ids, $action): int {
+            $records = DB::table('kmj_mail_messages')
+                ->where('mailbox_user_id', $ownerId)
+                ->whereIn('id', $ids)
+                ->orderBy('id')
+                ->lockForUpdate()->get(['id', 'folder', 'previous_folder']);
+            abort_unless($records->count() === count($ids), 404);
+
+            // Fail the entire bulk action when even one selected item is
+            // ineligible; never partially mutate a mixed-folder selection.
+            foreach ($records as $record) {
+                $folder = (string) $record->folder;
+                $ok = match ($action) {
+                    'star', 'unstar' => in_array($folder, ['inbox', 'sent', 'archive'], true),
+                    'read', 'unread' => in_array($folder, ['inbox', 'archive'], true),
+                    'archive' => $folder === 'inbox',
+                    'unarchive' => $folder === 'archive',
+                    'trash' => $folder !== 'trash',
+                    'restore' => $folder === 'trash',
+                };
+                abort_unless($ok, 409);
+            }
+
+            $now = now();
+            foreach ($records as $record) {
+                $updates = match ($action) {
+                    'star' => ['is_starred' => true],
+                    'unstar' => ['is_starred' => false],
+                    'read' => ['read_at' => $now],
+                    'unread' => ['read_at' => null],
+                    'archive' => ['folder' => 'archive', 'previous_folder' => null],
+                    'unarchive' => ['folder' => 'inbox', 'previous_folder' => null],
+                    'trash' => ['folder' => 'trash', 'previous_folder' => $record->folder],
+                    'restore' => [
+                        'folder' => in_array($record->previous_folder, ['inbox', 'sent', 'drafts', 'archive'], true)
+                            ? $record->previous_folder : 'inbox',
+                        'previous_folder' => null,
+                    ],
+                };
+                DB::table('kmj_mail_messages')
+                    ->where('mailbox_user_id', $ownerId)
+                    ->where('id', (int) $record->id)
+                    ->update($updates + ['updated_at' => $now]);
+            }
+
+            $this->audit($ownerId, 'kmj_mail_messages_organized', ['count' => count($ids)]);
+            return count($ids);
         });
     }
 
