@@ -13,7 +13,7 @@
             .kmj-header { padding-top:32px!important; padding-bottom:32px!important; }
             .kmj-body { padding-top:35px!important; padding-bottom:33px!important; }
             .kmj-title { font-size:30px!important; line-height:37px!important; }
-            .kmj-logo { width:300px!important; max-width:100%!important; }
+            .kmj-logo { width:320px!important; max-width:100%!important; }
             .kmj-cta { display:block!important; text-align:center!important; }
             .kmj-footer { text-align:left!important; }
         }
@@ -34,7 +34,7 @@
                                 <tr>
                                     <td align="left" valign="middle">
                                         <a href="https://kmjtechno.com" target="_blank" style="text-decoration:none;display:inline-block;border:0;">
-                                            <img class="kmj-logo" src="https://kmjtechno.com/assets/brand/kmj-email-lockup-dark.png" width="360" alt="KMJ TECHNO | INNOVATE BUILD SCALE" style="display:block;border:0;outline:none;width:360px;max-width:100%;height:auto;color:#ffffff;font-size:24px;line-height:32px;font-weight:bold;">
+                                            <img class="kmj-logo" src="https://kmjtechno.com/assets/brand/kmj-email-lockup-dark-trim.png" width="440" alt="KMJ TECHNO | INNOVATE BUILD SCALE" style="display:block;border:0;outline:none;width:360px;max-width:100%;height:auto;color:#ffffff;font-size:24px;line-height:32px;font-weight:bold;">
                                         </a>
                                     </td>
                                 </tr>

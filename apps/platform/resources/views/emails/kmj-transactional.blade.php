@@ -13,7 +13,7 @@
             .kmj-head { padding-top:28px!important; padding-bottom:26px!important; }
             .kmj-main { padding-top:36px!important; padding-bottom:31px!important; }
             .kmj-title { font-size:31px!important; line-height:38px!important; }
-            .kmj-logo { width:300px!important; max-width:100%!important; }
+            .kmj-logo { width:320px!important; max-width:100%!important; }
             .kmj-button { display:block!important; text-align:center!important; }
         }
     </style>
@@ -26,7 +26,7 @@
                 <tr><td height="5" bgcolor="#cd2141" style="font-size:0;line-height:5px;background:#cd2141;">&nbsp;</td></tr>
                 <tr><td class="kmj-pad kmj-head" bgcolor="#101722" style="padding:35px 43px 33px;background:#101722;">
                     <a href="https://kmjtechno.com" style="text-decoration:none;display:inline-block;">
-                        <img class="kmj-logo" src="https://kmjtechno.com/assets/brand/kmj-email-lockup-dark.png" width="360" alt="KMJ TECHNO — INNOVATE | BUILD | SCALE" style="display:block;border:0;outline:0;width:360px;max-width:100%;height:auto;color:#ffffff;font-weight:bold;font-size:20px;">
+                        <img class="kmj-logo" src="https://kmjtechno.com/assets/brand/kmj-email-lockup-dark-trim.png" width="440" alt="KMJ TECHNO — INNOVATE | BUILD | SCALE" style="display:block;border:0;outline:0;width:360px;max-width:100%;height:auto;color:#ffffff;font-weight:bold;font-size:20px;">
                     </a>
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:25px;"><tr><td style="border-top:1px solid #353c49;font-size:1px;line-height:1px;">&nbsp;</td></tr></table>
                     <p style="margin:20px 0 0;color:#c4ccd8;font-size:11px;line-height:19px;font-weight:bold;letter-spacing:1.6px;text-transform:uppercase;">{{ $eyebrow }}</p>

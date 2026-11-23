@@ -11,6 +11,10 @@ on:
       - 'scripts/operations/probe-owner-brevo-branded-email-20261021.py'
       - 'scripts/operations/probe-owner-brevo-enterprise-email-20261021.py'
       - 'scripts/test_brevo_branded_mail_20261021.py'
+      - 'scripts/test_email_lockup_trim.py'
+      - 'apps/platform/public/assets/brand/kmj-email-lockup-dark-trim.png'
+      - 'apps/platform/resources/views/emails/kmj-transactional.blade.php'
+      - 'apps/platform/resources/views/emails/kmj-native-outgoing.blade.php'
       - '.github/workflows/kmj-branded-auth-mail-safety.yml'
   push:
     branches: [main]
@@ -23,6 +27,10 @@ on:
       - 'scripts/operations/probe-owner-brevo-branded-email-20261021.py'
       - 'scripts/operations/probe-owner-brevo-enterprise-email-20261021.py'
       - 'scripts/test_brevo_branded_mail_20261021.py'
+      - 'scripts/test_email_lockup_trim.py'
+      - 'apps/platform/public/assets/brand/kmj-email-lockup-dark-trim.png'
+      - 'apps/platform/resources/views/emails/kmj-transactional.blade.php'
+      - 'apps/platform/resources/views/emails/kmj-native-outgoing.blade.php'
       - '.github/workflows/kmj-branded-auth-mail-safety.yml'
 
 permissions:
@@ -48,6 +56,7 @@ jobs:
           python3 -B -m py_compile scripts/operations/probe-owner-brevo-branded-email-20261021.py
           python3 -B -m py_compile scripts/operations/probe-owner-brevo-enterprise-email-20261021.py
           python3 -B scripts/test_brevo_branded_mail_20261021.py
+          python3 -B scripts/test_email_lockup_trim.py
           echo 'BRANDED_TEMPLATE_STATIC_TESTS=PASS'
           echo 'SMTP_SEND_NOT_ATTEMPTED=YES'
           echo 'PRODUCTION_MAIL_CONFIG=UNCHANGED'

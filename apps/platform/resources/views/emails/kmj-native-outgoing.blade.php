@@ -8,7 +8,7 @@
 @media only screen and (max-width:620px) {
 .kmj-wrap{width:100%!important;max-width:100%!important}
 .kmj-pad{padding:25px!important}
-.kmj-logo{width:300px!important;max-width:100%!important}
+.kmj-logo{width:320px!important;max-width:100%!important}
 }
 </style>
 </head>
@@ -19,7 +19,7 @@
 <tr><td height="5" style="background:#cd2141;line-height:5px">&nbsp;</td></tr>
 <tr><td class="kmj-pad" style="padding:32px 40px;background:#101722">
 <a href="https://kmjtechno.com" style="text-decoration:none">
-<img class="kmj-logo" src="https://kmjtechno.com/assets/brand/kmj-email-lockup-dark.png" width="360" alt="KMJ TECHNO — INNOVATE | BUILD | SCALE" style="display:block;border:0;width:360px;max-width:100%;height:auto;color:#fff;font-size:17px;font-weight:bold">
+<img class="kmj-logo" src="https://kmjtechno.com/assets/brand/kmj-email-lockup-dark-trim.png" width="440" alt="KMJ TECHNO — INNOVATE | BUILD | SCALE" style="display:block;border:0;width:360px;max-width:100%;height:auto;color:#fff;font-size:17px;font-weight:bold">
 </a>
 <p style="margin:25px 0 0;color:#bec8d7;font-size:11px;font-weight:bold;letter-spacing:2px">KMJ MAIL · PROFESSIONAL CORRESPONDENCE</p>
 </td></tr>
