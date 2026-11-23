@@ -257,3 +257,23 @@ void test('customer Licensing Hub has truthful four-step next-action guidance', 
     assert.ok(customer.includes('Secure device reset / transfer: not enabled'));
     assert.ok(!customer.includes('Your products, signed-license records'));
 });
+
+void test('customer renewal guidance distinguishes real license states and blocks fake renewal', () => {
+    const customer = read('resources/js/pages/licensing-hub.tsx');
+    assert.ok(customer.includes("['Renewals', '#my-renewals']"));
+    assert.ok(customer.includes('id="my-renewals"'));
+    assert.ok(customer.includes('renewalAttention = licenses.filter'));
+    assert.ok(customer.includes("['RENEWAL_DUE', 'GRACE']"));
+    assert.ok(customer.includes('accessReview = licenses.filter'));
+    assert.ok(customer.includes("['REVOKED', 'RESTRICTED']"));
+    assert.ok(customer.includes('renewalAttention.map'));
+    assert.ok(customer.includes('accessReview.map'));
+    assert.ok(customer.includes('Explore plans · Not checkout'));
+    assert.ok(customer.includes('cannot bypass revocation'));
+    assert.ok(customer.includes('license.grace_until'));
+    assert.ok(customer.includes('license.starts_at'));
+    assert.ok(customer.includes('licenses_truncated &&'));
+    assert.ok(customer.includes('remains disabled until signed device verification'));
+    assert.ok(!customer.includes("href='/licensing/renew'"));
+    assert.ok(!customer.includes('Automatic renewal successful'));
+});
