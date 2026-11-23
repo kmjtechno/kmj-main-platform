@@ -100,9 +100,14 @@ final class OmniDeskAutomaticTrialProvisionerTest extends TestCase
         ]);
         $expiresAt = DB::table('kslp_licenses')->where('id', $first['license_id'])->value('expires_at');
         self::assertNotNull($expiresAt);
+        $entitlementEnds = DB::table('entitlements')
+            ->where('id', $first['entitlement_id'])->value('ends_at');
+        self::assertNotNull($entitlementEnds);
+        // PostgreSQL timestamps may serialize with an explicit UTC offset,
+        // while the KSLP legacy timestamp is offset-naive.
         self::assertSame(
-            $expiresAt,
-            DB::table('entitlements')->where('id', $first['entitlement_id'])->value('ends_at'),
+            \Illuminate\Support\Carbon::parse((string) $expiresAt)->getTimestamp(),
+            \Illuminate\Support\Carbon::parse((string) $entitlementEnds)->getTimestamp(),
         );
     }
 
