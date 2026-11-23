@@ -34,7 +34,7 @@ final class OmniDeskProtectedLeaseService
      * The activation, binding, signature and replay cursor are all inside
      * one transaction; a signing/eligibility failure rolls everything back.
      *
-     * @param array<string, mixed> $request
+     * @param  array<string, mixed>  $request
      * @return array{activation_id:string,signed_entitlement:string,lease_expires_at:int,server_time:int,key_set_version:string}
      */
     public function activate(
@@ -190,7 +190,7 @@ final class OmniDeskProtectedLeaseService
      * Verify and consume a one-time device challenge, sign the next lease
      * with the protected signer, and advance its cursor atomically.
      *
-     * @param array<string, mixed> $request
+     * @param  array<string, mixed>  $request
      * @return array{signed_entitlement:string,lease_expires_at:int,next_renewal_at:int,server_time:int}
      */
     public function renew(
@@ -260,7 +260,7 @@ final class OmniDeskProtectedLeaseService
     }
 
     /**
-     * @param array<string, mixed> $binding
+     * @param  array<string, mixed>  $binding
      * @return array{token:string,jti:string,nonce:string,kid:string,lease_expires_at:int,next_renewal_at:int,server_time:int}
      */
     private function signedLease(
@@ -374,7 +374,7 @@ final class OmniDeskProtectedLeaseService
         }
     }
 
-    /** @param array<string, mixed> $request */
+    /** @param  array<string, mixed>  $request */
     private function validateActivationInput(array $request, string $idempotencyKey): void
     {
         $fields = [
