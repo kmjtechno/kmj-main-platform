@@ -24,9 +24,9 @@ spec.loader.exec_module(mod)
 
 class EliteEvidenceInstallerTests(unittest.TestCase):
     def test_source_is_exact_reviewed_commit_and_never_branched_latest(self):
-        self.assertEqual(mod.SOURCE_COMMIT, "ee7bef15c82d16933ab0e7fe187d8aa1649790c6")
+        self.assertEqual(mod.SOURCE_COMMIT, "3697cd3c05d036fdd560d2cb804a543af8981519")
         self.assertEqual(mod.SOURCE_URL, "https://github.com/kmjtechno/kmj-main-platform.git")
-        self.assertEqual(len(mod.TARGETS), 15)
+        self.assertEqual(len(mod.TARGETS), 16)
         for source, path, mode, bound in mod.TARGETS:
             self.assertNotIn("..", Path(source).parts)
             self.assertTrue(path.is_absolute())
@@ -96,6 +96,15 @@ class EliteEvidenceInstallerTests(unittest.TestCase):
                 with self.assertRaisesRegex(mod.Blocked, "EXISTING_ARTIFACT_MISMATCH"):
                     mod.install_new(dest, b"[Unit]\nDescription=changed\n", 0o644)
                 self.assertEqual(dest.read_bytes(), data)
+                new = b"[Unit]\nDescription=newer reviewed\n"
+                with self.assertRaisesRegex(mod.Blocked, "EXISTING_ARTIFACT_MISMATCH"):
+                    mod.install_new(dest, new, 0o644, frozenset({"0" * 64}))
+                self.assertEqual(dest.read_bytes(), data)
+                self.assertEqual(mod.install_new(dest, new, 0o644, frozenset({expected})),
+                                 "REPLACED_PIN_MATCH")
+                self.assertEqual(dest.read_bytes(), new)
+                self.assertEqual(dest.lstat().st_nlink, 1)
+                self.assertEqual([p.name for p in dest.parent.iterdir()], [dest.name])
 
     def test_default_inspect_is_strictly_read_only(self):
         with patch.object(mod, "require_operator"), patch.object(
@@ -198,6 +207,12 @@ class EliteEvidenceInstallerTests(unittest.TestCase):
                     os.chmod(d, 0o755)
                     with self.assertRaisesRegex(mod.Blocked, "STATE_DIR_UNTRUSTED"):
                         mod.ensure_dir(d, 0o700)
+
+    def test_only_the_known_earlier_collect_all_may_be_replaced(self):
+        self.assertEqual(set(mod.REPLACEABLE), {"elite_collect_all_receipts.py"})
+        self.assertEqual(len(mod.REPLACEABLE["elite_collect_all_receipts.py"]), 1)
+        names = [t[1].name for t in mod.TARGETS]
+        self.assertIn("elite_prepare_rehearsal.py", names)
 
     def test_installer_never_installs_the_gate_as_trust_anchor_or_writes_evidence(self):
         source = SCRIPT.read_text()

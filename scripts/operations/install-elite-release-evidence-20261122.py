@@ -28,7 +28,7 @@ import subprocess
 import sys
 import tempfile
 
-SOURCE_COMMIT = "ee7bef15c82d16933ab0e7fe187d8aa1649790c6"
+SOURCE_COMMIT = "3697cd3c05d036fdd560d2cb804a543af8981519"
 SOURCE_URL = "https://github.com/kmjtechno/kmj-main-platform.git"
 EXPECTED_HOST = "KMJ-elite"
 GATE = Path("/opt/kmj-main-platform-autopublish/main_platform_autopublish_gate.py")
@@ -38,11 +38,17 @@ PY_FILES = (
     "elite_collect_staging_origin_receipt.py", "check-staging-readback.py",
     "elite_collect_public_qa_receipt.py", "elite_collect_backup_receipts.py",
     "verify-elite-local-upload-restore-20261119.py",
-    "elite_collect_rollback_rehearsal_receipt.py",
+    "elite_collect_rollback_rehearsal_receipt.py", "elite_prepare_rehearsal.py",
     "rehearse-app-http-db-rollback-20261029.py",
     "elite_derive_migration_storage_receipt.py", "elite_collect_all_receipts.py",
     "elite_admission_broker.py", "main_platform_autopublish_gate.py",
 )
+# Previously installed reviewed versions that this installer may atomically replace
+# (sha256 of the exact bytes installed from commit ee7bef15). Anything else is refused.
+REPLACEABLE = {
+    "elite_collect_all_receipts.py": frozenset({
+        "20a94a07e66e5e9a99f69cb46e38a7d2c093a73d1f3b1f182242c9ef47af4a59"}),
+}
 UNITS = (
     "kmj-elite-release-admission-broker.service",
     "kmj-elite-release-admission-broker.timer",
@@ -187,14 +193,20 @@ def reviewed_bytes() -> dict[Path, tuple[bytes, int]]:
         return results
 
 
-def install_new(path: Path, contents: bytes, mode: int) -> str:
-    """No overwrite, no symlink following, atomic link of a root-created inode."""
+def install_new(path: Path, contents: bytes, mode: int,
+                replaces: frozenset = frozenset()) -> str:
+    """No symlink following; atomic link of a root-created inode. An existing file is only
+    replaced (atomic rename) when it still matches a known earlier reviewed digest."""
     check(protected_dir(path.parent), "INSTALL_PARENT_UNTRUSTED")
     sha = hashlib.sha256(contents).hexdigest()
     existing = classify_file(path, mode, sha)
     if existing == "PIN_MATCH":
         return "ALREADY_INSTALLED_PIN_MATCH"
-    check(existing == "MISSING", "EXISTING_ARTIFACT_MISMATCH")
+    replacing = False
+    if existing != "MISSING":
+        check(any(classify_file(path, mode, old) == "PIN_MATCH" for old in replaces),
+              "EXISTING_ARTIFACT_MISMATCH")
+        replacing = True
     token = os.urandom(12).hex()
     tmp = path.parent / ("." + path.name + "." + token + ".tmp")
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, mode)
@@ -206,16 +218,19 @@ def install_new(path: Path, contents: bytes, mode: int) -> str:
         os.chmod(tmp, mode, follow_symlinks=False)
         check(classify_file(tmp, mode, sha) == "PIN_MATCH",
               "STAGED_ARTIFACT_SHA_MISMATCH")
-        try:
-            os.link(tmp, path, follow_symlinks=False)
-        except FileExistsError:
-            raise Blocked("INSTALL_TARGET_RACE") from None
-        # Remove the transient second hard link BEFORE checking the required
-        # single-link root-owned installed inode. No overwrite or replace.
-        os.unlink(tmp)
+        if replacing:
+            os.replace(tmp, path)
+        else:
+            try:
+                os.link(tmp, path, follow_symlinks=False)
+            except FileExistsError:
+                raise Blocked("INSTALL_TARGET_RACE") from None
+            # Remove the transient second hard link BEFORE checking the required
+            # single-link root-owned installed inode.
+            os.unlink(tmp)
         check(classify_file(path, mode, sha) == "PIN_MATCH",
               "INSTALLED_ARTIFACT_SHA_MISMATCH")
-        return "INSTALLED_PIN_MATCH"
+        return "REPLACED_PIN_MATCH" if replacing else "INSTALLED_PIN_MATCH"
     finally:
         try:
             os.unlink(tmp)
@@ -263,7 +278,7 @@ def run(mode: str, enable_timer: bool = False) -> int:
         ensure_dir(directory, permissions)
     results = []
     for file, (blob, permissions) in reviewed.items():
-        results.append(install_new(file, blob, permissions))
+        results.append(install_new(file, blob, permissions, REPLACEABLE.get(file.name, frozenset())))
     print("KMJ_ELITE_RELEASE_EVIDENCE_FILES=" + ",".join(sorted(set(results))))
 
     fixed_run([
