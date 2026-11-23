@@ -237,6 +237,128 @@ final class NativeMailFlowTest extends TestCase
         $this->assertDatabaseCount('kmj_mail_messages', 0);
     }
 
+    public function test_private_star_archive_read_and_restore_are_not_visible_to_other_mailboxes(): void
+    {
+        [$owner, $staff] = $this->ownerAndStaff();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/mail/send', [
+                'recipient_id' => $staff->id,
+                'subject' => 'Review request',
+                'body' => 'Please review the document.',
+                'client_key' => (string) Str::uuid(),
+            ]);
+
+        $inbox = DB::table('kmj_mail_messages')->where('mailbox_user_id', $staff->id)->first();
+        $sent = DB::table('kmj_mail_messages')->where('mailbox_user_id', $owner->id)->first();
+        $url = '/team/mail/messages/manage';
+        $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
+            ->post($url, ['ids' => [$sent->id], 'action' => 'star', 'folder' => 'inbox'])
+            ->assertNotFound();
+
+        foreach (['star', 'archive', 'unread'] as $action) {
+            $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
+                ->post($url, ['ids' => [$inbox->id], 'action' => $action, 'folder' => 'inbox'])
+                ->assertRedirect('/team/mail?folder=inbox');
+        }
+
+        $this->assertDatabaseHas('kmj_mail_messages', [
+            'id' => $inbox->id, 'mailbox_user_id' => $staff->id,
+            'folder' => 'archive', 'is_starred' => true, 'read_at' => null,
+        ]);
+        $this->assertDatabaseHas('kmj_mail_messages', [
+            'id' => $sent->id, 'mailbox_user_id' => $owner->id,
+            'folder' => 'sent', 'is_starred' => false,
+        ]);
+
+        $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/team/mail?folder=starred')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('mailbox.items', 1)
+                ->where('mailbox.items.0.starred', true));
+        $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
+            ->post($url, ['ids' => [$inbox->id], 'action' => 'trash', 'folder' => 'archive'])
+            ->assertRedirect('/team/mail?folder=archive');
+        $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
+            ->post($url, ['ids' => [$inbox->id], 'action' => 'restore', 'folder' => 'trash'])
+            ->assertRedirect('/team/mail?folder=trash');
+        $this->assertDatabaseHas('kmj_mail_messages', ['id' => $inbox->id, 'folder' => 'archive']);
+    }
+
+    public function test_bulk_mail_management_is_atomic_with_owner_scope_and_rejects_invalid_actions(): void
+    {
+        [$owner, $staff] = $this->ownerAndStaff();
+        for ($i = 1; $i <= 2; $i++) {
+            $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+                ->post('/operator/mail/send', [
+                    'recipient_id' => $staff->id, 'subject' => 'Update '.$i,
+                    'body' => 'Note '.$i, 'client_key' => (string) Str::uuid(),
+                ]);
+        }
+        $ids = DB::table('kmj_mail_messages')->where('mailbox_user_id', $staff->id)
+            ->orderBy('id')->pluck('id')->map(static fn ($id) => (int) $id)->all();
+        $foreignId = (int) DB::table('kmj_mail_messages')
+            ->where('mailbox_user_id', $owner->id)->value('id');
+
+        $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/team/mail/messages/manage', [
+                'ids' => [$ids[0], $foreignId], 'action' => 'trash',
+            ])->assertNotFound();
+        $this->assertSame(2, DB::table('kmj_mail_messages')
+            ->where('mailbox_user_id', $staff->id)->where('folder', 'inbox')->count());
+
+        $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/team/mail/messages/manage', [
+                'ids' => $ids, 'action' => 'star', 'folder' => 'inbox',
+            ])->assertRedirect('/team/mail?folder=inbox');
+        $this->assertSame(2, DB::table('kmj_mail_messages')
+            ->where('mailbox_user_id', $staff->id)->where('is_starred', true)->count());
+
+        $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/team/mail/messages/manage', [
+                'ids' => [$ids[0], $ids[0]], 'action' => 'trash',
+            ])->assertSessionHasErrors('ids.1');
+        $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/team/mail/messages/manage', [
+                'ids' => $ids, 'action' => 'send',
+            ])->assertSessionHasErrors('action');
+    }
+
+    public function test_mailbox_pagination_never_fetches_more_than_forty_private_messages(): void
+    {
+        [$owner, $staff] = $this->ownerAndStaff();
+        $now = now();
+        for ($i = 1; $i <= 45; $i++) {
+            DB::table('kmj_mail_messages')->insert([
+                'mailbox_user_id' => $staff->id,
+                'sender_user_id' => $owner->id,
+                'recipient_user_id' => $staff->id,
+                'thread_id' => (string) Str::uuid(),
+                'folder' => 'inbox',
+                'subject' => 'Private note '.$i,
+                'body' => 'Internal only',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+
+        $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/team/mail?folder=inbox')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('mailbox.items', 40)
+                ->where('mailbox.total', 45)
+                ->where('mailbox.page', 1)
+                ->where('mailbox.has_more', true));
+        $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/team/mail?folder=inbox&page=2')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('mailbox.items', 5)
+                ->where('mailbox.total', 45)
+                ->where('mailbox.page', 2)
+                ->where('mailbox.has_more', false));
+        $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/team/mail?folder=inbox&page=1001')->assertSessionHasErrors('page');
+    }
+
     /** @return array{User, User} */
     private function ownerAndStaff(): array
     {
