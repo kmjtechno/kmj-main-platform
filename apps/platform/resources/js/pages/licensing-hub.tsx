@@ -239,10 +239,11 @@ export default function LicensingHub({
                                     OmniDesk · Your trial record
                                 </h2>
                                 <p className="text-muted-foreground mt-2 text-xs leading-5">
-                                    {stateLabels[omniTrial.state] ?? 'Restricted'}
+                                    {stateLabels[omniTrial.state] ??
+                                        'Restricted'}
                                     {' · '}
-                                    Expires {readableDate(omniTrial.expires_at)}.
-                                    No automatic paid charge follows trial
+                                    Expires {readableDate(omniTrial.expires_at)}
+                                    . No automatic paid charge follows trial
                                     expiry. A real signed device activation
                                     remains a separate security requirement.
                                 </p>
@@ -252,7 +253,10 @@ export default function LicensingHub({
                                 className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-red-500/30 px-4 text-xs font-bold hover:bg-red-500/5"
                             >
                                 Compare transparent upgrade plans
-                                <ArrowRight className="size-4" aria-hidden="true" />
+                                <ArrowRight
+                                    className="size-4"
+                                    aria-hidden="true"
+                                />
                             </Link>
                         </div>
                     </section>
