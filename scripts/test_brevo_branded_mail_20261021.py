@@ -58,6 +58,22 @@ class BrandedEmailProbeSafety(unittest.TestCase):
         self.assertIn("SECURE ACTION", markup)
         self.assertIn("https://kmjtechno.com/assets/brand/kmj-email-lockup-dark.png", markup)
 
+    def test_reference_header_uses_real_html_tagline_in_all_mail_views(self):
+        # Mobile Gmail must not shrink the tagline baked into a wide raster.
+        views = [
+            "kmj-native-outgoing.blade.php",
+            "kmj-auth-transactional.blade.php",
+            "kmj-transactional.blade.php",
+        ]
+        for name in views:
+            with self.subTest(view=name):
+                markup = (ROOT / "apps/platform/resources/views/emails" / name).read_text(encoding="utf-8")
+                self.assertIn("kmj-sender-avatar.png", markup)
+                self.assertIn('class="kmj-tagline"', markup)
+                self.assertIn("font-size:11px;line-height:16px;font-weight:700", markup)
+                self.assertNotIn("kmj-email-lockup-dark.png", markup)
+                self.assertNotIn("</table>p style", markup)
+
     def test_single_owner_only_key_never_persisted(self):
         s = PROBE.read_text(encoding="utf-8")
         self.assertEqual(probe.SENDER, "info@kmjtechno.com")
