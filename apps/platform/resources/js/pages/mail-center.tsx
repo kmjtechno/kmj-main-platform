@@ -433,28 +433,27 @@ export default function MailCenter({
                 data-test="kmj-native-mail"
                 className="owner-admin-page kmj-admin-shell mx-auto flex w-full max-w-[1500px] min-w-0 flex-col gap-4 px-4 py-5 sm:px-6 lg:px-8"
             >
-                <header className="owner-admin-hero kmj-admin-hero overflow-hidden rounded-[1.6rem] border p-5 sm:p-7">
+                <header className="owner-admin-hero kmj-admin-hero overflow-hidden rounded-2xl border p-4 sm:p-5">
                     <Link
                         href={back}
                         className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-xs"
                     >
                         <ArrowLeft size={14} /> Back to workspace
                     </Link>
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
                         <div>
                             <div className="flex items-center gap-2 text-xs font-bold tracking-[0.14em] text-red-500 uppercase">
                                 <ShieldCheck className="size-4" />
                                 KMJ TECHNO · Enterprise Communications
                             </div>
-                            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
+                            <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">
                                 KMJ Mail
                             </h1>
                             <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-6">
-                                Your independent KMJ Mail workspace supports
-                                private team messages and guarded internet email
-                                to Gmail, Outlook, Yahoo and other addresses. No
-                                Gmail account linking, OAuth or third-party
-                                mailbox access.
+                                Organize private KMJ team mail and send guarded
+                                external correspondence from your authorized
+                                company address. Internet inbound reception is
+                                not yet activated in this workspace.
                             </p>
                         </div>
                         <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs">
@@ -468,8 +467,8 @@ export default function MailCenter({
                             </span>
                         </div>
                     </div>
-                    <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                        <div className="bg-background/45 rounded-xl border p-4">
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                        <div className="bg-background/45 rounded-xl border p-3">
                             <span className="text-muted-foreground text-xs">
                                 Unread inbox
                             </span>
@@ -477,7 +476,7 @@ export default function MailCenter({
                                 {mailbox.unread}
                             </strong>
                         </div>
-                        <div className="bg-background/45 rounded-xl border p-4">
+                        <div className="bg-background/45 rounded-xl border p-3">
                             <span className="text-muted-foreground text-xs">
                                 KMJ team recipients
                             </span>
@@ -489,7 +488,7 @@ export default function MailCenter({
                                 }
                             </strong>
                         </div>
-                        <div className="bg-background/45 rounded-xl border p-4">
+                        <div className="bg-background/45 rounded-xl border p-3">
                             <span className="text-muted-foreground text-xs">
                                 Internet mail
                             </span>
@@ -499,9 +498,9 @@ export default function MailCenter({
                                     : 'External sending not activated'}
                             </strong>
                             <span className="text-muted-foreground mt-1 block text-[11px]">
-                                External sending uses KMJ Postfix, no Gmail
-                                connection. Inbox reception requires a separate
-                                pilot.
+                                SMTP acceptance is not recipient delivery.
+                                External incoming mail requires a separately
+                                verified inbound gateway.
                             </span>
                         </div>
                     </div>
@@ -528,8 +527,8 @@ export default function MailCenter({
                     className={
                         'grid min-h-[570px] min-w-0 gap-3 ' +
                         (view === 'compose'
-                            ? 'lg:grid-cols-[195px_minmax(0,1fr)]'
-                            : 'lg:grid-cols-[195px_minmax(240px,360px)_minmax(0,1fr)]')
+                            ? 'lg:grid-cols-[190px_minmax(0,1fr)]'
+                            : 'lg:grid-cols-[190px_minmax(270px,380px)_minmax(0,1fr)]')
                     }
                 >
                     <aside
@@ -545,7 +544,7 @@ export default function MailCenter({
                         </button>
                         <nav
                             aria-label="Private mail folders"
-                            className="mt-4 grid grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-1"
+                            className="mt-4 grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1"
                         >
                             {folderDefs.map(({ id, label, icon: Icon }) => (
                                 <button
@@ -627,7 +626,9 @@ export default function MailCenter({
                                 </h2>
                                 <p className="text-muted-foreground mt-1 text-xs">
                                     {view === 'mail'
-                                        ? 'Latest 40 items. Only your own private records.'
+                                        ? 'Your private mailbox · ' +
+                                              mailbox.total +
+                                              ' messages'
                                         : view === 'templates'
                                           ? 'Readable, reusable, fully KMJ-branded.'
                                           : 'KMJ internal workspace mail'}
@@ -724,8 +725,8 @@ export default function MailCenter({
                                                 No messages in this folder
                                             </p>
                                             <p className="text-muted-foreground mt-1 text-xs">
-                                                Compose a message to an approved
-                                                KMJ colleague.
+                                                Private internal messages appear in this
+                                                folder. External inbound is not active.
                                             </p>
                                         </div>
                                     )}
