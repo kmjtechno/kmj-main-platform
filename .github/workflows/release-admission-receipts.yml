@@ -26,6 +26,10 @@ on:
       - "scripts/operations/elite_prepare_rehearsal.py"
       - "scripts/test_elite_prepare_rehearsal.py"
       - "infra/server/systemd/kmj-elite-release-admission-broker.*"
+      - "scripts/operations/elite_release_prepare_broker.py"
+      - "scripts/test_elite_release_prepare_broker.py"
+      - "scripts/operations/owner-release-main-platform.sh"
+      - "infra/server/systemd/kmj-elite-release-prepare-broker.*"
       - ".github/workflows/release-admission-receipts.yml"
   workflow_dispatch:
 
@@ -52,5 +56,6 @@ jobs:
           python3 -B scripts/test_elite_admission_broker.py -v
           python3 -B scripts/test_elite_collect_all_and_broker_units.py -v
           python3 -B scripts/test_elite_prepare_rehearsal.py -v
+          python3 -B scripts/test_elite_release_prepare_broker.py -v
           echo "RELEASE_ADMISSION_RECEIPTS_QA=PASS"
           echo "INSTALLED=NO ADMISSION_WRITTEN=NO PRODUCTION_RELEASE=UNCHANGED"

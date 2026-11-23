@@ -146,6 +146,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-prepare-broker-20261123',
+        title: 'Release prepare broker: root intent broker that runs the pinned owner helper in bounded modes',
+        state: 'active',
+        detail: 'Source only. A one-shot owner intent makes root re-verify main head, exact-head CI and the pinned helper digest, then run the helper in prepare-only mode and migrate once the candidate is live. Never activates production.',
+        evidence:
+            'Offline tests with doubled network and helper, and exact-head CI only. Not installed or run on Elite.',
+    },
+    {
         id: 'release-helper-split-modes-20261123',
         title: 'Release helper split modes: prepare-only and post-activation migrate',
         state: 'active',
