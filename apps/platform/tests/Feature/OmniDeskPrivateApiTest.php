@@ -57,6 +57,59 @@ final class OmniDeskPrivateApiTest extends TestCase
             ->assertHeader('Cache-Control', 'no-store, private');
     }
 
+    public function test_future_dated_license_never_reports_active_status(): void
+    {
+        $fixture = $this->fixture();
+        DB::table('kslp_licenses')
+            ->where('id', $fixture['license_id'])
+            ->update(['starts_at' => now()->addDay()]);
+        $this->bindPrincipal($fixture['organization_id']);
+
+        $this->getJson(
+            '/api/v1/licensing/omnidesk/activations/'.$fixture['activation_id'].'/status',
+        )
+            ->assertOk()
+            ->assertJsonPath('state', 'RESTRICTED')
+            ->assertJsonPath('reason_codes.0', 'LICENSE_NOT_YET_ACTIVE')
+            ->assertJsonPath('current_sequence', 1);
+    }
+
+    public function test_paused_license_cannot_report_active_status(): void
+    {
+        $fixture = $this->fixture();
+        DB::table('kslp_licenses')
+            ->where('id', $fixture['license_id'])
+            ->update(['status' => 'suspended']);
+        $this->bindPrincipal($fixture['organization_id']);
+
+        $this->getJson(
+            '/api/v1/licensing/omnidesk/activations/'.$fixture['activation_id'].'/status',
+        )
+            ->assertOk()
+            ->assertJsonPath('state', 'RESTRICTED')
+            ->assertJsonPath('reason_codes.0', 'LICENSE_INACTIVE');
+    }
+
+    public function test_binding_without_issued_signed_lease_is_restricted(): void
+    {
+        $fixture = $this->fixture();
+        DB::table('omnidesk_activation_bindings')
+            ->where('activation_id', $fixture['activation_id'])
+            ->update([
+                'current_jti' => null,
+                'current_sequence' => 0,
+            ]);
+        $this->bindPrincipal($fixture['organization_id']);
+
+        $this->getJson(
+            '/api/v1/licensing/omnidesk/activations/'.$fixture['activation_id'].'/status',
+        )
+            ->assertOk()
+            ->assertJsonPath('state', 'RESTRICTED')
+            ->assertJsonPath('reason_codes.0', 'LEASE_NOT_ISSUED')
+            ->assertJsonPath('current_sequence', 0);
+    }
+
     public function test_future_entitlement_never_reports_active_license_status(): void
     {
         $fixture = $this->fixture();
