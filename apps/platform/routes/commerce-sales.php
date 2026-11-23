@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Services\Commerce\CommercialProductPublisher;
 use App\Services\Commerce\OmniDeskOrderPlanBinder;
+use App\Services\Licensing\OmniDesk\OmniDeskOfferCatalog;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -20,6 +21,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Request $request,
         OrganizationDirectory $organizations,
         OrganizationCapabilityContext $capabilities,
+        OmniDeskOfferCatalog $offers,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -92,6 +94,11 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 ])
                 ->all(),
             'recentOrders' => $recentOrders,
+            'omnideskOffers' => $offers->preview(),
+            'omnideskTrialEnabled' => (bool) config('omnidesk-licensing.trial_self_service_enabled', false),
+            'omnideskPaidCheckoutEnabled' => (bool) config('omnidesk-licensing.paid_plan_binding_enabled', false)
+                && (bool) config('omnidesk-licensing.live_paid_fulfillment_enabled', false)
+                && (bool) config('payment-providers.live_charging_enabled', false),
             'requestKey' => (string) Str::uuid(),
         ]);
     })->name('purchase.index');
