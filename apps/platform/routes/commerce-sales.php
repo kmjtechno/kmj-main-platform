@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Services\Commerce\CommercialProductPublisher;
+use App\Services\Commerce\OmniDeskOrderPlanBinder;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -138,6 +139,37 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             ->route('purchase.index')
             ->with('success', 'Purchase request submitted for operator confirmation.');
     })->name('purchase.orders.store');
+
+    // Product-specific catalog-plan binding is separate from payment evidence.
+    // This endpoint inherits the verified session + standard web CSRF guard.
+    Route::post('purchase/orders/{order}/omnidesk-plan', function (
+        Request $request,
+        string $order,
+        OmniDeskOrderPlanBinder $binder,
+    ) {
+        $actor = $request->user();
+        abort_unless($actor instanceof User && $actor->hasVerifiedEmail(), 403);
+        abort_unless(config('omnidesk-licensing.paid_plan_binding_enabled', false) === true, 503);
+
+        $validated = $request->validate([
+            'plan_id' => ['required', 'uuid'],
+        ]);
+
+        try {
+            $binder->bind($actor, $order, $validated['plan_id']);
+        } catch (DomainException $exception) {
+            if ($exception->getMessage() === 'OMNIDESK_PLAN_BINDING_FORBIDDEN') {
+                abort(403);
+            }
+
+            return back()->withErrors([
+                'plan_id' => 'This OmniDesk plan or checkout is not available.',
+            ]);
+        }
+
+        return redirect()->route('purchase.index')
+            ->with('success', 'Approved plan and price recorded. Payment has not been collected.');
+    })->middleware('throttle:5,1')->name('purchase.orders.omnidesk.plan');
 });
 
 Route::middleware(['auth', 'verified', 'password.confirm'])
