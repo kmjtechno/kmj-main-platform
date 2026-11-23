@@ -7,6 +7,7 @@ use App\Services\Operations\CodeBridgeStageDispatcher;
 use App\Services\Operations\DeliveryControlRequestQueue;
 use App\Services\Operations\EliteActivationIntentQueue;
 use App\Services\Operations\EliteAdmissionIntentQueue;
+use App\Services\Operations\EliteReleasePrepareIntentQueue;
 use App\Services\Operations\EliteReleaseReadinessSnapshot;
 use App\Services\Operations\OperationalReadinessSnapshot;
 use App\Services\Operations\OperatorActionRunner;
@@ -29,6 +30,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             EliteReleaseReadinessSnapshot $eliteRelease,
             CodeBridgeStageDispatcher $codebridgeStage,
             OutboxHealthSnapshot $outboxHealth,
+            EliteReleasePrepareIntentQueue $prepareQueue,
         ) {
             $user = $request->user();
             abort_unless($user instanceof User, 401);
@@ -169,6 +171,10 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
                 'readiness' => $readinessSnapshot,
                 'eliteRelease' => $eliteReleaseSnapshot,
                 'codebridgeStage' => $codebridgeStage->snapshot(),
+                'releasePrepare' => [
+                    'main_head' => $prepareQueue->mainHead(),
+                    'status' => $prepareQueue->status(),
+                ],
                 'outbox' => $outboxSnapshot,
                 'recentActions' => $recentActions,
             ]);
@@ -337,4 +343,30 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             // An intent in the inbox is NOT an admission and NOT an activation.
             return redirect()->route('operator.ops.index');
         })->name('ops.release-admission-intent');
+
+        Route::post('ops/actions/release-prepare-intent', function (
+            Request $request,
+            PlatformOwnerAccess $access,
+            EliteReleasePrepareIntentQueue $queue,
+        ) {
+            $user = $request->user();
+            abort_unless($user instanceof User, 401);
+            $access->require($user);
+
+            $validated = $request->validate([
+                'approved_sha' => ['required', 'string', 'regex:/\A[a-f0-9]{40}\z/D'],
+                'confirmation' => ['required', 'in:REQUEST_RELEASE_PREPARE'],
+                'owner_backup_rollback_attested' => ['required', 'accepted'],
+                'migrate_after_activation_accepted' => ['required', 'accepted'],
+            ]);
+
+            try {
+                $queue->enqueue($user, $validated['approved_sha'], $validated['confirmation'], true, true);
+            } catch (RuntimeException $exception) {
+                abort(409, 'The shown SHA is stale or a prepare request is already pending.');
+            }
+
+            // An intent in the inbox is NOT an approval, NOT a stage proof and NOT an activation.
+            return redirect()->route('operator.ops.index');
+        })->name('ops.release-prepare-intent');
     });

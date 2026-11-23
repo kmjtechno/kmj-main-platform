@@ -108,6 +108,7 @@ function OwnerOpsPreview() {
     return (
         <OwnerModuleShell>
             <OperatorOps
+                releasePrepare={{ main_head: null, status: null }}
                 eliteRelease={{
                     status: 'unavailable',
                     reason: 'SYNTHETIC_NO_ROOT_RECEIPT',

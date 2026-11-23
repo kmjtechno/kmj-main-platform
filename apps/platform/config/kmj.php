@@ -11,6 +11,8 @@ return [
         'release_receipt_path' => env('KMJ_ELITE_RELEASE_RECEIPT_PATH', '/run/kmj-main-platform/release-readiness.json'),
         'activation_intent_path' => env('KMJ_ELITE_ACTIVATION_INTENT_PATH', storage_path('app/private/ops/production-activation-request.json')),
         'admission_intent_path' => env('KMJ_ELITE_ADMISSION_INTENT_PATH', storage_path('app/private/ops/release-admission-request.json')),
+        'prepare_intent_path' => env('KMJ_ELITE_PREPARE_INTENT_PATH', storage_path('app/private/ops/release-prepare-request.json')),
+        'prepare_status_path' => env('KMJ_ELITE_PREPARE_STATUS_PATH', storage_path('app/private/ops/release-prepare-status.json')),
         'backup_freshness_hours' => [
             'daily' => 36,
             'weekly' => 216,
