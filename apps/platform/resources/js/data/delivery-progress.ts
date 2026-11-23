@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kslp-reseller-settlement-readiness-20261123',
+        title: 'ONE Licensing Hub: read-only reseller settlement blocker inspection',
+        state: 'active',
+        detail: 'SOURCE ONLY: internal KSLP inspector requires real license.manage tenant scope and exact organization-bound KSLP product + commercial order, then reads bounded provider order links, amount/currency/environment and reconciled/refund/dispute inbox indicators. It unconditionally reports missing delegated reseller grant, approved product SKU mapping, independently verified live merchant settlement, refund/reversal lifecycle and paid product-specific signing. Available credits stay null, verified live settlement false and paid issuance disabled, even for apparently consistent sandbox or forged local live receipts.',
+        evidence:
+            'KslpResellerSettlementReadinessInspector, Laravel negative coverage for manual confirmation, sandbox capture-like receipt, forged live link, reversal/amount mismatch and cross-tenant deny, with no payment API, credit, entitlement or license mutations. Separate PR #1101 proposes a zero-credit evidence ledger and remains independent. Exact-head CI, owner review and production release gates still required; owner explicitly deferred release.',
+    },
+    {
         id: 'kslp-customer-renewal-guidance-20261123',
         title: 'KSLP customer renewal and restricted-license recovery guidance (source only)',
         state: 'active',
