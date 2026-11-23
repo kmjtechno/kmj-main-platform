@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kslp-customer-renewal-guidance-20261123',
+        title: 'KSLP customer renewal and restricted-license recovery guidance (source only)',
+        state: 'active',
+        detail: 'Existing verified-customer ONE Licensing Hub gains a renewal and access-review section using already-tenant-scoped KSLP license states and actual expiry/grace dates. Distinguishes RENEWAL_DUE, GRACE, REVOKED, RESTRICTED and NOT_STARTED; displays count truncation explicitly. Purchase link is plan discovery only, not payment. No unsupported renewal charge, active device reset, grace extension, license issuance or privileged access created.',
+        evidence:
+            'Isolated source PR adds locked-theme customer UI, state-boundary Laravel regression and JS source contract. Exact-head CI, owner independent review, authenticated customer visual acceptance, settlement-verified merchant lifecycle and owner-gated deployment remain separate.',
+    },
+    {
         id: 'licensing-customer-guided-journey-20261123',
         title: 'One Licensing Hub: account-aware four-step customer onboarding and safe next actions',
         state: 'active',
