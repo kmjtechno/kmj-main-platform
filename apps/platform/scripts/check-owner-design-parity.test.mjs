@@ -126,7 +126,10 @@ void test('KMJ Mail enterprise inbox controls operate on real mailbox records', 
     assert.match(source, /activeSearch = q\.trim\(\)/);
     assert.match(source, /Colored shortcuts search this folder/);
     assert.match(source, /No messages match your search/);
-    assert.match(source, /Clear mail search and show all messages in this folder/);
+    assert.match(
+        source,
+        /Clear mail search and show all messages in this folder/,
+    );
     assert.match(source, /External inbound\s+is not active/);
     assert.doesNotMatch(source, /Gmail inbox synced|External inbox connected/);
 });
