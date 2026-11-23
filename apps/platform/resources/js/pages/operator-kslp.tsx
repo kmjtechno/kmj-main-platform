@@ -311,16 +311,25 @@ export default function OperatorKslp({
                                 Version {omnideskOfferVersion}. A no-card trial,
                                 personal free tier and monthly/yearly business
                                 offers live in this ONE Licensing Hub. Preparing
-                                a price creates PAUSED catalog plans only:
-                                no payment, customer entitlement, signed lease
-                                or automatic renewal is enabled.
+                                a price creates PAUSED catalog plans only: no
+                                payment, customer entitlement, signed lease or
+                                automatic renewal is enabled.
                             </p>
                             <p className="text-muted-foreground mt-2 text-xs">
-                                Trial rollout: {omnideskReleaseFlags.trial ? 'configured' : 'off'}
+                                Trial rollout:{' '}
+                                {omnideskReleaseFlags.trial
+                                    ? 'configured'
+                                    : 'off'}
                                 {' · '}
-                                Paid fulfillment: {omnideskReleaseFlags.paid ? 'configured' : 'off'}
+                                Paid fulfillment:{' '}
+                                {omnideskReleaseFlags.paid
+                                    ? 'configured'
+                                    : 'off'}
                                 {' · '}
-                                Live gateway: {omnideskReleaseFlags.gateway ? 'configured' : 'off'}
+                                Live gateway:{' '}
+                                {omnideskReleaseFlags.gateway
+                                    ? 'configured'
+                                    : 'off'}
                             </p>
                         </div>
                         <button
@@ -343,7 +352,9 @@ export default function OperatorKslp({
                                 key={offer.code}
                                 className="border-border rounded-xl border p-4"
                             >
-                                <p className="text-sm font-bold">{offer.name}</p>
+                                <p className="text-sm font-bold">
+                                    {offer.name}
+                                </p>
                                 <p className="mt-1 text-lg font-black tabular-nums">
                                     {offer.amount_minor === null
                                         ? offer.trial_days > 0
@@ -352,9 +363,11 @@ export default function OperatorKslp({
                                         : `₹${(offer.amount_minor / 100).toLocaleString('en-IN')} / ${offer.billing_interval}`}
                                 </p>
                                 <p className="text-muted-foreground mt-2 text-xs">
-                                    {offer.licensed_users} users · {offer.managed_devices} devices
+                                    {offer.licensed_users} users ·{' '}
+                                    {offer.managed_devices} devices
                                     {' · '}
-                                    {offer.concurrent_sessions} concurrent sessions
+                                    {offer.concurrent_sessions} concurrent
+                                    sessions
                                 </p>
                                 <p className="text-muted-foreground mt-2 text-xs">
                                     {offer.available
@@ -365,10 +378,10 @@ export default function OperatorKslp({
                         ))}
                     </div>
                     <p className="text-muted-foreground mt-4 text-xs">
-                        Launch pricing excludes applicable taxes. Owner
-                        merchant onboarding and verified LIVE provider payment
-                        must pass before activating any paid plan. Personal
-                        Free is non-commercial and direct-only.
+                        Launch pricing excludes applicable taxes. Owner merchant
+                        onboarding and verified LIVE provider payment must pass
+                        before activating any paid plan. Personal Free is
+                        non-commercial and direct-only.
                     </p>
                 </section>
 
