@@ -15,7 +15,7 @@
             .kmj-title { font-size:31px!important; line-height:38px!important; }
             .kmj-brand-mark { width:54px!important; height:54px!important; }
             .kmj-brand-name { font-size:23px!important; line-height:28px!important; }
-            .kmj-tagline { font-size:12px!important; line-height:17px!important; }
+            .kmj-tagline { font-size:14px!important; line-height:20px!important; }
             .kmj-button { display:block!important; text-align:center!important; }
         }
     </style>
@@ -35,7 +35,7 @@
 <td valign="middle" style="padding:0 0 0 10px;white-space:nowrap;">
 <a href="https://kmjtechno.com" style="display:block;color:#fff;text-decoration:none;">
 <span class="kmj-brand-name" style="display:block;white-space:nowrap;font-size:27px;line-height:32px;font-weight:800;letter-spacing:-0.5px;"><span style="color:#ff263f;">KMJ</span> <span style="color:#ffffff;">TECHNO</span></span>
-<span class="kmj-tagline" style="display:block;white-space:nowrap;color:#ffffff;font-size:13px;line-height:19px;font-weight:700;letter-spacing:0.1px;">INNOVATE <span style="color:#ff314a;">|</span> BUILD <span style="color:#ff314a;">|</span> SCALE</span>
+<span class="kmj-tagline" style="display:block;white-space:nowrap;color:#ffffff;font-size:15px;line-height:21px;font-weight:700;letter-spacing:0.1px;">INNOVATE <span style="color:#ff314a;">|</span> BUILD <span style="color:#ff314a;">|</span> SCALE</span>
 </a>
 </td>
 </tr>

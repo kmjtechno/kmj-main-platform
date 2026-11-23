@@ -3,13 +3,11 @@ import { useMemo, useState } from 'react';
 import {
     Archive,
     ArrowLeft,
-    Check,
     ChevronRight,
     Forward,
     ChevronLeft,
     FileText,
     Inbox,
-    KeyRound,
     LockKeyhole,
     MailOpen,
     Pencil,
@@ -440,77 +438,105 @@ export default function MailCenter({
             <Head title="KMJ Mail · Enterprise inbox and correspondence" />
             <div
                 data-test="kmj-native-mail"
-                className="owner-admin-page kmj-admin-shell mx-auto flex w-full max-w-[1500px] min-w-0 flex-col gap-4 px-4 py-5 sm:px-6 lg:px-8"
+                className="owner-admin-page kmj-admin-shell mx-auto flex w-full max-w-[1720px] min-w-0 flex-col gap-3 px-3 py-4 sm:px-5 lg:px-6"
             >
-                <header className="owner-admin-hero kmj-admin-hero overflow-hidden rounded-2xl border p-4 sm:p-5">
-                    <Link
-                        href={back}
-                        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-xs"
-                    >
-                        <ArrowLeft size={14} /> Back to workspace
-                    </Link>
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                            <div className="flex items-center gap-2 text-xs font-bold tracking-[0.14em] text-red-500 uppercase">
-                                <ShieldCheck className="size-4" />
-                                KMJ TECHNO · Enterprise Communications
+                <header className="relative overflow-hidden rounded-2xl border border-[#293447] bg-gradient-to-br from-[#111827] via-[#121d2d] to-[#1b273b] p-5 text-white shadow-[0_24px_55px_-32px_rgba(0,0,0,0.8)] sm:p-6">
+                    <div
+                        aria-hidden="true"
+                        className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-[#ff3853] to-[#a5092f]"
+                    />
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute -top-32 -right-24 size-80 rounded-full bg-red-500/[0.055] blur-3xl"
+                    />
+                    <div className="relative flex flex-wrap items-start justify-between gap-5">
+                        <div className="min-w-0 flex-1">
+                            <Link
+                                href={back}
+                                className="inline-flex min-h-8 items-center gap-2 text-xs font-semibold text-slate-300 transition hover:text-white"
+                            >
+                                <ArrowLeft className="size-3.5" />
+                                Command Center
+                            </Link>
+                            <div className="mt-2 flex items-center gap-4">
+                                <div className="hidden size-14 shrink-0 items-center justify-center rounded-2xl border border-red-500/25 bg-red-500/10 sm:flex">
+                                    <MailOpen className="size-7 text-[#ff405a]" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[11px] font-bold tracking-[0.2em] text-[#ff6076] uppercase">
+                                        KMJ TECHNO / COMMUNICATIONS
+                                    </p>
+                                    <h1 className="mt-0.5 text-[30px] font-black tracking-[-0.04em] sm:text-[34px]">
+                                        KMJ Mail
+                                    </h1>
+                                    <p className="mt-1 max-w-[620px] text-sm leading-6 text-slate-300">
+                                        A dedicated workspace for private team
+                                        conversations and authorized outbound
+                                        correspondence.
+                                    </p>
+                                </div>
                             </div>
-                            <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">
-                                KMJ Mail
-                            </h1>
-                            <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-6">
-                                Organize private KMJ team mail and send guarded
-                                external correspondence from your authorized
-                                company address. Internet inbound reception is
-                                not yet activated in this workspace.
-                            </p>
                         </div>
-                        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs">
-                            <span className="flex items-center gap-2 font-semibold text-red-500">
-                                <LockKeyhole size={14} />
-                                {isOwner ? 'Super Admin' : 'Approved KMJ Staff'}
+                        <div className="flex max-w-full flex-col items-start gap-2 sm:items-end">
+                            <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 text-xs font-semibold text-slate-200">
+                                <ShieldCheck className="size-4 text-[#ff6076]" />
+                                {isOwner
+                                    ? 'Owner workspace'
+                                    : 'Approved KMJ staff'}
                             </span>
-                            <span className="text-muted-foreground mt-1 block">
-                                Private internal delivery · Guarded external
-                                SMTP
+                            <span className="rounded-full border border-white/10 px-3 py-1.5 text-[11px] text-slate-300">
+                                Internet inbound: Not connected
                             </span>
                         </div>
                     </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                        <div className="bg-background/45 rounded-xl border p-3">
-                            <span className="text-muted-foreground text-xs">
-                                Unread inbox
-                            </span>
-                            <strong className="mt-1 block text-2xl font-bold tabular-nums">
-                                {mailbox.unread}
-                            </strong>
+                    <div className="relative mt-5 grid gap-3 border-t border-white/10 pt-4 sm:grid-cols-3">
+                        <div className="flex items-center gap-3">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.07]">
+                                <Inbox className="size-5 text-slate-200" />
+                            </div>
+                            <div>
+                                <p className="text-[11px] text-slate-300">
+                                    Unread messages
+                                </p>
+                                <p className="text-xl font-extrabold tabular-nums">
+                                    {mailbox.unread}
+                                </p>
+                            </div>
                         </div>
-                        <div className="bg-background/45 rounded-xl border p-3">
-                            <span className="text-muted-foreground text-xs">
-                                KMJ team recipients
-                            </span>
-                            <strong className="mt-1 block text-2xl font-bold tabular-nums">
-                                {
-                                    directory.filter(
-                                        (person) => person.id !== myUserId,
-                                    ).length
-                                }
-                            </strong>
+                        <div className="flex items-center gap-3">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.07]">
+                                <Users className="size-5 text-slate-200" />
+                            </div>
+                            <div>
+                                <p className="text-[11px] text-slate-300">
+                                    Approved recipients
+                                </p>
+                                <p className="text-xl font-extrabold tabular-nums">
+                                    {
+                                        directory.filter(
+                                            (person) => person.id !== myUserId,
+                                        ).length
+                                    }
+                                </p>
+                            </div>
                         </div>
-                        <div className="bg-background/45 rounded-xl border p-3">
-                            <span className="text-muted-foreground text-xs">
-                                Internet mail
-                            </span>
-                            <strong className="mt-1 block text-sm font-semibold">
-                                {externalOutbound.state === 'ready_to_queue'
-                                    ? 'Postfix outbound ready'
-                                    : 'External sending not activated'}
-                            </strong>
-                            <span className="text-muted-foreground mt-1 block text-[11px]">
-                                SMTP acceptance is not recipient delivery.
-                                External incoming mail requires a separately
-                                verified inbound gateway.
-                            </span>
+                        <div className="flex items-center gap-3">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.07]">
+                                <Send className="size-5 text-slate-200" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[11px] text-slate-300">
+                                    Outgoing transport
+                                </p>
+                                <p className="text-sm font-bold text-white">
+                                    {externalOutbound.state === 'ready_to_queue'
+                                        ? 'SMTP queue available'
+                                        : 'Not activated'}
+                                </p>
+                                <p className="text-[10px] text-slate-400">
+                                    Queued ≠ delivered
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </header>
@@ -534,20 +560,20 @@ export default function MailCenter({
 
                 <div
                     className={
-                        'grid min-h-[570px] min-w-0 gap-3 ' +
+                        'grid min-h-[640px] min-w-0 gap-3 ' +
                         (view === 'compose'
-                            ? 'lg:grid-cols-[190px_minmax(0,1fr)]'
-                            : 'lg:grid-cols-[190px_minmax(270px,380px)_minmax(0,1fr)]')
+                            ? 'lg:grid-cols-[205px_minmax(0,1fr)]'
+                            : 'lg:grid-cols-[205px_minmax(285px,390px)_minmax(0,1fr)]')
                     }
                 >
                     <aside
                         aria-label="Mail folders"
-                        className="bg-card min-w-0 rounded-2xl border p-3"
+                        className="from-card to-background min-w-0 rounded-2xl border border-slate-700/40 bg-gradient-to-b p-3 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)]"
                     >
                         <button
                             type="button"
                             onClick={startCompose}
-                            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white hover:bg-red-500"
+                            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#e32143] to-[#b91035] px-4 text-sm font-bold text-white shadow-[0_12px_25px_-15px_rgba(240,42,76,0.9)] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
                         >
                             <Pencil className="size-4" /> Compose
                         </button>
@@ -566,10 +592,10 @@ export default function MailCenter({
                                             : undefined
                                     }
                                     className={
-                                        'flex min-h-11 items-center gap-2 rounded-xl px-3 text-left text-sm transition ' +
+                                        'flex min-h-11 items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium transition focus-visible:outline-2 focus-visible:outline-red-500 ' +
                                         (folder === id && view === 'mail'
-                                            ? 'bg-red-500/10 font-semibold text-red-500'
-                                            : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground')
+                                            ? 'border border-red-500/25 bg-red-500/10 font-bold text-red-400 shadow-[inset_3px_0_0_0_#e52945]'
+                                            : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground border border-transparent')
                                     }
                                 >
                                     <Icon className="size-4 shrink-0" />
@@ -600,15 +626,17 @@ export default function MailCenter({
                                 </button>
                             )}
                         </div>
-                        <div className="text-muted-foreground mt-5 rounded-xl border border-dashed p-3 text-xs leading-5">
-                            <p className="text-foreground flex items-center gap-2 font-bold">
-                                <KeyRound size={14} /> Privacy by default
+                        <div className="mt-5 rounded-xl border border-white/10 bg-gradient-to-br from-[#182131] to-[#111822] p-3 text-xs leading-5 text-slate-300">
+                            <p className="flex items-center gap-2 font-bold text-white">
+                                <LockKeyhole
+                                    size={14}
+                                    className="text-[#ff6076]"
+                                />
+                                Private by default
                             </p>
                             <p className="mt-2">
-                                Only approved KMJ employees can receive internal
-                                mail. Customer organization membership alone
-                                grants no access. No customer inbox or external
-                                Gmail data is shared.
+                                Only authorized KMJ staff can open private team
+                                mail.
                             </p>
                         </div>
                     </aside>
@@ -616,13 +644,13 @@ export default function MailCenter({
                     <section
                         aria-label="Mail list"
                         className={
-                            'bg-card min-w-0 overflow-hidden rounded-2xl border p-3 ' +
+                            'bg-card/90 min-w-0 overflow-hidden rounded-2xl border border-slate-700/40 p-3 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)] ' +
                             (view === 'compose' ? 'hidden' : '')
                         }
                     >
                         <div className="flex items-center justify-between gap-2 px-2 pt-2">
                             <div>
-                                <h2 className="text-base font-bold">
+                                <h2 className="text-lg font-extrabold tracking-tight">
                                     {view === 'templates'
                                         ? 'Original KMJ templates'
                                         : view === 'staff'
@@ -848,7 +876,7 @@ export default function MailCenter({
                                                                   ),
                                                     )
                                                 }
-                                                className="mt-4 size-4 shrink-0 accent-red-500"
+                                                className="mt-5 size-4 shrink-0 accent-red-500"
                                             />
                                             <button
                                                 type="button"
@@ -861,14 +889,14 @@ export default function MailCenter({
                                                     )
                                                 }
                                                 className={
-                                                    'min-w-0 flex-1 rounded-xl border p-3 text-left transition hover:border-red-500/40 ' +
+                                                    'hover:bg-muted/50 min-w-0 flex-1 rounded-xl border p-4 text-left shadow-sm transition hover:border-red-500/40 focus-visible:outline-2 focus-visible:outline-red-500 ' +
                                                     (selected?.id === item.id
                                                         ? 'border-red-500/50 bg-red-500/5'
-                                                        : 'bg-background/30')
+                                                        : 'border-border/70 bg-background/35')
                                                 }
                                             >
                                                 <div className="flex items-center justify-between gap-2">
-                                                    <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold">
+                                                    <span className="flex min-w-0 items-center gap-1.5 truncate text-[13px] font-semibold">
                                                         {item.unread && (
                                                             <span className="size-2 rounded-full bg-red-500" />
                                                         )}
@@ -888,24 +916,39 @@ export default function MailCenter({
                                                                   item.recipient_user_id,
                                                               ))}
                                                     </span>
-                                                    <span className="text-muted-foreground shrink-0 text-[10px]">
+                                                    <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
                                                         {item.at.slice(0, 16)}
                                                     </span>
                                                 </div>
                                                 {deliveryLabel(
                                                     item.delivery_state,
                                                 ) && (
-                                                    <span className="mt-1 inline-block rounded-md border border-red-500/20 px-2 py-0.5 text-[10px] font-semibold text-red-500">
+                                                    <span
+                                                        className={
+                                                            'mt-2 inline-block rounded-md border px-2 py-1 text-[10px] font-semibold ' +
+                                                            (item.delivery_state ===
+                                                                'failed' ||
+                                                            item.delivery_state ===
+                                                                'blocked'
+                                                                ? 'border-red-500/30 bg-red-500/10 text-red-400'
+                                                                : item.delivery_state ===
+                                                                        'queued' ||
+                                                                    item.delivery_state ===
+                                                                        'submitting'
+                                                                  ? 'border-amber-500/25 bg-amber-500/10 text-amber-300'
+                                                                  : 'border-slate-500/25 bg-slate-500/10 text-slate-300')
+                                                        }
+                                                    >
                                                         {deliveryLabel(
                                                             item.delivery_state,
                                                         )}
                                                     </span>
                                                 )}
-                                                <div className="mt-1 truncate text-sm font-bold">
+                                                <div className="mt-2 truncate text-[15px] leading-6 font-bold">
                                                     {item.subject ||
                                                         '(No subject)'}
                                                 </div>
-                                                <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-5">
+                                                <p className="text-muted-foreground mt-1 line-clamp-2 text-[13px] leading-[21px]">
                                                     {item.snippet}
                                                 </p>
                                             </button>
@@ -1155,7 +1198,7 @@ export default function MailCenter({
 
                     <section
                         aria-label="KMJ private message"
-                        className="bg-card min-w-0 overflow-hidden rounded-2xl border"
+                        className="bg-card/95 min-w-0 overflow-hidden rounded-2xl border border-slate-700/40 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)]"
                     >
                         {view === 'compose' ? (
                             <div className="p-5 sm:p-6">
@@ -1443,13 +1486,13 @@ export default function MailCenter({
                             </div>
                         ) : selectedThread &&
                           selectedThread.items.length > 0 ? (
-                            <div className="p-5 sm:p-6">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="p-5 sm:p-7">
+                                <div className="border-border/60 flex flex-wrap items-center justify-between gap-3 border-b pb-6">
                                     <div>
                                         <p className="text-[11px] font-bold tracking-widest text-red-500 uppercase">
                                             PRIVATE CONVERSATION
                                         </p>
-                                        <h2 className="mt-2 text-xl font-bold">
+                                        <h2 className="mt-2 text-2xl font-black tracking-tight">
                                             {selectedThread.items[0].subject}
                                         </h2>
                                     </div>
@@ -1615,7 +1658,7 @@ export default function MailCenter({
                                     {selectedThread.items.map((item) => (
                                         <article
                                             key={item.id}
-                                            className="bg-background/60 rounded-xl border p-4"
+                                            className="border-border/70 bg-background/50 rounded-2xl border p-5 shadow-sm"
                                         >
                                             <div className="flex flex-wrap items-start justify-between gap-2 border-b pb-3">
                                                 <div className="text-xs">
@@ -1653,7 +1696,7 @@ export default function MailCenter({
                                                     {item.at.slice(0, 19)}
                                                 </span>
                                             </div>
-                                            <p className="mt-4 text-sm leading-7 break-words whitespace-pre-wrap">
+                                            <p className="mt-5 text-[15px] leading-8 break-words whitespace-pre-wrap">
                                                 {item.body}
                                             </p>
                                         </article>
@@ -1661,21 +1704,105 @@ export default function MailCenter({
                                 </div>
                             </div>
                         ) : (
-                            <div className="grid min-h-[460px] place-items-center p-8 text-center">
-                                <div>
-                                    <Inbox className="text-muted-foreground mx-auto size-9" />
-                                    <h2 className="mt-3 text-lg font-bold">
-                                        Private. Clear. In control.
-                                    </h2>
-                                    <p className="text-muted-foreground mt-2 max-w-sm text-sm leading-6">
-                                        Select a message to read a conversation
-                                        or compose a new one. Your private KMJ
-                                        mail is stored in the platform, not in
-                                        Gmail.
-                                    </p>
-                                    <div className="mt-4 inline-flex items-center gap-2 text-xs text-red-500">
-                                        <Check className="size-4" /> First-party
-                                        access controls
+                            <div className="relative flex min-h-[560px] flex-col overflow-hidden bg-gradient-to-b from-[#121d2b]/60 via-transparent to-[#182334]/25">
+                                <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4 sm:px-6">
+                                    <div>
+                                        <p className="text-[10px] font-bold tracking-[0.18em] text-red-400 uppercase">
+                                            KMJ MAIL / READING WORKSPACE
+                                        </p>
+                                        <p className="mt-1 text-sm font-semibold">
+                                            {
+                                                folderDefs.find(
+                                                    (item) =>
+                                                        item.id === folder,
+                                                )?.label
+                                            }{' '}
+                                            conversations
+                                        </p>
+                                    </div>
+                                    <div className="text-muted-foreground rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs">
+                                        {mailbox.total} in this folder
+                                    </div>
+                                </div>
+                                <div className="relative flex flex-1 items-center justify-center p-6 sm:p-10">
+                                    <div className="w-full max-w-[470px]">
+                                        <div className="flex size-16 items-center justify-center rounded-2xl border border-red-500/20 bg-gradient-to-br from-red-500/15 to-[#1d2939] shadow-[0_20px_45px_-25px_rgba(223,33,68,0.6)]">
+                                            <MailOpen className="size-8 text-[#ff4763]" />
+                                        </div>
+                                        <p className="mt-7 text-[11px] font-bold tracking-[0.2em] text-red-400 uppercase">
+                                            PRIVATE COMMUNICATIONS
+                                        </p>
+                                        <h2 className="mt-2 text-2xl leading-tight font-black tracking-tight sm:text-[30px]">
+                                            {mailbox.items.length
+                                                ? 'Your next conversation starts here.'
+                                                : 'A clear space for every conversation.'}
+                                        </h2>
+                                        <p className="text-muted-foreground mt-3 max-w-md text-sm leading-7">
+                                            {mailbox.items.length
+                                                ? 'Choose a message to view its full thread, sender details and delivery status.'
+                                                : 'This folder has no matching private messages. Compose a new message or choose another folder.'}
+                                        </p>
+                                        <div className="mt-6 flex flex-wrap gap-3">
+                                            {mailbox.items.length > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        navigate(
+                                                            folder,
+                                                            mailbox.items[0].id,
+                                                            q,
+                                                            mailbox.page,
+                                                        )
+                                                    }
+                                                    className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-[#e62446] to-[#b40c32] px-4 text-sm font-bold text-white transition hover:brightness-110"
+                                                >
+                                                    <MailOpen className="size-4" />
+                                                    Open latest message
+                                                </button>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={startCompose}
+                                                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 text-sm font-semibold hover:bg-white/[0.08]"
+                                            >
+                                                <Pencil className="size-4" />
+                                                New message
+                                            </button>
+                                        </div>
+                                        {mailbox.items.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    navigate(
+                                                        folder,
+                                                        mailbox.items[0].id,
+                                                        q,
+                                                        mailbox.page,
+                                                    )
+                                                }
+                                                className="mt-8 w-full rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-left transition hover:border-red-500/30 hover:bg-white/[0.06]"
+                                            >
+                                                <span className="text-muted-foreground text-[10px] font-bold tracking-[0.2em] uppercase">
+                                                    MOST RECENT ·{' '}
+                                                    {mailbox.items[0].at.slice(
+                                                        0,
+                                                        16,
+                                                    )}
+                                                </span>
+                                                <span className="mt-2 block truncate text-sm font-bold">
+                                                    {mailbox.items[0].subject ||
+                                                        '(No subject)'}
+                                                </span>
+                                                <span className="text-muted-foreground mt-1 line-clamp-2 block text-[13px] leading-6">
+                                                    {mailbox.items[0].snippet}
+                                                </span>
+                                            </button>
+                                        )}
+                                        <p className="text-muted-foreground mt-6 flex items-center gap-2 text-xs">
+                                            <ShieldCheck className="size-4 shrink-0 text-red-400" />
+                                            Private records. Owner-controlled
+                                            team access.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
