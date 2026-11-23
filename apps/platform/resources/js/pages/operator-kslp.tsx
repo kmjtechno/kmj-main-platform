@@ -4,7 +4,7 @@ import {
     type DeveloperWorkspaceProps,
 } from './developer-apps';
 import { Head, router, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     KeyRound,
     ShieldCheck,
@@ -88,6 +88,43 @@ type Props = {
 
 const LIST_PAGE_SIZE = 10;
 
+type HubWorkspace = 'overview' | 'licenses' | 'developers' | 'security';
+
+const HUB_WORKSPACES: ReadonlyArray<{
+    id: HubWorkspace;
+    label: string;
+    href: string;
+}> = [
+    { id: 'overview', label: 'Overview', href: '#license-overview' },
+    { id: 'licenses', label: 'Customers & licenses', href: '#license-search' },
+    {
+        id: 'developers',
+        label: 'Developer apps & keys',
+        href: '#issuer-workspaces',
+    },
+    { id: 'security', label: 'Security & audit', href: '#unverified-accounts' },
+];
+
+function workspaceForHash(hash: string): HubWorkspace {
+    if (
+        [
+            '#license-search',
+            '#license-issue',
+            '#license-register',
+            '#license-entitlements',
+        ].includes(hash)
+    ) {
+        return 'licenses';
+    }
+    if (['#issuer-workspaces', '#developer-workspace'].includes(hash)) {
+        return 'developers';
+    }
+    if (['#unverified-accounts', '#license-audit'].includes(hash)) {
+        return 'security';
+    }
+    return 'overview';
+}
+
 type PageControlsProps = {
     label: string;
     page: number;
@@ -154,6 +191,15 @@ export default function OperatorKslp({
     developerWorkspace,
     unverifiedEmailCleanup,
 }: Props) {
+    const [activeWorkspace, setActiveWorkspace] =
+        useState<HubWorkspace>('overview');
+    useEffect(() => {
+        const syncWorkspace = () =>
+            setActiveWorkspace(workspaceForHash(window.location.hash));
+        syncWorkspace();
+        window.addEventListener('hashchange', syncWorkspace);
+        return () => window.removeEventListener('hashchange', syncWorkspace);
+    }, []);
     const [actionReason, setActionReason] = useState('');
     const [purgingUnverified, setPurgingUnverified] = useState(false);
     const [customerQuery, setCustomerQuery] = useState(filters.customer_q);
@@ -259,28 +305,34 @@ export default function OperatorKslp({
             <div className="owner-admin-page kmj-admin-shell flex h-full min-w-0 flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6 lg:p-8">
                 <OperatorModuleNavigation active="licensing" />
                 <nav
-                    aria-label="KMJ Licensing Hub Super Admin sections"
-                    className="bg-card flex flex-wrap gap-2 rounded-xl border p-3 text-xs font-semibold"
+                    aria-label="KMJ Licensing Hub workspaces"
+                    className="bg-card flex flex-wrap items-center gap-2 rounded-xl border p-3 text-xs font-semibold"
                 >
-                    {[
-                        ['#license-overview', 'Overview'],
-                        ['#issuer-workspaces', 'Developer issuers'],
-                        ['#developer-workspace', 'Apps, Keys & SDK'],
-                        ['#unverified-accounts', 'Unverified accounts'],
-                        ['#license-issue', 'Issue license'],
-                        ['#license-search', 'Find customer'],
-                        ['#license-register', 'Manage plans'],
-                        ['#license-entitlements', 'All products'],
-                        ['#license-audit', 'Audit trail'],
-                    ].map(([href, label]) => (
+                    {HUB_WORKSPACES.map((workspace) => (
                         <a
-                            key={href}
-                            href={href}
-                            className="hover:bg-accent rounded-lg border px-3 py-2 hover:border-red-500/40 focus-visible:outline-2 focus-visible:outline-red-500"
+                            key={workspace.id}
+                            href={workspace.href}
+                            aria-current={
+                                activeWorkspace === workspace.id
+                                    ? 'page'
+                                    : undefined
+                            }
+                            onClick={() => setActiveWorkspace(workspace.id)}
+                            className={`rounded-lg border px-3 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-red-500 ${
+                                activeWorkspace === workspace.id
+                                    ? 'text-foreground border-red-500/60 bg-red-500/10'
+                                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                            }`}
                         >
-                            {label}
+                            {workspace.label}
                         </a>
                     ))}
+                    <a
+                        href="/operator/payments"
+                        className="text-muted-foreground hover:text-foreground ml-auto rounded-lg border border-dashed px-3 py-2 hover:border-red-500/40"
+                    >
+                        Payment gateway setup
+                    </a>
                 </nav>
                 <section
                     id="license-overview"
@@ -308,7 +360,10 @@ export default function OperatorKslp({
                         </div>
                     </div>
                 </section>
-                <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+                <section
+                    hidden={activeWorkspace !== 'overview'}
+                    className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6"
+                >
                     {cards.map(([l, v]) => (
                         <div key={l} className="bg-card rounded-xl border p-4">
                             <div className="text-muted-foreground text-xs">
@@ -319,7 +374,57 @@ export default function OperatorKslp({
                     ))}
                 </section>
                 <section
+                    hidden={activeWorkspace !== 'overview'}
+                    aria-label="Choose a licensing workflow"
+                    className="grid gap-3 lg:grid-cols-3"
+                >
+                    <a
+                        href="#license-search"
+                        onClick={() => setActiveWorkspace('licenses')}
+                        className="bg-card rounded-2xl border p-5 hover:border-red-500/50 focus-visible:outline-2 focus-visible:outline-red-500"
+                    >
+                        <h2 className="text-base font-bold">
+                            1. Customers & licenses
+                        </h2>
+                        <p className="text-muted-foreground mt-2 text-sm leading-6">
+                            Find a customer, inspect product entitlements, and
+                            manage the supported CloudOS license lifecycle.
+                            Payment and a signed device lease remain separate
+                            verified stages.
+                        </p>
+                    </a>
+                    <a
+                        href="#issuer-workspaces"
+                        onClick={() => setActiveWorkspace('developers')}
+                        className="bg-card rounded-2xl border p-5 hover:border-red-500/50 focus-visible:outline-2 focus-visible:outline-red-500"
+                    >
+                        <h2 className="text-base font-bold">
+                            2. Developer apps & keys
+                        </h2>
+                        <p className="text-muted-foreground mt-2 text-sm leading-6">
+                            AuthSP-style application registration, organization
+                            subscriptions, issuer quotas, SDKs and keys. Access
+                            remains tenant-scoped and release-gated.
+                        </p>
+                    </a>
+                    <a
+                        href="/operator/payments"
+                        className="bg-card rounded-2xl border p-5 hover:border-red-500/50 focus-visible:outline-2 focus-visible:outline-red-500"
+                    >
+                        <h2 className="text-base font-bold">
+                            3. Payments & subscriptions
+                        </h2>
+                        <p className="text-muted-foreground mt-2 text-sm leading-6">
+                            Configure and verify Razorpay or Cashfree sandbox
+                            connections. Live checkout, settlement and automatic
+                            license issuance are not enabled by configuration
+                            alone.
+                        </p>
+                    </a>
+                </section>
+                <section
                     id="issuer-workspaces"
+                    hidden={activeWorkspace !== 'developers'}
                     aria-label="Developer issuer organizations"
                     className="bg-card scroll-mt-6 rounded-2xl border p-5"
                 >
@@ -460,6 +565,7 @@ export default function OperatorKslp({
                 </section>
                 <section
                     id="developer-workspace"
+                    hidden={activeWorkspace !== 'developers'}
                     aria-label="Applications, keys and SDK setup"
                     className="bg-card scroll-mt-6 rounded-2xl border border-red-500/20 p-4 sm:p-6"
                 >
@@ -493,6 +599,7 @@ export default function OperatorKslp({
                 </section>
                 <section
                     id="unverified-accounts"
+                    hidden={activeWorkspace !== 'security'}
                     aria-label="Unverified email account cleanup"
                     className="bg-card scroll-mt-6 rounded-2xl border border-amber-500/20 p-5 sm:p-6"
                 >
@@ -598,6 +705,7 @@ export default function OperatorKslp({
                 </section>
                 <section
                     id="license-issue"
+                    hidden={activeWorkspace !== 'licenses'}
                     className="bg-card scroll-mt-6 rounded-2xl border p-5"
                 >
                     <h2 className="font-bold">
@@ -700,6 +808,7 @@ export default function OperatorKslp({
                 </section>
                 <section
                     id="license-search"
+                    hidden={activeWorkspace !== 'licenses'}
                     className="bg-card scroll-mt-6 rounded-2xl border p-5"
                     aria-label="License search"
                 >
@@ -779,6 +888,7 @@ export default function OperatorKslp({
                 </section>
                 <section
                     id="license-register"
+                    hidden={activeWorkspace !== 'licenses'}
                     className="bg-card scroll-mt-6 rounded-2xl border p-5"
                 >
                     <div className="flex items-center justify-between">
@@ -1012,6 +1122,7 @@ export default function OperatorKslp({
                 </section>
                 <section
                     id="license-entitlements"
+                    hidden={activeWorkspace !== 'licenses'}
                     className="bg-card scroll-mt-6 rounded-2xl border p-5"
                 >
                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1108,6 +1219,7 @@ export default function OperatorKslp({
                 </section>
                 <section
                     id="license-audit"
+                    hidden={activeWorkspace !== 'security'}
                     className="bg-card scroll-mt-6 rounded-2xl border p-5"
                 >
                     <div className="flex items-center gap-2">
