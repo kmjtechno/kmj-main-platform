@@ -33,6 +33,11 @@ Route::middleware(['auth', 'verified', 'password.confirm'])->group(function (): 
         ->whereNumber('message')
         ->middleware('throttle:6,1')
         ->name('kmj-mail.draft-send');
+    // One authorized mailbox per request, max 40 IDs, no SMTP or irreversible delete.
+    Route::post('{portal}/mail/messages/manage', [NativeMailController::class, 'manage'])
+        ->whereIn('portal', ['operator', 'team'])
+        ->middleware('throttle:20,1')
+        ->name('kmj-mail.manage');
     Route::post('{portal}/mail/messages/{message}/trash', [NativeMailController::class, 'trash'])
         ->whereIn('portal', ['operator', 'team'])
         ->whereNumber('message')
