@@ -1,8 +1,11 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import {
+    Archive,
     ArrowLeft,
     Check,
+    ChevronRight,
+    Forward,
     ChevronLeft,
     FileText,
     Inbox,
@@ -13,6 +16,8 @@ import {
     RotateCcw,
     Search,
     Send,
+    Star,
+    RefreshCw,
     ShieldCheck,
     Trash2,
     UserPlus,
@@ -36,6 +41,7 @@ type MailItem = {
     sender_email: string | null;
     delivery_state: string | null;
     unread: boolean;
+    starred: boolean;
     at: string;
 };
 type ThreadItem = {
@@ -45,6 +51,7 @@ type ThreadItem = {
     recipient_email: string | null;
     sender_email: string | null;
     delivery_state: string | null;
+    starred: boolean;
     folder: string;
     subject: string;
     body: string;
@@ -58,17 +65,25 @@ type Template = {
     intro: string;
     notice: string;
 };
-type Folder = 'inbox' | 'sent' | 'drafts' | 'trash';
+type Folder = 'inbox' | 'sent' | 'drafts' | 'archive' | 'starred' | 'trash';
 type View = 'mail' | 'compose' | 'templates' | 'staff';
 
 type Props = {
     audience: 'owner' | 'staff';
     workspaceMode: 'native_internal';
     templates: Template[];
-    mailbox: { items: MailItem[]; unread: number };
+    mailbox: {
+        items: MailItem[];
+        unread: number;
+        total: number;
+        page: number;
+        page_size: number;
+        has_more: boolean;
+    };
     folder: Folder;
     q: string;
     selectedThread: { items: ThreadItem[]; thread_id: string } | null;
+    selectedMessageId: number | null;
     directory: Contact[];
     staff: {
         user_id: number;
@@ -90,6 +105,8 @@ const folderDefs: { id: Folder; label: string; icon: typeof Inbox }[] = [
     { id: 'inbox', label: 'Inbox', icon: Inbox },
     { id: 'sent', label: 'Sent', icon: Send },
     { id: 'drafts', label: 'Drafts', icon: FileText },
+    { id: 'archive', label: 'Archive', icon: Archive },
+    { id: 'starred', label: 'Starred', icon: Star },
     { id: 'trash', label: 'Trash', icon: Trash2 },
 ];
 
@@ -100,6 +117,7 @@ export default function MailCenter({
     folder,
     q,
     selectedThread,
+    selectedMessageId,
     directory,
     staff,
     myUserId,
@@ -125,6 +143,7 @@ export default function MailCenter({
     const [view, setView] = useState<View>('mail');
     const [search, setSearch] = useState(q);
     const [busy, setBusy] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [recipientId, setRecipientId] = useState('');
     const [recipientType, setRecipientType] = useState<'external' | 'internal'>(
         'external',
@@ -157,14 +176,17 @@ export default function MailCenter({
         nextFolder: Folder,
         message?: number,
         searchTerm: string = search,
+        nextPage = 1,
     ) => {
         setView('mail');
+        setSelectedIds([]);
         router.get(
             base,
             {
                 folder: nextFolder,
                 ...(searchTerm.trim() ? { q: searchTerm.trim() } : {}),
                 ...(message ? { message } : {}),
+                ...(nextPage > 1 ? { page: nextPage } : {}),
             },
             { preserveScroll: true },
         );
@@ -299,6 +321,66 @@ export default function MailCenter({
         );
     };
 
+    const manageMessages = (
+        action:
+            | 'star'
+            | 'unstar'
+            | 'read'
+            | 'unread'
+            | 'archive'
+            | 'unarchive'
+            | 'trash'
+            | 'restore',
+        ids: number[] = selectedIds,
+    ) => {
+        if (busy || ids.length === 0) return;
+        setBusy(true);
+        router.post(
+            base + '/messages/manage',
+            { ids, action, folder },
+            {
+                preserveScroll: true,
+                onFinish: () => setBusy(false),
+                onSuccess: () => setSelectedIds([]),
+            },
+        );
+    };
+
+    const forwardMessage = () => {
+        const current =
+            selectedThread?.items.find(
+                (item) => item.id === selectedMessageId,
+            ) ?? selectedThread?.items.at(-1);
+        if (!current) return;
+        setRecipientType('external');
+        setRecipientEmail('');
+        setRecipientId('');
+        setClientKey(crypto.randomUUID());
+        setSubject(
+            current.subject.toLowerCase().startsWith('fwd:')
+                ? current.subject
+                : 'Fwd: ' + current.subject,
+        );
+        setBody(
+            [
+                '',
+                '',
+                '---------- Forwarded KMJ message ----------',
+                'From: ' +
+                    (current.sender_email ?? contactName(current.from_id)),
+                'Date: ' + current.at,
+                'Subject: ' + current.subject,
+                '',
+                current.body,
+            ]
+                .join('\n')
+                .slice(0, 12000),
+        );
+        setDraftId(null);
+        setReplyId(null);
+        setView('compose');
+    };
+
     const changeStaff = (action: 'grant' | 'revoke', id: number) => {
         if (!isOwner || busy) return;
         setBusy(true);
@@ -343,40 +425,44 @@ export default function MailCenter({
         }
     };
 
-    const selected = selectedThread?.items.at(-1);
+    const selected =
+        selectedThread?.items.find((item) => item.id === selectedMessageId) ??
+        selectedThread?.items.at(-1);
+    const allPageSelected =
+        mailbox.items.length > 0 &&
+        mailbox.items.every((item) => selectedIds.includes(item.id));
     const back = isOwner ? '/operator' : '/dashboard';
 
     // app.tsx already mounts AppLayout (owner: OwnerModuleShell; staff: sidebar).
     // Nesting AppLayout here duplicates the entire top bar and sidebar.
     return (
         <>
-            <Head title="KMJ Mail · Private enterprise communications" />
+            <Head title="KMJ Mail · Enterprise inbox and correspondence" />
             <div
                 data-test="kmj-native-mail"
                 className="owner-admin-page kmj-admin-shell mx-auto flex w-full max-w-[1500px] min-w-0 flex-col gap-4 px-4 py-5 sm:px-6 lg:px-8"
             >
-                <header className="owner-admin-hero kmj-admin-hero overflow-hidden rounded-[1.6rem] border p-5 sm:p-7">
+                <header className="owner-admin-hero kmj-admin-hero overflow-hidden rounded-2xl border p-4 sm:p-5">
                     <Link
                         href={back}
                         className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-xs"
                     >
                         <ArrowLeft size={14} /> Back to workspace
                     </Link>
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
                         <div>
                             <div className="flex items-center gap-2 text-xs font-bold tracking-[0.14em] text-red-500 uppercase">
                                 <ShieldCheck className="size-4" />
                                 KMJ TECHNO · Enterprise Communications
                             </div>
-                            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
+                            <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">
                                 KMJ Mail
                             </h1>
                             <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-6">
-                                Your independent KMJ Mail workspace supports
-                                private team messages and guarded internet email
-                                to Gmail, Outlook, Yahoo and other addresses. No
-                                Gmail account linking, OAuth or third-party
-                                mailbox access.
+                                Organize private KMJ team mail and send guarded
+                                external correspondence from your authorized
+                                company address. Internet inbound reception is
+                                not yet activated in this workspace.
                             </p>
                         </div>
                         <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs">
@@ -390,8 +476,8 @@ export default function MailCenter({
                             </span>
                         </div>
                     </div>
-                    <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                        <div className="bg-background/45 rounded-xl border p-4">
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                        <div className="bg-background/45 rounded-xl border p-3">
                             <span className="text-muted-foreground text-xs">
                                 Unread inbox
                             </span>
@@ -399,7 +485,7 @@ export default function MailCenter({
                                 {mailbox.unread}
                             </strong>
                         </div>
-                        <div className="bg-background/45 rounded-xl border p-4">
+                        <div className="bg-background/45 rounded-xl border p-3">
                             <span className="text-muted-foreground text-xs">
                                 KMJ team recipients
                             </span>
@@ -411,7 +497,7 @@ export default function MailCenter({
                                 }
                             </strong>
                         </div>
-                        <div className="bg-background/45 rounded-xl border p-4">
+                        <div className="bg-background/45 rounded-xl border p-3">
                             <span className="text-muted-foreground text-xs">
                                 Internet mail
                             </span>
@@ -421,9 +507,9 @@ export default function MailCenter({
                                     : 'External sending not activated'}
                             </strong>
                             <span className="text-muted-foreground mt-1 block text-[11px]">
-                                External sending uses KMJ Postfix, no Gmail
-                                connection. Inbox reception requires a separate
-                                pilot.
+                                SMTP acceptance is not recipient delivery.
+                                External incoming mail requires a separately
+                                verified inbound gateway.
                             </span>
                         </div>
                     </div>
@@ -450,8 +536,8 @@ export default function MailCenter({
                     className={
                         'grid min-h-[570px] min-w-0 gap-3 ' +
                         (view === 'compose'
-                            ? 'lg:grid-cols-[195px_minmax(0,1fr)]'
-                            : 'lg:grid-cols-[195px_minmax(240px,360px)_minmax(0,1fr)]')
+                            ? 'lg:grid-cols-[190px_minmax(0,1fr)]'
+                            : 'lg:grid-cols-[190px_minmax(270px,380px)_minmax(0,1fr)]')
                     }
                 >
                     <aside
@@ -467,7 +553,7 @@ export default function MailCenter({
                         </button>
                         <nav
                             aria-label="Private mail folders"
-                            className="mt-4 grid grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-1"
+                            className="mt-4 grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1"
                         >
                             {folderDefs.map(({ id, label, icon: Icon }) => (
                                 <button
@@ -549,7 +635,9 @@ export default function MailCenter({
                                 </h2>
                                 <p className="text-muted-foreground mt-1 text-xs">
                                     {view === 'mail'
-                                        ? 'Latest 40 items. Only your own private records.'
+                                        ? 'Your private mailbox · ' +
+                                          mailbox.total +
+                                          ' messages'
                                         : view === 'templates'
                                           ? 'Readable, reusable, fully KMJ-branded.'
                                           : 'KMJ internal workspace mail'}
@@ -588,56 +676,240 @@ export default function MailCenter({
                                         Find
                                     </button>
                                 </form>
-                                <div className="mt-3 space-y-1.5">
-                                    {mailbox.items.map((item) => (
+                                <div className="bg-background/30 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border p-2">
+                                    <label className="flex items-center gap-2 text-xs font-semibold">
+                                        <input
+                                            type="checkbox"
+                                            aria-label="Select all visible messages"
+                                            checked={allPageSelected}
+                                            onChange={() =>
+                                                setSelectedIds(
+                                                    allPageSelected
+                                                        ? []
+                                                        : mailbox.items.map(
+                                                              (item) => item.id,
+                                                          ),
+                                                )
+                                            }
+                                            disabled={
+                                                mailbox.items.length === 0
+                                            }
+                                            className="size-4 accent-red-500"
+                                        />
+                                        Select page
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-muted-foreground text-xs">
+                                            {mailbox.total} total
+                                        </span>
                                         <button
                                             type="button"
-                                            key={item.id}
                                             onClick={() =>
-                                                navigate(folder, item.id, q)
+                                                navigate(
+                                                    folder,
+                                                    undefined,
+                                                    q,
+                                                    mailbox.page,
+                                                )
                                             }
-                                            className={
-                                                'w-full rounded-xl border p-3 text-left transition hover:border-red-500/40 ' +
-                                                (selected?.id === item.id
-                                                    ? 'border-red-500/50 bg-red-500/5'
-                                                    : 'bg-background/30')
-                                            }
+                                            className="flex min-h-9 items-center gap-1 rounded-lg border px-2 text-xs font-semibold"
+                                            aria-label="Refresh mail list"
                                         >
-                                            <div className="flex items-center justify-between gap-2">
-                                                <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold">
-                                                    {item.unread && (
-                                                        <span className="size-2 rounded-full bg-red-500" />
-                                                    )}
-                                                    {folder === 'inbox'
-                                                        ? (item.sender_email ??
-                                                          contactName(
-                                                              item.sender_user_id,
-                                                          ))
-                                                        : (item.recipient_email ??
-                                                          contactName(
-                                                              item.recipient_user_id,
-                                                          ))}
-                                                </span>
-                                                <span className="text-muted-foreground shrink-0 text-[10px]">
-                                                    {item.at.slice(0, 16)}
-                                                </span>
-                                            </div>
-                                            {deliveryLabel(
-                                                item.delivery_state,
-                                            ) && (
-                                                <span className="mt-1 inline-block rounded-md border border-red-500/20 px-2 py-0.5 text-[10px] font-semibold text-red-500">
-                                                    {deliveryLabel(
-                                                        item.delivery_state,
-                                                    )}
-                                                </span>
-                                            )}
-                                            <div className="mt-1 truncate text-sm font-bold">
-                                                {item.subject || '(No subject)'}
-                                            </div>
-                                            <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-5">
-                                                {item.snippet}
-                                            </p>
+                                            <RefreshCw className="size-3.5" />
+                                            Refresh
                                         </button>
+                                    </div>
+                                </div>
+                                {selectedIds.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/5 p-2">
+                                        <span className="text-xs font-bold text-red-500">
+                                            {selectedIds.length} selected
+                                        </span>
+                                        {(folder === 'inbox' ||
+                                            folder === 'archive') && (
+                                            <>
+                                                <button
+                                                    type="button"
+                                                    disabled={busy}
+                                                    onClick={() =>
+                                                        manageMessages('read')
+                                                    }
+                                                    className="rounded-lg border px-2 py-2 text-xs"
+                                                >
+                                                    Mark read
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={busy}
+                                                    onClick={() =>
+                                                        manageMessages('unread')
+                                                    }
+                                                    className="rounded-lg border px-2 py-2 text-xs"
+                                                >
+                                                    Mark unread
+                                                </button>
+                                            </>
+                                        )}
+                                        {folder === 'inbox' && (
+                                            <button
+                                                type="button"
+                                                disabled={busy}
+                                                onClick={() =>
+                                                    manageMessages('archive')
+                                                }
+                                                className="rounded-lg border px-2 py-2 text-xs"
+                                            >
+                                                Archive
+                                            </button>
+                                        )}
+                                        {folder === 'archive' && (
+                                            <button
+                                                type="button"
+                                                disabled={busy}
+                                                onClick={() =>
+                                                    manageMessages('unarchive')
+                                                }
+                                                className="rounded-lg border px-2 py-2 text-xs"
+                                            >
+                                                To inbox
+                                            </button>
+                                        )}
+                                        {folder !== 'trash' &&
+                                            folder !== 'drafts' && (
+                                                <button
+                                                    type="button"
+                                                    disabled={busy}
+                                                    onClick={() =>
+                                                        manageMessages(
+                                                            folder === 'starred'
+                                                                ? 'unstar'
+                                                                : 'star',
+                                                        )
+                                                    }
+                                                    className="rounded-lg border px-2 py-2 text-xs"
+                                                >
+                                                    {folder === 'starred'
+                                                        ? 'Unstar'
+                                                        : 'Star'}
+                                                </button>
+                                            )}
+                                        {folder === 'trash' ? (
+                                            <button
+                                                type="button"
+                                                disabled={busy}
+                                                onClick={() =>
+                                                    manageMessages('restore')
+                                                }
+                                                className="rounded-lg border px-2 py-2 text-xs"
+                                            >
+                                                Restore
+                                            </button>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                disabled={busy}
+                                                onClick={() =>
+                                                    manageMessages('trash')
+                                                }
+                                                className="rounded-lg border px-2 py-2 text-xs"
+                                            >
+                                                Move to Trash
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                                <div className="mt-3 space-y-1.5">
+                                    {mailbox.items.map((item) => (
+                                        <div
+                                            key={item.id}
+                                            className="flex items-start gap-2"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                aria-label={
+                                                    'Select ' +
+                                                    (item.subject || 'message')
+                                                }
+                                                checked={selectedIds.includes(
+                                                    item.id,
+                                                )}
+                                                onChange={(event) =>
+                                                    setSelectedIds(
+                                                        (previous) =>
+                                                            event.target.checked
+                                                                ? [
+                                                                      ...previous,
+                                                                      item.id,
+                                                                  ]
+                                                                : previous.filter(
+                                                                      (id) =>
+                                                                          id !==
+                                                                          item.id,
+                                                                  ),
+                                                    )
+                                                }
+                                                className="mt-4 size-4 shrink-0 accent-red-500"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    navigate(
+                                                        folder,
+                                                        item.id,
+                                                        q,
+                                                        mailbox.page,
+                                                    )
+                                                }
+                                                className={
+                                                    'min-w-0 flex-1 rounded-xl border p-3 text-left transition hover:border-red-500/40 ' +
+                                                    (selected?.id === item.id
+                                                        ? 'border-red-500/50 bg-red-500/5'
+                                                        : 'bg-background/30')
+                                                }
+                                            >
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold">
+                                                        {item.unread && (
+                                                            <span className="size-2 rounded-full bg-red-500" />
+                                                        )}
+                                                        {item.starred && (
+                                                            <Star className="size-3 fill-amber-400 text-amber-400" />
+                                                        )}
+                                                        {item.folder ===
+                                                            'inbox' ||
+                                                        item.folder ===
+                                                            'archive'
+                                                            ? (item.sender_email ??
+                                                              contactName(
+                                                                  item.sender_user_id,
+                                                              ))
+                                                            : (item.recipient_email ??
+                                                              contactName(
+                                                                  item.recipient_user_id,
+                                                              ))}
+                                                    </span>
+                                                    <span className="text-muted-foreground shrink-0 text-[10px]">
+                                                        {item.at.slice(0, 16)}
+                                                    </span>
+                                                </div>
+                                                {deliveryLabel(
+                                                    item.delivery_state,
+                                                ) && (
+                                                    <span className="mt-1 inline-block rounded-md border border-red-500/20 px-2 py-0.5 text-[10px] font-semibold text-red-500">
+                                                        {deliveryLabel(
+                                                            item.delivery_state,
+                                                        )}
+                                                    </span>
+                                                )}
+                                                <div className="mt-1 truncate text-sm font-bold">
+                                                    {item.subject ||
+                                                        '(No subject)'}
+                                                </div>
+                                                <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-5">
+                                                    {item.snippet}
+                                                </p>
+                                            </button>
+                                        </div>
                                     ))}
                                     {mailbox.items.length === 0 && (
                                         <div className="rounded-xl border border-dashed px-4 py-12 text-center">
@@ -646,12 +918,66 @@ export default function MailCenter({
                                                 No messages in this folder
                                             </p>
                                             <p className="text-muted-foreground mt-1 text-xs">
-                                                Compose a message to an approved
-                                                KMJ colleague.
+                                                Private internal messages appear
+                                                in this folder. External inbound
+                                                is not active.
                                             </p>
                                         </div>
                                     )}
                                 </div>
+                                {mailbox.total > mailbox.page_size && (
+                                    <div className="mt-4 flex items-center justify-between gap-2 border-t pt-3">
+                                        <span className="text-muted-foreground text-xs">
+                                            {Math.min(
+                                                (mailbox.page - 1) *
+                                                    mailbox.page_size +
+                                                    1,
+                                                mailbox.total,
+                                            )}
+                                            –
+                                            {Math.min(
+                                                mailbox.page *
+                                                    mailbox.page_size,
+                                                mailbox.total,
+                                            )}{' '}
+                                            of {mailbox.total}
+                                        </span>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                disabled={mailbox.page <= 1}
+                                                onClick={() =>
+                                                    navigate(
+                                                        folder,
+                                                        undefined,
+                                                        q,
+                                                        mailbox.page - 1,
+                                                    )
+                                                }
+                                                className="flex min-h-9 items-center gap-1 rounded-lg border px-3 text-xs disabled:opacity-40"
+                                            >
+                                                <ChevronLeft className="size-3.5" />
+                                                Previous
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={!mailbox.has_more}
+                                                onClick={() =>
+                                                    navigate(
+                                                        folder,
+                                                        undefined,
+                                                        q,
+                                                        mailbox.page + 1,
+                                                    )
+                                                }
+                                                className="flex min-h-9 items-center gap-1 rounded-lg border px-3 text-xs disabled:opacity-40"
+                                            >
+                                                Next
+                                                <ChevronRight className="size-3.5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </>
                         )}
                         {view === 'templates' && (
@@ -996,6 +1322,13 @@ export default function MailCenter({
                                             {body.length}/12,000
                                         </span>
                                     </label>
+                                    <p className="text-muted-foreground rounded-xl border border-dashed p-3 text-xs leading-5">
+                                        Recipient privacy is enforced. This
+                                        release supports one external recipient
+                                        per message; CC/BCC and attachments
+                                        require separately reviewed transport
+                                        and scanning.
+                                    </p>
                                     <div className="flex flex-wrap gap-2">
                                         <button
                                             type="button"
@@ -1041,12 +1374,36 @@ export default function MailCenter({
                                 <div className="bg-[#edf0f4] p-5">
                                     <div className="mx-auto max-w-xl overflow-hidden rounded-xl border bg-white shadow-sm">
                                         <div className="border-t-4 border-[#d61f42] bg-[#111927] p-6">
-                                            <img
-                                                src="/assets/brand/kmj-email-lockup-dark-trim.png"
-                                                width="440"
-                                                className="h-auto max-w-full"
-                                                alt="KMJ TECHNO — INNOVATE | BUILD | SCALE"
-                                            />
+                                            <div className="flex items-center gap-3">
+                                                <img
+                                                    src="/assets/brand/kmj-sender-avatar.png"
+                                                    width="64"
+                                                    height="64"
+                                                    className="size-16 shrink-0 object-contain"
+                                                    alt="KMJ TECHNO"
+                                                />
+                                                <div className="min-w-0">
+                                                    <p className="text-[27px] leading-8 font-extrabold tracking-tight">
+                                                        <span className="text-[#ff263f]">
+                                                            KMJ
+                                                        </span>{' '}
+                                                        <span className="text-white">
+                                                            TECHNO
+                                                        </span>
+                                                    </p>
+                                                    <p className="text-[13px] leading-5 font-bold text-white">
+                                                        INNOVATE{' '}
+                                                        <span className="text-[#ff314a]">
+                                                            |
+                                                        </span>{' '}
+                                                        BUILD{' '}
+                                                        <span className="text-[#ff314a]">
+                                                            |
+                                                        </span>{' '}
+                                                        SCALE
+                                                    </p>
+                                                </div>
+                                            </div>
                                             <p className="mt-6 text-[11px] font-bold tracking-widest text-[#bec8d7] uppercase">
                                                 {activeTemplate.category}
                                             </p>
@@ -1130,6 +1487,95 @@ export default function MailCenter({
                                                 Reply
                                             </button>
                                         ) : null}
+                                        {folder !== 'drafts' &&
+                                            folder !== 'trash' &&
+                                            selected && (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        onClick={forwardMessage}
+                                                        className="flex min-h-10 items-center gap-1 rounded-xl border px-3 text-xs font-semibold"
+                                                    >
+                                                        <Forward className="size-3.5" />
+                                                        Forward
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        disabled={busy}
+                                                        onClick={() =>
+                                                            manageMessages(
+                                                                selected.starred
+                                                                    ? 'unstar'
+                                                                    : 'star',
+                                                                [selected.id],
+                                                            )
+                                                        }
+                                                        className="flex min-h-10 items-center gap-1 rounded-xl border px-3 text-xs font-semibold"
+                                                    >
+                                                        <Star className="size-3.5" />
+                                                        {selected.starred
+                                                            ? 'Unstar'
+                                                            : 'Star'}
+                                                    </button>
+                                                    {(selected.folder ===
+                                                        'inbox' ||
+                                                        selected.folder ===
+                                                            'archive') && (
+                                                        <button
+                                                            type="button"
+                                                            disabled={busy}
+                                                            onClick={() =>
+                                                                manageMessages(
+                                                                    'unread',
+                                                                    [
+                                                                        selected.id,
+                                                                    ],
+                                                                )
+                                                            }
+                                                            className="min-h-10 rounded-xl border px-3 text-xs font-semibold"
+                                                        >
+                                                            Mark unread
+                                                        </button>
+                                                    )}
+                                                    {selected.folder ===
+                                                        'inbox' && (
+                                                        <button
+                                                            type="button"
+                                                            disabled={busy}
+                                                            onClick={() =>
+                                                                manageMessages(
+                                                                    'archive',
+                                                                    [
+                                                                        selected.id,
+                                                                    ],
+                                                                )
+                                                            }
+                                                            className="flex min-h-10 items-center gap-1 rounded-xl border px-3 text-xs font-semibold"
+                                                        >
+                                                            <Archive className="size-3.5" />
+                                                            Archive
+                                                        </button>
+                                                    )}
+                                                    {selected.folder ===
+                                                        'archive' && (
+                                                        <button
+                                                            type="button"
+                                                            disabled={busy}
+                                                            onClick={() =>
+                                                                manageMessages(
+                                                                    'unarchive',
+                                                                    [
+                                                                        selected.id,
+                                                                    ],
+                                                                )
+                                                            }
+                                                            className="min-h-10 rounded-xl border px-3 text-xs font-semibold"
+                                                        >
+                                                            To inbox
+                                                        </button>
+                                                    )}
+                                                </>
+                                            )}
                                         {folder === 'trash' ? (
                                             <button
                                                 type="button"

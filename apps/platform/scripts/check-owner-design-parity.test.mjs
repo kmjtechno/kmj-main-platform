@@ -113,3 +113,16 @@ void test('mobile and accessible one-dashboard styles remain locked', () => {
     assert.match(shellCss, /focus-visible/);
     assert.match(shellCss, /min-height: 42px/);
 });
+
+void test('KMJ Mail enterprise inbox controls operate on real mailbox records', () => {
+    const source = read('resources/js/pages/mail-center.tsx');
+    assert.match(source, /'archive', label: 'Archive'/);
+    assert.match(source, /'starred', label: 'Starred'/);
+    assert.match(source, /base \+ '\/messages\/manage'/);
+    assert.match(source, /selectedIds\.length > 0/);
+    assert.match(source, /mailbox\.total > mailbox\.page_size/);
+    assert.match(source, /forwardMessage/);
+    assert.match(source, /aria-label="Select all visible messages"/);
+    assert.match(source, /External inbound\s+is not active/);
+    assert.doesNotMatch(source, /Gmail inbox synced|External inbox connected/);
+});
