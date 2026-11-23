@@ -45,6 +45,19 @@ final class OmniDeskProtectedLeaseService
     ): array {
         $this->requireManager($principal);
         $this->validateActivationInput($request, $idempotencyKey);
+        /** @var array{
+         * license_or_entitlement_reference:string,
+         * device_public_key:string,
+         * device_public_key_fingerprint:string,
+         * installation_id:string,
+         * client_version:string,
+         * protocol_version:string,
+         * platform:string,
+         * architecture:string,
+         * client_nonce:string,
+         * proof_scheme:string,
+         * device_signature:string
+         * } $request */
         $this->deviceProof->verify($request, $idempotencyKey);
 
         return DB::transaction(function () use ($request, $idempotencyKey, $principal, $signer): array {
@@ -285,21 +298,29 @@ final class OmniDeskProtectedLeaseService
             throw new DomainException('OMNIDESK_SIGNER_UNAVAILABLE');
         }
         $publicKey = $this->keys->publicKey($kid, 'license');
+        if ($publicKey === '') {
+            throw new DomainException('OMNIDESK_SIGNER_UNAVAILABLE');
+        }
+
+        /** @var array{id:string,customer_id:string,plan:string,expires_at:mixed} $licenseFields */
+        $licenseFields = (array) $license;
+        /** @var array{id:string,ends_at:mixed} $entitlementFields */
+        $entitlementFields = (array) $entitlement;
 
         $now = time();
         $expiry = min(
             $now + 86_400,
-            Carbon::parse($license->expires_at)->getTimestamp(),
-            $entitlement->ends_at === null
+            Carbon::parse($licenseFields['expires_at'])->getTimestamp(),
+            $entitlementFields['ends_at'] === null
                 ? PHP_INT_MAX
-                : Carbon::parse($entitlement->ends_at)->getTimestamp(),
+                : Carbon::parse($entitlementFields['ends_at'])->getTimestamp(),
         );
         $duration = min(3_600, intdiv(max(0, $expiry - $now), 2));
         if ($duration < 60) {
             throw new DomainException('OMNIDESK_LICENSE_INACTIVE');
         }
         $leaseExpiry = $now + $duration;
-        $plan = match ((string) $license->plan) {
+        $plan = match ($licenseFields['plan']) {
             'personal_free' => 'Personal_Free',
             'trial' => 'Trial',
             'professional' => 'Professional',
@@ -316,9 +337,9 @@ final class OmniDeskProtectedLeaseService
             'contract_version' => OmniDeskLicenseContract::CONTRACT_VERSION,
             'jti' => $jti,
             'kid' => $kid,
-            'license_id' => (string) $license->id,
-            'entitlement_id' => (string) $entitlement->id,
-            'customer_id' => (string) $license->customer_id,
+            'license_id' => $licenseFields['id'],
+            'entitlement_id' => $entitlementFields['id'],
+            'customer_id' => $licenseFields['customer_id'],
             'organization_id' => (string) $binding['organization_id'],
             'product_id' => OmniDeskLicenseContract::PRODUCT_ID,
             'product_slug' => OmniDeskLicenseContract::PRODUCT_SLUG,
@@ -348,6 +369,7 @@ final class OmniDeskProtectedLeaseService
         $signed = $this->issuer->issue($claims, $signer);
         $signature = base64_decode($signed['signature_base64'], true);
         if ($signature === false
+            || $signature === ''
             || ! sodium_crypto_sign_verify_detached(
                 $signature, $signed['canonical_payload'], $publicKey,
             )) {
