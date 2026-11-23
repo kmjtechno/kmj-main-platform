@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\User;
-use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
 use App\Services\Licensing\Kslp\KslpCustomerWorkspaceQuery;
+use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
