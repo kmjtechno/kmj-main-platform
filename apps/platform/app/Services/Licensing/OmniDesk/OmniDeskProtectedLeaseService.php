@@ -347,9 +347,12 @@ final class OmniDeskProtectedLeaseService
             'activation_id' => (string) $binding['activation_id'],
             'device_public_key_fingerprint' => (string) $binding['device_public_key_fingerprint'],
             'installation_id' => (string) $binding['installation_id'],
-            // Only the actual tenant-entitled capability. Never grant
-            // clipboard, files, relay or unattended access implicitly.
-            'capabilities' => [OmniDeskLicenseContract::CAPABILITY],
+            // The commercial entitlement is "omnidesk.remote_access".
+            // The signed Rust runtime capability is "remote.interactive".
+            // They are distinct contracts; entitlement eligibility is
+            // checked above before granting the strictly smaller runtime
+            // surface. Never implicitly grant files, relay or unattended.
+            'capabilities' => ['remote.interactive'],
             'limits' => [
                 'licensed_users' => 1,
                 'managed_devices' => 1,
