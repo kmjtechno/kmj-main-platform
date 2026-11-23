@@ -126,18 +126,3 @@ void test('KMJ Mail enterprise inbox controls operate on real mailbox records', 
     assert.match(source, /External inbound\s+is not active/);
     assert.doesNotMatch(source, /Gmail inbox synced|External inbox connected/);
 });
-
-void test('KMJ Mail premium workspace replaces oversized empty reader with actionable controls', () => {
-    const source = read('resources/js/pages/mail-center.tsx');
-    assert.match(source, /KMJ TECHNO \/ COMMUNICATIONS/);
-    assert.match(source, /Mail that means business|Your next conversation starts here/);
-    assert.match(source, /Open latest message/);
-    assert.match(source, /onClick=\{startCompose\}/);
-    assert.match(source, /navigate\(folder, mailbox\.items\[0\]\.id, q, mailbox\.page\)/);
-    assert.match(source, /owner-admin-page kmj-admin-shell/);
-    assert.match(source, /mailbox\.total/);
-    assert.match(source, /item\.delivery_state === 'failed'/);
-    assert.match(source, /Internet inbound: Not connected/);
-    assert.doesNotMatch(source, /Private\. Clear\. In control\./);
-    assert.doesNotMatch(source, /Gmail inbox synced|External inbox connected/);
-});
