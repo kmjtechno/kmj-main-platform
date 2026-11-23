@@ -1183,33 +1183,59 @@ export default function MailCenter({
                         className="kmj-mail-reader bg-card/95 min-w-0 overflow-hidden rounded-2xl border border-slate-700/40 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)]"
                     >
                         {view === 'compose' ? (
-                            <div className="p-5 sm:p-6">
-                                <button
-                                    type="button"
-                                    onClick={() => setView('mail')}
-                                    className="text-muted-foreground flex min-h-10 items-center gap-2 text-xs"
-                                >
-                                    <ChevronLeft className="size-4" /> Back to
-                                    messages
-                                </button>
-                                <p className="mt-3 text-[11px] font-bold tracking-widest text-red-500 uppercase">
-                                    KMJ PRIVATE MESSAGE
-                                </p>
-                                <h2 className="mt-2 text-2xl font-black">
-                                    {draftId
-                                        ? 'Edit your draft'
-                                        : replyId
-                                          ? 'Reply to conversation'
-                                          : 'Compose'}
-                                </h2>
-                                <p className="text-muted-foreground mt-2 text-xs leading-6">
-                                    Draft or refine this message with KMJ AI
-                                    Copilot. Every AI suggestion must be
-                                    reviewed before a separate manual Send
-                                    action. Queued email is not proof of inbox
-                                    delivery.
-                                </p>
-                                <div className="mt-6 space-y-4">
+                            <div className={'kmj-mail-compose-overlay-layout ' + (composerMinimized ? 'is-minimized' : '')}>
+                                <div className="kmj-mail-compose-underlay">
+                                    <p className="text-[10px] font-bold tracking-[0.15em] text-red-400 uppercase">
+                                        PRIVATE CONVERSATION
+                                    </p>
+                                    <h2 className="mt-2 text-xl font-extrabold">
+                                        {selectedThread?.items[0]?.subject ?? 'Start a new conversation'}
+                                    </h2>
+                                    <div className="kmj-mail-message-brand mt-6 flex items-center gap-3 rounded-t-xl p-4">
+                                        <img
+                                            src="/assets/brand/kmj-logo-horizontal-readable.svg"
+                                            width="180"
+                                            height="45"
+                                            alt="KMJ TECHNO — INNOVATE | BUILD | SCALE"
+                                            className="h-9 w-auto object-contain"
+                                        />
+                                        <div className="ml-auto text-right text-xs">
+                                            <strong>KMJ Mail Enterprise</strong>
+                                            <small className="block">Official correspondence</small>
+                                        </div>
+                                    </div>
+                                    <div className="rounded-b-xl border border-t-0 border-white/10 p-5 text-sm leading-7 whitespace-pre-wrap">
+                                        {selectedThread?.items.at(-1)?.body ?? 'Your message appears here after selecting a conversation.'}
+                                    </div>
+                                </div>
+                                <div className="kmj-mail-floating-compose">
+                                    <div className="p-5 sm:p-6">
+                                        <div className="kmj-mail-compose-head">
+                                            <strong className="flex items-center gap-2 text-sm">
+                                                <Pencil className="size-4" />
+                                                {draftId ? 'Edit draft' : replyId ? 'Reply' : 'New message'}
+                                            </strong>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setComposerMinimized((old) => !old)}
+                                                    aria-label={composerMinimized ? 'Expand composer' : 'Minimize composer'}
+                                                    title={composerMinimized ? 'Expand' : 'Minimize'}
+                                                    className="rounded-md border border-white/20 px-2 text-sm"
+                                                >
+                                                    {composerMinimized ? '+' : '−'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setView('mail')}
+                                                    aria-label="Close compose window"
+                                                    className="rounded-md border border-white/20 p-1"
+                                                >
+                                                    <X className="size-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-4">
                                     <div
                                         role="group"
                                         aria-label="Recipient type"
@@ -1331,6 +1357,17 @@ export default function MailCenter({
                                             className="bg-background mt-2 min-h-12 w-full rounded-xl border px-3 text-sm"
                                         />
                                     </label>
+                                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-fuchsia-500/25 bg-fuchsia-500/5 p-2">
+                                        <span className="flex items-center gap-2 text-xs font-bold text-fuchsia-200">
+                                            <Sparkles className="size-4" /> KMJ AI · Write with AI
+                                        </span>
+                                        <a
+                                            href="#kmj-ai-copilot"
+                                            className="rounded-lg border border-fuchsia-500/40 bg-fuchsia-500/20 px-3 py-1.5 text-xs font-semibold text-fuchsia-100"
+                                        >
+                                            Open Copilot
+                                        </a>
+                                    </div>
                                     <label className="block text-xs font-semibold">
                                         Message
                                         <textarea
@@ -1339,7 +1376,7 @@ export default function MailCenter({
                                                 setBody(e.target.value)
                                             }
                                             maxLength={12000}
-                                            rows={11}
+                                            rows={6}
                                             aria-label="Message body"
                                             placeholder="Write a clear, professional message..."
                                             className="bg-background mt-2 w-full resize-y rounded-xl border p-4 text-sm leading-6"
@@ -1355,7 +1392,7 @@ export default function MailCenter({
                                         require separately reviewed transport
                                         and scanning.
                                     </p>
-                                    <div className="flex flex-wrap gap-2">
+                                    <div className="flex flex-wrap items-center justify-end gap-2 border-t border-white/10 pt-3">
                                         <button
                                             type="button"
                                             onClick={() => submit('send')}
@@ -1384,6 +1421,8 @@ export default function MailCenter({
                                         >
                                             Save draft
                                         </button>
+                                    </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
