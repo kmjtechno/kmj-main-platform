@@ -308,5 +308,52 @@ class StaticBoundaryTests(unittest.TestCase):
         self.assertIn("Unit=kmj-elite-release-prepare-broker.service", self.TIMER)
 
 
+class HelperLogTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_markers_keep_only_fixed_tokens(self):
+        out = "x\nKMJ_FAST_STAGE=BLOCKED_REMOTE_MAIN_SHA_CHANGED\nsecret=abc123 token\nKMJ_OWNER_RELEASE=HASH_MISMATCH_stage.sh\n"
+        self.assertEqual(b.helper_markers(out), "KMJ_FAST_STAGE=BLOCKED_REMOTE_MAIN_SHA_CHANGED KMJ_OWNER_RELEASE=HASH_MISMATCH_stage.sh")
+        self.assertEqual(b.helper_markers("only free text secret=abc"), "")
+        self.assertEqual(b.helper_markers(None), "")
+
+    def test_log_is_root_only_bounded_and_no_symlink_follow(self):
+        b.persist_helper_log("o" * 20000, "e" * 20000, 2, self.dir)
+        path = self.dir / b.HELPER_LOG
+        self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+        self.assertLess(path.stat().st_size, 17000)
+        self.assertIn("exit=2", path.read_text())
+        tmp = Path(str(path) + ".tmp")
+        tmp.symlink_to(self.dir / "elsewhere")
+        with self.assertRaises(OSError):
+            b.persist_helper_log("a", "b", 1, self.dir)
+        self.assertFalse((self.dir / "elsewhere").exists())
+
+    def test_failed_status_names_marker_and_exit_without_free_text(self):
+        state = self.dir / "state"
+        state.mkdir(mode=0o700)
+        state.chmod(0o700)
+        status = self.dir / "status.json"
+        fake = Fake(code=2, out="KMJ_FAST_STAGE=BLOCKED_MISSING_composer password=hunter2")
+        old = b.HELPER_SHA256
+        b.HELPER_SHA256 = hashlib.sha256(fake.data).hexdigest()
+        try:
+            uid = os.getuid()
+            with self.assertRaisesRegex(ValueError, "BLOCKED_HELPER_FAILED"):
+                b.prepare(b.parse_intent(raw(intent_body()), NOW), uid, NOW, fake, state, status, True, uid)
+        finally:
+            b.HELPER_SHA256 = old
+        detail = json.loads(status.read_text())["detail"]
+        self.assertIn("KMJ_FAST_STAGE=BLOCKED_MISSING_composer", detail)
+        self.assertIn("exit=2", detail)
+        self.assertNotIn("hunter2", detail)
+        self.assertLessEqual(len(detail), 120)
+
+
 if __name__ == "__main__":
     unittest.main()
