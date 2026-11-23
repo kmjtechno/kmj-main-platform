@@ -49,7 +49,7 @@ class BrandedEmailProbeSafety(unittest.TestCase):
         self.assertIn("KMJ TECHNO Enterprise Mail QA", source)
         self.assertIn('width="64" height="64" alt="KMJ TECHNO"', markup)
         self.assertIn('class="kmj-tagline"', markup)
-        self.assertIn('font-size:13px;line-height:19px;font-weight:700', markup)
+        self.assertIn('font-size:15px;line-height:21px;font-weight:700', markup)
         self.assertIn("SECURITY NOTICE", markup)
         self.assertIn("PRIVATE ACCOUNT COMMUNICATION", markup)
         self.assertIn("SECURE ACTION", markup)
