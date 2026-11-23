@@ -310,3 +310,26 @@ void test('customer renewal guidance distinguishes real license states and block
     assert.ok(!customer.includes("href='/licensing/renew'"));
     assert.ok(!customer.includes('Automatic renewal successful'));
 });
+
+void test('reseller credit evidence is zero-credit, tenant-scoped and never paid fulfillment', () => {
+    const ledger = read(
+        'app/Services/Licensing/Kslp/KslpResellerCreditEvidenceLedger.php',
+    );
+    const migration = read(
+        'database/migrations/2026_11_23_000510_create_kslp_reseller_credit_evidence_ledger.php',
+    );
+
+    assert.ok(ledger.includes('license.manage'));
+    assert.ok(ledger.includes("->where('organization_id', $issuerOrganizationId)"));
+    assert.ok(ledger.includes("->where('event_key_hash', $eventHash)"));
+    assert.ok(ledger.includes("'credits_delta' => 0"));
+    assert.ok(ledger.includes("'available_credits' => null"));
+    assert.ok(ledger.includes("'paid_issuance_enabled' => false"));
+    assert.ok(ledger.includes('KSLP_RESELLER_EVIDENCE_SCOPE_INVALID'));
+    assert.ok(ledger.includes('KSLP_RESELLER_EVIDENCE_IDEMPOTENCY_CONFLICT'));
+    assert.ok(migration.includes("'kslp_reseller_evidence_once_per_order'"));
+    assert.ok(migration.includes("'commerce_orders'"));
+    assert.doesNotMatch(ledger, /issueDelegated\s*\(/);
+    assert.doesNotMatch(ledger, /->update\s*\(/);
+    assert.doesNotMatch(ledger, /->delete\s*\(/);
+});
