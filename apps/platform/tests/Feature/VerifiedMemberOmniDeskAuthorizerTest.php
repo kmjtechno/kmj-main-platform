@@ -140,6 +140,7 @@ final class VerifiedMemberOmniDeskAuthorizerTest extends TestCase
         self::assertSame((string) $org->getKey(), $principal->organizationId);
         self::assertFalse($principal->canManage);
     }
+
     public function test_license_manage_is_rechecked_after_owner_membership_is_downgraded(): void
     {
         $owner = User::factory()->create();
@@ -189,5 +190,4 @@ final class VerifiedMemberOmniDeskAuthorizerTest extends TestCase
             $this->requestFor($owner, (string) $organization->getKey()),
         );
     }
-
 }
