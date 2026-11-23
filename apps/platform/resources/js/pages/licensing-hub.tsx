@@ -158,14 +158,18 @@ export default function LicensingHub({
                             <p className="text-xs font-bold tracking-wider text-red-500 uppercase">
                                 KMJ CodeBridge · Monthly usage
                             </p>
-                            <h2 id="codebridge-usage-heading" className="mt-1 text-lg font-bold">
+                            <h2
+                                id="codebridge-usage-heading"
+                                className="mt-1 text-lg font-bold"
+                            >
                                 Free forever. Grow when you need more.
                             </h2>
                             <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
-                                Planned hosted remote tool-call allowances. No card needed
-                                for the proposed Free plan. Self-hosted open-source
-                                CodeBridge is not subject to a KMJ monthly hosted-call meter.
-                                AI provider fees, if any, are separate.
+                                Planned hosted remote tool-call allowances. No
+                                card needed for the proposed Free plan.
+                                Self-hosted open-source CodeBridge is not
+                                subject to a KMJ monthly hosted-call meter. AI
+                                provider fees, if any, are separate.
                             </p>
                         </div>
                         <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-300">
@@ -174,15 +178,23 @@ export default function LicensingHub({
                     </div>
                     <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                         {codebridge_usage_preview.plans.map((plan) => (
-                            <article key={plan.id} className="border-border rounded-xl border p-4">
-                                <h3 className="text-sm font-bold">{plan.label}</h3>
+                            <article
+                                key={plan.id}
+                                className="border-border rounded-xl border p-4"
+                            >
+                                <h3 className="text-sm font-bold">
+                                    {plan.label}
+                                </h3>
                                 <p className="mt-2 text-2xl font-extrabold tabular-nums">
                                     {plan.monthly_price_inr === null
                                         ? 'Custom'
                                         : `₹${plan.monthly_price_inr}`}
                                     {plan.monthly_price_inr !== null && (
                                         <span className="text-muted-foreground ml-1 text-xs font-medium">
-                                            /{plan.per_user ? 'user/month' : 'month'}
+                                            /
+                                            {plan.per_user
+                                                ? 'user/month'
+                                                : 'month'}
                                         </span>
                                     )}
                                 </p>
@@ -194,12 +206,16 @@ export default function LicensingHub({
                             </article>
                         ))}
                     </div>
-                    <div className="mt-4 rounded-xl border border-dashed p-3 text-sm" role="status">
-                        <strong>Live usage: Not available yet.</strong>{' '}
-                        The account-wide meter, remaining calls and UTC reset date
-                        will appear only after authenticated gateway tracking and
-                        licensing verification are production ready.
-                        No usage numbers or purchases are inferred from this preview.
+                    <div
+                        className="mt-4 rounded-xl border border-dashed p-3 text-sm"
+                        role="status"
+                    >
+                        <strong>Live usage: Not available yet.</strong> The
+                        account-wide meter, remaining calls and UTC reset date
+                        will appear only after authenticated gateway tracking
+                        and licensing verification are production ready. No
+                        usage numbers or purchases are inferred from this
+                        preview.
                     </div>
                 </section>
 
