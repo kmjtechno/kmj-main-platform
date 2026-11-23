@@ -129,7 +129,7 @@ final class OmniDeskOrderPlanBinder
     }
 
     /**
-     * @param array<string,string|int> $snapshot
+     * @param  array<string,string|int>  $snapshot
      * @return array{commercial_order_id:string,plan_id:string,plan_code:string,currency:string,amount_minor:int,billing_interval:string}
      */
     private function shape(array $snapshot): array
