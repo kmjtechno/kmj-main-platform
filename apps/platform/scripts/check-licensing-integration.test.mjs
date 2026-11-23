@@ -244,7 +244,10 @@ void test('customer Licensing Hub has truthful four-step next-action guidance', 
     assert.ok(customer.includes('organizations.length > 0'));
     assert.ok(customer.includes('product_entitlements.length > 0'));
     assert.ok(customer.includes('license_count > 0'));
-    assert.ok(customer.includes('href="/dashboard"') || customer.includes("href: '/dashboard'"));
+    assert.ok(
+        customer.includes('href="/dashboard"') ||
+            customer.includes("href: '/dashboard'"),
+    );
     assert.ok(customer.includes('href="/purchase"'));
     assert.ok(customer.includes('href="/developer/apps"'));
     assert.ok(customer.includes('separate issuer-subscription permissions'));
