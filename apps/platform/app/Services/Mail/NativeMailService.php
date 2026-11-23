@@ -323,7 +323,7 @@ final class NativeMailService
      * Atomic, mailbox-scoped organization actions. Never mutates a recipient's
      * independent copy, triggers email delivery, or permanently deletes records.
      *
-     * @param list<int> $ids
+     * @param  list<int>  $ids
      */
     public function manage(User $user, array $ids, string $action): int
     {
@@ -382,6 +382,7 @@ final class NativeMailService
             }
 
             $this->audit($ownerId, 'kmj_mail_messages_organized', ['count' => count($ids)]);
+
             return count($ids);
         });
     }
