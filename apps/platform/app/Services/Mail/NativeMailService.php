@@ -125,7 +125,7 @@ final class NativeMailService
             ->where('thread_id', (string) $anchor->thread_id)
             ->orderBy('id')->limit(100)
             ->get(['id', 'sender_user_id', 'recipient_user_id', 'folder',
-                'subject', 'body', 'recipient_email', 'sender_email', 'delivery_state',
+                'subject', 'body', 'recipient_email', 'sender_email', 'delivery_state', 'is_starred',
                 'sent_at', 'created_at']);
 
         DB::table('kmj_mail_messages')
@@ -143,6 +143,7 @@ final class NativeMailService
                 'recipient_email' => $row->recipient_email,
                 'sender_email' => $row->sender_email,
                 'delivery_state' => $row->delivery_state,
+                'starred' => (bool) $row->is_starred,
                 'folder' => (string) $row->folder,
                 'subject' => (string) $row->subject,
                 'body' => (string) $row->body,
