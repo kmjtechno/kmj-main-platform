@@ -655,7 +655,7 @@ final class OmniDeskPrivateApiTest extends TestCase
             'device_signature' => 'unsigned',
         ];
         $message = app(OmniDeskDeviceRenewalProof::class)->canonicalMessage($proof);
-        $proof['device_signature'] = $this->testUrlBase64(
+        $proof['device_signature'] = $this->test_url_base64(
             sodium_crypto_sign_detached($message, $deviceSecret),
         );
         $renewal = $this->postJson(
@@ -750,7 +750,7 @@ final class OmniDeskPrivateApiTest extends TestCase
             app(KslpKeyRegistry::class)->publish(
                 $kid,
                 'license',
-                $this->testUrlBase64($signerPublic),
+                $this->test_url_base64($signerPublic),
             );
         }
         $this->app->instance(OmniDeskSigner::class, new class($signerSecret, $kid) implements OmniDeskSigner
@@ -779,7 +779,7 @@ final class OmniDeskPrivateApiTest extends TestCase
         $idempotency = 'omnidesk-test-'.Str::random(32);
         $body = [
             'license_or_entitlement_reference' => $f['license_id'],
-            'device_public_key' => $this->testUrlBase64($devicePublic),
+            'device_public_key' => $this->test_url_base64($devicePublic),
             'device_public_key_fingerprint' => 'sha256:'.hash('sha256', $devicePublic),
             'installation_id' => 'install-protected-test-p520',
             'client_version' => '0.0.1',
@@ -790,7 +790,7 @@ final class OmniDeskPrivateApiTest extends TestCase
             'proof_scheme' => 'KMJ-OMNIDESK-ACTIVATE-v1',
         ];
         $message = app(OmniDeskActivationProof::class)->canonicalMessage($body, $idempotency);
-        $body['device_signature'] = $this->testUrlBase64(
+        $body['device_signature'] = $this->test_url_base64(
             sodium_crypto_sign_detached($message, $deviceSecret),
         );
 
@@ -820,7 +820,7 @@ final class OmniDeskPrivateApiTest extends TestCase
         return json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
     }
 
-    private function testUrlBase64(string $bytes): string
+    private function test_url_base64(string $bytes): string
     {
         return rtrim(strtr(base64_encode($bytes), '+/', '-_'), '=');
     }
