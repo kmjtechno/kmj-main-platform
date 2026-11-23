@@ -259,18 +259,28 @@ void test('customer Licensing Hub has truthful four-step next-action guidance', 
 });
 
 void test('issuer quota snapshot remains tenant scoped and never implies reseller credits', () => {
-    const issuerQuery = read('app/Services/Licensing/Kslp/KslpDeveloperWorkspaceQuery.php');
+    const issuerQuery = read(
+        'app/Services/Licensing/Kslp/KslpDeveloperWorkspaceQuery.php',
+    );
     const workspace = read('resources/js/pages/developer-apps.tsx');
-    const control = read('app/Services/Licensing/Kslp/KslpLicenseControlPlane.php');
+    const control = read(
+        'app/Services/Licensing/Kslp/KslpLicenseControlPlane.php',
+    );
 
-    assert.ok(issuerQuery.includes("license.manage"));
+    assert.ok(issuerQuery.includes('license.manage'));
     assert.ok(issuerQuery.includes("->whereIn('organization_id', $tenantIds)"));
-    assert.ok(issuerQuery.includes("->whereIn('issuer_organization_id', $tenantIds)"));
-    assert.ok(issuerQuery.includes("->where('created_at', '>=', now()->startOfMonth())"));
-    assert.ok(issuerQuery.includes("monthly_issued"));
-    assert.ok(issuerQuery.includes("monthly_remaining"));
-    assert.ok(issuerQuery.includes("product_remaining"));
-    assert.ok(issuerQuery.includes("greaterThanOrEqualTo"));
+    assert.ok(
+        issuerQuery.includes("->whereIn('issuer_organization_id', $tenantIds)"),
+    );
+    assert.ok(
+        issuerQuery.includes(
+            "->where('created_at', '>=', now()->startOfMonth())",
+        ),
+    );
+    assert.ok(issuerQuery.includes('monthly_issued'));
+    assert.ok(issuerQuery.includes('monthly_remaining'));
+    assert.ok(issuerQuery.includes('product_remaining'));
+    assert.ok(issuerQuery.includes('greaterThanOrEqualTo'));
     assert.ok(control.includes('KSLP_ISSUER_MONTHLY_LIMIT'));
     assert.ok(workspace.includes('Issuer limits · Read-only snapshot'));
     assert.ok(workspace.includes('is not a reseller wallet balance'));
