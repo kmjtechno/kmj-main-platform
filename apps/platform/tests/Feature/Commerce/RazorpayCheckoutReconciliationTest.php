@@ -113,6 +113,35 @@ final class RazorpayCheckoutReconciliationTest extends TestCase
         $this->assertDatabaseCount('entitlements', 0);
     }
 
+    public function test_sandbox_checkout_reuse_rejects_existing_live_or_foreign_currency_link(): void
+    {
+        $this->vault();
+        $this->fakeProvider();
+        $order = $this->commercialOrder('request:rzp:existing-link-environment');
+        $service = app(RazorpayCheckoutOrders::class);
+        $service->open($order->getKey(), self::AMOUNT);
+
+        foreach ([
+            ['environment', 'live', 'RAZORPAY_ORDER_ENVIRONMENT_CONFLICT'],
+            ['currency', 'USD', 'RAZORPAY_ORDER_CURRENCY_CONFLICT'],
+        ] as [$field, $value, $expected]) {
+            DB::table('commerce_provider_orders')->where('commercial_order_id', $order->getKey())
+                ->update([$field => $value]);
+            try {
+                $service->open($order->getKey(), self::AMOUNT);
+                $this->fail('Sandbox checkout must not reuse a mismatched provider link.');
+            } catch (DomainException $exception) {
+                $this->assertSame($expected, $exception->getMessage());
+            }
+            DB::table('commerce_provider_orders')->where('commercial_order_id', $order->getKey())
+                ->update([$field => $field === 'environment' ? 'sandbox' : 'INR']);
+        }
+
+        Http::assertSentCount(1);
+        $this->assertDatabaseCount('entitlements', 0);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+    }
+
     public function test_provider_create_http_runs_outside_the_locked_database_transaction(): void
     {
         $this->vault();
@@ -379,6 +408,35 @@ final class RazorpayCheckoutReconciliationTest extends TestCase
 
         $this->assertSame(1, $totals['rejected']);
         $this->assertSame('requested', $order->refresh()->status);
+    }
+
+    public function test_refund_metadata_must_be_explicit_integer_zero_before_confirmation(): void
+    {
+        $this->vault();
+        $this->fakeProvider();
+        $order = $this->commercialOrder('request:rzp:refund-metadata');
+        app(RazorpayCheckoutOrders::class)->open($order->getKey(), self::AMOUNT);
+
+        // Previous int coercion treated null, false and strings as zero.
+        // Unknown refund state is NOT captured-and-unrefunded evidence.
+        foreach ([null, false, '0', 'unknown', 1] as $index => $refunded) {
+            $this->fakeProvider(payment: ['amount_refunded' => $refunded]);
+            $eventId = 'evt_bad_refund_'.$index;
+            $this->inbox($eventId);
+            $result = app(RazorpayWebhookReconciler::class)->reconcilePending();
+
+            $this->assertSame(1, $result['rejected']);
+            $this->assertSame('requested', $order->refresh()->status);
+            $this->assertDatabaseHas('payment_webhook_events', [
+                'event_id' => $eventId,
+                'processing_status' => 'rejected',
+                'processing_note' => 'NOT_SETTLED',
+            ]);
+        }
+
+        $this->assertDatabaseCount('entitlements', 0);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+        $this->assertDatabaseCount('kslp_activations', 0);
     }
 
     public function test_provider_outage_keeps_the_event_for_a_later_retry(): void
