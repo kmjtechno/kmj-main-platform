@@ -56,7 +56,7 @@ class BrandedEmailProbeSafety(unittest.TestCase):
         self.assertIn("SECURITY NOTICE", markup)
         self.assertIn("PRIVATE ACCOUNT COMMUNICATION", markup)
         self.assertIn("SECURE ACTION", markup)
-        self.assertIn("https://kmjtechno.com/assets/brand/kmj-email-lockup-dark.png", markup)
+        self.assertIn("https://kmjtechno.com/assets/brand/kmj-sender-avatar.png", markup)
 
     def test_reference_header_uses_real_html_tagline_in_all_mail_views(self):
         # Mobile Gmail must not shrink the tagline baked into a wide raster.
