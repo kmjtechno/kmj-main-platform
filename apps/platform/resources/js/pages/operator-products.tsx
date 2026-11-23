@@ -19,12 +19,32 @@ import {
     type ManagedProduct,
 } from '@/components/operator-product-manager';
 
+type OwnerPricingProposal = {
+    version: string;
+    status: 'owner_review_only' | 'unavailable';
+    products: {
+        slug: string;
+        name: string;
+        entry_plan: string;
+        entry_amount_minor: number | null;
+        annual_amount_minor: number | null;
+        unit: string;
+        quote_only: boolean;
+        existing_owner_reference: boolean;
+    }[];
+};
+
+const formatProposedInr = (minor: number | null): string =>
+    minor === null ? 'Quote only' : `₹${(minor / 100).toLocaleString('en-IN')}`;
+
 export default function OperatorProducts({
     products,
     generation,
+    pricingProposal,
 }: {
     products: ManagedProduct[];
     generation?: GenerationConfiguration;
+    pricingProposal?: OwnerPricingProposal;
 }) {
     const pageUrl = usePage().url;
     // Only an existing catalog slug may preselect an editor. Unrecognized
@@ -125,6 +145,93 @@ export default function OperatorProducts({
                         ))}
                     </div>
                 </header>
+
+                <details
+                    id="owner-pricing-proposals"
+                    className="bg-card rounded-2xl border p-5 sm:p-6"
+                >
+                    <summary className="cursor-pointer text-base font-bold">
+                        Proposed product pricing · Owner review only
+                    </summary>
+                    <p className="text-muted-foreground mt-3 max-w-4xl text-sm leading-6">
+                        These numbers are nonbinding research candidates, NOT
+                        live catalog plans, payable offers or licensed access.
+                        Prices exclude applicable taxes and separately billed
+                        customer infrastructure, AI, relay and installation. No
+                        gateway, order, subscriber or entitlement is changed.
+                    </p>
+                    {pricingProposal?.status === 'owner_review_only' ? (
+                        <div className="mt-4 overflow-x-auto">
+                            <p className="text-muted-foreground mb-3 text-xs">
+                                Private price book {pricingProposal.version} ·
+                                15 registered product profiles
+                            </p>
+                            <table className="w-full min-w-[800px] text-left text-xs">
+                                <thead className="text-muted-foreground">
+                                    <tr>
+                                        {[
+                                            'Product',
+                                            'Proposed entry plan',
+                                            'Entry INR',
+                                            'Annual INR',
+                                            'Pricing status',
+                                        ].map((label) => (
+                                            <th
+                                                className="border-b px-3 py-2"
+                                                key={label}
+                                            >
+                                                {label}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {pricingProposal.products.map((item) => (
+                                        <tr
+                                            key={item.slug}
+                                            className="border-b last:border-0"
+                                        >
+                                            <td className="px-3 py-3 font-semibold">
+                                                {item.name}
+                                            </td>
+                                            <td className="px-3 py-3">
+                                                {item.entry_plan}
+                                                <div className="text-muted-foreground mt-1">
+                                                    {item.unit}
+                                                </div>
+                                            </td>
+                                            <td className="px-3 py-3 tabular-nums">
+                                                {formatProposedInr(
+                                                    item.entry_amount_minor,
+                                                )}
+                                            </td>
+                                            <td className="px-3 py-3 tabular-nums">
+                                                {formatProposedInr(
+                                                    item.annual_amount_minor,
+                                                )}
+                                            </td>
+                                            <td className="px-3 py-3">
+                                                {item.existing_owner_reference
+                                                    ? 'Existing approved price reference, not live'
+                                                    : item.quote_only
+                                                      ? 'Indicative · custom quote required'
+                                                      : 'Unapproved proposal'}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <p
+                            className="text-muted-foreground mt-4 text-sm"
+                            role="status"
+                        >
+                            Price proposals are unavailable. No customer charge
+                            is authorized.
+                        </p>
+                    )}
+                </details>
 
                 {creating && (
                     <section
