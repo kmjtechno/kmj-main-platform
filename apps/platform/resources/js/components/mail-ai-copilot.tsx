@@ -137,7 +137,9 @@ export default function MailAiCopilot({
                 !('mode' in data) ||
                 data.mode !== mode
             ) {
-                setError('AI returned an unexpected response. No draft was used.');
+                setError(
+                    'AI returned an unexpected response. No draft was used.',
+                );
                 return;
             }
             const parsed = data as AiResponse;
@@ -160,7 +162,9 @@ export default function MailAiCopilot({
                         <Sparkles className="size-5 text-fuchsia-300" />
                     </div>
                     <div>
-                        <h2 className="text-sm font-extrabold">KMJ AI Copilot</h2>
+                        <h2 className="text-sm font-extrabold">
+                            KMJ AI Copilot
+                        </h2>
                         <p className="text-[11px] text-slate-400">
                             Hinglish → professional mail
                         </p>
@@ -235,10 +239,14 @@ export default function MailAiCopilot({
                             Tone
                             <select
                                 value={tone}
-                                onChange={(event) => setTone(event.target.value)}
+                                onChange={(event) =>
+                                    setTone(event.target.value)
+                                }
                                 className="mt-1 w-full rounded-lg border border-white/15 bg-[#111827] p-2 text-xs"
                             >
-                                <option value="professional">Professional</option>
+                                <option value="professional">
+                                    Professional
+                                </option>
                                 <option value="formal">Formal</option>
                                 <option value="friendly">Friendly</option>
                                 <option value="firm">Firm</option>
@@ -273,8 +281,8 @@ export default function MailAiCopilot({
                         className="mt-1 size-4 shrink-0 accent-fuchsia-500"
                     />
                     I consent to sending my instructions
-                    {mode !== 'compose' ? ' and selected email content' : ''}{' '}
-                    to a verified private AI provider for this request.
+                    {mode !== 'compose' ? ' and selected email content' : ''} to
+                    a verified private AI provider for this request.
                 </label>
                 <button
                     type="button"
@@ -301,14 +309,20 @@ export default function MailAiCopilot({
                             : 'Suggest a reply'}
                 </button>
                 {error && (
-                    <p role="alert" className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-amber-200">
+                    <p
+                        role="alert"
+                        className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-amber-200"
+                    >
                         {error}
                     </p>
                 )}
             </div>
 
             {result && (
-                <div aria-live="polite" className="mt-5 rounded-xl border border-fuchsia-400/35 bg-fuchsia-500/[0.07] p-3">
+                <div
+                    aria-live="polite"
+                    className="mt-5 rounded-xl border border-fuchsia-400/35 bg-fuchsia-500/[0.07] p-3"
+                >
                     <p className="flex items-center gap-2 text-xs font-bold text-fuchsia-200">
                         <CheckCircle2 className="size-4" />
                         {mode === 'explain'
@@ -328,7 +342,10 @@ export default function MailAiCopilot({
                             <button
                                 type="button"
                                 onClick={() =>
-                                    onUseCompose(result.subject ?? '', result.text)
+                                    onUseCompose(
+                                        result.subject ?? '',
+                                        result.text,
+                                    )
                                 }
                                 className="flex min-h-9 items-center gap-1.5 rounded-lg bg-fuchsia-600 px-3 text-xs font-bold"
                             >
@@ -348,7 +365,9 @@ export default function MailAiCopilot({
                         )}
                         <button
                             type="button"
-                            onClick={() => void navigator.clipboard.writeText(result.text)}
+                            onClick={() =>
+                                void navigator.clipboard.writeText(result.text)
+                            }
                             className="flex min-h-9 items-center gap-1.5 rounded-lg border border-white/20 px-3 text-xs"
                         >
                             <Copy className="size-3.5" />
@@ -363,8 +382,8 @@ export default function MailAiCopilot({
                 </div>
             )}
             <p className="mt-5 text-[11px] leading-5 text-slate-400">
-                ModelFabric only: verified free routes with documented no-training
-                handling. No fallback to unknown or paid providers.
+                ModelFabric only: verified free routes with documented
+                no-training handling. No fallback to unknown or paid providers.
             </p>
         </aside>
     );
