@@ -66,6 +66,20 @@ Additional constants `kmj-ai-support`, `kmj-automate` and `kmj-ai-gateway` are *
 - Expiry, suspension, refund, revoke and transfer propagate to renewable leases; offline grace is bounded and signed.
 - Owner, developer, customer, reseller and support see only their allowed activities and tenant data; account cleanup stays blocked until separately approved.
 
+## Connected product repository cross-check (23 November 2026)
+
+Source readmes were inspected in the current accessible GitHub repositories; a README is product guidance, **not** proof of commercial production release.
+
+| Repository | Verified source-level observation | Licensing/payment integration implication |
+| --- | --- | --- |
+| [kmj-omnidesk](https://github.com/kmjtechno/kmj-omnidesk) | README explicitly describes **pre-alpha**, implemented Rust Ed25519 verification and signed policies; production KMS/signer integration, real-world connectivity campaign and release remain gated | Reuse unique Main Platform OmniDesk product audience and device/seat lease; don't turn on checkout from client-side verification alone |
+| [kmj-codebridge](https://github.com/kmjtechno/kmj-codebridge) | Developer-preview bridge with explicit device/project scoping, OAuth and no arbitrary shell; README describes local-model-first workflows | Billed feature rights should target scoped device/project/organization and policy, not expose runtime credentials; the README's local-first AI design differs from the Main Platform roadmap's cloud-only AI-router policy and needs a scoped architecture decision, **not** silent reconciliation |
+| [kmj-cloudos](https://github.com/kmjtechno/kmj-cloudos) | Public README is a minimal project description, not live signing/payment evidence | Keep current CloudOS KSLP v1 compatibility and require runtime/signer/device proof before broader claims |
+| [KMJ-Calibration-Studio](https://github.com/kmjtechno/KMJ-Calibration-Studio) | Independent Qt6 camera/projector calibration program; source describes working 2D workflow and remaining hardware/feature validation | Treat a calibration license as an industrial workstation/projector installation right, not a browser subscription or web-hosted playback service |
+| [kmj-cinecore](https://github.com/kmjtechno/kmj-cinecore) | Active Windows/C++/Qt/D3D12 development; README says actual projection, media and motion hardware evidence is still pending | Canonical catalog alignment and per-site/operator/OEM licensing profile must precede a sellable CineCore checkout |
+
+The earlier `vioso-clone` repo identifier could not be retrieved through the connected GitHub account in this review; do not infer current code or release state from prior notes. Other product families require individual repository/profile verification before commercialization.
+
 ## Delivery dependencies
 
 - Keep payment adapter work scoped to existing PRs (Razorpay sandbox reconcile #1056, durable order intent #929, early webhook retry #928) and reconcile their base/CI before merge. Do not independently deploy stacked drafts.
