@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kslp-issuer-quota-readmodel-20261123',
+        title: 'ONE Licensing Hub: tenant-scoped issuer quota snapshot, not reseller credits',
+        state: 'active',
+        detail: 'SOURCE ONLY: reuse canonical KSLP issuer subscription limits and delegated license records to display authorized organization-scoped registered product, monthly issued license and remaining allowance snapshots inside existing developer workspace. Expired and paused issuer subscriptions show unavailable remaining allowances. No wallet balance, settlement proof, additional issuer powers, checkout, paid entitlement or release configuration changes.',
+        evidence:
+            'New aggregate queries in KslpDeveloperWorkspaceQuery restricted by license.manage membership, existing developer-apps.tsx read-only display, Laravel tenant-isolation/expiry feature tests and static contract regression. Exact-head CI, independent review and later authenticated UX acceptance remain required. Production deployment explicitly deferred by owner.',
+    },
+    {
         id: 'licensing-customer-guided-journey-20261123',
         title: 'One Licensing Hub: account-aware four-step customer onboarding and safe next actions',
         state: 'active',
