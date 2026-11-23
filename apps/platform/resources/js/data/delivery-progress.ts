@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'razorpay-mainline-durable-intent-early-webhook-recovery-20261123',
+        title: 'Razorpay: reconcile duplicate-order and early webhook race safely',
+        state: 'active',
+        detail: 'SOURCE ONLY: current-main integration of previously verified PR #929 durable provider-order intent (commit before outbound SANDBOX API and no blind retry of uncertain outcome), plus PR #928 bounded retry of a verified pre-link webhook. Their regression tests now coexist in a single isolated branch. Only a trusted locally bound, provider-verified captured payment can confirm a commercial order; no customer payment, entitlement or license is issued by this change.',
+        evidence:
+            'New consolidation PR for source-only mainline reconciliation is pending exact-head CI, isolated PostgreSQL migration and rollback, authenticated staging, protected review and signed Elite release. Prior heads #928 and #929 were separately green but GitHub reported their old-base PRs not mergeable. Merchant live KYC/credentials, Cashfree adapter, refunds, subscription ledger and product-specific signing remain independent hard gates.',
+    },
+    {
         id: 'owner-codebridge-stage-dispatch-draft-20261123',
         title: 'CodeBridge Release Center: owner-only one-click source staging (draft)',
         state: 'active',
