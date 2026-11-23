@@ -1466,6 +1466,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence:
             'Existing source-reviewed #1058 UI and Node navigation contracts applied to unchanged main-equivalent base on a fresh current-main branch, plus product-by-product workflow/payment evidence matrix. Exact-head review and tests are required, as are authenticated browser acceptance, customer-device signer interop, owner-pinned Elite release, and verified merchant and DR gates. Not live.',
     },
+    {
+        id: 'kmj-competitive-pricebook-current-main-20261123',
+        title: 'KMJ revenue: owner-only competitive draft across 15 registered products',
+        state: 'active',
+        detail: 'SOURCE ONLY: 15 canonical KMJ product SKU proposals in INR minor units with CodeBridge owner-approved reference preserved, illustrative OmniDesk Solo INR 149/month and CloudOS BYO-infra INR 499/month, plus four explicitly unregistered roadmap concepts. A collapsed owner-only Product Management preview cannot create a checkout, price public offer, subscription, entitlement, live charge or signed license.',
+        evidence:
+            'Original reviewed pricebook #1061 code, tests and source-only research were ported onto unchanged matching current-main base; versioned private JSON and service fail closed when any commercial enablement flag is true. Owner margin, tax, actual merchant rate, per-product signing, real customer and native-device validation, exact-head CI/review and protected Elite release remain unverified.',
+    },
 ];
 
 export const verifiedDeliveryMilestones = deliveryMilestones.filter(
