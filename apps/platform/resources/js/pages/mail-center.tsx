@@ -1,4 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import MailAiCopilot from '@/components/mail-ai-copilot';
 import { useMemo, useState } from 'react';
 import {
     Archive,
@@ -562,8 +563,8 @@ export default function MailCenter({
                     className={
                         'grid min-h-[640px] min-w-0 gap-3 ' +
                         (view === 'compose'
-                            ? 'lg:grid-cols-[205px_minmax(0,1fr)]'
-                            : 'lg:grid-cols-[205px_minmax(285px,390px)_minmax(0,1fr)]')
+                            ? 'lg:grid-cols-[205px_minmax(0,1fr)] 2xl:grid-cols-[205px_minmax(0,1fr)_330px]'
+                            : 'lg:grid-cols-[205px_minmax(285px,390px)_minmax(0,1fr)] 2xl:grid-cols-[205px_335px_minmax(0,1fr)_330px]')
                     }
                 >
                     <aside
@@ -1221,10 +1222,11 @@ export default function MailCenter({
                                           : 'Compose'}
                                 </h2>
                                 <p className="text-muted-foreground mt-2 text-xs leading-6">
-                                    Send to any valid email address through KMJ
-                                    TECHNO's own Postfix mail server, or message
-                                    approved internal teammates. A queued
-                                    message is not proof of inbox delivery.
+                                    Draft or refine this message with KMJ AI
+                                    Copilot. Every AI suggestion must be
+                                    reviewed before a separate manual Send
+                                    action. Queued email is not proof of inbox
+                                    delivery.
                                 </p>
                                 <div className="mt-6 space-y-4">
                                     <div
@@ -1808,6 +1810,20 @@ export default function MailCenter({
                             </div>
                         )}
                     </section>
+                    <MailAiCopilot
+                        base={base}
+                        selectedMessageId={selected?.id ?? null}
+                        onUseCompose={(suggestedSubject, suggestedBody) => {
+                            startCompose();
+                            setSubject(suggestedSubject);
+                            setBody(suggestedBody);
+                        }}
+                        onUseReply={(suggestedBody) => {
+                            if (!selected) return;
+                            startReply();
+                            setBody(suggestedBody);
+                        }}
+                    />
                 </div>
             </div>
         </>

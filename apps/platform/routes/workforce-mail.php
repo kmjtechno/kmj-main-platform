@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\NativeMailAiController;
 use App\Http\Controllers\NativeMailController;
 use Illuminate\Support\Facades\Route;
 
@@ -33,6 +34,12 @@ Route::middleware(['auth', 'verified', 'password.confirm'])->group(function (): 
         ->whereNumber('message')
         ->middleware('throttle:6,1')
         ->name('kmj-mail.draft-send');
+    // Explicit per-action user consent. No autonomous sending or provider override.
+    Route::post('{portal}/mail/ai/generate', [NativeMailAiController::class, 'generate'])
+        ->whereIn('portal', ['operator', 'team'])
+        ->middleware('throttle:4,1')
+        ->name('kmj-mail.ai-generate');
+
     // One authorized mailbox per request, max 40 IDs, no SMTP or irreversible delete.
     Route::post('{portal}/mail/messages/manage', [NativeMailController::class, 'manage'])
         ->whereIn('portal', ['operator', 'team'])

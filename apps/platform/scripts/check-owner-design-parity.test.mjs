@@ -126,3 +126,19 @@ void test('KMJ Mail enterprise inbox controls operate on real mailbox records', 
     assert.match(source, /External inbound\s+is not active/);
     assert.doesNotMatch(source, /Gmail inbox synced|External inbox connected/);
 });
+
+void test('KMJ Mail AI Copilot requires consent and never sends email', () => {
+    const page = read('resources/js/pages/mail-center.tsx');
+    const assistant = read('resources/js/components/mail-ai-copilot.tsx');
+    const routes = read('routes/workforce-mail.php');
+    assert.match(page, /<MailAiCopilot/);
+    assert.match(page, /onUseCompose=/);
+    assert.match(page, /onUseReply=/);
+    assert.match(assistant, /consent_to_ai_processing: consent/);
+    assert.match(assistant, /mode === 'compose'/);
+    assert.match(assistant, /selectedMessageId === null/);
+    assert.match(assistant, /No verified private free AI model is connected/);
+    assert.match(assistant, /AI cannot send your email/);
+    assert.match(routes, /kmj-mail\.ai-generate/);
+    assert.doesNotMatch(assistant, /send-external|\/mail\/send/);
+});
