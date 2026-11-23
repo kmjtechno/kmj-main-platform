@@ -114,6 +114,13 @@ Schedule::command('licensing:expire-omnidesk-trials --limit=50')
     ->everyFiveMinutes()
     ->withoutOverlapping(5);
 
+// This lane does absolutely nothing until BOTH the owner release flag and
+// real LIVE payment settings are approved, AND the independently verified
+// PSP server-to-server adapter is explicitly registered.
+Schedule::command('licensing:fulfill-omnidesk-paid --limit=20')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(5);
+
 /*
 | Read-only operator diagnostic for Home Office device enrollment.
 | Does NOT revoke, enroll, configure, deploy or output any credentials/URLs.
