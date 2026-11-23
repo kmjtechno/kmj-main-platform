@@ -1451,6 +1451,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Targeted feature regressions in RazorpayCheckoutReconciliationTest, exact-head CI and reviewed PR #1078. Not merged, not staged or deployed to Elite. Requires independent review, fresh owner-pinned release approval, actual merchant acceptance and separate settlement/reversal ledger.',
     },
     {
+        id: 'licensing-guided-authsp-owner-current-main-20261123',
+        title: 'One Licensing Hub: AuthSP-style guided owner workspaces and product readiness',
+        state: 'active',
+        detail: 'SOURCE ONLY: reorganize the existing protected owner Licensing Hub into Overview, Customers & licenses, Developer apps & keys, and Security & audit, with deep-link/hash workspace navigation and a direct Payment gateway setup path. Retains existing KSLP authorization, tenant scopes, audits and endpoints; no second licensing server, customer account purge, charges, automatic signed license or entitlement grant.',
+        evidence:
+            'Existing source-reviewed #1058 UI and Node navigation contracts applied to unchanged main-equivalent base on a fresh current-main branch, plus product-by-product workflow/payment evidence matrix. Exact-head review and tests are required, as are authenticated browser acceptance, customer-device signer interop, owner-pinned Elite release, and verified merchant and DR gates. Not live.',
+    },
+    {
         id: 'kmj-competitive-pricebook-current-main-20261123',
         title: 'KMJ revenue: owner-only competitive draft across 15 registered products',
         state: 'active',
