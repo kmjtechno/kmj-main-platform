@@ -3,6 +3,7 @@
 use App\Http\Controllers\OwnerProductStudioController;
 use App\Models\User;
 use App\Services\Commerce\AdminProductManager;
+use App\Services\Commerce\CommercialPriceProposalBook;
 use App\Services\PlatformOwnerAccess;
 use App\Services\ProductStudio\FreeCloudProductDraftGenerator;
 use Illuminate\Http\Request;
@@ -17,13 +18,14 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
     ->prefix('operator/products')
     ->name('operator.products.')
     ->group(function (): void {
-        Route::get('/', function (Request $request, PlatformOwnerAccess $access, FreeCloudProductDraftGenerator $generator) {
+        Route::get('/', function (Request $request, PlatformOwnerAccess $access, FreeCloudProductDraftGenerator $generator, CommercialPriceProposalBook $priceBook) {
             $user = $request->user();
             abort_unless($user instanceof User, 401);
             $access->require($user);
 
             return Inertia::render('operator-products', [
                 'generation' => $generator->configuration(),
+                'pricingProposal' => $priceBook->snapshot(),
                 'products' => Product::query()
                     ->orderBy('sort_order')
                     ->orderBy('name')
