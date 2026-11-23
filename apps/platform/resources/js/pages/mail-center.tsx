@@ -1,8 +1,16 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import MailAiCopilot from '@/components/mail-ai-copilot';
+import '@/../css/kmj-mail-approved.css';
 import { useMemo, useState } from 'react';
 import {
     Archive,
+    HardDrive,
+    Mail,
+    Tag,
+    SlidersHorizontal,
+    Clock3,
+    Sparkles,
+    X,
     ArrowLeft,
     ChevronRight,
     Forward,
@@ -79,6 +87,11 @@ type Props = {
         page_size: number;
         has_more: boolean;
     };
+    mailMetrics: {
+        total_messages: number;
+        unread: number;
+        mail_text_bytes: number;
+    };
     folder: Folder;
     q: string;
     selectedThread: { items: ThreadItem[]; thread_id: string } | null;
@@ -113,6 +126,7 @@ export default function MailCenter({
     audience,
     templates,
     mailbox,
+    mailMetrics,
     folder,
     q,
     selectedThread,
@@ -140,6 +154,8 @@ export default function MailCenter({
     const isOwner = audience === 'owner';
     const base = isOwner ? '/operator/mail' : '/team/mail';
     const [view, setView] = useState<View>('mail');
+    const [mailTab, setMailTab] = useState<'primary' | 'team' | 'updates' | 'system'>('primary');
+    const [composerMinimized, setComposerMinimized] = useState(false);
     const [search, setSearch] = useState(q);
     const [busy, setBusy] = useState(false);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -441,102 +457,68 @@ export default function MailCenter({
                 data-test="kmj-native-mail"
                 className="owner-admin-page kmj-admin-shell mx-auto flex w-full max-w-[1720px] min-w-0 flex-col gap-3 px-3 py-4 sm:px-5 lg:px-6"
             >
-                <header className="relative overflow-hidden rounded-2xl border border-[#293447] bg-gradient-to-br from-[#111827] via-[#121d2d] to-[#1b273b] p-5 text-white shadow-[0_24px_55px_-32px_rgba(0,0,0,0.8)] sm:p-6">
-                    <div
-                        aria-hidden="true"
-                        className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-[#ff3853] to-[#a5092f]"
-                    />
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute -top-32 -right-24 size-80 rounded-full bg-red-500/[0.055] blur-3xl"
-                    />
-                    <div className="relative flex flex-wrap items-start justify-between gap-5">
-                        <div className="min-w-0 flex-1">
-                            <Link
-                                href={back}
-                                className="inline-flex min-h-8 items-center gap-2 text-xs font-semibold text-slate-300 transition hover:text-white"
-                            >
-                                <ArrowLeft className="size-3.5" />
-                                Command Center
-                            </Link>
-                            <div className="mt-2 flex items-center gap-4">
-                                <div className="hidden size-14 shrink-0 items-center justify-center rounded-2xl border border-red-500/25 bg-red-500/10 sm:flex">
-                                    <MailOpen className="size-7 text-[#ff405a]" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-[11px] font-bold tracking-[0.2em] text-[#ff6076] uppercase">
-                                        KMJ TECHNO / COMMUNICATIONS
-                                    </p>
-                                    <h1 className="mt-0.5 text-[30px] font-black tracking-[-0.04em] sm:text-[34px]">
-                                        KMJ Mail
-                                    </h1>
-                                    <p className="mt-1 max-w-[620px] text-sm leading-6 text-slate-300">
-                                        A dedicated workspace for private team
-                                        conversations and authorized outbound
-                                        correspondence.
-                                    </p>
-                                </div>
+                <header className="kmj-mail-hero" aria-label="KMJ Mail Enterprise">
+                    <div className="kmj-mail-globe" aria-hidden="true" />
+                    <div className="kmj-mail-hero-top">
+                        <div className="kmj-mail-hero-brand">
+                            <div className="kmj-mail-hero-icon">
+                                <MailOpen aria-hidden="true" />
+                            </div>
+                            <div>
+                                <p className="kmj-mail-eyebrow">
+                                    KMJ TECHNO / ENTERPRISE COMMUNICATIONS
+                                </p>
+                                <h1>
+                                    KMJ Mail <span>Enterprise</span>
+                                </h1>
+                                <p className="kmj-mail-hero-subtitle">
+                                    Secure, private and AI-powered team mail for your organization.
+                                </p>
                             </div>
                         </div>
-                        <div className="flex max-w-full flex-col items-start gap-2 sm:items-end">
-                            <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 text-xs font-semibold text-slate-200">
-                                <ShieldCheck className="size-4 text-[#ff6076]" />
-                                {isOwner
-                                    ? 'Owner workspace'
-                                    : 'Approved KMJ staff'}
-                            </span>
-                            <span className="rounded-full border border-white/10 px-3 py-1.5 text-[11px] text-slate-300">
-                                Internet inbound: Not connected
-                            </span>
+                        <div className="kmj-mail-secure-panel">
+                            <ShieldCheck size={26} aria-hidden="true" />
+                            <div>
+                                <strong>Private &amp; Secure</strong>
+                                <small>Authorized KMJ team mail · AI by consent</small>
+                            </div>
                         </div>
                     </div>
-                    <div className="relative mt-5 grid gap-3 border-t border-white/10 pt-4 sm:grid-cols-3">
-                        <div className="flex items-center gap-3">
-                            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.07]">
-                                <Inbox className="size-5 text-slate-200" />
-                            </div>
+                    <div className="kmj-mail-metrics" aria-label="Live private mailbox metrics">
+                        <div className="kmj-mail-metric">
+                            <span className="kmj-mail-metric-icon"><Inbox size={22} /></span>
+                            <div><small>Unread</small><strong>{mailMetrics.unread.toLocaleString()}</strong></div>
+                        </div>
+                        <div className="kmj-mail-metric">
+                            <span className="kmj-mail-metric-icon"><Mail size={22} /></span>
+                            <div><small>Total Messages</small><strong>{mailMetrics.total_messages.toLocaleString()}</strong></div>
+                        </div>
+                        <div className="kmj-mail-metric">
+                            <span className="kmj-mail-metric-icon"><Users size={22} /></span>
+                            <div><small>Team Recipients</small><strong>{directory.filter((person) => person.id !== myUserId).length}</strong></div>
+                        </div>
+                        <div className="kmj-mail-metric">
+                            <span className="kmj-mail-metric-icon"><HardDrive size={22} /></span>
                             <div>
-                                <p className="text-[11px] text-slate-300">
-                                    Unread messages
-                                </p>
-                                <p className="text-xl font-extrabold tabular-nums">
-                                    {mailbox.unread}
-                                </p>
+                                <small>Stored Mail Text (approx.)</small>
+                                <strong>
+                                    {mailMetrics.mail_text_bytes < 1024
+                                        ? mailMetrics.mail_text_bytes + ' B'
+                                        : mailMetrics.mail_text_bytes < 1048576
+                                          ? (mailMetrics.mail_text_bytes / 1024).toFixed(1) + ' KB'
+                                          : (mailMetrics.mail_text_bytes / 1048576).toFixed(1) + ' MB'}
+                                </strong>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.07]">
-                                <Users className="size-5 text-slate-200" />
-                            </div>
+                        <div className="kmj-mail-metric">
+                            <span className="kmj-mail-metric-icon"><Send size={22} /></span>
                             <div>
-                                <p className="text-[11px] text-slate-300">
-                                    Approved recipients
-                                </p>
-                                <p className="text-xl font-extrabold tabular-nums">
-                                    {
-                                        directory.filter(
-                                            (person) => person.id !== myUserId,
-                                        ).length
-                                    }
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.07]">
-                                <Send className="size-5 text-slate-200" />
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-[11px] text-slate-300">
-                                    Outgoing transport
-                                </p>
-                                <p className="text-sm font-bold text-white">
-                                    {externalOutbound.state === 'ready_to_queue'
-                                        ? 'SMTP queue available'
-                                        : 'Not activated'}
-                                </p>
-                                <p className="text-[10px] text-slate-400">
-                                    Queued ≠ delivered
-                                </p>
+                                <small>Mail Transport</small>
+                                <strong className="kmj-mail-metric-status">
+                                    <span className={externalOutbound.state === 'ready_to_queue' ? 'is-ready' : 'is-offline'} />
+                                    {externalOutbound.state === 'ready_to_queue' ? 'SMTP ready' : 'Not activated'}
+                                </strong>
+                                <em>Acceptance ≠ inbox delivery</em>
                             </div>
                         </div>
                     </div>
