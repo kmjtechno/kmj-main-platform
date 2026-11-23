@@ -1418,6 +1418,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence:
             'PR source implements Laravel owner request and audit, unique no-clobber inbox, Python root broker, optional systemd unit/timer templates and negative CI. Requires reviewed root installation and legitimate staging, disposable restore, rollback and owner approval; DR remains NOT_VERIFIED.',
     },
+    {
+        id: 'razorpay-sandbox-current-main-reconciliation-20261123',
+        title: 'Razorpay payment trust: verified sandbox capture, durable order intent and early webhook recovery',
+        state: 'active',
+        detail: 'SOURCE ONLY: previously green #928/#929/#1056/#1064/#1068 Razorpay sandbox guards consolidated on main after #1071. One committed intent before external provider order call prevents duplicate create on uncertain outcome; bounded early signed webhook retry; production skips the sandbox worker. No live charges, refunds, subscriptions, entitlements or signed licenses.',
+        evidence:
+            'New exact-main PR under review. Prior combined #1068 had 14/14 checks and 12/12 workflow PASS but became non-mergeable as main advanced. Latest Fast Release Guide SHA pin correction independently MERGED in #1071, so this PR intentionally does not touch that guide. New exact-head QA, migration rollback and authenticated staging are still required before any merge. Elite production mutation NONE.',
+    },
 ];
 
 export const verifiedDeliveryMilestones = deliveryMilestones.filter(
