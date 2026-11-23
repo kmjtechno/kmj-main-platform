@@ -271,6 +271,10 @@ final class NativeMailFlowTest extends TestCase
         ]);
 
         $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/team/mail?folder=archive&message='.$inbox->id)->assertOk();
+        $this->assertNotNull(DB::table('kmj_mail_messages')->where('id', $inbox->id)->value('read_at'));
+
+        $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
             ->get('/team/mail?folder=starred')->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->has('mailbox.items', 1)
