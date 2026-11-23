@@ -24,9 +24,9 @@ spec.loader.exec_module(mod)
 
 class EliteEvidenceInstallerTests(unittest.TestCase):
     def test_source_is_exact_reviewed_commit_and_never_branched_latest(self):
-        self.assertEqual(mod.SOURCE_COMMIT, "3697cd3c05d036fdd560d2cb804a543af8981519")
+        self.assertEqual(mod.SOURCE_COMMIT, "cbe4133b5d0e97d3bc68ce081964f5521bdd3abd")
         self.assertEqual(mod.SOURCE_URL, "https://github.com/kmjtechno/kmj-main-platform.git")
-        self.assertEqual(len(mod.TARGETS), 16)
+        self.assertEqual(len(mod.TARGETS), 19)
         for source, path, mode, bound in mod.TARGETS:
             self.assertNotIn("..", Path(source).parts)
             self.assertTrue(path.is_absolute())
@@ -112,7 +112,7 @@ class EliteEvidenceInstallerTests(unittest.TestCase):
                 mod, "fixed_run", side_effect=AssertionError("external command in inspect")):
             self.assertEqual(mod.run("inspect"), 0)
 
-    def _install(self, enable_timer, gate="PIN_MATCH"):
+    def _install(self, enable_timer, gate="PIN_MATCH", enable_prepare_timer=False):
         calls = []
 
         def fake_run(argv, timeout=45):
@@ -131,7 +131,7 @@ class EliteEvidenceInstallerTests(unittest.TestCase):
                 mod, "install_new", return_value="INSTALLED_PIN_MATCH"), patch.object(
                 mod, "fixed_run", side_effect=fake_run), patch.object(
                 Path, "exists", return_value=True):
-            code = mod.run("install", enable_timer)
+            code = mod.run("install", enable_timer, enable_prepare_timer)
         return code, calls
 
     def test_install_without_flag_never_enables_a_timer(self):
@@ -163,6 +163,33 @@ class EliteEvidenceInstallerTests(unittest.TestCase):
     def test_install_blocks_when_the_protected_gate_is_missing(self):
         with self.assertRaisesRegex(mod.Blocked, "AUTOPUBLISH_GATE_MISSING"):
             self._install(False, gate="MISSING")
+
+    def test_prepare_timer_is_enabled_only_by_its_own_flag_and_never_with_the_admission_flag(self):
+        for flags, expected, forbidden in (
+            ((True, False), "kmj-elite-release-admission-broker.timer", "kmj-elite-release-prepare-broker.timer"),
+            ((False, True), "kmj-elite-release-prepare-broker.timer", "kmj-elite-release-admission-broker.timer"),
+        ):
+            code, calls = self._install(flags[0], enable_prepare_timer=flags[1])
+            self.assertEqual(code, 0)
+            self.assertIn(("/usr/bin/systemctl", "enable", "--now", expected), calls)
+            self.assertNotIn(("/usr/bin/systemctl", "enable", "--now", forbidden), calls)
+            self.assertTrue(all("start" not in args for args in calls))
+        _code, calls = self._install(False)
+        self.assertFalse(any("enable" in args for args in calls))
+
+    def test_every_unit_is_verified_and_prepare_timer_flag_needs_install(self):
+        _code, calls = self._install(False)
+        verify = next(c for c in calls if c[:2] == ("/usr/bin/systemd-analyze", "verify"))
+        for unit in mod.UNITS:
+            self.assertIn("/etc/systemd/system/" + unit, verify)
+        with patch.object(mod.sys, "argv", ["x", "--inspect", "--enable-prepare-timer"]):
+            self.assertEqual(mod.main(), 2)
+
+    def test_prepare_broker_and_units_are_pinned_targets(self):
+        names = {path.name for _s, path, _m, _b in mod.TARGETS}
+        for expected in ("elite_release_prepare_broker.py", "kmj-elite-release-prepare-broker.service",
+                         "kmj-elite-release-prepare-broker.timer"):
+            self.assertIn(expected, names)
 
     def test_enable_timer_without_install_is_refused(self):
         with patch.object(mod.sys, "argv", ["x", "--inspect", "--enable-timer"]):

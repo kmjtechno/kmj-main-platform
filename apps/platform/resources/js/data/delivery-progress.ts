@@ -146,6 +146,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-installer-v3-prepare-broker-20261123',
+        title: 'Evidence installer v3: installs the release prepare broker with its own timer approval flag',
+        state: 'active',
+        detail: 'The owner installer is pinned to a newer exact merge commit and adds the prepare broker and its units. The prepare timer is enabled only by a separate explicit flag.',
+        evidence:
+            'Offline installer tests and exact-head CI only. Not run on Elite yet.',
+    },
+    {
         id: 'ops-release-prepare-click-20261123',
         title: 'Ops release prepare click: owner intent for the root prepare broker',
         state: 'active',

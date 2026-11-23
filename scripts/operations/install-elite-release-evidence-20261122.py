@@ -8,6 +8,8 @@ approvals, candidate release, database, symlink or production mutation.
 --inspect: no mutations.
 --install: guarded fixed root-owned collector/broker files and unit templates, plus the
     receipt and broker state directories (0700 root). The broker timer is NOT enabled.
+--install --enable-prepare-timer: additionally enables ONLY the release prepare broker timer
+    (explicit owner approval for the Ops "Request release prepare" click to act).
 --install --enable-timer: additionally enables ONLY the admission broker timer.
     This flag is the owner's explicit approval to enable it. The broker writes only the
     per-release admission file after verifying receipts; this installer never starts the
@@ -28,7 +30,7 @@ import subprocess
 import sys
 import tempfile
 
-SOURCE_COMMIT = "3697cd3c05d036fdd560d2cb804a543af8981519"
+SOURCE_COMMIT = "cbe4133b5d0e97d3bc68ce081964f5521bdd3abd"
 SOURCE_URL = "https://github.com/kmjtechno/kmj-main-platform.git"
 EXPECTED_HOST = "KMJ-elite"
 GATE = Path("/opt/kmj-main-platform-autopublish/main_platform_autopublish_gate.py")
@@ -41,7 +43,8 @@ PY_FILES = (
     "elite_collect_rollback_rehearsal_receipt.py", "elite_prepare_rehearsal.py",
     "rehearse-app-http-db-rollback-20261029.py",
     "elite_derive_migration_storage_receipt.py", "elite_collect_all_receipts.py",
-    "elite_admission_broker.py", "main_platform_autopublish_gate.py",
+    "elite_admission_broker.py", "elite_release_prepare_broker.py",
+    "main_platform_autopublish_gate.py",
 )
 # Previously installed reviewed versions that this installer may atomically replace
 # (sha256 of the exact bytes installed from commit ee7bef15). Anything else is refused.
@@ -52,6 +55,8 @@ REPLACEABLE = {
 UNITS = (
     "kmj-elite-release-admission-broker.service",
     "kmj-elite-release-admission-broker.timer",
+    "kmj-elite-release-prepare-broker.service",
+    "kmj-elite-release-prepare-broker.timer",
 )
 TARGETS = tuple(
     ("scripts/operations/" + name, DEST / name, 0o500, 60000) for name in PY_FILES
@@ -65,6 +70,7 @@ DIRS = (
     (Path("/var/lib/kmj-main-platform/admission-broker"), 0o700),
 )
 SYSTEMD_TIMER = "kmj-elite-release-admission-broker.timer"
+PREPARE_TIMER = "kmj-elite-release-prepare-broker.timer"
 ENV = {
     "PATH": "/usr/sbin:/usr/bin:/sbin:/bin",
     "HOME": "/root",
@@ -182,6 +188,15 @@ def reviewed_bytes() -> dict[Path, tuple[bytes, int]]:
               "SERVICE_BROKER_DRIFT")
         check(b"Unit=kmj-elite-release-admission-broker.service"
               in names["kmj-elite-release-admission-broker.timer"], "TIMER_SERVICE_DRIFT")
+        prepare = names["elite_release_prepare_broker.py"]
+        check(b"--prepare-only" in prepare and b"--post-activation" in prepare
+              and b"release-prepare-request.json" in prepare, "PREPARE_BROKER_ARTIFACT_DRIFT")
+        prepare_service = names["kmj-elite-release-prepare-broker.service"]
+        check(b"elite_release_prepare_broker.py --execute" in prepare_service
+              and b"production-release" not in prepare_service and b"systemctl" not in prepare_service,
+              "PREPARE_SERVICE_DRIFT")
+        check(b"Unit=kmj-elite-release-prepare-broker.service"
+              in names["kmj-elite-release-prepare-broker.timer"], "PREPARE_TIMER_DRIFT")
         for name, data in names.items():
             if name.endswith(".py"):
                 check(b"shell" + b"=True" not in data and b"os." + b"system" not in data,
@@ -256,7 +271,7 @@ def ensure_dir(path: Path, mode: int) -> None:
           and stat.S_IMODE(info.st_mode) & forbidden == 0, "STATE_DIR_UNTRUSTED")
 
 
-def run(mode: str, enable_timer: bool = False) -> int:
+def run(mode: str, enable_timer: bool = False, enable_prepare_timer: bool = False) -> int:
     require_operator()
     if mode == "inspect":
         for i, (_, file, permissions, _) in enumerate(TARGETS, 1):
@@ -283,7 +298,7 @@ def run(mode: str, enable_timer: bool = False) -> int:
 
     fixed_run([
         "/usr/bin/systemd-analyze", "verify",
-        str(Path("/etc/systemd/system/" + UNITS[0])), str(Path("/etc/systemd/system/" + UNITS[1])),
+        *[str(Path("/etc/systemd/system/" + unit)) for unit in UNITS],
     ])
     fixed_run(["/usr/bin/systemctl", "daemon-reload"])
     if enable_timer:
@@ -294,6 +309,14 @@ def run(mode: str, enable_timer: bool = False) -> int:
         print("KMJ_ELITE_RELEASE_EVIDENCE_TIMER=ACTIVE")
     else:
         print("KMJ_ELITE_RELEASE_EVIDENCE_TIMER=NOT_ENABLED_RERUN_WITH_ENABLE_TIMER_TO_APPROVE")
+    if enable_prepare_timer:
+        # Prepare broker timer only: runs the pinned owner helper in bounded modes, never activates.
+        fixed_run(["/usr/bin/systemctl", "enable", "--now", PREPARE_TIMER])
+        fixed_run(["/usr/bin/systemctl", "is-enabled", "--quiet", PREPARE_TIMER])
+        fixed_run(["/usr/bin/systemctl", "is-active", "--quiet", PREPARE_TIMER])
+        print("KMJ_ELITE_RELEASE_PREPARE_TIMER=ACTIVE")
+    else:
+        print("KMJ_ELITE_RELEASE_PREPARE_TIMER=NOT_ENABLED_RERUN_WITH_ENABLE_PREPARE_TIMER_TO_APPROVE")
     print("KMJ_ELITE_RELEASE_EVIDENCE_INSTALL=PASS")
     print("REHEARSAL_CONFIG=OWNER_PROVISIONED_SEPARATELY")
     print("PRODUCTION_RELEASE_SWITCH=NOT_ATTEMPTED")
@@ -307,12 +330,13 @@ def main() -> int:
     group.add_argument("--inspect", action="store_true")
     group.add_argument("--install", action="store_true")
     parser.add_argument("--enable-timer", action="store_true")
+    parser.add_argument("--enable-prepare-timer", action="store_true")
     args = parser.parse_args()
-    if args.enable_timer and not args.install:
+    if (args.enable_timer or args.enable_prepare_timer) and not args.install:
         print("KMJ_ELITE_RELEASE_EVIDENCE_INSTALL=BLOCKED_ENABLE_TIMER_NEEDS_INSTALL")
         return 2
     try:
-        return run("install" if args.install else "inspect", args.enable_timer)
+        return run("install" if args.install else "inspect", args.enable_timer, args.enable_prepare_timer)
     except Blocked as error:
         print("KMJ_ELITE_RELEASE_EVIDENCE_INSTALL=BLOCKED_" + str(error))
         return 2
