@@ -54,6 +54,7 @@ TARGETS = tuple(
     for name in UNITS
 )
 DIRS = (
+    (Path("/var/lib/kmj-main-platform"), 0o755),
     (Path("/var/lib/kmj-release-receipts"), 0o700),
     (Path("/var/lib/kmj-main-platform/admission-broker"), 0o700),
 )
@@ -235,8 +236,9 @@ def ensure_dir(path: Path, mode: int) -> None:
     if not path.exists():
         os.mkdir(path, mode)
     info = os.lstat(path)
+    forbidden = 0o077 if mode == 0o700 else 0o022
     check(stat.S_ISDIR(info.st_mode) and info.st_uid == 0
-          and stat.S_IMODE(info.st_mode) & 0o077 == 0, "STATE_DIR_UNTRUSTED")
+          and stat.S_IMODE(info.st_mode) & forbidden == 0, "STATE_DIR_UNTRUSTED")
 
 
 def run(mode: str, enable_timer: bool = False) -> int:

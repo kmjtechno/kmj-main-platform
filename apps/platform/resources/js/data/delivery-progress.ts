@@ -143,7 +143,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'active',
         detail: 'Source-only owner installer pinned to an exact merge commit. It installs root-owned collector and broker files, requires the private gate copy to be byte-identical to the installed trusted gate, creates private state directories, and enables only the admission broker timer when the owner passes the explicit flag. It never starts the production release unit, writes an approval or an admission.',
         evidence:
-            'Offline tests and exact-head CI only. Not run on Elite yet; the rollback rehearsal still needs an owner-provisioned disposable database config.',
+            'Offline tests and exact-head CI only. A first owner run stopped fail-closed before installing because the broker state parent directory did not exist yet; the installer now creates it. Not yet installed on Elite; the rollback rehearsal still needs an owner-provisioned disposable database config.',
     },
     {
         id: 'release-collect-all-and-broker-units-20261122',

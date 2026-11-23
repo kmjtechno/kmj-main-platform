@@ -173,8 +173,13 @@ class EliteEvidenceInstallerTests(unittest.TestCase):
 
     def test_state_dirs_are_private_root_dirs_and_collectors_never_world_readable(self):
         for directory, mode in mod.DIRS:
-            self.assertEqual(mode, 0o700)
+            self.assertIn(mode, (0o700, 0o755))
             self.assertTrue(str(directory).startswith("/var/lib/"))
+        order = [str(d) for d, _ in mod.DIRS]
+        self.assertLess(order.index("/var/lib/kmj-main-platform"),
+                        order.index("/var/lib/kmj-main-platform/admission-broker"))
+        self.assertEqual(dict(mod.DIRS)[Path("/var/lib/kmj-release-receipts")], 0o700)
+        self.assertEqual(dict(mod.DIRS)[Path("/var/lib/kmj-main-platform/admission-broker")], 0o700)
         for _, target, mode, _ in mod.TARGETS:
             if target.suffix == ".py":
                 self.assertEqual(mode, 0o500)
