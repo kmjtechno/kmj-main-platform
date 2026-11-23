@@ -168,5 +168,7 @@ void test('locked KMJ Mail reference uses real four-pane UI and functional contr
     assert.match(ownerShell, /data-owner-mail=/);
     assert.match(css, /grid-template-columns: minmax\(150px, 175px\)/);
     assert.match(css, /\.kmj-mail-globe/);
+    assert.match(css, /@media \(max-width: 1350px\)/);
+    assert.doesNotMatch(css, /@media \(max-width: 1500px\)/);
     assert.doesNotMatch(page, /1,248|50 GB|36 Team Recipients/);
 });
