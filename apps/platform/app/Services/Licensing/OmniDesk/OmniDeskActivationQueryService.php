@@ -33,6 +33,20 @@ final class OmniDeskActivationQueryService
         }
         if ($license['revoked_at'] !== null || (string) $license['status'] === 'revoked') {
             $reasonCodes[] = 'LICENSE_REVOKED';
+        } elseif ((string) $license['status'] !== 'active') {
+            // The shared CloudOS-oriented KSLP state helper considers dates
+            // but does not independently reject a paused OmniDesk license.
+            $reasonCodes[] = 'LICENSE_INACTIVE';
+        }
+        if ($license['starts_at'] === null || now()->lt($license['starts_at'])) {
+            $reasonCodes[] = 'LICENSE_NOT_YET_ACTIVE';
+        }
+        if ((int) $binding['current_sequence'] < 1
+            || ! is_string($binding['current_jti'] ?? null)
+            || trim($binding['current_jti']) === '') {
+            // bind() creates a row at sequence 0 BEFORE an actual signed lease
+            // exists. Never present this unsent activation as licensed/ACTIVE.
+            $reasonCodes[] = 'LEASE_NOT_ISSUED';
         }
 
         // Revocation/plan changes after activation must not turn a stale
@@ -257,7 +271,7 @@ final class OmniDeskActivationQueryService
         if ($licenseRow === null) {
             throw new DomainException('OMNIDESK_ACTIVATION_NOT_FOUND');
         }
-        /** @var array{id:string,status:string,revoked_at:mixed} $license */
+        /** @var array{id:string,status:string,revoked_at:mixed,starts_at:mixed} $license */
         $license = (array) $licenseRow;
 
         return [$binding, $activation, $license];
@@ -268,7 +282,7 @@ final class OmniDeskActivationQueryService
      * license -> activation -> binding. Non-locking lookups are identifiers
      * only and MUST be rechecked after the authoritative locks are held.
      *
-     * @return array{array{activation_id:string,entitlement_id:string,organization_id:string,current_sequence:int|string},array{id:string,license_id:string,deactivated_at:mixed},array{id:string,status:string,revoked_at:mixed}}
+     * @return array{array{activation_id:string,entitlement_id:string,organization_id:string,current_sequence:int|string},array{id:string,license_id:string,deactivated_at:mixed},array{id:string,status:string,revoked_at:mixed,starts_at:mixed}}
      */
     private function lockedRecordsForPrincipal(
         string $activationId,
@@ -321,7 +335,7 @@ final class OmniDeskActivationQueryService
         $binding = (array) $bindingRow;
         /** @var array{id:string,license_id:string,deactivated_at:mixed} $activation */
         $activation = (array) $activationRow;
-        /** @var array{id:string,status:string,revoked_at:mixed} $license */
+        /** @var array{id:string,status:string,revoked_at:mixed,starts_at:mixed} $license */
         $license = (array) $licenseRow;
 
         return [$binding, $activation, $license];
