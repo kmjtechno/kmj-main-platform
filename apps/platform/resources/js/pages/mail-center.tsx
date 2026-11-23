@@ -1042,8 +1042,8 @@ export default function MailCenter({
                                     <div className="mx-auto max-w-xl overflow-hidden rounded-xl border bg-white shadow-sm">
                                         <div className="border-t-4 border-[#d61f42] bg-[#111927] p-6">
                                             <img
-                                                src="/assets/brand/kmj-email-lockup-dark.png"
-                                                width="320"
+                                                src="/assets/brand/kmj-email-lockup-dark-trim.png"
+                                                width="440"
                                                 className="h-auto max-w-full"
                                                 alt="KMJ TECHNO — INNOVATE | BUILD | SCALE"
                                             />

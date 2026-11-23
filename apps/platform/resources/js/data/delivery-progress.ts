@@ -146,6 +146,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'mail-logo-trim-20261123',
+        title: 'Email logo trim: larger tagline using a lossless crop of the approved lockup',
+        state: 'active',
+        detail: 'Emails now use an email-only copy of the approved lockup with its empty margin removed, rendered at 440px (320px mobile). The canonical logo file is unchanged.',
+        evidence:
+            'Pixel-identical crop test and exact-head CI only. Not deployed; no real inbox render checked yet.',
+    },
+    {
         id: 'release-evidence-installer-v2-20261123',
         title: 'Evidence installer v2: adds the rehearsal workspace helper with a bounded atomic upgrade',
         state: 'active',
