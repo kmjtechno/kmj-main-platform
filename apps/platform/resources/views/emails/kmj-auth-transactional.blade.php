@@ -13,7 +13,7 @@
             .kmj-header { padding-top:32px!important; padding-bottom:32px!important; }
             .kmj-body { padding-top:35px!important; padding-bottom:33px!important; }
             .kmj-title { font-size:30px!important; line-height:37px!important; }
-            .kmj-logo { width:300px!important; max-width:100%!important; }
+            .kmj-mark { width:58px!important; height:58px!important; }
             .kmj-cta { display:block!important; text-align:center!important; }
             .kmj-footer { text-align:left!important; }
         }
@@ -33,9 +33,21 @@
                             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
                                 <tr>
                                     <td align="left" valign="middle">
-                                        <a href="https://kmjtechno.com" target="_blank" style="text-decoration:none;display:inline-block;border:0;">
-                                            <img class="kmj-logo" src="https://kmjtechno.com/assets/brand/kmj-email-lockup-dark.png" width="360" alt="KMJ TECHNO | INNOVATE BUILD SCALE" style="display:block;border:0;outline:none;width:360px;max-width:100%;height:auto;color:#ffffff;font-size:24px;line-height:32px;font-weight:bold;">
-                                        </a>
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+    <tr>
+        <td width="62" valign="middle" style="width:62px;padding:0;">
+            <a href="https://kmjtechno.com" style="text-decoration:none;display:block;">
+                <img class="kmj-mark" src="https://kmjtechno.com/assets/brand/kmj-sender-avatar.png" width="58" height="58" alt="KMJ TECHNO logo" style="display:block;border:0;outline:none;width:58px;height:58px;">
+            </a>
+        </td>
+        <td valign="middle" style="padding:0 0 0 8px;white-space:nowrap;">
+            <a href="https://kmjtechno.com" style="color:#ffffff;text-decoration:none;display:block;">
+                <span style="display:block;font-family:Arial,Helvetica,sans-serif;font-size:22px;line-height:27px;font-weight:800;white-space:nowrap;"><span style="color:#f52237;">KMJ</span> <span style="color:#ffffff;">TECHNO</span></span>
+                <span class="kmj-tagline" style="display:block;font-family:Arial,Helvetica,sans-serif;color:#ffffff;font-size:11px;line-height:16px;font-weight:700;letter-spacing:0.1px;white-space:nowrap;">INNOVATE <span style="color:#f52237;">|</span> BUILD <span style="color:#f52237;">|</span> SCALE</span>
+            </a>
+        </td>
+    </tr>
+</table>
                                     </td>
                                 </tr>
                                 <tr><td style="padding-top:24px;">
