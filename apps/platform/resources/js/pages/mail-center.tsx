@@ -159,6 +159,7 @@ export default function MailCenter({
     >('primary');
     const [composerMinimized, setComposerMinimized] = useState(false);
     const [search, setSearch] = useState(q);
+    const activeSearch = q.trim();
     const [busy, setBusy] = useState(false);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [recipientId, setRecipientId] = useState('');
@@ -839,6 +840,38 @@ export default function MailCenter({
                                         Find
                                     </button>
                                 </form>
+                                {activeSearch !== '' && (
+                                    <div
+                                        role="status"
+                                        className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs"
+                                    >
+                                        <span className="min-w-0 text-slate-200">
+                                            {mailbox.total} results in{' '}
+                                            <strong>
+                                                {
+                                                    folderDefs.find(
+                                                        (item) =>
+                                                            item.id === folder,
+                                                    )?.label
+                                                }
+                                            </strong>{' '}
+                                            for “{activeSearch}”. Colored
+                                            shortcuts search this folder; they
+                                            are not saved labels.
+                                        </span>
+                                        <button
+                                            type="button"
+                                            aria-label="Clear mail search and show all messages in this folder"
+                                            onClick={() => {
+                                                setSearch('');
+                                                navigate(folder, undefined, '');
+                                            }}
+                                            className="min-h-9 shrink-0 rounded-lg border border-amber-400/35 bg-amber-500/10 px-3 font-bold text-amber-100 hover:bg-amber-500/20"
+                                        >
+                                            Clear search
+                                        </button>
+                                    </div>
+                                )}
                                 <div className="kmj-mail-toolbar bg-background/30 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border p-2">
                                     <label className="flex items-center gap-2 text-xs font-semibold">
                                         <input
@@ -1115,12 +1148,14 @@ export default function MailCenter({
                                         <div className="rounded-xl border border-dashed px-4 py-6 text-center">
                                             <MailOpen className="text-muted-foreground mx-auto size-7" />
                                             <p className="mt-2 text-sm font-semibold">
-                                                No messages in this folder
+                                                {activeSearch
+                                                    ? 'No messages match your search'
+                                                    : 'No messages in this folder'}
                                             </p>
                                             <p className="text-muted-foreground mt-1 text-xs">
-                                                Private internal messages appear
-                                                in this folder. External inbound
-                                                is not active.
+                                                {activeSearch
+                                                    ? 'Clear the search above to see all messages in this folder. Search covers subject, body and recipient, not saved labels.'
+                                                    : 'Private internal messages appear in this folder. External inbound is not active.'}
                                             </p>
                                         </div>
                                     )}
@@ -2086,12 +2121,18 @@ export default function MailCenter({
                                         <h2 className="mt-2 text-2xl leading-tight font-black tracking-tight sm:text-[30px]">
                                             {mailbox.items.length
                                                 ? 'Your next conversation starts here.'
-                                                : 'A clear space for every conversation.'}
+                                                : activeSearch
+                                                  ? 'No matching conversations.'
+                                                  : 'A clear space for every conversation.'}
                                         </h2>
                                         <p className="text-muted-foreground mt-3 max-w-md text-sm leading-7">
                                             {mailbox.items.length
                                                 ? 'Choose a message to view its full thread, sender details and delivery status.'
-                                                : 'This folder has no matching private messages. Compose a new message or choose another folder.'}
+                                                : activeSearch
+                                                  ? 'The search “' +
+                                                    activeSearch +
+                                                    '” found no matching messages in this folder. Clear the search to browse the full folder.'
+                                                  : 'This folder has no matching private messages. Compose a new message or choose another folder.'}
                                         </p>
                                         {folder === 'inbox' && latestSent && (
                                             <section
@@ -2156,6 +2197,23 @@ export default function MailCenter({
                                             </section>
                                         )}
                                         <div className="mt-6 flex flex-wrap gap-3">
+                                            {activeSearch !== '' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSearch('');
+                                                        navigate(
+                                                            folder,
+                                                            undefined,
+                                                            '',
+                                                        );
+                                                    }}
+                                                    className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-[#e62446] to-[#b40c32] px-4 text-sm font-bold text-white transition hover:brightness-110"
+                                                >
+                                                    <X className="size-4" />
+                                                    Clear search
+                                                </button>
+                                            )}
                                             {mailbox.items.length > 0 && (
                                                 <button
                                                     type="button"
