@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     ArrowRight,
     BookOpenText,
@@ -51,6 +51,15 @@ export default function MailAiCopilot({
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [result, setResult] = useState<AiResponse | null>(null);
+    const selectedRef = useRef(selectedMessageId);
+    selectedRef.current = selectedMessageId;
+
+    // A summary or reply must never leak into a different selected thread.
+    useEffect(() => {
+        setResult(null);
+        setError(null);
+        setConsent(false);
+    }, [selectedMessageId]);
 
     const selectMode = (next: MailAiMode) => {
         setMode(next);
@@ -67,6 +76,7 @@ export default function MailAiCopilot({
             setError('Select one of your messages first.');
             return;
         }
+        const selectedAtRequest = selectedMessageId;
         setBusy(true);
         setError(null);
         setResult(null);
@@ -99,6 +109,9 @@ export default function MailAiCopilot({
                 }),
             });
             const data: unknown = await response.json();
+            if (selectedAtRequest !== selectedRef.current) {
+                return;
+            }
             if (!response.ok) {
                 const code =
                     typeof data === 'object' &&
