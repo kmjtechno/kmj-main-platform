@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Services\Licensing\Kslp\KslpDeveloperWorkspaceQuery;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
+use App\Services\Licensing\OmniDesk\OmniDeskOfferCatalog;
 use App\Services\Licensing\UnverifiedAccountCleanup;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
@@ -13,7 +14,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
-Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $access, KslpLicenseControlPlane $control, KslpDeveloperWorkspaceQuery $developerWorkspace, UnverifiedAccountCleanup $cleanup) {
+Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $access, KslpLicenseControlPlane $control, KslpDeveloperWorkspaceQuery $developerWorkspace, UnverifiedAccountCleanup $cleanup, OmniDeskOfferCatalog $omniOffers) {
     $user = $request->user();
     abort_unless($user instanceof User, 401);
     $access->require($user);
@@ -171,6 +172,13 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
                 ->count(),
         ],
         'licenses' => $licenses,
+        'omnideskOffers' => $omniOffers->preview(),
+        'omnideskOfferVersion' => OmniDeskOfferCatalog::VERSION,
+        'omnideskReleaseFlags' => [
+            'trial' => (bool) config('omnidesk-licensing.trial_self_service_enabled', false),
+            'paid' => (bool) config('omnidesk-licensing.live_paid_fulfillment_enabled', false),
+            'gateway' => (bool) config('payment-providers.live_charging_enabled', false),
+        ],
         'issuerWorkspaces' => $issuerWorkspaces,
         'developerIssuanceEnabled' => Schema::hasTable('kslp_license_keys') && (bool) config('services.kmj_developer_licensing.enabled', false),
         // Reuse exactly the tenant-restricted developer workspace query. Global
@@ -202,6 +210,37 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
         'events' => DB::table('kslp_license_events')->latest('created_at')->limit(50)->get(),
     ]);
 })->name('operator.kslp')->middleware('password.confirm');
+
+// Owner may prepare price options in the EXISTING canonical Licensing Hub.
+// This inserts PAUSED plans only; no publish, private-key access or charge.
+Route::post('operator/kslp/omnidesk/offers/prepare', function (
+    Request $request,
+    PlatformOwnerAccess $access,
+    OmniDeskOfferCatalog $catalog,
+) {
+    $actor = $request->user();
+    abort_unless($actor instanceof User, 401);
+    $access->require($actor);
+
+    try {
+        $result = $catalog->prepare();
+    } catch (DomainException) {
+        return back()->withErrors([
+            'omnidesk_offers' => 'Catalog conflict or missing OmniDesk product. Review the authoritative product and plan records; nothing was partially changed.',
+        ]);
+    }
+
+    Log::notice('KMJ_OWNER_OMNIDESK_OFFERS_PREPARED_PAUSED', [
+        'actor_id' => (int) $actor->getKey(),
+        'created' => $result['created'],
+        'unchanged' => $result['unchanged'],
+        'launch_enabled' => false,
+    ]);
+
+    return redirect('/operator/kslp#omnidesk-offers')
+        ->with('success', 'OmniDesk INR launch offers prepared as PAUSED. No payment, free rights or signed license enabled.');
+})->middleware(['password.confirm', 'throttle:3,1'])
+    ->name('operator.kslp.omnidesk.offers.prepare');
 
 // One-click owner-initiated deletion of ONLY exact-preview, old, standalone
 // email-unverified accounts. Disabled until protected backup/release approval.
