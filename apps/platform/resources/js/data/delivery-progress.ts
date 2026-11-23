@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'owner-codebridge-stage-dispatch-draft-20261123',
+        title: 'CodeBridge Release Center: owner-only one-click source staging (draft)',
+        state: 'active',
+        detail: 'SOURCE-ONLY draft: PR #1049 adds a guarded Super Admin request for the fixed CodeBridge main staging workflow. Owner/passkey/password gates, server-side GitHub token, duplicate dispatch protection and audit apply. The stage button fails closed when its capability is absent. A GitHub dispatch acknowledgement is not a staging receipt, signature or production release.',
+        evidence:
+            'PR #1049 is a current-main draft awaiting exact-head CI and independent approval. CodeBridge workflow PR #1142 still requires fresh protected CODEOWNER approval; no GitHub App credential is installed or proved by this source, no owner signing, Elite host installation or live UI change. 24x7 coding remains separately blocked on verified-free-cloud account and private-source consent.',
+    },
+    {
         id: 'modelfabric-quota-aware-routing-20261122',
         title: 'ModelFabric: model-specific free quota failover and additional provider presets',
         state: 'active',
