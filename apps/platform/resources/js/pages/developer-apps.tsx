@@ -19,6 +19,11 @@ type Organization = {
     role: string;
     issuer_status: string;
     product_limit: number;
+    monthly_issue_limit: number | null;
+    registered_products: number;
+    monthly_issued: number;
+    product_remaining: number | null;
+    monthly_remaining: number | null;
     current_period_end: string | null;
 };
 
@@ -441,6 +446,110 @@ export function DeveloperAppsWorkspace({
                                 ? 'This organization has no currently active issuer subscription. Owner approval and recorded commercial entitlement are required before app registration.'
                                 : 'Developer issuance is paused by a platform-wide release gate. An active owner-issued license does not bypass this gate or create an issuer subscription.'}
                         </p>
+                    )}
+                </section>
+
+                <section
+                    id="issuer-quota-snapshot"
+                    aria-labelledby="issuer-quota-heading"
+                    className="bg-card rounded-2xl border p-5 sm:p-6"
+                >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h2
+                                id="issuer-quota-heading"
+                                className="text-base font-bold"
+                            >
+                                Issuer limits · Read-only snapshot
+                            </h2>
+                            <p className="text-muted-foreground mt-2 max-w-3xl text-xs leading-5">
+                                Issuer quota is not a reseller wallet balance.
+                                Counts use the same server-month window as the
+                                delegated license gate. Revoked keys still count
+                                toward issued licenses. Only organizations
+                                where you have license management permission
+                                are shown.
+                            </p>
+                        </div>
+                        <span className="rounded-full border px-3 py-1 text-xs font-semibold">
+                            {canIssueKeys
+                                ? 'Issuance still requires server approval'
+                                : 'Issuance currently disabled'}
+                        </span>
+                    </div>
+                    {organizations.length === 0 ? (
+                        <p className="text-muted-foreground mt-4 text-xs">
+                            No authorized issuer organization is linked to this
+                            account. No quota or credit entitlement is implied.
+                        </p>
+                    ) : (
+                        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                            {organizations.map((organization) => (
+                                <article
+                                    key={organization.id}
+                                    className="border-border rounded-xl border p-4"
+                                >
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <h3 className="text-sm font-bold">
+                                            {organization.name}
+                                        </h3>
+                                        <span className="bg-muted rounded-full px-3 py-1 text-xs font-bold">
+                                            {organization.issuer_status}
+                                        </span>
+                                    </div>
+                                    <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                                        <div>
+                                            <dt className="text-muted-foreground">
+                                                Registered apps
+                                            </dt>
+                                            <dd className="mt-1 font-semibold tabular-nums">
+                                                {organization.registered_products}
+                                                {' / '}
+                                                {organization.issuer_status ===
+                                                'not_subscribed'
+                                                    ? 'Not subscribed'
+                                                    : organization.product_limit}
+                                            </dd>
+                                        </div>
+                                        <div>
+                                            <dt className="text-muted-foreground">
+                                                Monthly licenses issued
+                                            </dt>
+                                            <dd className="mt-1 font-semibold tabular-nums">
+                                                {organization.monthly_issued}
+                                                {' / '}
+                                                {organization.monthly_issue_limit ??
+                                                    'Not subscribed'}
+                                            </dd>
+                                        </div>
+                                        <div>
+                                            <dt className="text-muted-foreground">
+                                                Apps remaining
+                                            </dt>
+                                            <dd className="mt-1 font-semibold tabular-nums">
+                                                {organization.product_remaining ??
+                                                    'Not available'}
+                                            </dd>
+                                        </div>
+                                        <div>
+                                            <dt className="text-muted-foreground">
+                                                Monthly issues remaining
+                                            </dt>
+                                            <dd className="mt-1 font-semibold tabular-nums">
+                                                {organization.monthly_remaining ??
+                                                    'Not available'}
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                    <p className="text-muted-foreground mt-4 text-xs leading-5">
+                                        Remaining figures are policy snapshots,
+                                        not spendable credits, payment proof,
+                                        trial activation or authorization to
+                                        create signed commercial licenses.
+                                    </p>
+                                </article>
+                            ))}
+                        </div>
                     )}
                 </section>
 
