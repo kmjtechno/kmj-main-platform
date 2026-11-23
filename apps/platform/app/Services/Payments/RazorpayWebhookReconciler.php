@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services\Payments;
 
 use DomainException;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use KMJ\MainPlatform\Commerce\Models\CommercialOrder;
@@ -20,6 +22,12 @@ final class RazorpayWebhookReconciler
 {
     private const TRIGGERS = ['payment.captured', 'order.paid'];
 
+    // Allow a verified payment to arrive before the provider order link commits.
+    // Bound retries to avoid permanently scanning unsolicited foreign order IDs.
+    private const LINK_GRACE_MINUTES = 60;
+
+    private const LINK_RETRY_SECONDS = 60;
+
     public function __construct(
         private readonly RazorpayPaymentAdapter $adapter,
         private readonly CommercialOrderService $orders,
@@ -34,7 +42,13 @@ final class RazorpayWebhookReconciler
 
         $events = DB::table('payment_webhook_events')
             ->where('provider', 'razorpay')
-            ->where('processing_status', 'received')
+            ->where(static function (Builder $query): void {
+                $query->where('processing_status', 'received')
+                    ->orWhere(static function (Builder $retry): void {
+                        $retry->where('processing_status', 'awaiting_link')
+                            ->where('updated_at', '<=', now()->subSeconds(self::LINK_RETRY_SECONDS));
+                    });
+            })
             ->whereIn('event_type', self::TRIGGERS)
             ->orderBy('id')
             ->limit(max(1, min($limit, 500)))
@@ -50,7 +64,7 @@ final class RazorpayWebhookReconciler
             };
             if ($outcome['status'] !== null) {
                 DB::table('payment_webhook_events')
-                    ->where('id', $event->id)->where('processing_status', 'received')
+                    ->where('id', $event->id)->where('processing_status', $event->processing_status)
                     ->update([
                         'processing_status' => $outcome['status'],
                         'processing_note' => $outcome['note'],
@@ -78,8 +92,25 @@ final class RazorpayWebhookReconciler
             ? DB::table('commerce_provider_orders')->where('provider', 'razorpay')->where('provider_order_id', $orderRef)->first()
             : null;
 
-        if ($link === null || ! is_string($paymentRef)) {
-            return ['bucket' => 'unmatched', 'status' => 'unmatched', 'note' => 'NO_LINKED_ORDER'];
+        if (! is_string($orderRef) || $orderRef === '' || ! is_string($paymentRef) || $paymentRef === '') {
+            return ['bucket' => 'unmatched', 'status' => 'unmatched', 'note' => 'INVALID_LINK_REFERENCE'];
+        }
+
+        if ($link === null) {
+            // Missing links are not proof of a foreign order while the provider
+            // create/DB commit may still be in flight. Never query provider or
+            // confirm a commercial order until the trusted local link exists.
+            if (Carbon::parse((string) data_get($event, 'received_at'))->lte(now()->subMinutes(self::LINK_GRACE_MINUTES))) {
+                return ['bucket' => 'unmatched', 'status' => 'unmatched', 'note' => 'LINK_WINDOW_EXPIRED'];
+            }
+
+            return ['bucket' => 'retry_later', 'status' => 'awaiting_link', 'note' => 'LINK_PENDING'];
+        }
+
+        // Never use a sandbox provider adapter to confirm a real/live order.
+        // Signature-verified webhook receipt is not independent settlement.
+        if ((string) $link->environment !== 'sandbox') {
+            return ['bucket' => 'rejected', 'status' => 'rejected', 'note' => 'PROVIDER_ENVIRONMENT_MISMATCH'];
         }
 
         try {
