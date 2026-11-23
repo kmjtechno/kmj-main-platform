@@ -123,6 +123,6 @@ void test('KMJ Mail enterprise inbox controls operate on real mailbox records', 
     assert.match(source, /mailbox\.total > mailbox\.page_size/);
     assert.match(source, /forwardMessage/);
     assert.match(source, /aria-label="Select all visible messages"/);
-    assert.match(source, /External inbound is not active/);
+    assert.match(source, /External inbound\s+is not active/);
     assert.doesNotMatch(source, /Gmail inbox synced|External inbox connected/);
 });
