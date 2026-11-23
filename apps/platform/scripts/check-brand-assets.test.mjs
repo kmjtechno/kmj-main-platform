@@ -81,13 +81,25 @@ void test('email templates render the approved KMJ lockup and readable tagline',
         'kmj-auth-transactional',
         'kmj-transactional',
     ]) {
-        const source = readFileSync(`resources/views/emails/${name}.blade.php`, 'utf8');
-        assert.match(source, /src="https:\/\/kmjtechno\.com\/assets\/brand\/kmj-email-lockup-dark\.png"/);
+        const source = readFileSync(
+            `resources/views/emails/${name}.blade.php`,
+            'utf8',
+        );
+        assert.match(
+            source,
+            /src="https:\/\/kmjtechno\.com\/assets\/brand\/kmj-email-lockup-dark\.png"/,
+        );
         assert.match(source, /class="kmj-logo"[^\n]*width="360"/);
         assert.match(source, /\.kmj-logo\s*\{\s*width:300px!important/);
-        assert.match(source, /font-size:13px;[^\n]*>INNOVATE \| BUILD \| SCALE<\/p>/);
+        assert.match(
+            source,
+            /font-size:13px;[^\n]*>INNOVATE \| BUILD \| SCALE<\/p>/,
+        );
     }
 
     const preview = readFileSync('resources/js/pages/mail-center.tsx', 'utf8');
-    assert.match(preview, /src="\/assets\/brand\/kmj-email-lockup-dark\.png"\s+width="320"/);
+    assert.match(
+        preview,
+        /src="\/assets\/brand\/kmj-email-lockup-dark\.png"\s+width="320"/,
+    );
 });
