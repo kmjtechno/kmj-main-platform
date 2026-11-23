@@ -100,7 +100,10 @@ void test('pricing book covers the canonical product registry without enabling c
     assert.equal(new Set(book.products.map((p) => p.slug)).size, 15);
 
     const registry = readFileSync(
-        new URL('../app/Services/Commerce/KmjProductCatalog.php', import.meta.url),
+        new URL(
+            '../app/Services/Commerce/KmjProductCatalog.php',
+            import.meta.url,
+        ),
         'utf8',
     );
     for (const product of book.products) {
