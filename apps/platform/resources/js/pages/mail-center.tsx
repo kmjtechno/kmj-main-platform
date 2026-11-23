@@ -1043,8 +1043,9 @@ export default function MailCenter({
                                         <div className="border-t-4 border-[#d61f42] bg-[#111927] p-6">
                                             <img
                                                 src="/assets/brand/kmj-email-lockup-dark.png"
-                                                width="220"
-                                                alt="KMJ TECHNO"
+                                                width="320"
+                                                className="h-auto max-w-full"
+                                                alt="KMJ TECHNO — INNOVATE | BUILD | SCALE"
                                             />
                                             <p className="mt-6 text-[11px] font-bold tracking-widest text-[#bec8d7] uppercase">
                                                 {activeTemplate.category}

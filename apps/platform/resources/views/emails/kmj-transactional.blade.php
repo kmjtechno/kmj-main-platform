@@ -13,7 +13,7 @@
             .kmj-head { padding-top:28px!important; padding-bottom:26px!important; }
             .kmj-main { padding-top:36px!important; padding-bottom:31px!important; }
             .kmj-title { font-size:31px!important; line-height:38px!important; }
-            .kmj-logo { width:240px!important; max-width:100%!important; }
+            .kmj-logo { width:300px!important; max-width:100%!important; }
             .kmj-button { display:block!important; text-align:center!important; }
         }
     </style>
@@ -26,7 +26,7 @@
                 <tr><td height="5" bgcolor="#cd2141" style="font-size:0;line-height:5px;background:#cd2141;">&nbsp;</td></tr>
                 <tr><td class="kmj-pad kmj-head" bgcolor="#101722" style="padding:35px 43px 33px;background:#101722;">
                     <a href="https://kmjtechno.com" style="text-decoration:none;display:inline-block;">
-                        <img class="kmj-logo" src="https://kmjtechno.com/assets/brand/kmj-email-lockup-dark.png" width="300" alt="KMJ TECHNO — INNOVATE | BUILD | SCALE" style="display:block;border:0;outline:0;width:300px;max-width:100%;height:auto;color:#ffffff;font-weight:bold;font-size:20px;">
+                        <img class="kmj-logo" src="https://kmjtechno.com/assets/brand/kmj-email-lockup-dark.png" width="360" alt="KMJ TECHNO — INNOVATE | BUILD | SCALE" style="display:block;border:0;outline:0;width:360px;max-width:100%;height:auto;color:#ffffff;font-weight:bold;font-size:20px;">
                     </a>
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:25px;"><tr><td style="border-top:1px solid #353c49;font-size:1px;line-height:1px;">&nbsp;</td></tr></table>
                     <p style="margin:20px 0 0;color:#c4ccd8;font-size:11px;line-height:19px;font-weight:bold;letter-spacing:1.6px;text-transform:uppercase;">{{ $eyebrow }}</p>
@@ -70,7 +70,7 @@
                 </td></tr>
                 <tr><td class="kmj-pad" bgcolor="#f9fafc" style="padding:27px 43px;border:1px solid #dfe4ea;border-top:0;background:#f9fafc;">
                     <p style="margin:0 0 5px;color:#172236;font-size:16px;line-height:23px;font-weight:bold;">KMJ TECHNO</p>
-                    <p style="margin:0 0 16px;color:#79869a;font-size:11px;line-height:18px;letter-spacing:1.3px;font-weight:bold;">INNOVATE | BUILD | SCALE</p>
+                    <p style="margin:0 0 16px;color:#79869a;font-size:13px;line-height:20px;letter-spacing:1px;font-weight:bold;">INNOVATE | BUILD | SCALE</p>
                     <p style="margin:0 0 12px;color:#67758b;font-size:12px;line-height:21px;">This is a service notification about your KMJ TECHNO account or a transaction you initiated. It is not a promotional email.</p>
                     <p style="margin:0;color:#67758b;font-size:12px;line-height:20px;"><a href="https://kmjtechno.com" style="color:#a91d3d;text-decoration:none;">kmjtechno.com</a> &nbsp; | &nbsp; <a href="mailto:info@kmjtechno.com" style="color:#a91d3d;text-decoration:none;">Support</a></p>
                 </td></tr>

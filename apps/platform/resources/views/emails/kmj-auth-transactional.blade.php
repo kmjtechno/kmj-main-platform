@@ -13,7 +13,7 @@
             .kmj-header { padding-top:32px!important; padding-bottom:32px!important; }
             .kmj-body { padding-top:35px!important; padding-bottom:33px!important; }
             .kmj-title { font-size:30px!important; line-height:37px!important; }
-            .kmj-logo { width:260px!important; max-width:100%!important; }
+            .kmj-logo { width:300px!important; max-width:100%!important; }
             .kmj-cta { display:block!important; text-align:center!important; }
             .kmj-footer { text-align:left!important; }
         }
@@ -34,7 +34,7 @@
                                 <tr>
                                     <td align="left" valign="middle">
                                         <a href="https://kmjtechno.com" target="_blank" style="text-decoration:none;display:inline-block;border:0;">
-                                            <img class="kmj-logo" src="https://kmjtechno.com/assets/brand/kmj-email-lockup-dark.png" width="320" alt="KMJ TECHNO | INNOVATE BUILD SCALE" style="display:block;border:0;outline:none;width:320px;max-width:100%;height:auto;color:#ffffff;font-size:24px;line-height:32px;font-weight:bold;">
+                                            <img class="kmj-logo" src="https://kmjtechno.com/assets/brand/kmj-email-lockup-dark.png" width="360" alt="KMJ TECHNO | INNOVATE BUILD SCALE" style="display:block;border:0;outline:none;width:360px;max-width:100%;height:auto;color:#ffffff;font-size:24px;line-height:32px;font-weight:bold;">
                                         </a>
                                     </td>
                                 </tr>
@@ -105,7 +105,7 @@
                     <tr>
                         <td class="kmj-gutter kmj-footer" bgcolor="#f9fafc" style="padding:29px 46px;border:1px solid #e2e7ed;border-top:0;border-radius:0 0 16px 16px;background-color:#f9fafc;text-align:left;">
                             <p style="margin:0 0 7px;color:#172238;font-size:16px;line-height:23px;font-weight:bold;letter-spacing:0.2px;">KMJ TECHNO</p>
-                            <p style="margin:0 0 17px;color:#7a879b;font-size:11px;line-height:18px;font-weight:bold;letter-spacing:1.4px;">INNOVATE | BUILD | SCALE</p>
+                            <p style="margin:0 0 17px;color:#7a879b;font-size:13px;line-height:20px;font-weight:bold;letter-spacing:1px;">INNOVATE | BUILD | SCALE</p>
                             <p style="margin:0 0 12px;color:#66758b;font-size:13px;line-height:21px;">Official account-security communication from KMJ TECHNO. Please verify the sender domain before following security links.</p>
                             <p style="margin:0;color:#65738a;font-size:12px;line-height:20px;">
                                 <a href="https://kmjtechno.com" style="color:#9d2540;text-decoration:none;">kmjtechno.com</a>
