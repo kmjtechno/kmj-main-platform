@@ -4,7 +4,6 @@ import {
     BadgeCheck,
     Boxes,
     Clock3,
-    Code2,
     Download,
     KeyRound,
     Laptop2,
@@ -205,7 +204,8 @@ export default function LicensingHub({
                             {
                                 number: '04',
                                 title: 'Devices & downloads',
-                                detail: 'Device transfer and signed releases require verification',
+                                detail:
+                                    'Device transfer and signed releases require verification',
                                 href: '#my-devices',
                                 action: 'Review device records',
                             },
@@ -269,7 +269,10 @@ export default function LicensingHub({
                                 className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-bold text-white hover:bg-red-700"
                             >
                                 Review licenses
-                                <ArrowRight className="size-4" aria-hidden="true" />
+                                <ArrowRight
+                                    className="size-4"
+                                    aria-hidden="true"
+                                />
                             </a>
                         ) : product_entitlements.length > 0 ? (
                             <a
