@@ -496,3 +496,96 @@
 @media (prefers-reduced-motion: reduce) {
     .kmj-mail-approved-shell * {scroll-behavior:auto!important;transition-duration:0.01ms!important}
 }
+
+/* Exact approved: compact triage tabs and easy-to-scan sender rows. */
+.kmj-mail-approved-shell .kmj-mail-tabs {
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr)) 32px;
+    align-items:center;
+    gap:1px;
+    margin:5px -4px 0;
+    border-bottom:1px solid #2c3b50;
+    padding:0 4px;
+}
+.kmj-mail-approved-shell .kmj-mail-tabs button {
+    min-width:0;
+    min-height:40px;
+    font-size:11px;
+    font-weight:650;
+    color:#b4c3d8;
+    padding:6px 2px;
+}
+.kmj-mail-approved-shell .kmj-mail-tabs button[aria-selected='true'] {
+    color:#f4f6fa;
+    border-bottom:3px solid #fa315d;
+    background:linear-gradient(0deg,#fb275117,transparent);
+}
+.kmj-mail-approved-shell .kmj-mail-tabs button:hover {color:white;background:#121d2d}
+.kmj-mail-approved-shell .kmj-mail-sender-avatar {
+    display:inline-grid;
+    place-items:center;
+    width:27px;
+    height:27px;
+    flex:0 0 27px;
+    border-radius:50%;
+    background:linear-gradient(135deg,#556fab,#263969);
+    color:#fff;
+    font-size:11px;
+    font-weight:800;
+}
+.kmj-mail-approved-shell .kmj-mail-search-labels button:hover {background:#1b2639}
+.kmj-mail-approved-shell .kmj-mail-thread-messages > article {
+    border-radius:0 0 12px 12px;
+    border-top:0;
+    background:linear-gradient(155deg,#0e1726,#090f19);
+}
+.kmj-mail-approved-shell .kmj-mail-message-list button {width:100%}
+.kmj-mail-approved-shell .kmj-mail-message-list button .truncate {
+    min-width:0;
+    font-size:12px;
+}
+.kmj-mail-approved-shell .kmj-mail-message-list button > div:nth-child(2) {
+    font-size:13px;
+}
+.kmj-mail-approved-shell .kmj-mail-search-labels button:focus-visible,
+.kmj-mail-approved-shell .kmj-mail-tabs button:focus-visible {
+    outline:2px solid #f43b6d;
+    outline-offset:1px;
+}
+.kmj-mail-approved-shell .kmj-mail-ai-actions button {
+    display:flex;
+    width:100%;
+    align-items:center;
+    gap:9px;
+    min-height:35px;
+    padding:7px 9px;
+    text-align:left;
+    border-radius:8px;
+    border:1px solid #384961;
+    color:#edf1fb;
+    background:#151d31;
+    font-size:11px;
+    font-weight:600;
+}
+.kmj-mail-approved-shell .kmj-mail-ai-actions button:hover {
+    border-color:#bd529c;
+    background:#261c38;
+}
+.kmj-mail-approved-shell .kmj-mail-ai-actions button:disabled {
+    opacity:.5;
+    cursor:not-allowed;
+}
+.kmj-mail-approved-shell .kmj-mail-ai-actions a:hover {border-color:#c64d95}
+.kmj-mail-approved-shell .kmj-mail-ai-result {
+    border-radius:12px;
+    border-color:#b755ab;
+    background:linear-gradient(120deg,#391f49,#1c2039);
+}
+@media (max-width: 1120px) {
+    .kmj-mail-approved-shell .kmj-mail-tabs button {font-size:10px}
+}
+@media (max-width: 700px) {
+    .kmj-mail-approved-shell .kmj-mail-ai-actions {margin-top:12px}
+    .kmj-mail-approved-shell .kmj-mail-metrics .kmj-mail-metric {min-height:55px}
+    .kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-floating-compose {margin:0;max-width:100%}
+}
