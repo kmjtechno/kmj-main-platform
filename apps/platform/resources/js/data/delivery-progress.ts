@@ -146,6 +146,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-helper-split-modes-20261123',
+        title: 'Release helper split modes: prepare-only and post-activation migrate',
+        state: 'active',
+        detail: 'The owner release helper can stop right after the owner approval and run the live-candidate migration later, so no terminal has to wait for activation. Default behaviour is unchanged.',
+        evidence:
+            'Static and argument contract tests and exact-head CI only. Not run on Elite.',
+    },
+    {
         id: 'mail-logo-trim-20261123',
         title: 'Email logo trim: larger tagline using a lossless crop of the approved lockup',
         state: 'active',

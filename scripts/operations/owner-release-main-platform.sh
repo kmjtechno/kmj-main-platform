@@ -4,7 +4,10 @@
 # stays the separate guarded Supervisor/broker step, and the owner approval flags below are the owner's own
 # explicit attestation by running this script as root.
 #
-# Usage (root, on KMJ-elite):  bash owner-release-main-platform.sh <40-hex-main-sha>
+# Usage (root, on KMJ-elite):
+#   bash owner-release-main-platform.sh <40-hex-main-sha>                  full chain (unchanged behaviour)
+#   bash owner-release-main-platform.sh --prepare-only <40-hex-main-sha>   stage..approval, then STOP (no wait)
+#   bash owner-release-main-platform.sh --post-activation <40-hex-main-sha> migrate the LIVE candidate only
 # The caller pins THIS file by sha256 (given out of band) before running it. The helpers it downloads are
 # pinned below by sha256 and fetched from the same exact commit; a mismatch aborts before anything runs.
 set -Eeuo pipefail
@@ -20,6 +23,11 @@ PIN_MATERIALIZE=fd29c4ebcf224c45786f8cedd0e0d42bbfd414d706678fe820e0ead4eea3984f
 PIN_RECOVERY=d3f977dbd68bd986e888c720c2bcc49e1c02e884878bfc4e4c0903f53bdf3212
 
 fail() { printf 'KMJ_OWNER_RELEASE=BLOCKED_%s\n' "$1"; exit 2; }
+MODE=full
+if [[ "$#" -eq 2 && ( "$1" == --prepare-only || "$1" == --post-activation ) ]]; then
+  MODE="${1#--}"
+  shift
+fi
 [[ "$#" -eq 1 && "$1" =~ ^[a-f0-9]{40}$ ]] || fail EXACT_SHA_REQUIRED
 SHA="$1"
 S12="${SHA:0:12}"
@@ -27,6 +35,14 @@ S12="${SHA:0:12}"
 [[ -L "$ROOT/current" ]] || fail LIVE_POINTER_MISSING
 LIVE="$(basename "$(readlink -f "$ROOT/current")")"
 [[ "$LIVE" =~ ^platform-[a-f0-9]{12}$ ]] || fail LIVE_NAME_UNEXPECTED
+if [[ "$MODE" == post-activation ]]; then
+  # Only the migration of the candidate that is ALREADY live. Nothing is staged, approved or switched here.
+  [[ "$LIVE" == "platform-$S12" ]] || fail CANDIDATE_NOT_LIVE
+  runuser -u kmjprod -- php8.4 "$ROOT/current/apps/platform/artisan" migrate --force
+  echo POST_ACTIVATION_MIGRATE_DONE
+  echo CHAIN_EXIT=0
+  exit 0
+fi
 [[ "$LIVE" != "platform-$S12" ]] || fail ALREADY_LIVE
 
 MP="https://raw.githubusercontent.com/$HELPERS_REPO/$SHA/scripts/operations"
@@ -53,6 +69,10 @@ python3 switch.py switch --apply --plan-id "$PID" --app-dir "$APP" --shared "$SH
 /bin/bash -p materialize.sh "$SHA" "$LIVE"
 bash recovery.sh "$SHA" "$LIVE"
 python3 approval.py --sha="$SHA" --live="$LIVE" --apply --attest-backup --attest-rollback
+if [[ "$MODE" == prepare-only ]]; then
+  echo APPROVAL_DONE_PREPARE_ONLY_ACTIVATE_THEN_RUN_POST_ACTIVATION
+  exit 0
+fi
 echo APPROVAL_DONE_WAITING_FOR_ACTIVATION
 
 for _ in $(seq 1 180); do
