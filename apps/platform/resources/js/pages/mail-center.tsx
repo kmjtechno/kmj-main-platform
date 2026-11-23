@@ -1041,24 +1041,12 @@ export default function MailCenter({
                                 <div className="bg-[#edf0f4] p-5">
                                     <div className="mx-auto max-w-xl overflow-hidden rounded-xl border bg-white shadow-sm">
                                         <div className="border-t-4 border-[#d61f42] bg-[#111927] p-6">
-                                            <div className="flex items-center gap-3">
-                                                <img
-                                                    src="/assets/brand/kmj-sender-avatar.png"
-                                                    width="64"
-                                                    height="64"
-                                                    className="h-16 w-16 object-contain"
-                                                    alt="KMJ TECHNO"
-                                                />
-                                                <div>
-                                                    <p className="m-0 text-[27px] leading-8 font-extrabold">
-                                                        <span className="text-[#ff263f]">KMJ</span>{' '}
-                                                        <span className="text-white">TECHNO</span>
-                                                    </p>
-                                                    <p className="m-0 text-[13px] leading-[19px] font-bold text-white">
-                                                        INNOVATE <span className="text-[#ff314a]">|</span> BUILD <span className="text-[#ff314a]">|</span> SCALE
-                                                    </p>
-                                                </div>
-                                            </div>
+                                            <img
+                                                src="/assets/brand/kmj-email-lockup-dark-trim.png"
+                                                width="440"
+                                                className="h-auto max-w-full"
+                                                alt="KMJ TECHNO — INNOVATE | BUILD | SCALE"
+                                            />
                                             <p className="mt-6 text-[11px] font-bold tracking-widest text-[#bec8d7] uppercase">
                                                 {activeTemplate.category}
                                             </p>
