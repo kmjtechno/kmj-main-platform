@@ -32,15 +32,17 @@ final class KslpDeveloperWorkspaceQuery
                 if ($subscription === null) {
                     $org['issuer_status'] = 'not_subscribed';
                     $org['product_limit'] = 0;
+                    $org['monthly_issue_limit'] = null;
                     $org['current_period_end'] = null;
                 } else {
                     $org['issuer_status'] = (string) $subscription->status;
                     if ($org['issuer_status'] === 'active'
                         && $subscription->current_period_end !== null
-                        && now()->greaterThan($subscription->current_period_end)) {
+                        && now()->greaterThanOrEqualTo($subscription->current_period_end)) {
                         $org['issuer_status'] = 'expired';
                     }
                     $org['product_limit'] = (int) $subscription->product_limit;
+                    $org['monthly_issue_limit'] = (int) $subscription->monthly_issue_limit;
                     $org['current_period_end'] = $subscription->current_period_end;
                 }
 
@@ -48,6 +50,40 @@ final class KslpDeveloperWorkspaceQuery
             })->values()->all();
 
         $tenantIds = array_column($organizations, 'id');
+
+        // These read-only aggregates use the same issuer monthly
+        // server-clock window as KslpLicenseControlPlane::issueDelegated().
+        // They are advisory snapshots, never spendable reseller credits or
+        // proof that a payment or product release has been authorized.
+        $productCounts = $tenantIds === [] ? collect() : DB::table('kslp_licensed_products')
+            ->whereIn('organization_id', $tenantIds)
+            ->select('organization_id')
+            ->selectRaw('COUNT(*) AS total')
+            ->groupBy('organization_id')
+            ->pluck('total', 'organization_id');
+        $issuedCounts = $tenantIds === [] ? collect() : DB::table('kslp_licenses')
+            ->whereIn('issuer_organization_id', $tenantIds)
+            ->where('created_at', '>=', now()->startOfMonth())
+            ->select('issuer_organization_id')
+            ->selectRaw('COUNT(*) AS total')
+            ->groupBy('issuer_organization_id')
+            ->pluck('total', 'issuer_organization_id');
+
+        foreach ($organizations as &$organization) {
+            $registered = (int) ($productCounts[$organization['id']] ?? 0);
+            $issued = (int) ($issuedCounts[$organization['id']] ?? 0);
+            $active = $organization['issuer_status'] === 'active';
+            $monthlyLimit = $organization['monthly_issue_limit'];
+
+            $organization['registered_products'] = $registered;
+            $organization['monthly_issued'] = $issued;
+            $organization['product_remaining'] = $active
+                ? max(0, $organization['product_limit'] - $registered) : null;
+            $organization['monthly_remaining'] = $active && $monthlyLimit !== null
+                ? max(0, $monthlyLimit - $issued) : null;
+        }
+        unset($organization);
+
         $products = $tenantIds === [] ? [] : DB::table('kslp_licensed_products')
             ->whereIn('organization_id', $tenantIds)
             ->orderBy('created_at', 'desc')
