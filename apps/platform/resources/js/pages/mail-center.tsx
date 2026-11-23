@@ -667,16 +667,96 @@ export default function MailCenter({
                                         Find
                                     </button>
                                 </form>
-                                <div className="mt-3 space-y-1.5">
-                                    {mailbox.items.map((item) => (
+                                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-background/30 p-2">
+                                    <label className="flex items-center gap-2 text-xs font-semibold">
+                                        <input
+                                            type="checkbox"
+                                            aria-label="Select all visible messages"
+                                            checked={allPageSelected}
+                                            onChange={() =>
+                                                setSelectedIds(
+                                                    allPageSelected
+                                                        ? []
+                                                        : mailbox.items.map((item) => item.id),
+                                                )
+                                            }
+                                            disabled={mailbox.items.length === 0}
+                                            className="size-4 accent-red-500"
+                                        />
+                                        Select page
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-muted-foreground text-xs">
+                                            {mailbox.total} total
+                                        </span>
                                         <button
                                             type="button"
-                                            key={item.id}
                                             onClick={() =>
-                                                navigate(folder, item.id, q)
+                                                navigate(folder, undefined, q, mailbox.page)
                                             }
+                                            className="flex min-h-9 items-center gap-1 rounded-lg border px-2 text-xs font-semibold"
+                                            aria-label="Refresh mail list"
+                                        >
+                                            <RefreshCw className="size-3.5" />
+                                            Refresh
+                                        </button>
+                                    </div>
+                                </div>
+                                {selectedIds.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/5 p-2">
+                                        <span className="text-xs font-bold text-red-500">
+                                            {selectedIds.length} selected
+                                        </span>
+                                        {(folder === 'inbox' || folder === 'archive') && (
+                                            <>
+                                                <button type="button" disabled={busy} onClick={() => manageMessages('read')} className="rounded-lg border px-2 py-2 text-xs">Mark read</button>
+                                                <button type="button" disabled={busy} onClick={() => manageMessages('unread')} className="rounded-lg border px-2 py-2 text-xs">Mark unread</button>
+                                            </>
+                                        )}
+                                        {folder === 'inbox' && (
+                                            <button type="button" disabled={busy} onClick={() => manageMessages('archive')} className="rounded-lg border px-2 py-2 text-xs">Archive</button>
+                                        )}
+                                        {folder === 'archive' && (
+                                            <button type="button" disabled={busy} onClick={() => manageMessages('unarchive')} className="rounded-lg border px-2 py-2 text-xs">To inbox</button>
+                                        )}
+                                        {folder !== 'trash' && folder !== 'drafts' && (
+                                            <button type="button" disabled={busy} onClick={() => manageMessages(folder === 'starred' ? 'unstar' : 'star')} className="rounded-lg border px-2 py-2 text-xs">
+                                                {folder === 'starred' ? 'Unstar' : 'Star'}
+                                            </button>
+                                        )}
+                                        {folder === 'trash' ? (
+                                            <button type="button" disabled={busy} onClick={() => manageMessages('restore')} className="rounded-lg border px-2 py-2 text-xs">Restore</button>
+                                        ) : (
+                                            <button type="button" disabled={busy} onClick={() => manageMessages('trash')} className="rounded-lg border px-2 py-2 text-xs">Move to Trash</button>
+                                        )}
+                                    </div>
+                                )}
+                                <div className="mt-3 space-y-1.5">
+                                    {mailbox.items.map((item) => (
+                                        <div
+                                            key={item.id}
+                                            className="flex items-start gap-2"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                aria-label={'Select ' + (item.subject || 'message')}
+                                                checked={selectedIds.includes(item.id)}
+                                                onChange={(event) =>
+                                                    setSelectedIds((previous) =>
+                                                        event.target.checked
+                                                            ? [...previous, item.id]
+                                                            : previous.filter((id) => id !== item.id),
+                                                    )
+                                                }
+                                                className="mt-4 size-4 shrink-0 accent-red-500"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    navigate(folder, item.id, q, mailbox.page)
+                                                }
                                             className={
-                                                'w-full rounded-xl border p-3 text-left transition hover:border-red-500/40 ' +
+                                                'min-w-0 flex-1 rounded-xl border p-3 text-left transition hover:border-red-500/40 ' +
                                                 (selected?.id === item.id
                                                     ? 'border-red-500/50 bg-red-500/5'
                                                     : 'bg-background/30')
@@ -687,7 +767,10 @@ export default function MailCenter({
                                                     {item.unread && (
                                                         <span className="size-2 rounded-full bg-red-500" />
                                                     )}
-                                                    {folder === 'inbox'
+                                                    {item.starred && (
+                                                        <Star className="size-3 fill-amber-400 text-amber-400" />
+                                                    )}
+                                                    {(item.folder === 'inbox' || item.folder === 'archive')
                                                         ? (item.sender_email ??
                                                           contactName(
                                                               item.sender_user_id,
@@ -716,7 +799,8 @@ export default function MailCenter({
                                             <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-5">
                                                 {item.snippet}
                                             </p>
-                                        </button>
+                                            </button>
+                                        </div>
                                     ))}
                                     {mailbox.items.length === 0 && (
                                         <div className="rounded-xl border border-dashed px-4 py-12 text-center">
@@ -731,6 +815,34 @@ export default function MailCenter({
                                         </div>
                                     )}
                                 </div>
+                                {mailbox.total > mailbox.page_size && (
+                                    <div className="mt-4 flex items-center justify-between gap-2 border-t pt-3">
+                                        <span className="text-muted-foreground text-xs">
+                                            {Math.min((mailbox.page - 1) * mailbox.page_size + 1, mailbox.total)}–
+                                            {Math.min(mailbox.page * mailbox.page_size, mailbox.total)} of {mailbox.total}
+                                        </span>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                disabled={mailbox.page <= 1}
+                                                onClick={() => navigate(folder, undefined, q, mailbox.page - 1)}
+                                                className="flex min-h-9 items-center gap-1 rounded-lg border px-3 text-xs disabled:opacity-40"
+                                            >
+                                                <ChevronLeft className="size-3.5" />
+                                                Previous
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={!mailbox.has_more}
+                                                onClick={() => navigate(folder, undefined, q, mailbox.page + 1)}
+                                                className="flex min-h-9 items-center gap-1 rounded-lg border px-3 text-xs disabled:opacity-40"
+                                            >
+                                                Next
+                                                <ChevronRight className="size-3.5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </>
                         )}
                         {view === 'templates' && (
