@@ -9,8 +9,8 @@ use App\Services\Licensing\OmniDesk\OmniDeskTrialSelfServiceDiscovery;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
 use Inertia\Inertia;
+use KMJ\MainPlatform\Organizations\Services\OrganizationCapabilityContext;
 
 // Already inside the existing auth + verified web route group.
 // No independent AuthSP login, backend, signer or licensing database.
@@ -37,7 +37,6 @@ Route::get('licensing', function (
 
     return $response;
 })->name('licensing.hub');
-
 
 // Mutating only the one canonical first-party KSLP trial ledger. This route is
 // required from web.php inside auth+verified WEB middleware, so Laravel's
