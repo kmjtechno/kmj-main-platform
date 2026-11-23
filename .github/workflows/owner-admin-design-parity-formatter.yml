@@ -6,6 +6,8 @@ on:
       - 'apps/platform/resources/js/layouts/owner-module-shell.tsx'
       - 'apps/platform/resources/js/pages/**'
       - 'apps/platform/scripts/check-owner-design-parity.test.mjs'
+      - 'apps/platform/scripts/check-owner-product-editor-state.test.mjs'
+      - 'apps/platform/resources/private/kmj-commercial-pricebook-20261123.json'
       - '.github/workflows/owner-admin-design-parity-formatter.yml'
   workflow_dispatch:
 jobs:
@@ -31,12 +33,18 @@ jobs:
             resources/js/layouts/owner-module-shell.tsx \
             resources/js/pages/services/ai-providers.tsx \
             resources/js/pages/services/codebridge.tsx \
-            scripts/check-owner-design-parity.test.mjs
+            scripts/check-owner-design-parity.test.mjs \
+            resources/js/pages/operator-products.tsx \
+            scripts/check-owner-product-editor-state.test.mjs \
+            resources/private/kmj-commercial-pricebook-20261123.json
           git diff --no-ext-diff -- \
             resources/css/owner-module-shell.css \
             resources/js/layouts/owner-module-shell.tsx \
             resources/js/pages/services/ai-providers.tsx \
             resources/js/pages/services/codebridge.tsx \
-            scripts/check-owner-design-parity.test.mjs
+            scripts/check-owner-design-parity.test.mjs \
+            resources/js/pages/operator-products.tsx \
+            scripts/check-owner-product-editor-state.test.mjs \
+            resources/private/kmj-commercial-pricebook-20261123.json
           echo 'LIVE_HOST_MUTATION=NONE'
           echo 'GIT_BRANCH_WRITE=NONE'
