@@ -861,12 +861,12 @@
 }
 /* Original approved owner navigation is compact enough to show Kristi.
  * Scope these density refinements only to the Mail route. */
-.owner-module-shell[data-owner-mail='true'] .owner-sidebar > a:not(.owner-sidebar-kristi),
-.owner-module-shell[data-owner-mail='true'] .owner-sidebar nav > a {
+[data-owner-mail='true'] .owner-sidebar > a:not(.owner-sidebar-kristi),
+[data-owner-mail='true'] .owner-sidebar nav > a {
     min-height: 34px;
     font-size: 12px;
 }
-.owner-module-shell[data-owner-mail='true'] .owner-sidebar nav h2 {
+[data-owner-mail='true'] .owner-sidebar nav h2 {
     font-size: 10px;
 }
 @media (max-width: 700px) {
