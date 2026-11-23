@@ -238,10 +238,10 @@ final class OmniDeskOfferCatalog
                 'commercial_use' => $offer['features']['commercial_use'],
                 'available' => $activeProduct
                     && ($offer['pricing_model'] !== 'subscription'
-                        || (bool) $product?->getAttribute('purchase_enabled'))
+                        || (bool) $product->getAttribute('purchase_enabled'))
                     && $plan instanceof Plan
                     && $plan->getAttribute('status') === 'active'
-                    && (string) $plan->getAttribute('product_id') === (string) $product?->getKey(),
+                    && (string) $plan->getAttribute('product_id') === (string) $product->getKey(),
             ];
         }
 
