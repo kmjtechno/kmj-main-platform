@@ -848,11 +848,16 @@ export default function MailCenter({
                                         <span className="min-w-0 text-slate-200">
                                             {mailbox.total} results in{' '}
                                             <strong>
-                                                {folderDefs.find(
-                                                    (item) => item.id === folder,
-                                                )?.label}
+                                                {
+                                                    folderDefs.find(
+                                                        (item) =>
+                                                            item.id === folder,
+                                                    )?.label
+                                                }
                                             </strong>{' '}
-                                            for “{activeSearch}”. Colored shortcuts search this folder; they are not saved labels.
+                                            for “{activeSearch}”. Colored
+                                            shortcuts search this folder; they
+                                            are not saved labels.
                                         </span>
                                         <button
                                             type="button"
@@ -2197,7 +2202,11 @@ export default function MailCenter({
                                                     type="button"
                                                     onClick={() => {
                                                         setSearch('');
-                                                        navigate(folder, undefined, '');
+                                                        navigate(
+                                                            folder,
+                                                            undefined,
+                                                            '',
+                                                        );
                                                     }}
                                                     className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-[#e62446] to-[#b40c32] px-4 text-sm font-bold text-white transition hover:brightness-110"
                                                 >
