@@ -75,7 +75,10 @@ final class RazorpayPaymentAdapter implements PaymentProviderAdapter
             || ($body['captured'] ?? null) !== true
             || ! is_string($body['currency'] ?? null)
             || ! is_int($body['amount'] ?? null) || $body['amount'] < 1
-            || (int) ($body['amount_refunded'] ?? 0) !== 0
+            // Missing, boolean, string and malformed refund amounts are
+            // unknown settlement state, never proof of zero refunds.
+            || ! is_int($body['amount_refunded'] ?? null)
+            || $body['amount_refunded'] !== 0
             || ($expectedOrderId !== null && ($body['order_id'] ?? null) !== $expectedOrderId)) {
             throw new DomainException('RAZORPAY_PAYMENT_NOT_SETTLED');
         }
