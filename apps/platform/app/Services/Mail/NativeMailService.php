@@ -65,15 +65,16 @@ final class NativeMailService
         $query = DB::table('kmj_mail_messages')
             ->where('mailbox_user_id', (int) $user->getKey());
 
+        $contentSize = (clone $query)
+            ->where('folder', '!=', 'trash')
+            ->selectRaw('COALESCE(SUM(LENGTH(body) + LENGTH(subject)), 0) AS bytes')
+            ->first();
+
         return [
             'total_messages' => (int) (clone $query)->where('folder', '!=', 'trash')->count(),
             'unread' => (int) (clone $query)->where('folder', 'inbox')->whereNull('read_at')->count(),
-            // PostgreSQL/SQLite length is an approximation for UTF-8 storage;
-            // label the metric as mail text, never as total server disk usage.
-            'mail_text_bytes' => (int) (clone $query)
-                ->where('folder', '!=', 'trash')
-                ->selectRaw('COALESCE(SUM(LENGTH(body) + LENGTH(subject)), 0) AS bytes')
-                ->value('bytes'),
+            // Only approximate message text, never server storage or a quota.
+            'mail_text_bytes' => (int) ($contentSize->bytes ?? 0),
         ];
     }
 
