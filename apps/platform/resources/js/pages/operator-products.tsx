@@ -157,8 +157,8 @@ export default function OperatorProducts({
                         These numbers are nonbinding research candidates, NOT
                         live catalog plans, payable offers or licensed access.
                         Prices exclude applicable taxes and separately billed
-                        customer infrastructure, AI, relay and installation.
-                        No gateway, order, subscriber or entitlement is changed.
+                        customer infrastructure, AI, relay and installation. No
+                        gateway, order, subscriber or entitlement is changed.
                     </p>
                     {pricingProposal?.status === 'owner_review_only' ? (
                         <div className="mt-4 overflow-x-auto">
@@ -223,8 +223,12 @@ export default function OperatorProducts({
                             </table>
                         </div>
                     ) : (
-                        <p className="text-muted-foreground mt-4 text-sm" role="status">
-                            Price proposals are unavailable. No customer charge is authorized.
+                        <p
+                            className="text-muted-foreground mt-4 text-sm"
+                            role="status"
+                        >
+                            Price proposals are unavailable. No customer charge
+                            is authorized.
                         </p>
                     )}
                 </details>
