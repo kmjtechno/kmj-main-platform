@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-mail-ai-copilot-20261123',
+        title: 'KMJ Mail: AI-assisted Hinglish compose, Hindi explain and smart reply',
+        state: 'active',
+        detail: 'Source candidate: authentic owner/staff Mail Center Copilot UI with explicit per-request consent, editable AI draft and human-only Send. Backend uses tenant-scoped ModelFabric verified-zero private no-training routes, reads only requesting user mailbox, fails closed when none is available. No external inbox, AI auto-send or paid provider fallback.',
+        evidence:
+            'Feature branch feat/kmj-mail-ai-copilot-20261123; gated PHP consent/isolation/no-route tests and connected browser UI. Not production live until exact SHA green CI and owner-pinned Elite release.',
+    },
+    {
         id: 'kmj-mail-inbox-management-20261123',
         title: 'KMJ Mail: functional inbox management and private bulk organization',
         state: 'active',
