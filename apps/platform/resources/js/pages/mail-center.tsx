@@ -1,8 +1,14 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import MailAiCopilot from '@/components/mail-ai-copilot';
+import '../../css/kmj-mail-approved.css';
 import { useMemo, useState } from 'react';
 import {
     Archive,
+    HardDrive,
+    Mail,
+    SlidersHorizontal,
+    Sparkles,
+    X,
     ArrowLeft,
     ChevronRight,
     Forward,
@@ -79,6 +85,11 @@ type Props = {
         page_size: number;
         has_more: boolean;
     };
+    mailMetrics: {
+        total_messages: number;
+        unread: number;
+        mail_text_bytes: number;
+    };
     folder: Folder;
     q: string;
     selectedThread: { items: ThreadItem[]; thread_id: string } | null;
@@ -113,6 +124,7 @@ export default function MailCenter({
     audience,
     templates,
     mailbox,
+    mailMetrics,
     folder,
     q,
     selectedThread,
@@ -140,6 +152,10 @@ export default function MailCenter({
     const isOwner = audience === 'owner';
     const base = isOwner ? '/operator/mail' : '/team/mail';
     const [view, setView] = useState<View>('mail');
+    const [mailTab, setMailTab] = useState<
+        'primary' | 'team' | 'updates' | 'system'
+    >('primary');
+    const [composerMinimized, setComposerMinimized] = useState(false);
     const [search, setSearch] = useState(q);
     const [busy, setBusy] = useState(false);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -200,6 +216,7 @@ export default function MailCenter({
         setBody('');
         setDraftId(null);
         setReplyId(null);
+        setComposerMinimized(false);
         setView('compose');
     };
 
@@ -230,6 +247,7 @@ export default function MailCenter({
         setBody('');
         setDraftId(null);
         setReplyId(latest.id);
+        setComposerMinimized(false);
         setView('compose');
     };
 
@@ -246,6 +264,7 @@ export default function MailCenter({
         setBody(selected.body);
         setDraftId(selected.id);
         setReplyId(null);
+        setComposerMinimized(false);
         setView('compose');
     };
 
@@ -377,6 +396,7 @@ export default function MailCenter({
         );
         setDraftId(null);
         setReplyId(null);
+        setComposerMinimized(false);
         setView('compose');
     };
 
@@ -427,10 +447,25 @@ export default function MailCenter({
     const selected =
         selectedThread?.items.find((item) => item.id === selectedMessageId) ??
         selectedThread?.items.at(-1);
+    // These are UI filters on the current page only, not invented server-side
+    // priority or spam classifiers. The actual full mailbox remains accessible.
+    const visibleItems = useMemo(() => {
+        if (mailTab === 'primary') return mailbox.items;
+        return mailbox.items.filter((item) => {
+            if (mailTab === 'team') return item.recipient_user_id !== null;
+            if (mailTab === 'updates') {
+                return /update|release|status|progress|milestone/i.test(
+                    item.subject,
+                );
+            }
+            return /system|security|password|verification|notice|alert/i.test(
+                item.subject,
+            );
+        });
+    }, [mailTab, mailbox.items]);
     const allPageSelected =
-        mailbox.items.length > 0 &&
-        mailbox.items.every((item) => selectedIds.includes(item.id));
-    const back = isOwner ? '/operator' : '/dashboard';
+        visibleItems.length > 0 &&
+        visibleItems.every((item) => selectedIds.includes(item.id));
 
     // app.tsx already mounts AppLayout (owner: OwnerModuleShell; staff: sidebar).
     // Nesting AppLayout here duplicates the entire top bar and sidebar.
@@ -439,104 +474,123 @@ export default function MailCenter({
             <Head title="KMJ Mail · Enterprise inbox and correspondence" />
             <div
                 data-test="kmj-native-mail"
-                className="owner-admin-page kmj-admin-shell mx-auto flex w-full max-w-[1720px] min-w-0 flex-col gap-3 px-3 py-4 sm:px-5 lg:px-6"
+                className="owner-admin-page kmj-admin-shell kmj-mail-approved-shell mx-auto flex w-full max-w-[1720px] min-w-0 flex-col gap-3 px-3 py-4 sm:px-5 lg:px-6"
             >
-                <header className="relative overflow-hidden rounded-2xl border border-[#293447] bg-gradient-to-br from-[#111827] via-[#121d2d] to-[#1b273b] p-5 text-white shadow-[0_24px_55px_-32px_rgba(0,0,0,0.8)] sm:p-6">
-                    <div
-                        aria-hidden="true"
-                        className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-[#ff3853] to-[#a5092f]"
-                    />
-                    <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute -top-32 -right-24 size-80 rounded-full bg-red-500/[0.055] blur-3xl"
-                    />
-                    <div className="relative flex flex-wrap items-start justify-between gap-5">
-                        <div className="min-w-0 flex-1">
-                            <Link
-                                href={back}
-                                className="inline-flex min-h-8 items-center gap-2 text-xs font-semibold text-slate-300 transition hover:text-white"
-                            >
-                                <ArrowLeft className="size-3.5" />
-                                Command Center
-                            </Link>
-                            <div className="mt-2 flex items-center gap-4">
-                                <div className="hidden size-14 shrink-0 items-center justify-center rounded-2xl border border-red-500/25 bg-red-500/10 sm:flex">
-                                    <MailOpen className="size-7 text-[#ff405a]" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-[11px] font-bold tracking-[0.2em] text-[#ff6076] uppercase">
-                                        KMJ TECHNO / COMMUNICATIONS
-                                    </p>
-                                    <h1 className="mt-0.5 text-[30px] font-black tracking-[-0.04em] sm:text-[34px]">
-                                        KMJ Mail
-                                    </h1>
-                                    <p className="mt-1 max-w-[620px] text-sm leading-6 text-slate-300">
-                                        A dedicated workspace for private team
-                                        conversations and authorized outbound
-                                        correspondence.
-                                    </p>
-                                </div>
+                <header
+                    className="kmj-mail-hero"
+                    aria-label="KMJ Mail Enterprise"
+                >
+                    <div className="kmj-mail-globe" aria-hidden="true" />
+                    <div className="kmj-mail-hero-top">
+                        <div className="kmj-mail-hero-brand">
+                            <div className="kmj-mail-hero-icon">
+                                <MailOpen aria-hidden="true" />
+                            </div>
+                            <div>
+                                <p className="kmj-mail-eyebrow">
+                                    KMJ TECHNO / ENTERPRISE COMMUNICATIONS
+                                </p>
+                                <h1>
+                                    KMJ Mail <span>Enterprise</span>
+                                </h1>
+                                <p className="kmj-mail-hero-subtitle">
+                                    Secure, private and AI-powered team mail for
+                                    your organization.
+                                </p>
                             </div>
                         </div>
-                        <div className="flex max-w-full flex-col items-start gap-2 sm:items-end">
-                            <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 text-xs font-semibold text-slate-200">
-                                <ShieldCheck className="size-4 text-[#ff6076]" />
-                                {isOwner
-                                    ? 'Owner workspace'
-                                    : 'Approved KMJ staff'}
-                            </span>
-                            <span className="rounded-full border border-white/10 px-3 py-1.5 text-[11px] text-slate-300">
-                                Internet inbound: Not connected
-                            </span>
+                        <div className="kmj-mail-secure-panel">
+                            <ShieldCheck size={26} aria-hidden="true" />
+                            <div>
+                                <strong>Private &amp; Secure</strong>
+                                <small>
+                                    Authorized KMJ team mail · AI by consent
+                                </small>
+                            </div>
                         </div>
                     </div>
-                    <div className="relative mt-5 grid gap-3 border-t border-white/10 pt-4 sm:grid-cols-3">
-                        <div className="flex items-center gap-3">
-                            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.07]">
-                                <Inbox className="size-5 text-slate-200" />
-                            </div>
+                    <div
+                        className="kmj-mail-metrics"
+                        aria-label="Live private mailbox metrics"
+                    >
+                        <div className="kmj-mail-metric">
+                            <span className="kmj-mail-metric-icon">
+                                <Inbox size={22} />
+                            </span>
                             <div>
-                                <p className="text-[11px] text-slate-300">
-                                    Unread messages
-                                </p>
-                                <p className="text-xl font-extrabold tabular-nums">
-                                    {mailbox.unread}
-                                </p>
+                                <small>Unread</small>
+                                <strong>
+                                    {mailMetrics.unread.toLocaleString()}
+                                </strong>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.07]">
-                                <Users className="size-5 text-slate-200" />
-                            </div>
+                        <div className="kmj-mail-metric">
+                            <span className="kmj-mail-metric-icon">
+                                <Mail size={22} />
+                            </span>
                             <div>
-                                <p className="text-[11px] text-slate-300">
-                                    Approved recipients
-                                </p>
-                                <p className="text-xl font-extrabold tabular-nums">
+                                <small>Total Messages</small>
+                                <strong>
+                                    {mailMetrics.total_messages.toLocaleString()}
+                                </strong>
+                            </div>
+                        </div>
+                        <div className="kmj-mail-metric">
+                            <span className="kmj-mail-metric-icon">
+                                <Users size={22} />
+                            </span>
+                            <div>
+                                <small>Team Recipients</small>
+                                <strong>
                                     {
                                         directory.filter(
                                             (person) => person.id !== myUserId,
                                         ).length
                                     }
-                                </p>
+                                </strong>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.07]">
-                                <Send className="size-5 text-slate-200" />
+                        <div className="kmj-mail-metric">
+                            <span className="kmj-mail-metric-icon">
+                                <HardDrive size={22} />
+                            </span>
+                            <div>
+                                <small>Stored Mail Text (approx.)</small>
+                                <strong>
+                                    {mailMetrics.mail_text_bytes < 1024
+                                        ? mailMetrics.mail_text_bytes + ' B'
+                                        : mailMetrics.mail_text_bytes < 1048576
+                                          ? (
+                                                mailMetrics.mail_text_bytes /
+                                                1024
+                                            ).toFixed(1) + ' KB'
+                                          : (
+                                                mailMetrics.mail_text_bytes /
+                                                1048576
+                                            ).toFixed(1) + ' MB'}
+                                </strong>
                             </div>
-                            <div className="min-w-0">
-                                <p className="text-[11px] text-slate-300">
-                                    Outgoing transport
-                                </p>
-                                <p className="text-sm font-bold text-white">
+                        </div>
+                        <div className="kmj-mail-metric">
+                            <span className="kmj-mail-metric-icon">
+                                <Send size={22} />
+                            </span>
+                            <div>
+                                <small>Mail Transport</small>
+                                <strong className="kmj-mail-metric-status">
+                                    <span
+                                        className={
+                                            externalOutbound.state ===
+                                            'ready_to_queue'
+                                                ? 'is-ready'
+                                                : 'is-offline'
+                                        }
+                                    />
                                     {externalOutbound.state === 'ready_to_queue'
-                                        ? 'SMTP queue available'
+                                        ? 'SMTP ready'
                                         : 'Not activated'}
-                                </p>
-                                <p className="text-[10px] text-slate-400">
-                                    Queued ≠ delivered
-                                </p>
+                                </strong>
+                                <em>Acceptance ≠ inbox delivery</em>
                             </div>
                         </div>
                     </div>
@@ -561,7 +615,7 @@ export default function MailCenter({
 
                 <div
                     className={
-                        'grid min-h-[640px] min-w-0 gap-3 ' +
+                        'kmj-mail-workspace-grid grid min-h-[640px] min-w-0 gap-3 ' +
                         (view === 'compose'
                             ? 'lg:grid-cols-[205px_minmax(0,1fr)] 2xl:grid-cols-[205px_minmax(0,1fr)_330px]'
                             : 'lg:grid-cols-[205px_minmax(285px,390px)_minmax(0,1fr)] 2xl:grid-cols-[205px_335px_minmax(0,1fr)_330px]')
@@ -569,7 +623,7 @@ export default function MailCenter({
                 >
                     <aside
                         aria-label="Mail folders"
-                        className="from-card to-background min-w-0 rounded-2xl border border-slate-700/40 bg-gradient-to-b p-3 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)]"
+                        className="kmj-mail-folders from-card to-background min-w-0 rounded-2xl border border-slate-700/40 bg-gradient-to-b p-3 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)]"
                     >
                         <button
                             type="button"
@@ -588,13 +642,15 @@ export default function MailCenter({
                                     type="button"
                                     onClick={() => navigate(id, undefined, '')}
                                     aria-current={
-                                        folder === id && view === 'mail'
+                                        folder === id &&
+                                        (view === 'mail' || view === 'compose')
                                             ? 'page'
                                             : undefined
                                     }
                                     className={
                                         'flex min-h-11 items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium transition focus-visible:outline-2 focus-visible:outline-red-500 ' +
-                                        (folder === id && view === 'mail'
+                                        (folder === id &&
+                                        (view === 'mail' || view === 'compose')
                                             ? 'border border-red-500/25 bg-red-500/10 font-bold text-red-400 shadow-[inset_3px_0_0_0_#e52945]'
                                             : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground border border-transparent')
                                     }
@@ -609,6 +665,39 @@ export default function MailCenter({
                                 </button>
                             ))}
                         </nav>
+                        <div className="kmj-mail-search-labels mt-4 border-t border-white/10 pt-3">
+                            <div className="flex items-center justify-between gap-2 px-2 text-xs font-bold">
+                                <span>Labels</span>
+                                <span className="text-[10px] font-normal text-slate-400">
+                                    Quick search
+                                </span>
+                            </div>
+                            {[
+                                ['CodeBridge', '#4a9cff'],
+                                ['CloudOS', '#a458ed'],
+                                ['OmniDesk', '#f59d28'],
+                                ['Licensing', '#21b995'],
+                                ['Support', '#ef4068'],
+                                ['Marketing', '#e745a2'],
+                            ].map(([name, color]) => (
+                                <button
+                                    key={name}
+                                    type="button"
+                                    title={'Search current folder for ' + name}
+                                    onClick={() =>
+                                        navigate(folder, undefined, name)
+                                    }
+                                    className="flex min-h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-xs text-slate-300 hover:bg-white/[0.06]"
+                                >
+                                    <span
+                                        aria-hidden="true"
+                                        className="size-3.5 shrink-0 rounded-sm"
+                                        style={{ background: color }}
+                                    />
+                                    {name}
+                                </button>
+                            ))}
+                        </div>
                         <div className="mt-4 border-t pt-4">
                             <button
                                 type="button"
@@ -627,7 +716,10 @@ export default function MailCenter({
                                 </button>
                             )}
                         </div>
-                        <div className="mt-5 rounded-xl border border-white/10 bg-gradient-to-br from-[#182131] to-[#111822] p-3 text-xs leading-5 text-slate-300">
+                        <div
+                            id="kmj-mail-help"
+                            className="mt-5 rounded-xl border border-white/10 bg-gradient-to-br from-[#182131] to-[#111822] p-3 text-xs leading-5 text-slate-300"
+                        >
                             <p className="flex items-center gap-2 font-bold text-white">
                                 <LockKeyhole
                                     size={14}
@@ -637,7 +729,8 @@ export default function MailCenter({
                             </p>
                             <p className="mt-2">
                                 Only authorized KMJ staff can open private team
-                                mail.
+                                mail. External incoming mail, attachments and
+                                CC/BCC require separate verified services.
                             </p>
                         </div>
                     </aside>
@@ -645,11 +738,10 @@ export default function MailCenter({
                     <section
                         aria-label="Mail list"
                         className={
-                            'bg-card/90 min-w-0 overflow-hidden rounded-2xl border border-slate-700/40 p-3 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)] ' +
-                            (view === 'compose' ? 'hidden' : '')
+                            'kmj-mail-list bg-card/90 min-w-0 overflow-hidden rounded-2xl border border-slate-700/40 p-3 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)]'
                         }
                     >
-                        <div className="flex items-center justify-between gap-2 px-2 pt-2">
+                        <div className="kmj-mail-list-head flex items-center justify-between gap-2 px-2 pt-2">
                             <div>
                                 <h2 className="text-lg font-extrabold tracking-tight">
                                     {view === 'templates'
@@ -657,13 +749,15 @@ export default function MailCenter({
                                         : view === 'staff'
                                           ? 'Staff access'
                                           : view === 'compose'
-                                            ? 'New message'
+                                            ? folderDefs.find(
+                                                  (f) => f.id === folder,
+                                              )?.label
                                             : folderDefs.find(
                                                   (f) => f.id === folder,
                                               )?.label}
                                 </h2>
                                 <p className="text-muted-foreground mt-1 text-xs">
-                                    {view === 'mail'
+                                    {view === 'mail' || view === 'compose'
                                         ? 'Your private mailbox · ' +
                                           mailbox.total +
                                           ' messages'
@@ -673,8 +767,43 @@ export default function MailCenter({
                                 </p>
                             </div>
                         </div>
-                        {view === 'mail' && (
+                        {(view === 'mail' || view === 'compose') && (
                             <>
+                                <div
+                                    className="kmj-mail-tabs"
+                                    role="tablist"
+                                    aria-label="On-page message filters"
+                                >
+                                    {(
+                                        [
+                                            ['primary', 'Primary'],
+                                            ['team', 'Team'],
+                                            ['updates', 'Updates'],
+                                            ['system', 'System'],
+                                        ] as const
+                                    ).map(([tab, label]) => (
+                                        <button
+                                            type="button"
+                                            role="tab"
+                                            key={tab}
+                                            aria-selected={mailTab === tab}
+                                            onClick={() => {
+                                                setMailTab(tab);
+                                                setSelectedIds([]);
+                                            }}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        title="Clear filter"
+                                        aria-label="Show all messages on this page"
+                                        onClick={() => setMailTab('primary')}
+                                    >
+                                        <SlidersHorizontal className="size-4" />
+                                    </button>
+                                </div>
                                 <form
                                     className="mt-3 flex gap-2"
                                     onSubmit={(e) => {
@@ -705,7 +834,7 @@ export default function MailCenter({
                                         Find
                                     </button>
                                 </form>
-                                <div className="bg-background/30 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border p-2">
+                                <div className="kmj-mail-toolbar bg-background/30 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border p-2">
                                     <label className="flex items-center gap-2 text-xs font-semibold">
                                         <input
                                             type="checkbox"
@@ -715,7 +844,7 @@ export default function MailCenter({
                                                 setSelectedIds(
                                                     allPageSelected
                                                         ? []
-                                                        : mailbox.items.map(
+                                                        : visibleItems.map(
                                                               (item) => item.id,
                                                           ),
                                                 )
@@ -729,7 +858,10 @@ export default function MailCenter({
                                     </label>
                                     <div className="flex items-center gap-2">
                                         <span className="text-muted-foreground text-xs">
-                                            {mailbox.total} total
+                                            {mailTab === 'primary'
+                                                ? mailbox.total + ' total'
+                                                : visibleItems.length +
+                                                  ' on this page'}
                                         </span>
                                         <button
                                             type="button"
@@ -847,8 +979,8 @@ export default function MailCenter({
                                         )}
                                     </div>
                                 )}
-                                <div className="mt-3 space-y-1.5">
-                                    {mailbox.items.map((item) => (
+                                <div className="kmj-mail-message-list mt-3 space-y-1.5">
+                                    {visibleItems.map((item) => (
                                         <div
                                             key={item.id}
                                             className="flex items-start gap-2"
@@ -889,6 +1021,11 @@ export default function MailCenter({
                                                         mailbox.page,
                                                     )
                                                 }
+                                                aria-current={
+                                                    selected?.id === item.id
+                                                        ? 'true'
+                                                        : undefined
+                                                }
                                                 className={
                                                     'hover:bg-muted/50 min-w-0 flex-1 rounded-xl border p-4 text-left shadow-sm transition hover:border-red-500/40 focus-visible:outline-2 focus-visible:outline-red-500 ' +
                                                     (selected?.id === item.id
@@ -898,6 +1035,20 @@ export default function MailCenter({
                                             >
                                                 <div className="flex items-center justify-between gap-2">
                                                     <span className="flex min-w-0 items-center gap-1.5 truncate text-[13px] font-semibold">
+                                                        <span
+                                                            aria-hidden="true"
+                                                            className="kmj-mail-sender-avatar"
+                                                        >
+                                                            {(
+                                                                item.sender_email ??
+                                                                item.recipient_email ??
+                                                                contactName(
+                                                                    item.sender_user_id,
+                                                                )
+                                                            )
+                                                                .slice(0, 1)
+                                                                .toUpperCase()}
+                                                        </span>
                                                         {item.unread && (
                                                             <span className="size-2 rounded-full bg-red-500" />
                                                         )}
@@ -955,7 +1106,7 @@ export default function MailCenter({
                                             </button>
                                         </div>
                                     ))}
-                                    {mailbox.items.length === 0 && (
+                                    {visibleItems.length === 0 && (
                                         <div className="rounded-xl border border-dashed px-4 py-12 text-center">
                                             <MailOpen className="text-muted-foreground mx-auto size-7" />
                                             <p className="mt-2 text-sm font-semibold">
@@ -1199,210 +1350,310 @@ export default function MailCenter({
 
                     <section
                         aria-label="KMJ private message"
-                        className="bg-card/95 min-w-0 overflow-hidden rounded-2xl border border-slate-700/40 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)]"
+                        className="kmj-mail-reader bg-card/95 min-w-0 overflow-hidden rounded-2xl border border-slate-700/40 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)]"
                     >
                         {view === 'compose' ? (
-                            <div className="p-5 sm:p-6">
-                                <button
-                                    type="button"
-                                    onClick={() => setView('mail')}
-                                    className="text-muted-foreground flex min-h-10 items-center gap-2 text-xs"
-                                >
-                                    <ChevronLeft className="size-4" /> Back to
-                                    messages
-                                </button>
-                                <p className="mt-3 text-[11px] font-bold tracking-widest text-red-500 uppercase">
-                                    KMJ PRIVATE MESSAGE
-                                </p>
-                                <h2 className="mt-2 text-2xl font-black">
-                                    {draftId
-                                        ? 'Edit your draft'
-                                        : replyId
-                                          ? 'Reply to conversation'
-                                          : 'Compose'}
-                                </h2>
-                                <p className="text-muted-foreground mt-2 text-xs leading-6">
-                                    Draft or refine this message with KMJ AI
-                                    Copilot. Every AI suggestion must be
-                                    reviewed before a separate manual Send
-                                    action. Queued email is not proof of inbox
-                                    delivery.
-                                </p>
-                                <div className="mt-6 space-y-4">
-                                    <div
-                                        role="group"
-                                        aria-label="Recipient type"
-                                    >
-                                        <p className="mb-2 text-xs font-semibold">
-                                            Send to
-                                        </p>
-                                        <div className="flex flex-wrap gap-2">
-                                            <button
-                                                type="button"
-                                                aria-pressed={
-                                                    recipientType === 'external'
-                                                }
-                                                onClick={() =>
-                                                    setRecipientType('external')
-                                                }
-                                                className={
-                                                    'min-h-11 rounded-xl border px-4 text-sm font-semibold ' +
-                                                    (recipientType ===
-                                                    'external'
-                                                        ? 'border-red-500 bg-red-500/10 text-red-500'
-                                                        : 'text-muted-foreground hover:text-foreground')
-                                                }
-                                            >
-                                                Email address · Gmail / Outlook
-                                                / Any
-                                            </button>
-                                            <button
-                                                type="button"
-                                                aria-pressed={
-                                                    recipientType === 'internal'
-                                                }
-                                                onClick={() =>
-                                                    setRecipientType('internal')
-                                                }
-                                                className={
-                                                    'min-h-11 rounded-xl border px-4 text-sm font-semibold ' +
-                                                    (recipientType ===
-                                                    'internal'
-                                                        ? 'border-red-500 bg-red-500/10 text-red-500'
-                                                        : 'text-muted-foreground hover:text-foreground')
-                                                }
-                                            >
-                                                KMJ colleague
-                                            </button>
+                            <div
+                                className={
+                                    'kmj-mail-compose-overlay-layout ' +
+                                    (composerMinimized ? 'is-minimized' : '')
+                                }
+                            >
+                                <div className="kmj-mail-compose-underlay">
+                                    <p className="text-[10px] font-bold tracking-[0.15em] text-red-400 uppercase">
+                                        PRIVATE CONVERSATION
+                                    </p>
+                                    <h2 className="mt-2 text-xl font-extrabold">
+                                        {selectedThread?.items[0]?.subject ??
+                                            'Start a new conversation'}
+                                    </h2>
+                                    <div className="kmj-mail-message-brand mt-6 flex items-center gap-3 rounded-t-xl p-4">
+                                        <img
+                                            src="/assets/brand/kmj-logo-horizontal-readable.svg"
+                                            width="180"
+                                            height="45"
+                                            alt="KMJ TECHNO — INNOVATE | BUILD | SCALE"
+                                            className="h-9 w-auto object-contain"
+                                        />
+                                        <div className="ml-auto text-right text-xs">
+                                            <strong>KMJ Mail Enterprise</strong>
+                                            <small className="block">
+                                                Official correspondence
+                                            </small>
                                         </div>
                                     </div>
-                                    {recipientType === 'external' ? (
-                                        <div className="space-y-2">
-                                            <label className="block text-xs font-semibold">
-                                                To · external email address
-                                                <input
-                                                    type="email"
-                                                    aria-label="External recipient email address"
-                                                    inputMode="email"
-                                                    autoComplete="email"
-                                                    maxLength={254}
-                                                    placeholder="someone@gmail.com"
-                                                    value={recipientEmail}
-                                                    onChange={(event) =>
-                                                        setRecipientEmail(
-                                                            event.target.value,
+                                    <div className="rounded-b-xl border border-t-0 border-white/10 p-5 text-sm leading-7 whitespace-pre-wrap">
+                                        {selectedThread?.items.at(-1)?.body ??
+                                            'Your message appears here after selecting a conversation.'}
+                                    </div>
+                                </div>
+                                <div className="kmj-mail-floating-compose">
+                                    <div className="p-5 sm:p-6">
+                                        <div className="kmj-mail-compose-head">
+                                            <strong className="flex items-center gap-2 text-sm">
+                                                <Pencil className="size-4" />
+                                                {draftId
+                                                    ? 'Edit draft'
+                                                    : replyId
+                                                      ? 'Reply'
+                                                      : 'New message'}
+                                            </strong>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setComposerMinimized(
+                                                            (old) => !old,
                                                         )
                                                     }
+                                                    aria-label={
+                                                        composerMinimized
+                                                            ? 'Expand composer'
+                                                            : 'Minimize composer'
+                                                    }
+                                                    title={
+                                                        composerMinimized
+                                                            ? 'Expand'
+                                                            : 'Minimize'
+                                                    }
+                                                    className="rounded-md border border-white/20 px-2 text-sm"
+                                                >
+                                                    {composerMinimized
+                                                        ? '+'
+                                                        : '−'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setView('mail')
+                                                    }
+                                                    aria-label="Close compose window"
+                                                    className="rounded-md border border-white/20 p-1"
+                                                >
+                                                    <X className="size-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div
+                                                role="group"
+                                                aria-label="Recipient type"
+                                            >
+                                                <p className="mb-2 text-xs font-semibold">
+                                                    Send to
+                                                </p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    <button
+                                                        type="button"
+                                                        aria-pressed={
+                                                            recipientType ===
+                                                            'external'
+                                                        }
+                                                        onClick={() =>
+                                                            setRecipientType(
+                                                                'external',
+                                                            )
+                                                        }
+                                                        className={
+                                                            'min-h-11 rounded-xl border px-4 text-sm font-semibold ' +
+                                                            (recipientType ===
+                                                            'external'
+                                                                ? 'border-red-500 bg-red-500/10 text-red-500'
+                                                                : 'text-muted-foreground hover:text-foreground')
+                                                        }
+                                                    >
+                                                        Email address · Gmail /
+                                                        Outlook / Any
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        aria-pressed={
+                                                            recipientType ===
+                                                            'internal'
+                                                        }
+                                                        onClick={() =>
+                                                            setRecipientType(
+                                                                'internal',
+                                                            )
+                                                        }
+                                                        className={
+                                                            'min-h-11 rounded-xl border px-4 text-sm font-semibold ' +
+                                                            (recipientType ===
+                                                            'internal'
+                                                                ? 'border-red-500 bg-red-500/10 text-red-500'
+                                                                : 'text-muted-foreground hover:text-foreground')
+                                                        }
+                                                    >
+                                                        KMJ colleague
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            {recipientType === 'external' ? (
+                                                <div className="space-y-2">
+                                                    <label className="block text-xs font-semibold">
+                                                        To · external email
+                                                        address
+                                                        <input
+                                                            type="email"
+                                                            aria-label="External recipient email address"
+                                                            inputMode="email"
+                                                            autoComplete="email"
+                                                            maxLength={254}
+                                                            placeholder="someone@gmail.com"
+                                                            value={
+                                                                recipientEmail
+                                                            }
+                                                            onChange={(event) =>
+                                                                setRecipientEmail(
+                                                                    event.target
+                                                                        .value,
+                                                                )
+                                                            }
+                                                            className="bg-background mt-2 min-h-12 w-full rounded-xl border px-3 text-sm"
+                                                        />
+                                                    </label>
+                                                    <div className="text-muted-foreground rounded-xl border border-dashed px-4 py-3 text-xs leading-5">
+                                                        <strong className="text-foreground block">
+                                                            From:{' '}
+                                                            {externalOutbound.from ??
+                                                                'KMJ domain sender (not activated)'}
+                                                        </strong>
+                                                        {externalOutbound.state ===
+                                                        'ready_to_queue'
+                                                            ? 'You can queue one external email. Postfix acceptance will appear in Sent; recipient Inbox delivery is not guaranteed.'
+                                                            : 'External sending is not activated for this mailbox. You can save an external draft, but the Send action is disabled until KMJ mail transport and sender authorization are approved.'}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <label className="block text-xs font-semibold">
+                                                    To · verified KMJ colleague
+                                                    <select
+                                                        aria-label="KMJ recipient"
+                                                        value={recipientId}
+                                                        onChange={(event) =>
+                                                            setRecipientId(
+                                                                event.target
+                                                                    .value,
+                                                            )
+                                                        }
+                                                        className="bg-background mt-2 min-h-12 w-full rounded-xl border px-3 text-sm"
+                                                    >
+                                                        <option value="">
+                                                            Select an approved
+                                                            team member
+                                                        </option>
+                                                        {directory.map(
+                                                            (person) => (
+                                                                <option
+                                                                    key={
+                                                                        person.id
+                                                                    }
+                                                                    value={
+                                                                        person.id
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        person.name
+                                                                    }{' '}
+                                                                    ·{' '}
+                                                                    {
+                                                                        person.role
+                                                                    }
+                                                                </option>
+                                                            ),
+                                                        )}
+                                                    </select>
+                                                </label>
+                                            )}
+                                            <label className="block text-xs font-semibold">
+                                                Subject
+                                                <input
+                                                    value={subject}
+                                                    onChange={(e) =>
+                                                        setSubject(
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    maxLength={180}
+                                                    aria-label="Mail subject"
+                                                    placeholder="What is this about?"
                                                     className="bg-background mt-2 min-h-12 w-full rounded-xl border px-3 text-sm"
                                                 />
                                             </label>
-                                            <div className="text-muted-foreground rounded-xl border border-dashed px-4 py-3 text-xs leading-5">
-                                                <strong className="text-foreground block">
-                                                    From:{' '}
-                                                    {externalOutbound.from ??
-                                                        'KMJ domain sender (not activated)'}
-                                                </strong>
-                                                {externalOutbound.state ===
-                                                'ready_to_queue'
-                                                    ? 'You can queue one external email. Postfix acceptance will appear in Sent; recipient Inbox delivery is not guaranteed.'
-                                                    : 'External sending is not activated for this mailbox. You can save an external draft, but the Send action is disabled until KMJ mail transport and sender authorization are approved.'}
+                                            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-fuchsia-500/25 bg-fuchsia-500/5 p-2">
+                                                <span className="flex items-center gap-2 text-xs font-bold text-fuchsia-200">
+                                                    <Sparkles className="size-4" />{' '}
+                                                    KMJ AI · Write with AI
+                                                </span>
+                                                <a
+                                                    href="#kmj-ai-copilot"
+                                                    className="rounded-lg border border-fuchsia-500/40 bg-fuchsia-500/20 px-3 py-1.5 text-xs font-semibold text-fuchsia-100"
+                                                >
+                                                    Open Copilot
+                                                </a>
+                                            </div>
+                                            <label className="block text-xs font-semibold">
+                                                Message
+                                                <textarea
+                                                    value={body}
+                                                    onChange={(e) =>
+                                                        setBody(e.target.value)
+                                                    }
+                                                    maxLength={12000}
+                                                    rows={6}
+                                                    aria-label="Message body"
+                                                    placeholder="Write a clear, professional message..."
+                                                    className="bg-background mt-2 w-full resize-y rounded-xl border p-4 text-sm leading-6"
+                                                />
+                                                <span className="text-muted-foreground mt-1 block text-right text-[11px]">
+                                                    {body.length}/12,000
+                                                </span>
+                                            </label>
+                                            <p className="text-muted-foreground rounded-xl border border-dashed p-3 text-xs leading-5">
+                                                Recipient privacy is enforced.
+                                                This release supports one
+                                                external recipient per message;
+                                                CC/BCC and attachments require
+                                                separately reviewed transport
+                                                and scanning.
+                                            </p>
+                                            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-white/10 pt-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        submit('send')
+                                                    }
+                                                    disabled={
+                                                        busy ||
+                                                        (recipientType ===
+                                                        'external'
+                                                            ? !recipientEmail.trim() ||
+                                                              externalOutbound.state !==
+                                                                  'ready_to_queue'
+                                                            : !recipientId) ||
+                                                        !subject.trim() ||
+                                                        !body.trim()
+                                                    }
+                                                    className="flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-40"
+                                                >
+                                                    <Send className="size-4" />{' '}
+                                                    {recipientType ===
+                                                    'external'
+                                                        ? 'Queue external email'
+                                                        : 'Send internally'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        submit('draft')
+                                                    }
+                                                    disabled={busy}
+                                                    className="min-h-11 rounded-xl border px-5 text-sm font-semibold"
+                                                >
+                                                    Save draft
+                                                </button>
                                             </div>
                                         </div>
-                                    ) : (
-                                        <label className="block text-xs font-semibold">
-                                            To · verified KMJ colleague
-                                            <select
-                                                aria-label="KMJ recipient"
-                                                value={recipientId}
-                                                onChange={(event) =>
-                                                    setRecipientId(
-                                                        event.target.value,
-                                                    )
-                                                }
-                                                className="bg-background mt-2 min-h-12 w-full rounded-xl border px-3 text-sm"
-                                            >
-                                                <option value="">
-                                                    Select an approved team
-                                                    member
-                                                </option>
-                                                {directory.map((person) => (
-                                                    <option
-                                                        key={person.id}
-                                                        value={person.id}
-                                                    >
-                                                        {person.name} ·{' '}
-                                                        {person.role}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </label>
-                                    )}
-                                    <label className="block text-xs font-semibold">
-                                        Subject
-                                        <input
-                                            value={subject}
-                                            onChange={(e) =>
-                                                setSubject(e.target.value)
-                                            }
-                                            maxLength={180}
-                                            aria-label="Mail subject"
-                                            placeholder="What is this about?"
-                                            className="bg-background mt-2 min-h-12 w-full rounded-xl border px-3 text-sm"
-                                        />
-                                    </label>
-                                    <label className="block text-xs font-semibold">
-                                        Message
-                                        <textarea
-                                            value={body}
-                                            onChange={(e) =>
-                                                setBody(e.target.value)
-                                            }
-                                            maxLength={12000}
-                                            rows={11}
-                                            aria-label="Message body"
-                                            placeholder="Write a clear, professional message..."
-                                            className="bg-background mt-2 w-full resize-y rounded-xl border p-4 text-sm leading-6"
-                                        />
-                                        <span className="text-muted-foreground mt-1 block text-right text-[11px]">
-                                            {body.length}/12,000
-                                        </span>
-                                    </label>
-                                    <p className="text-muted-foreground rounded-xl border border-dashed p-3 text-xs leading-5">
-                                        Recipient privacy is enforced. This
-                                        release supports one external recipient
-                                        per message; CC/BCC and attachments
-                                        require separately reviewed transport
-                                        and scanning.
-                                    </p>
-                                    <div className="flex flex-wrap gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => submit('send')}
-                                            disabled={
-                                                busy ||
-                                                (recipientType === 'external'
-                                                    ? !recipientEmail.trim() ||
-                                                      externalOutbound.state !==
-                                                          'ready_to_queue'
-                                                    : !recipientId) ||
-                                                !subject.trim() ||
-                                                !body.trim()
-                                            }
-                                            className="flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-40"
-                                        >
-                                            <Send className="size-4" />{' '}
-                                            {recipientType === 'external'
-                                                ? 'Queue external email'
-                                                : 'Send internally'}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => submit('draft')}
-                                            disabled={busy}
-                                            className="min-h-11 rounded-xl border px-5 text-sm font-semibold"
-                                        >
-                                            Save draft
-                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -1488,8 +1739,28 @@ export default function MailCenter({
                             </div>
                         ) : selectedThread &&
                           selectedThread.items.length > 0 ? (
-                            <div className="p-5 sm:p-7">
-                                <div className="border-border/60 flex flex-wrap items-center justify-between gap-3 border-b pb-6">
+                            <div className="p-4 sm:p-5">
+                                <div className="kmj-mail-reader-toolbar flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            navigate(
+                                                folder,
+                                                undefined,
+                                                q,
+                                                mailbox.page,
+                                            )
+                                        }
+                                        className="flex min-h-9 items-center gap-2 rounded-lg border border-white/15 px-3 text-xs"
+                                    >
+                                        <ArrowLeft className="size-4" />
+                                        Back to {folder}
+                                    </button>
+                                    <span className="text-[11px] text-slate-400">
+                                        Private owner-scoped thread
+                                    </span>
+                                </div>
+                                <div className="border-border/60 flex flex-wrap items-center justify-between gap-3 border-b py-4">
                                     <div>
                                         <p className="text-[11px] font-bold tracking-widest text-red-500 uppercase">
                                             PRIVATE CONVERSATION
@@ -1498,7 +1769,7 @@ export default function MailCenter({
                                             {selectedThread.items[0].subject}
                                         </h2>
                                     </div>
-                                    <div className="flex flex-wrap gap-2">
+                                    <div className="kmj-mail-read-actions flex flex-wrap gap-2">
                                         {folder === 'drafts' ? (
                                             <>
                                                 <button
@@ -1656,7 +1927,24 @@ export default function MailCenter({
                                         )}
                                     </div>
                                 </div>
-                                <div className="mt-6 space-y-4">
+                                <div className="kmj-mail-message-brand mt-4 flex flex-wrap items-center justify-between gap-4 rounded-t-xl p-4">
+                                    <img
+                                        src="/assets/brand/kmj-logo-horizontal-readable.svg"
+                                        width="210"
+                                        height="55"
+                                        alt="KMJ TECHNO — INNOVATE | BUILD | SCALE"
+                                        className="h-11 w-auto object-contain"
+                                    />
+                                    <div className="text-right">
+                                        <strong className="block text-base">
+                                            KMJ Mail Enterprise
+                                        </strong>
+                                        <small className="text-[11px]">
+                                            Private official correspondence
+                                        </small>
+                                    </div>
+                                </div>
+                                <div className="kmj-mail-thread-messages mt-0 space-y-4">
                                     {selectedThread.items.map((item) => (
                                         <article
                                             key={item.id}

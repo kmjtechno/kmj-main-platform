@@ -363,6 +363,56 @@ final class NativeMailFlowTest extends TestCase
             ->get('/team/mail?folder=inbox&page=1001')->assertSessionHasErrors('page');
     }
 
+    public function test_approved_dashboard_metrics_are_real_and_scoped_to_each_private_mailbox(): void
+    {
+        Mail::fake();
+        [$owner, $staff] = $this->ownerAndStaff();
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/mail/send', [
+                'recipient_id' => $staff->id,
+                'subject' => 'CodeBridge delivery update',
+                'body' => 'Only the owner and staff copies can be read.',
+                'client_key' => (string) Str::uuid(),
+            ])->assertRedirect('/operator/mail?folder=sent');
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/mail?folder=sent')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('mailMetrics.total_messages', 1)
+                ->where('mailMetrics.unread', 0)
+                ->where('mailMetrics.mail_text_bytes', strlen('CodeBridge delivery update') + strlen('Only the owner and staff copies can be read.')));
+
+        $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/team/mail')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('mailMetrics.total_messages', 1)
+                ->where('mailMetrics.unread', 1));
+
+        $staffMessage = (int) DB::table('kmj_mail_messages')
+            ->where('mailbox_user_id', $staff->id)->value('id');
+
+        $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/team/mail/messages/manage', [
+                'ids' => [$staffMessage],
+                'action' => 'trash',
+                'folder' => 'inbox',
+            ])->assertRedirect();
+
+        $this->actingAs($staff)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/team/mail')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('mailMetrics.total_messages', 0)
+                ->where('mailMetrics.unread', 0)
+                ->where('mailMetrics.mail_text_bytes', 0));
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/mail?folder=sent')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('mailMetrics.total_messages', 1));
+        Mail::assertNothingOutgoing();
+    }
+
     /** @return array{User, User} */
     private function ownerAndStaff(): array
     {

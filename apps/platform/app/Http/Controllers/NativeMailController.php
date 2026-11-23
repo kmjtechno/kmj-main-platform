@@ -42,6 +42,7 @@ final class NativeMailController
             'templates' => WorkforceMailCatalog::forAudience($portal === 'operator' ? 'owner' : 'team'),
             'workspaceMode' => 'native_internal',
             'mailbox' => $this->mail->mailbox($user, $folder, $search, (int) ($values['page'] ?? 1)),
+            'mailMetrics' => $this->mail->summary($user),
             'folder' => $folder,
             'q' => $search,
             'selectedThread' => $thread,

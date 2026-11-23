@@ -8,6 +8,10 @@ import {
     LoaderCircle,
     MessageSquareReply,
     ShieldCheck,
+    SlidersHorizontal,
+    FilePenLine,
+    MessageCircle,
+    ClipboardList,
     Sparkles,
     WandSparkles,
 } from 'lucide-react';
@@ -32,9 +36,9 @@ const actions: {
     label: string;
     icon: typeof Sparkles;
 }[] = [
-    { id: 'compose', label: 'Write with AI', icon: WandSparkles },
-    { id: 'explain', label: 'Explain in Hindi', icon: Languages },
-    { id: 'reply', label: 'Smart Reply', icon: MessageSquareReply },
+    { id: 'compose', label: 'Email AI', icon: WandSparkles },
+    { id: 'explain', label: 'Summarize', icon: Languages },
+    { id: 'reply', label: 'Reply', icon: MessageSquareReply },
 ];
 
 export default function MailAiCopilot({
@@ -50,20 +54,23 @@ export default function MailAiCopilot({
     const [consent, setConsent] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [result, setResult] = useState<AiResponse | null>(null);
+    const [results, setResults] = useState<
+        Partial<Record<MailAiMode, AiResponse>>
+    >({});
+    const [showTools, setShowTools] = useState(false);
+    const result = results[mode] ?? null;
     const selectedRef = useRef(selectedMessageId);
     selectedRef.current = selectedMessageId;
 
     // A summary or reply must never leak into a different selected thread.
     useEffect(() => {
-        setResult(null);
+        setResults({});
         setError(null);
         setConsent(false);
     }, [selectedMessageId]);
 
     const selectMode = (next: MailAiMode) => {
         setMode(next);
-        setResult(null);
         setError(null);
         setConsent(false);
     };
@@ -79,7 +86,7 @@ export default function MailAiCopilot({
         const selectedAtRequest = selectedMessageId;
         setBusy(true);
         setError(null);
-        setResult(null);
+        setResults((current) => ({ ...current, [mode]: undefined }));
         try {
             // Same-origin Laravel session + CSRF cookie. No API keys in browser.
             const xsrf = document.cookie
@@ -143,7 +150,7 @@ export default function MailAiCopilot({
                 return;
             }
             const parsed = data as AiResponse;
-            setResult(parsed);
+            setResults((current) => ({ ...current, [mode]: parsed }));
         } catch {
             setError('AI request failed. No email was sent or saved.');
         } finally {
@@ -153,8 +160,9 @@ export default function MailAiCopilot({
 
     return (
         <aside
-            aria-label="KMJ Mail AI Copilot"
-            className="min-w-0 rounded-2xl border border-fuchsia-400/25 bg-gradient-to-b from-[#171729] via-[#101626] to-[#111927] p-4 text-slate-100 shadow-[0_20px_40px_-28px_rgba(193,56,157,0.55)]"
+            id="kmj-ai-copilot"
+            aria-label="KMJ Mail AI Assistant"
+            className="kmj-mail-copilot min-w-0 rounded-2xl border border-fuchsia-400/25 bg-gradient-to-b from-[#171729] via-[#101626] to-[#111927] p-4 text-slate-100 shadow-[0_20px_40px_-28px_rgba(193,56,157,0.55)]"
         >
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -163,7 +171,7 @@ export default function MailAiCopilot({
                     </div>
                     <div>
                         <h2 className="text-sm font-extrabold">
-                            KMJ AI Copilot
+                            KMJ AI Assistant
                         </h2>
                         <p className="text-[11px] text-slate-400">
                             Hinglish → professional mail
@@ -171,11 +179,11 @@ export default function MailAiCopilot({
                     </div>
                 </div>
                 <span className="rounded-full border border-fuchsia-500/30 px-2 py-1 text-[10px] font-bold text-fuchsia-200">
-                    Review-first
+                    Beta · Review-first
                 </span>
             </div>
 
-            <div className="mt-5 grid grid-cols-3 gap-1.5">
+            <div className="mt-4 grid grid-cols-4 gap-1.5">
                 {actions.map((action) => {
                     const Icon = action.icon;
                     return (
@@ -192,24 +200,67 @@ export default function MailAiCopilot({
                             }
                         >
                             <Icon className="size-4" />
-                            {action.id === 'compose'
-                                ? 'Compose'
-                                : action.id === 'explain'
-                                  ? 'Hindi'
-                                  : 'Reply'}
+                            {action.label}
                         </button>
                     );
                 })}
+                <button
+                    type="button"
+                    aria-expanded={showTools}
+                    onClick={() => setShowTools((value) => !value)}
+                    className={
+                        'flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-xl border p-1 text-center text-[11px] font-semibold transition ' +
+                        (showTools
+                            ? 'border-fuchsia-400/60 bg-fuchsia-500/20 text-white'
+                            : 'border-white/10 bg-white/[0.04] text-slate-300')
+                    }
+                >
+                    <SlidersHorizontal className="size-4" />
+                    Tools
+                </button>
             </div>
-
-            <div className="mt-5 space-y-3">
+            {showTools && (
+                <div className="kmj-mail-ai-card mt-3 space-y-2 rounded-xl border p-3 text-xs">
+                    <p className="font-semibold text-fuchsia-100">
+                        Writing tools
+                    </p>
+                    <label className="flex items-center justify-between gap-2">
+                        Tone
+                        <select
+                            value={tone}
+                            onChange={(event) => setTone(event.target.value)}
+                            className="rounded-lg border border-white/15 bg-[#111827] px-2 py-1.5"
+                        >
+                            <option value="professional">Professional</option>
+                            <option value="formal">Formal</option>
+                            <option value="friendly">Friendly</option>
+                            <option value="firm">Firm</option>
+                        </select>
+                    </label>
+                    <label className="flex items-center justify-between gap-2">
+                        Output language
+                        <select
+                            value={language}
+                            onChange={(event) =>
+                                setLanguage(event.target.value)
+                            }
+                            className="rounded-lg border border-white/15 bg-[#111827] px-2 py-1.5"
+                        >
+                            <option value="english">English</option>
+                            <option value="hindi">Hindi</option>
+                            <option value="hinglish">Hinglish</option>
+                        </select>
+                    </label>
+                </div>
+            )}
+            <div className="mt-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                     <label
                         htmlFor="kmj-mail-ai-instruction"
                         className="text-xs font-bold text-slate-200"
                     >
                         {mode === 'compose'
-                            ? 'AI ko Hinglish mein samjhaiye'
+                            ? 'AI से क्या करवाना है?'
                             : mode === 'explain'
                               ? 'Hindi explanation'
                               : 'Reply kaise dena hai?'}
@@ -233,7 +284,7 @@ export default function MailAiCopilot({
                     }
                     className="w-full resize-y rounded-xl border border-fuchsia-500/25 bg-[#0a1020] p-3 text-sm leading-6 text-white placeholder:text-slate-500 focus:border-fuchsia-400 focus:outline-none"
                 />
-                {mode !== 'explain' && (
+                {mode !== 'explain' && !showTools && (
                     <div className="grid grid-cols-2 gap-2">
                         <label className="text-[11px] font-semibold text-slate-300">
                             Tone
@@ -318,10 +369,49 @@ export default function MailAiCopilot({
                 )}
             </div>
 
+            <section
+                className="kmj-mail-ai-actions mt-5"
+                aria-label="KMJ AI quick actions"
+            >
+                <h3 className="mb-2 text-xs font-bold text-white">
+                    Quick Actions
+                </h3>
+                <div className="space-y-1.5">
+                    <button type="button" onClick={() => selectMode('compose')}>
+                        <FilePenLine size={15} /> नई ईमेल लिखें (AI Compose)
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => selectMode('explain')}
+                        disabled={selectedMessageId === null}
+                    >
+                        <ClipboardList size={15} /> ईमेल का हिंदी सार (Summarize)
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => selectMode('reply')}
+                        disabled={selectedMessageId === null}
+                    >
+                        <MessageCircle size={15} /> Reply सुझाव (Smart Reply)
+                    </button>
+                    <button type="button" onClick={() => setShowTools(true)}>
+                        <SlidersHorizontal size={15} /> Professional / Formal /
+                        Friendly
+                    </button>
+                    <a
+                        href="/operator/modelfabric"
+                        className="flex min-h-9 items-center gap-2 rounded-lg border border-white/20 px-3 text-[11px] text-slate-300 hover:bg-white/10"
+                    >
+                        <Sparkles size={15} /> Verified ModelFabric provider
+                        settings
+                    </a>
+                </div>
+            </section>
+
             {result && (
                 <div
                     aria-live="polite"
-                    className="mt-5 rounded-xl border border-fuchsia-400/35 bg-fuchsia-500/[0.07] p-3"
+                    className="kmj-mail-ai-result mt-5 rounded-xl border border-fuchsia-400/35 bg-fuchsia-500/[0.07] p-3"
                 >
                     <p className="flex items-center gap-2 text-xs font-bold text-fuchsia-200">
                         <CheckCircle2 className="size-4" />

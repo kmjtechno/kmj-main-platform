@@ -53,6 +53,31 @@ final class NativeMailService
             ])->values()->all());
     }
 
+    /**
+     * Owner-only mailbox metrics; never return aggregate data from other
+     * employees' private mailbox copies or global mail transport tables.
+     *
+     * @return array{total_messages:int,unread:int,mail_text_bytes:int}
+     */
+    public function summary(User $user): array
+    {
+        $this->requireAllowed($user);
+        $query = DB::table('kmj_mail_messages')
+            ->where('mailbox_user_id', (int) $user->getKey());
+
+        $contentSize = (clone $query)
+            ->where('folder', '!=', 'trash')
+            ->selectRaw('COALESCE(SUM(LENGTH(body) + LENGTH(subject)), 0) AS bytes')
+            ->first();
+
+        return [
+            'total_messages' => (int) (clone $query)->where('folder', '!=', 'trash')->count(),
+            'unread' => (int) (clone $query)->where('folder', 'inbox')->whereNull('read_at')->count(),
+            // Only approximate message text, never server storage or a quota.
+            'mail_text_bytes' => (int) ($contentSize->bytes ?? 0),
+        ];
+    }
+
     /** @return array{items:array<int,array<string,mixed>>,unread:int,total:int,page:int,page_size:int,has_more:bool} */
     public function mailbox(User $user, string $folder, string $search = '', int $page = 1): array
     {

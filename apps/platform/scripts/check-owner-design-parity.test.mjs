@@ -142,3 +142,31 @@ void test('KMJ Mail AI Copilot requires consent and never sends email', () => {
     assert.match(routes, /kmj-mail\.ai-generate/);
     assert.doesNotMatch(assistant, /send-external|\/mail\/send/);
 });
+
+void test('locked KMJ Mail reference uses real four-pane UI and functional controls', () => {
+    const page = read('resources/js/pages/mail-center.tsx');
+    const ai = read('resources/js/components/mail-ai-copilot.tsx');
+    const ownerShell = read('resources/js/layouts/owner-module-shell.tsx');
+    const css = read('resources/css/kmj-mail-approved.css');
+    assert.match(page, /kmj-mail-approved-shell/);
+    assert.match(page, /kmj-mail-hero/);
+    assert.match(page, /mailMetrics\.total_messages/);
+    assert.match(page, /mailMetrics\.mail_text_bytes/);
+    assert.match(page, /kmj-mail-workspace-grid/);
+    assert.match(page, /kmj-mail-tabs/);
+    assert.match(page, /visibleItems\.map/);
+    assert.match(page, /kmj-mail-sender-avatar/);
+    assert.match(page, /kmj-mail-message-brand/);
+    assert.match(page, /kmj-mail-floating-compose/);
+    assert.match(page, /onClick=\{\(\) => submit\('send'\)\}/);
+    assert.match(page, /onClick=\{\(\) => submit\('draft'\)\}/);
+    assert.match(page, /kmj-mail-search-labels/);
+    assert.match(ai, /id="kmj-ai-copilot"/);
+    assert.match(ai, /Quick Actions/);
+    assert.match(ai, /consent_to_ai_processing: consent/);
+    assert.match(ownerShell, /owner-mail-global-search/);
+    assert.match(ownerShell, /data-owner-mail=/);
+    assert.match(css, /grid-template-columns: minmax\(150px, 175px\)/);
+    assert.match(css, /\.kmj-mail-globe/);
+    assert.doesNotMatch(page, /1,248|50 GB|36 Team Recipients/);
+});
