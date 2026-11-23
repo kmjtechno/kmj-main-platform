@@ -5,7 +5,9 @@ declare(strict_types=1);
 use App\Services\Licensing\OmniDesk\OmniDeskActivationQueryService;
 use App\Services\Licensing\OmniDesk\OmniDeskApiAuthorizer;
 use App\Services\Licensing\OmniDesk\OmniDeskApiPrincipal;
+use App\Services\Licensing\OmniDesk\OmniDeskProtectedLeaseService;
 use App\Services\Licensing\OmniDesk\OmniDeskRenewalChallengeStore;
+use App\Services\Licensing\OmniDesk\OmniDeskSigner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
@@ -37,10 +39,15 @@ $omnideskError = static function (Throwable $error) {
 
     [$code, $status] = match ($error->getMessage()) {
         'OMNIDESK_UNAUTHENTICATED' => ['UNAUTHENTICATED', 401],
-        'OMNIDESK_FORBIDDEN' => ['FORBIDDEN', 403],
+        'OMNIDESK_FORBIDDEN', 'FORBIDDEN' => ['FORBIDDEN', 403],
         'OMNIDESK_ACTIVATION_NOT_FOUND' => ['ACTIVATION_REVOKED', 404],
         'OMNIDESK_RENEWAL_CHALLENGE_DENIED' => ['ACTIVATION_REVOKED', 404],
-        'OMNIDESK_REASON_REQUIRED' => ['INVALID_REQUEST', 422],
+        'OMNIDESK_REASON_REQUIRED', 'INVALID_REQUEST' => ['INVALID_REQUEST', 422],
+        'OMNIDESK_ACTIVATION_PROOF_INVALID' => ['FORBIDDEN', 403],
+        'OMNIDESK_ACTIVATION_CONFLICT' => ['ACTIVATION_CONFLICT', 409],
+        'OMNIDESK_REPLAY_DETECTED', 'OMNIDESK_LEASE_SEQUENCE_INVALID' => ['REPLAY_DETECTED', 409],
+        'OMNIDESK_LICENSE_INACTIVE', 'OMNIDESK_ENTITLEMENT_INACTIVE' => ['ENTITLEMENT_INACTIVE', 403],
+        'OMNIDESK_SIGNER_UNAVAILABLE' => ['ISSUANCE_NOT_CONFIGURED', 503],
         'OMNIDESK_PRODUCT_NOT_FOUND' => ['SERVER_UNAVAILABLE', 503],
         default => ['SERVER_UNAVAILABLE', 503],
     };
@@ -53,11 +60,9 @@ Route::prefix('v1/licensing/omnidesk')->group(function () use (
     $omnideskPrincipal,
     $omnideskError,
 ): void {
-    // The published OmniDesk client contract requires these endpoints. They
-    // must not silently return 404 or issue mock/unsigned entitlements while
-    // the protected, transactional issuer integration is not provisioned.
-    // Replace these fail-closed adapters only alongside authenticated device
-    // proof checks, tenant/seat eligibility, replay cursor and HSM-backed sign.
+    // These routes remain fail-closed in production until the owner-protected
+    // signing service is explicitly bound to OmniDeskSigner. A configured
+    // authorizer alone can never issue a lease or a mock signature.
     Route::post('activations', function (Request $request) use ($omnideskPrincipal, $omnideskError) {
         if (strlen($request->getContent()) > 2048) {
             return response()->json(['error' => 'INVALID_REQUEST'], 413)
@@ -69,9 +74,23 @@ Route::prefix('v1/licensing/omnidesk')->group(function () use (
             if (! $principal->canManage) {
                 throw new DomainException('OMNIDESK_FORBIDDEN');
             }
+            if (! app()->bound(OmniDeskSigner::class)) {
+                return response()->json(['error' => 'ISSUANCE_NOT_CONFIGURED'], 503)
+                    ->header('Cache-Control', 'no-store, private');
+            }
 
-            return response()->json(['error' => 'ISSUANCE_NOT_CONFIGURED'], 503)
-                ->header('Cache-Control', 'no-store, private');
+            $key = $request->header('Idempotency-Key');
+            if (! is_string($key)) {
+                throw new DomainException('INVALID_REQUEST');
+            }
+            $issued = app(OmniDeskProtectedLeaseService::class)->activate(
+                $request->all(),
+                $key,
+                $principal,
+                app(OmniDeskSigner::class),
+            );
+
+            return response()->json($issued)->header('Cache-Control', 'no-store, private');
         } catch (Throwable $error) {
             return $omnideskError($error);
         }
@@ -88,9 +107,17 @@ Route::prefix('v1/licensing/omnidesk')->group(function () use (
             if (! $principal->canManage) {
                 throw new DomainException('OMNIDESK_FORBIDDEN');
             }
+            if (! app()->bound(OmniDeskSigner::class)) {
+                return response()->json(['error' => 'ISSUANCE_NOT_CONFIGURED'], 503)
+                    ->header('Cache-Control', 'no-store, private');
+            }
+            $issued = app(OmniDeskProtectedLeaseService::class)->renew(
+                $request->all(),
+                $principal,
+                app(OmniDeskSigner::class),
+            );
 
-            return response()->json(['error' => 'ISSUANCE_NOT_CONFIGURED'], 503)
-                ->header('Cache-Control', 'no-store, private');
+            return response()->json($issued)->header('Cache-Control', 'no-store, private');
         } catch (Throwable $error) {
             return $omnideskError($error);
         }
