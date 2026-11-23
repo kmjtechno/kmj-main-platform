@@ -8,11 +8,17 @@ type Stage = {
     workflow_url: string;
 };
 
-export default function CodeBridgeStageControl({ stage }: { stage?: Stage | null }) {
+export default function CodeBridgeStageControl({
+    stage,
+}: {
+    stage?: Stage | null;
+}) {
     // Synthetic previews and partial server responses may omit this optional
     // protected capability. Fail closed instead of crashing the Ops console.
     const configured = stage?.configured === true;
-    const workflowUrl = stage?.workflow_url ?? 'https://github.com/kmjtechno/kmj-codebridge/actions/workflows/oneclick-stage.yml';
+    const workflowUrl =
+        stage?.workflow_url ??
+        'https://github.com/kmjtechno/kmj-codebridge/actions/workflows/oneclick-stage.yml';
     const [requesting, setRequesting] = useState(false);
     const [notice, setNotice] = useState('');
 
