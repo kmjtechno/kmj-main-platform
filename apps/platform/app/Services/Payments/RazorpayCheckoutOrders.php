@@ -10,9 +10,12 @@ use InvalidArgumentException;
 use KMJ\MainPlatform\Commerce\Models\CommercialOrder;
 
 /**
- * Opens (once) a Razorpay SANDBOX order for a requested commercial order and records the
- * binding. The expected amount is a server-supplied fact, never read from a browser.
- * No payment is taken and no entitlement or license is granted here.
+ * Opens one SANDBOX provider order for a requested commercial order.
+ *
+ * Reserve the intent in a committed transaction BEFORE outbound HTTP, so a
+ * provider-success/DB-failure cannot silently issue a second order on retry.
+ * An incomplete intent is fail-closed and requires operator reconciliation.
+ * No charge, entitlement or license is created by this service.
  */
 final class RazorpayCheckoutOrders
 {
@@ -30,7 +33,9 @@ final class RazorpayCheckoutOrders
             throw new InvalidArgumentException('RAZORPAY_EXPECTED_AMOUNT_INVALID');
         }
 
-        return DB::transaction(function () use ($commercialOrderId, $expectedAmountMinor): array {
+        // Only the reservation needs a DB lock. Never hold it while waiting
+        // on an external payment provider's network response.
+        $decision = DB::transaction(function () use ($commercialOrderId, $expectedAmountMinor): array {
             $order = CommercialOrder::query()->whereKey($commercialOrderId)->lockForUpdate()->firstOrFail();
             if ((string) $order->getAttribute('status') !== 'requested') {
                 throw new DomainException('RAZORPAY_ORDER_NOT_OPENABLE');
@@ -43,7 +48,20 @@ final class RazorpayCheckoutOrders
                     throw new DomainException('RAZORPAY_ORDER_AMOUNT_CONFLICT');
                 }
 
-                return $this->shape($existing->provider_order_id, (int) $existing->amount_minor, (string) $existing->currency);
+                return ['linked' => $this->shape((string) $existing->provider_order_id, (int) $existing->amount_minor, (string) $existing->currency), 'credentials' => null];
+            }
+
+            $intent = DB::table('commerce_provider_order_intents')
+                ->where('commercial_order_id', $commercialOrderId)->where('provider', 'razorpay')->first();
+            if ($intent !== null) {
+                if ((int) $intent->amount_minor !== $expectedAmountMinor) {
+                    throw new DomainException('RAZORPAY_ORDER_AMOUNT_CONFLICT');
+                }
+
+                // A previous external call may have succeeded even if PHP
+                // timed out or the subsequent DB link insert failed. Do not
+                // call create again without provider-side reconciliation.
+                throw new DomainException('RAZORPAY_ORDER_CREATION_PENDING_REVIEW');
             }
 
             try {
@@ -52,14 +70,48 @@ final class RazorpayCheckoutOrders
                 throw new DomainException('RAZORPAY_SANDBOX_CREDENTIALS_NOT_READY');
             }
 
-            // The commercial order id is the receipt, so provider records trace back to our order.
-            $created = $this->client->create(
-                (string) $order->getKey(),
-                $expectedAmountMinor,
-                'INR',
-                $credentials['client_id'],
-                $credentials['client_secret'],
-            );
+            DB::table('commerce_provider_order_intents')->insert([
+                'commercial_order_id' => $order->getKey(),
+                'provider' => 'razorpay',
+                'amount_minor' => $expectedAmountMinor,
+                'currency' => 'INR',
+                'creation_status' => 'creating',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return ['linked' => null, 'credentials' => $credentials];
+        });
+
+        if ($decision['linked'] !== null) {
+            return $decision['linked'];
+        }
+
+        $credentials = $decision['credentials'];
+
+        // The reservation has committed and is now durable. On network
+        // timeout or DB failure, leave it unresolved; retry must NOT create
+        // another provider order from an uncertain remote outcome.
+        $created = $this->client->create(
+            $commercialOrderId,
+            $expectedAmountMinor,
+            'INR',
+            $credentials['client_id'],
+            $credentials['client_secret'],
+        );
+
+        return DB::transaction(function () use ($commercialOrderId, $expectedAmountMinor, $created): array {
+            $order = CommercialOrder::query()->whereKey($commercialOrderId)->lockForUpdate()->firstOrFail();
+            if ((string) $order->getAttribute('status') !== 'requested') {
+                throw new DomainException('RAZORPAY_ORDER_NOT_OPENABLE');
+            }
+
+            $intent = DB::table('commerce_provider_order_intents')
+                ->where('commercial_order_id', $commercialOrderId)->where('provider', 'razorpay')->first();
+            if ($intent === null || $intent->creation_status !== 'creating'
+                || (int) $intent->amount_minor !== $expectedAmountMinor || $intent->currency !== 'INR') {
+                throw new DomainException('RAZORPAY_ORDER_INTENT_MISMATCH');
+            }
 
             DB::table('commerce_provider_orders')->insert([
                 'commercial_order_id' => $order->getKey(),
@@ -71,6 +123,11 @@ final class RazorpayCheckoutOrders
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+
+            DB::table('commerce_provider_order_intents')
+                ->where('commercial_order_id', $commercialOrderId)->where('provider', 'razorpay')
+                ->where('creation_status', 'creating')
+                ->update(['creation_status' => 'linked', 'updated_at' => now()]);
 
             return $this->shape($created['order_id'], $created['amount_minor'], $created['currency']);
         });
