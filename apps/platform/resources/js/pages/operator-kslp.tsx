@@ -4,7 +4,7 @@ import {
     DeveloperAppsWorkspace,
     type DeveloperWorkspaceProps,
 } from './developer-apps';
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import {
     KeyRound,
@@ -332,19 +332,27 @@ export default function OperatorKslp({
                                     : 'off'}
                             </p>
                         </div>
-                        <button
-                            type="button"
-                            onClick={() =>
-                                router.post(
-                                    '/operator/kslp/omnidesk/offers/prepare',
-                                    {},
-                                    { preserveScroll: true },
-                                )
-                            }
-                            className="min-h-11 rounded-xl bg-red-600 px-4 text-xs font-bold text-white hover:bg-red-500"
-                        >
-                            Prepare paused INR plans
-                        </button>
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    router.post(
+                                        '/operator/kslp/omnidesk/offers/prepare',
+                                        {},
+                                        { preserveScroll: true },
+                                    )
+                                }
+                                className="min-h-11 rounded-xl bg-red-600 px-4 text-xs font-bold text-white hover:bg-red-500"
+                            >
+                                Prepare paused INR plans
+                            </button>
+                            <Link
+                                href="/operator/payments"
+                                className="inline-flex min-h-11 items-center rounded-xl border px-4 text-xs font-bold hover:bg-red-500/10"
+                            >
+                                Verify Razorpay / Cashfree gateway
+                            </Link>
+                        </div>
                     </div>
                     <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {omnideskOffers.map((offer) => (
