@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'licensing-customer-guided-journey-20261123',
+        title: 'One Licensing Hub: account-aware four-step customer onboarding and safe next actions',
+        state: 'active',
+        detail: 'SOURCE ONLY: improve existing authenticated customer Licensing Hub with four linked account, product, license and device/download steps plus conditional next action based on real organization memberships, entitlement and license record counts. Keep developer issuer subscription distinct from customer purchase; no second licensing system, fake active license, key, live checkout, live quota, automatic payment or device reset. Source-only until exact-head CI, owner review, protected Elite release and authenticated browser acceptance.',
+        evidence:
+            'Current-main GitHub PR for licensing-hub.tsx and JavaScript integration contract regression. Existing trusted routes /dashboard, /purchase, /developer/apps and anchor sections only; no KSLP authority, schema, checkout, entitlement, signer or production environment changes.',
+    },
+    {
         id: 'kmj-mail-empty-inbox-real-sent-reference-parity-20261123',
         title: 'KMJ Mail: owner-approved real-data reader and AI panel visual correction',
         state: 'active',

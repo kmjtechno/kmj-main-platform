@@ -226,3 +226,34 @@ void test('Licensing Hub uses guided owner workspaces and preserves routes', () 
     assert.match(ownerRoutes, /PlatformOwnerAccess/);
     assert.match(ownerRoutes, /'password\.confirm'/);
 });
+
+void test('customer Licensing Hub has truthful four-step next-action guidance', () => {
+    const customer = read('resources/js/pages/licensing-hub.tsx');
+
+    for (const [section, label] of [
+        ['getting-started', 'Getting started'],
+        ['my-products', 'My products'],
+        ['my-licenses', 'Licenses'],
+        ['my-devices', 'Devices'],
+        ['my-downloads', 'Downloads'],
+    ]) {
+        assert.ok(customer.includes(`id="${section}"`), section);
+        assert.ok(customer.includes(`['${label}', '#${section}']`), label);
+    }
+
+    assert.ok(customer.includes('organizations.length > 0'));
+    assert.ok(customer.includes('product_entitlements.length > 0'));
+    assert.ok(customer.includes('license_count > 0'));
+    assert.ok(
+        customer.includes('href="/dashboard"') ||
+            customer.includes("href: '/dashboard'"),
+    );
+    assert.ok(customer.includes('href="/purchase"'));
+    assert.ok(customer.includes('href="/developer/apps"'));
+    assert.ok(customer.includes('separate issuer-subscription permissions'));
+    assert.ok(customer.includes('No automatic charges'));
+    assert.ok(customer.includes('This guidance does not enable checkout'));
+    assert.ok(customer.includes('Live usage: Not available yet.'));
+    assert.ok(customer.includes('Secure device reset / transfer: not enabled'));
+    assert.ok(!customer.includes('Your products, signed-license records'));
+});
