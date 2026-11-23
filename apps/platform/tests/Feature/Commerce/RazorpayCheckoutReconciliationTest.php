@@ -413,14 +413,39 @@ final class RazorpayCheckoutReconciliationTest extends TestCase
     public function test_refund_metadata_must_be_explicit_integer_zero_before_confirmation(): void
     {
         $this->vault();
-        $this->fakeProvider();
+        // Use ONE mutable HTTP stub: Laravel's fake callbacks accumulate, so
+        // repeatedly calling fakeProvider() would keep the first response.
+        $refundState = null;
+        Http::fake([
+            'api.razorpay.com/v1/orders' => fn (Request $request) => Http::response([
+                'id' => 'order_TEST1',
+                'receipt' => $request['receipt'],
+                'currency' => 'INR',
+                'amount' => $request['amount'],
+                'status' => 'created',
+                'amount_paid' => 0,
+                'amount_due' => $request['amount'],
+            ]),
+            'api.razorpay.com/v1/payments/*' => function (Request $request) use (&$refundState) {
+                return Http::response([
+                    'id' => 'pay_ABC123',
+                    'order_id' => 'order_TEST1',
+                    'status' => 'captured',
+                    'captured' => true,
+                    'currency' => 'INR',
+                    'amount' => self::AMOUNT,
+                    'amount_refunded' => $refundState,
+                ]);
+            },
+        ]);
+
         $order = $this->commercialOrder('request:rzp:refund-metadata');
         app(RazorpayCheckoutOrders::class)->open($order->getKey(), self::AMOUNT);
 
         // Previous int coercion treated null, false and strings as zero.
         // Unknown refund state is NOT captured-and-unrefunded evidence.
         foreach ([null, false, '0', 'unknown', 1] as $index => $refunded) {
-            $this->fakeProvider(payment: ['amount_refunded' => $refunded]);
+            $refundState = $refunded;
             $eventId = 'evt_bad_refund_'.$index;
             $this->inbox($eventId);
             $result = app(RazorpayWebhookReconciler::class)->reconcilePending();
