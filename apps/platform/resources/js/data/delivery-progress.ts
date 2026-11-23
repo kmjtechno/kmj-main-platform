@@ -146,6 +146,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-evidence-installer-v2-20261123',
+        title: 'Evidence installer v2: adds the rehearsal workspace helper with a bounded atomic upgrade',
+        state: 'active',
+        detail: 'Updated owner installer pinned to a newer exact merge commit. It adds the rehearsal workspace helper and may atomically replace only the one previously installed runner whose exact earlier digest it knows; any other differing file is still refused.',
+        evidence:
+            'Offline tests and exact-head CI only. Not run on Elite yet.',
+    },
+    {
         id: 'release-rehearsal-workspace-20261123',
         title: 'Release rehearsal workspace: disposable database and secret-free code-tree copies',
         state: 'active',
