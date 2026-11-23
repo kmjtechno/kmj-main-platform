@@ -99,6 +99,47 @@ final class NativeMailFlowTest extends TestCase
         Notification::assertNothingSent();
     }
 
+    public function test_empty_inbox_displays_only_own_real_sent_previews_without_changing_inbox_counts(): void
+    {
+        Mail::fake();
+        Notification::fake();
+        [$owner, $staff] = $this->ownerAndStaff();
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/mail/send', [
+                'recipient_id' => $staff->id,
+                'subject' => 'Actual private progress update',
+                'body' => 'Real correspondence visible only to the authorized sender.',
+                'client_key' => (string) Str::uuid(),
+            ])->assertRedirect('/operator/mail?folder=sent');
+
+        $this->actingAs($owner)->get('/operator/mail')
+            ->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('folder', 'inbox')
+            ->where('mailbox.total', 0)
+            ->has('mailbox.items', 0)
+            ->where('recentSent.total', 1)
+            ->has('recentSent.items', 1)
+            ->where('recentSent.items.0.subject', 'Actual private progress update'));
+
+        $this->actingAs($owner)->get('/operator/mail?q=missing')
+            ->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('mailbox.total', 0)
+            ->where('recentSent', null));
+
+        $this->actingAs($owner)->get('/operator/mail?folder=sent')
+            ->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('mailbox.total', 1)
+            ->where('recentSent', null));
+
+        $this->actingAs($staff)->get('/team/mail')
+            ->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('mailbox.total', 1)
+            ->where('recentSent', null));
+        Mail::assertNothingOutgoing();
+        Notification::assertNothingSent();
+    }
+
     public function test_reading_thread_marks_only_own_mailbox_read_and_rejects_others(): void
     {
         [$owner, $staff] = $this->ownerAndStaff();

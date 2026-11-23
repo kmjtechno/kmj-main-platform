@@ -408,6 +408,29 @@ export default function MailAiCopilot({
                 </div>
             </section>
 
+            {!result && (
+                <div
+                    className="kmj-mail-ai-readiness-stack mt-4"
+                    aria-label="AI summary and reply readiness"
+                >
+                    <section className="kmj-mail-ai-readiness-card">
+                        <h3>ईमेल का हिंदी सार (AI Summary)</h3>
+                        <p>
+                            {selectedMessageId === null
+                                ? 'एक वास्तविक निजी ईमेल चुनें। सार अभी तैयार नहीं किया गया है।'
+                                : 'Summarize चुनें, consent दें और verified ModelFabric provider से वास्तविक सार बनाएँ।'}
+                        </p>
+                    </section>
+                    <section className="kmj-mail-ai-readiness-card">
+                        <h3>सुझाया गया Reply (हिंदी में)</h3>
+                        <p>
+                            {selectedMessageId === null
+                                ? 'किसी वास्तविक ईमेल को चुनने के बाद Reply suggestion उपलब्ध होगा।'
+                                : 'Reply चुनें और AI से draft बनवाएँ। Send हमेशा आपके नियंत्रण में रहेगा।'}
+                        </p>
+                    </section>
+                </div>
+            )}
             {result && (
                 <div
                     aria-live="polite"

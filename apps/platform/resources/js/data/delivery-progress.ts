@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-mail-empty-inbox-real-sent-reference-parity-20261123',
+        title: 'KMJ Mail: owner-approved real-data reader and AI panel visual correction',
+        state: 'active',
+        detail: 'Source-only correction after owner rejected live screenshot parity. Empty unfiltered Inbox stays honestly at zero while showing clearly labeled up to six real, authenticated-user Sent previews with a branded reader; no invented Inbox/AI content. AI Summary and Reply cards render neutral readiness instructions until actual consented provider responses exist. Compact mail-only navigation keeps the original KMJ locked brand. No mail send, SMTP, data migration, provider activation or billing change.',
+        evidence:
+            'Owner approved Dashboard/Workspace screenshots are the visual reference, actual 2026-11-23 live screenshot is the mismatch witness. Source PR #1094 includes own-mailbox-only Laravel regression. Exact PR-head checks, owner authenticated browser parity and a new SHA-pinned Elite release are required; no production activation by this PR.',
+    },
+    {
         id: 'codebridge-usage-preview-unified-hub-20261123',
         title: 'CodeBridge: truthful proposed hosted usage tiers in the ONE customer Licensing Hub',
         state: 'active',
