@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-authenticated-usage-readmodel-20261123',
+        title: 'CodeBridge: member- and entitlement-scoped internal monthly ledger read model',
+        state: 'active',
+        detail: 'SOURCE ONLY: server-supplied verified actor, real organization membership, active non-expired CodeBridge entitlement and UTC month scope a read-only aggregate of recorded ledger counters. Missing rows are unknown, not zero. Every result explicitly denies live meter, verified receipt, billable usage, active plan and remaining quota. No customer route, payment, quota enforcement, subscription, license issuance or cleanup.',
+        evidence:
+            'PR #1093 introduces AuthenticatedHostedUsageReadModel and four isolation/security regressions; exact-head CI and independent owner review pending. Counters are NOT signed device proof. Existing PR #1092 is merely receipt consistency and cannot authorize billing; KSLP seat binding, attestation and Elite recovery/cutover gates remain unverified.',
+    },
+    {
         id: 'codebridge-usage-preview-unified-hub-20261123',
         title: 'CodeBridge: truthful proposed hosted usage tiers in the ONE customer Licensing Hub',
         state: 'active',
