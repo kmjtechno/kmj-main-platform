@@ -1453,13 +1453,13 @@ export default function MailCenter({
                             </div>
                         ) : selectedThread &&
                           selectedThread.items.length > 0 ? (
-                            <div className="p-5 sm:p-6">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="p-5 sm:p-7">
+                                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-6">
                                     <div>
                                         <p className="text-[11px] font-bold tracking-widest text-red-500 uppercase">
                                             PRIVATE CONVERSATION
                                         </p>
-                                        <h2 className="mt-2 text-xl font-bold">
+                                        <h2 className="mt-2 text-2xl font-black tracking-tight">
                                             {selectedThread.items[0].subject}
                                         </h2>
                                     </div>
@@ -1625,7 +1625,7 @@ export default function MailCenter({
                                     {selectedThread.items.map((item) => (
                                         <article
                                             key={item.id}
-                                            className="bg-background/60 rounded-xl border p-4"
+                                            className="rounded-2xl border border-border/70 bg-background/50 p-5 shadow-sm"
                                         >
                                             <div className="flex flex-wrap items-start justify-between gap-2 border-b pb-3">
                                                 <div className="text-xs">
@@ -1663,7 +1663,7 @@ export default function MailCenter({
                                                     {item.at.slice(0, 19)}
                                                 </span>
                                             </div>
-                                            <p className="mt-4 text-sm leading-7 break-words whitespace-pre-wrap">
+                                            <p className="mt-5 text-[15px] leading-8 break-words whitespace-pre-wrap">
                                                 {item.body}
                                             </p>
                                         </article>
@@ -1671,21 +1671,79 @@ export default function MailCenter({
                                 </div>
                             </div>
                         ) : (
-                            <div className="grid min-h-[460px] place-items-center p-8 text-center">
-                                <div>
-                                    <Inbox className="text-muted-foreground mx-auto size-9" />
-                                    <h2 className="mt-3 text-lg font-bold">
-                                        Private. Clear. In control.
-                                    </h2>
-                                    <p className="text-muted-foreground mt-2 max-w-sm text-sm leading-6">
-                                        Select a message to read a conversation
-                                        or compose a new one. Your private KMJ
-                                        mail is stored in the platform, not in
-                                        Gmail.
-                                    </p>
-                                    <div className="mt-4 inline-flex items-center gap-2 text-xs text-red-500">
-                                        <Check className="size-4" /> First-party
-                                        access controls
+                            <div className="relative flex min-h-[560px] flex-col overflow-hidden bg-gradient-to-b from-[#121d2b]/60 via-transparent to-[#182334]/25">
+                                <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4 sm:px-6">
+                                    <div>
+                                        <p className="text-[10px] font-bold tracking-[0.18em] text-red-400 uppercase">
+                                            KMJ MAIL / READING WORKSPACE
+                                        </p>
+                                        <p className="mt-1 text-sm font-semibold">
+                                            {folderDefs.find((item) => item.id === folder)?.label} conversations
+                                        </p>
+                                    </div>
+                                    <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-muted-foreground">
+                                        {mailbox.total} in this folder
+                                    </div>
+                                </div>
+                                <div className="relative flex flex-1 items-center justify-center p-6 sm:p-10">
+                                    <div className="w-full max-w-[470px]">
+                                        <div className="flex size-16 items-center justify-center rounded-2xl border border-red-500/20 bg-gradient-to-br from-red-500/15 to-[#1d2939] shadow-[0_20px_45px_-25px_rgba(223,33,68,0.6)]">
+                                            <MailOpen className="size-8 text-[#ff4763]" />
+                                        </div>
+                                        <p className="mt-7 text-[11px] font-bold tracking-[0.2em] text-red-400 uppercase">
+                                            PRIVATE COMMUNICATIONS
+                                        </p>
+                                        <h2 className="mt-2 text-2xl font-black leading-tight tracking-tight sm:text-[30px]">
+                                            {mailbox.items.length
+                                                ? 'Your next conversation starts here.'
+                                                : 'A clear space for every conversation.'}
+                                        </h2>
+                                        <p className="mt-3 max-w-md text-sm leading-7 text-muted-foreground">
+                                            {mailbox.items.length
+                                                ? 'Choose a message to view its full thread, sender details and delivery status.'
+                                                : 'This folder has no matching private messages. Compose a new message or choose another folder.'}
+                                        </p>
+                                        <div className="mt-6 flex flex-wrap gap-3">
+                                            {mailbox.items.length > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => navigate(folder, mailbox.items[0].id, q, mailbox.page)}
+                                                    className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-[#e62446] to-[#b40c32] px-4 text-sm font-bold text-white transition hover:brightness-110"
+                                                >
+                                                    <MailOpen className="size-4" />
+                                                    Open latest message
+                                                </button>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={startCompose}
+                                                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 text-sm font-semibold hover:bg-white/[0.08]"
+                                            >
+                                                <Pencil className="size-4" />
+                                                New message
+                                            </button>
+                                        </div>
+                                        {mailbox.items.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => navigate(folder, mailbox.items[0].id, q, mailbox.page)}
+                                                className="mt-8 w-full rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-left transition hover:border-red-500/30 hover:bg-white/[0.06]"
+                                            >
+                                                <span className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground uppercase">
+                                                    MOST RECENT · {mailbox.items[0].at.slice(0, 16)}
+                                                </span>
+                                                <span className="mt-2 block truncate text-sm font-bold">
+                                                    {mailbox.items[0].subject || '(No subject)'}
+                                                </span>
+                                                <span className="mt-1 block line-clamp-2 text-[13px] leading-6 text-muted-foreground">
+                                                    {mailbox.items[0].snippet}
+                                                </span>
+                                            </button>
+                                        )}
+                                        <p className="mt-6 flex items-center gap-2 text-xs text-muted-foreground">
+                                            <ShieldCheck className="size-4 shrink-0 text-red-400" />
+                                            Private records. Owner-controlled team access.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
