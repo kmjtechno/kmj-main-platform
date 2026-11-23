@@ -521,7 +521,11 @@
 .kmj-mail-approved-shell #kmj-mail-help {
     scroll-margin-top: 90px;
 }
-@media (max-width: 1500px) {
+/* Viewport includes the 225px owner navigation. At 1648px the content
+ * area is ~1400px and can hold the approved four-pane layout. Collapsing at
+ * 1500px moved the AI assistant below the message reader in the owner's exact
+ * reference-size window. Keep all four panes above 1350px viewport width. */
+@media (max-width: 1350px) {
     .owner-module-shell[data-owner-mail='true']
         .owner-module-content
         .kmj-mail-approved-shell {
