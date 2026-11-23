@@ -82,7 +82,7 @@ final class KslpResellerSettlementReadinessInspector
         if (! is_int($commercial['amount_minor'] ?? null)
             && ! ctype_digit((string) ($commercial['amount_minor'] ?? ''))) {
             $reasons[] = 'ORDER_PRICE_NOT_RECORDED';
-        } elseif ((int) ($commercial['amount_minor'] ?? 0) < 1) {
+        } elseif ((int) $commercial['amount_minor'] < 1) {
             $reasons[] = 'ORDER_PRICE_NOT_RECORDED';
         }
         if (! preg_match('/\A[A-Z]{3}\z/D', (string) ($commercial['currency'] ?? ''))) {
