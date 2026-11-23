@@ -109,6 +109,12 @@ export default function LicensingHub({
         (count, license) => count + license.non_deactivated_devices,
         0,
     );
+    const renewalAttention = licenses.filter((license) =>
+        ['RENEWAL_DUE', 'GRACE'].includes(license.state),
+    );
+    const accessReview = licenses.filter((license) =>
+        ['REVOKED', 'RESTRICTED'].includes(license.state),
+    );
 
     return (
         <>
@@ -389,6 +395,7 @@ export default function LicensingHub({
                         ['Getting started', '#getting-started'],
                         ['My products', '#my-products'],
                         ['Licenses', '#my-licenses'],
+                        ['Renewals', '#my-renewals'],
                         ['Devices', '#my-devices'],
                         ['Downloads', '#my-downloads'],
                     ].map(([label, href]) => (
@@ -413,7 +420,7 @@ export default function LicensingHub({
                             icon: KeyRound,
                         },
                         {
-                            label: 'Currently eligible in shown records',
+                            label: 'Active, due or grace records shown',
                             number: activeLicenses,
                             icon: BadgeCheck,
                         },
@@ -570,11 +577,144 @@ export default function LicensingHub({
                                             {license.non_deactivated_devices}
                                         </span>
                                         <span>Online status: not verified</span>
+                                        {license.state === 'NOT_STARTED' && (
+                                            <span>
+                                                Starts{' '}
+                                                {readableDate(license.starts_at)}
+                                            </span>
+                                        )}
+                                        {license.state === 'GRACE' &&
+                                            license.grace_until && (
+                                                <span>
+                                                    Grace until{' '}
+                                                    {readableDate(
+                                                        license.grace_until,
+                                                    )}
+                                                </span>
+                                            )}
                                     </div>
                                 </article>
                             ))}
                         </div>
                     )}
+                </section>
+
+                <section
+                    id="my-renewals"
+                    aria-labelledby="renewals-heading"
+                    className="border-border bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
+                >
+                    <div className="flex items-start gap-3">
+                        <Clock3
+                            className="mt-0.5 size-5 text-red-500"
+                            aria-hidden="true"
+                        />
+                        <div>
+                            <h2
+                                id="renewals-heading"
+                                className="text-lg font-bold"
+                            >
+                                Renewals &amp; access review
+                            </h2>
+                            <p className="text-muted-foreground mt-2 text-xs leading-5">
+                                Your next step is based only on your visible KSLP
+                                license records. A renewal-due or grace status
+                                is not proof of a charge, auto-renewal or
+                                newly signed license. Plans are for discovery,
+                                not an immediate license extension.
+                            </p>
+                        </div>
+                    </div>
+                    {licenses_truncated && (
+                        <p className="mt-4 text-xs text-amber-600 dark:text-amber-400">
+                            These results cover the latest 100 shown licenses,
+                            not your complete renewal history.
+                        </p>
+                    )}
+                    {renewalAttention.length === 0 &&
+                    accessReview.length === 0 ? (
+                        <div className="bg-muted/50 mt-5 rounded-xl p-4 text-sm">
+                            No renewal-due, grace or access-restricted records
+                            were found in the licenses shown. This does not
+                            confirm auto-renewal or active billing.
+                        </div>
+                    ) : (
+                        <div className="mt-5 grid gap-3">
+                            {renewalAttention.map((license) => (
+                                <article
+                                    key={license.id}
+                                    className="border-border rounded-xl border p-4"
+                                >
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <h3 className="text-sm font-bold">
+                                            {license.product}
+                                        </h3>
+                                        <span className="rounded-full border border-amber-500/40 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-300">
+                                            {stateLabels[license.state]}
+                                        </span>
+                                    </div>
+                                    <p className="text-muted-foreground mt-2 text-xs">
+                                        {license.subject_label} · Plan{' '}
+                                        {license.plan} · Expires{' '}
+                                        {readableDate(license.expires_at)}
+                                        {license.state === 'GRACE' &&
+                                            license.grace_until && (
+                                                <>
+                                                    {' '}· Grace ends{' '}
+                                                    {readableDate(
+                                                        license.grace_until,
+                                                    )}
+                                                </>
+                                            )}
+                                    </p>
+                                    <p className="text-muted-foreground mt-3 text-xs leading-5">
+                                        Review the available plan options. The
+                                        server must independently verify an
+                                        approved renewal and any resulting
+                                        entitlement before changing access.
+                                    </p>
+                                    <Link
+                                        href="/purchase"
+                                        className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-red-500/30 px-3 text-xs font-semibold text-red-600 hover:bg-red-500/5"
+                                    >
+                                        Explore plans · Not checkout
+                                        <ArrowRight
+                                            className="size-4"
+                                            aria-hidden="true"
+                                        />
+                                    </Link>
+                                </article>
+                            ))}
+                            {accessReview.map((license) => (
+                                <article
+                                    key={license.id}
+                                    className="border-border rounded-xl border p-4"
+                                >
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <h3 className="text-sm font-bold">
+                                            {license.product}
+                                        </h3>
+                                        <span className="bg-muted rounded-full px-3 py-1 text-xs font-bold">
+                                            {stateLabels[license.state]}
+                                        </span>
+                                    </div>
+                                    <p className="text-muted-foreground mt-2 text-xs leading-5">
+                                        {license.subject_label} · Ref{' '}
+                                        {license.id.slice(0, 8)}. Access requires
+                                        an authorized review. Buying another
+                                        plan cannot bypass revocation or an
+                                        unknown restriction; use KMJ account
+                                        support for next steps.
+                                    </p>
+                                </article>
+                            ))}
+                        </div>
+                    )}
+                    <p className="text-muted-foreground mt-4 text-xs">
+                        Device-seat recovery is separate from renewal and
+                        remains disabled until signed device verification,
+                        cooldown and audit gates pass.
+                    </p>
                 </section>
 
                 <section
