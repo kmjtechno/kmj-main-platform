@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\Licensing\Kslp\KslpCustomerWorkspaceQuery;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -145,5 +147,49 @@ final class KslpCustomerWorkspaceTest extends TestCase
             'id' => $mine['id'],
             'status' => 'revoked',
         ]);
+    }
+
+    public function test_customer_renewal_states_are_derived_only_from_verified_kslp_dates(): void
+    {
+        $now = Carbon::parse('2026-11-23 12:00:00', 'UTC');
+        $license = [
+            'status' => 'active',
+            'starts_at' => '2026-11-01 00:00:00',
+            'expires_at' => '2026-12-10 00:00:00',
+            'grace_until' => '2026-12-20 00:00:00',
+            'revoked_at' => null,
+        ];
+
+        self::assertSame('ACTIVE', KslpCustomerWorkspaceQuery::state($license, $now));
+        self::assertSame('RENEWAL_DUE', KslpCustomerWorkspaceQuery::state([
+            ...$license,
+            'expires_at' => '2026-11-27 12:00:00',
+        ], $now));
+        self::assertSame('GRACE', KslpCustomerWorkspaceQuery::state([
+            ...$license,
+            'expires_at' => '2026-11-22 12:00:00',
+            'grace_until' => '2026-11-30 00:00:00',
+        ], $now));
+        self::assertSame('RESTRICTED', KslpCustomerWorkspaceQuery::state([
+            ...$license,
+            'expires_at' => '2026-11-22 12:00:00',
+            'grace_until' => '2026-11-22 20:00:00',
+        ], $now));
+        self::assertSame('NOT_STARTED', KslpCustomerWorkspaceQuery::state([
+            ...$license,
+            'starts_at' => '2026-11-24 00:00:00',
+        ], $now));
+        self::assertSame('REVOKED', KslpCustomerWorkspaceQuery::state([
+            ...$license,
+            'revoked_at' => '2026-11-20 00:00:00',
+        ], $now));
+        self::assertSame('RESTRICTED', KslpCustomerWorkspaceQuery::state([
+            ...$license,
+            'status' => 'suspended',
+        ], $now));
+        self::assertSame('RESTRICTED', KslpCustomerWorkspaceQuery::state([
+            ...$license,
+            'expires_at' => '',
+        ], $now));
     }
 }
