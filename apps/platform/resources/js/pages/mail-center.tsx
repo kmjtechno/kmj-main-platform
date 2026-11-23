@@ -443,9 +443,21 @@ export default function MailCenter({
     const selected =
         selectedThread?.items.find((item) => item.id === selectedMessageId) ??
         selectedThread?.items.at(-1);
+    // These are UI filters on the current page only, not invented server-side
+    // priority or spam classifiers. The actual full mailbox remains accessible.
+    const visibleItems = useMemo(() => {
+        if (mailTab === 'primary') return mailbox.items;
+        return mailbox.items.filter((item) => {
+            if (mailTab === 'team') return item.recipient_user_id !== null;
+            if (mailTab === 'updates') {
+                return /update|release|status|progress|milestone/i.test(item.subject);
+            }
+            return /system|security|password|verification|notice|alert/i.test(item.subject);
+        });
+    }, [mailTab, mailbox.items]);
     const allPageSelected =
-        mailbox.items.length > 0 &&
-        mailbox.items.every((item) => selectedIds.includes(item.id));
+        visibleItems.length > 0 &&
+        visibleItems.every((item) => selectedIds.includes(item.id));
     const back = isOwner ? '/operator' : '/dashboard';
 
     // app.tsx already mounts AppLayout (owner: OwnerModuleShell; staff: sidebar).
@@ -591,6 +603,35 @@ export default function MailCenter({
                                 </button>
                             ))}
                         </nav>
+                        <div className="kmj-mail-search-labels mt-4 border-t border-white/10 pt-3">
+                            <div className="flex items-center justify-between gap-2 px-2 text-xs font-bold">
+                                <span>Labels</span>
+                                <span className="text-[10px] font-normal text-slate-400">Quick search</span>
+                            </div>
+                            {[
+                                ['CodeBridge', '#4a9cff'],
+                                ['CloudOS', '#a458ed'],
+                                ['OmniDesk', '#f59d28'],
+                                ['Licensing', '#21b995'],
+                                ['Support', '#ef4068'],
+                                ['Marketing', '#e745a2'],
+                            ].map(([name, color]) => (
+                                <button
+                                    key={name}
+                                    type="button"
+                                    title={'Search current folder for ' + name}
+                                    onClick={() => navigate(folder, undefined, name)}
+                                    className="flex min-h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-xs text-slate-300 hover:bg-white/[0.06]"
+                                >
+                                    <span
+                                        aria-hidden="true"
+                                        className="size-3.5 shrink-0 rounded-sm"
+                                        style={{ background: color }}
+                                    />
+                                    {name}
+                                </button>
+                            ))}
+                        </div>
                         <div className="mt-4 border-t pt-4">
                             <button
                                 type="button"
@@ -630,7 +671,7 @@ export default function MailCenter({
                             'kmj-mail-list bg-card/90 min-w-0 overflow-hidden rounded-2xl border border-slate-700/40 p-3 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)] '
                         }
                     >
-                        <div className="flex items-center justify-between gap-2 px-2 pt-2">
+                        <div className="kmj-mail-list-head flex items-center justify-between gap-2 px-2 pt-2">
                             <div>
                                 <h2 className="text-lg font-extrabold tracking-tight">
                                     {view === 'templates'
@@ -638,7 +679,7 @@ export default function MailCenter({
                                         : view === 'staff'
                                           ? 'Staff access'
                                           : view === 'compose'
-                                            ? 'New message'
+                                            ? folderDefs.find((f) => f.id === folder)?.label
                                             : folderDefs.find(
                                                   (f) => f.id === folder,
                                               )?.label}
@@ -656,6 +697,35 @@ export default function MailCenter({
                         </div>
                         {(view === 'mail' || view === 'compose') && (
                             <>
+                                <div className="kmj-mail-tabs" role="tablist" aria-label="On-page message filters">
+                                    {([
+                                        ['primary', 'Primary'],
+                                        ['team', 'Team'],
+                                        ['updates', 'Updates'],
+                                        ['system', 'System'],
+                                    ] as const).map(([tab, label]) => (
+                                        <button
+                                            type="button"
+                                            role="tab"
+                                            key={tab}
+                                            aria-selected={mailTab === tab}
+                                            onClick={() => {
+                                                setMailTab(tab);
+                                                setSelectedIds([]);
+                                            }}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        title="Clear filter"
+                                        aria-label="Show all messages on this page"
+                                        onClick={() => setMailTab('primary')}
+                                    >
+                                        <SlidersHorizontal className="size-4" />
+                                    </button>
+                                </div>
                                 <form
                                     className="mt-3 flex gap-2"
                                     onSubmit={(e) => {
@@ -686,7 +756,7 @@ export default function MailCenter({
                                         Find
                                     </button>
                                 </form>
-                                <div className="bg-background/30 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border p-2">
+                                <div className="kmj-mail-toolbar bg-background/30 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border p-2">
                                     <label className="flex items-center gap-2 text-xs font-semibold">
                                         <input
                                             type="checkbox"
@@ -696,7 +766,7 @@ export default function MailCenter({
                                                 setSelectedIds(
                                                     allPageSelected
                                                         ? []
-                                                        : mailbox.items.map(
+                                                        : visibleItems.map(
                                                               (item) => item.id,
                                                           ),
                                                 )
@@ -710,7 +780,9 @@ export default function MailCenter({
                                     </label>
                                     <div className="flex items-center gap-2">
                                         <span className="text-muted-foreground text-xs">
-                                            {mailbox.total} total
+                                            {mailTab === 'primary'
+                                                ? mailbox.total + ' total'
+                                                : visibleItems.length + ' on this page'}
                                         </span>
                                         <button
                                             type="button"
@@ -828,8 +900,8 @@ export default function MailCenter({
                                         )}
                                     </div>
                                 )}
-                                <div className="mt-3 space-y-1.5">
-                                    {mailbox.items.map((item) => (
+                                <div className="kmj-mail-message-list mt-3 space-y-1.5">
+                                    {visibleItems.map((item) => (
                                         <div
                                             key={item.id}
                                             className="flex items-start gap-2"
@@ -870,6 +942,7 @@ export default function MailCenter({
                                                         mailbox.page,
                                                     )
                                                 }
+                                                aria-current={selected?.id === item.id ? 'true' : undefined}
                                                 className={
                                                     'hover:bg-muted/50 min-w-0 flex-1 rounded-xl border p-4 text-left shadow-sm transition hover:border-red-500/40 focus-visible:outline-2 focus-visible:outline-red-500 ' +
                                                     (selected?.id === item.id
@@ -879,6 +952,9 @@ export default function MailCenter({
                                             >
                                                 <div className="flex items-center justify-between gap-2">
                                                     <span className="flex min-w-0 items-center gap-1.5 truncate text-[13px] font-semibold">
+                                                        <span aria-hidden="true" className="kmj-mail-sender-avatar">
+                                                            {(item.sender_email ?? item.recipient_email ?? contactName(item.sender_user_id)).slice(0, 1).toUpperCase()}
+                                                        </span>
                                                         {item.unread && (
                                                             <span className="size-2 rounded-full bg-red-500" />
                                                         )}
@@ -936,7 +1012,7 @@ export default function MailCenter({
                                             </button>
                                         </div>
                                     ))}
-                                    {mailbox.items.length === 0 && (
+                                    {visibleItems.length === 0 && (
                                         <div className="rounded-xl border border-dashed px-4 py-12 text-center">
                                             <MailOpen className="text-muted-foreground mx-auto size-7" />
                                             <p className="mt-2 text-sm font-semibold">
