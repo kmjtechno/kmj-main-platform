@@ -724,6 +724,102 @@ final class OmniDeskPrivateApiTest extends TestCase
         $this->assertDatabaseCount('omnidesk_activation_bindings', 0);
     }
 
+    public function test_published_kid_with_wrong_signer_key_rolls_back_all_activation_mutations(): void
+    {
+        [$f, $deviceSecret, $body, $idempotency] = $this->protectedIssuerFixture();
+        unset($deviceSecret);
+        $this->bindPrincipal($f['organization_id'], true);
+
+        $wrongPair = sodium_crypto_sign_seed_keypair(hash('sha256', 'wrong-protected-signer-test', true));
+        $wrongPrivateKey = sodium_crypto_sign_secretkey($wrongPair);
+        $this->app->instance(OmniDeskSigner::class, new class($wrongPrivateKey) implements OmniDeskSigner
+        {
+            public function __construct(private readonly string $privateKey) {}
+
+            public function kid(): string
+            {
+                return 'omnidesk-protected-test-01';
+            }
+
+            public function sign(string $canonicalPayload): string
+            {
+                return sodium_crypto_sign_detached($canonicalPayload, $this->privateKey);
+            }
+        });
+
+        $this->postJson(
+            '/api/v1/licensing/omnidesk/activations',
+            $body,
+            ['Idempotency-Key' => $idempotency],
+        )->assertStatus(503)->assertJsonPath('error', 'ISSUANCE_NOT_CONFIGURED');
+
+        $this->assertDatabaseCount('kslp_activations', 0);
+        $this->assertDatabaseCount('omnidesk_activation_bindings', 0);
+        $this->assertDatabaseCount('kslp_license_events', 0);
+    }
+
+    public function test_cross_tenant_license_reference_is_not_activatable(): void
+    {
+        [$f, $deviceSecret, $body, $idempotency] = $this->protectedIssuerFixture();
+        unset($deviceSecret);
+        $other = Organization::query()->create(['name' => 'Unauthorized issuing tenant']);
+        $this->bindPrincipal((string) $other->getKey(), true);
+
+        $this->postJson(
+            '/api/v1/licensing/omnidesk/activations',
+            $body,
+            ['Idempotency-Key' => $idempotency],
+        )->assertStatus(404)->assertJsonPath('error', 'ACTIVATION_REVOKED');
+
+        $this->assertDatabaseCount('kslp_activations', 0);
+        $this->assertDatabaseCount('omnidesk_activation_bindings', 0);
+    }
+
+    public function test_tampered_renewal_signature_is_forbidden_and_challenge_remains_unconsumed(): void
+    {
+        [$f, $secret, $body, $idempotency] = $this->protectedIssuerFixture();
+        $this->bindPrincipal($f['organization_id'], true);
+
+        $activation = $this->postJson(
+            '/api/v1/licensing/omnidesk/activations',
+            $body,
+            ['Idempotency-Key' => $idempotency],
+        )->assertOk()->json();
+        $activationId = $activation['activation_id'];
+        $claims = $this->decodeProtectedToken($activation['signed_entitlement']);
+        $challenge = $this->postJson(
+            '/api/v1/licensing/omnidesk/activations/'.$activationId.'/renewal-challenge',
+            [],
+        )->assertOk()->json();
+        $proof = [
+            'activation_id' => $activationId,
+            'current_jti' => $claims['jti'],
+            'current_sequence' => 1,
+            'server_challenge' => $challenge['server_challenge'],
+            'client_nonce' => 'nonce-protected-renew-0123456789',
+            'client_version' => '0.0.1',
+            'proof_scheme' => 'KMJ-OMNIDESK-RENEW-v1',
+            'device_signature' => 'unsigned',
+        ];
+        $message = app(OmniDeskDeviceRenewalProof::class)->canonicalMessage($proof);
+        $proof['device_signature'] = $this->test_url_base64(
+            sodium_crypto_sign_detached($message, $secret),
+        );
+        $proof['client_nonce'] = 'nonce-modified-after-signature';
+
+        $this->postJson('/api/v1/licensing/omnidesk/leases/renew', $proof)
+            ->assertStatus(403)
+            ->assertJsonPath('error', 'FORBIDDEN');
+        $this->assertDatabaseHas('omnidesk_renewal_challenges', [
+            'activation_id' => $activationId,
+            'consumed_at' => null,
+        ]);
+        $this->assertDatabaseHas('omnidesk_activation_bindings', [
+            'activation_id' => $activationId,
+            'current_sequence' => 1,
+        ]);
+    }
+
     /**
      * Creates an isolated pre-activation license and binds a private signer
      * only for the test container, never in a production provider.
