@@ -148,6 +148,7 @@ final class KslpCustomerWorkspaceTest extends TestCase
             'status' => 'revoked',
         ]);
     }
+
     public function test_customer_renewal_states_are_derived_only_from_verified_kslp_dates(): void
     {
         $now = Carbon::parse('2026-11-23 12:00:00', 'UTC');
@@ -191,5 +192,4 @@ final class KslpCustomerWorkspaceTest extends TestCase
             'expires_at' => '',
         ], $now));
     }
-
 }
