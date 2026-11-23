@@ -19,11 +19,13 @@ import main_platform_autopublish_gate as gate  # noqa: E402
 import release_admission_receipts as ra  # noqa: E402
 
 STEPS = (
-    ("STAGING_ORIGIN", "elite_collect_staging_origin_receipt.py"),
-    ("PUBLIC_QA", "elite_collect_public_qa_receipt.py"),
-    ("BACKUP_AND_RESTORE", "elite_collect_backup_receipts.py"),
-    ("ROLLBACK_REHEARSAL", "elite_collect_rollback_rehearsal_receipt.py"),
-    ("MIGRATION_STORAGE", "elite_derive_migration_storage_receipt.py"),
+    ("STAGING_ORIGIN", "elite_collect_staging_origin_receipt.py", "--write"),
+    ("PUBLIC_QA", "elite_collect_public_qa_receipt.py", "--write"),
+    ("BACKUP_AND_RESTORE", "elite_collect_backup_receipts.py", "--write"),
+    ("REHEARSAL_WORKSPACE", "elite_prepare_rehearsal.py", "--write"),
+    ("ROLLBACK_REHEARSAL", "elite_collect_rollback_rehearsal_receipt.py", "--write"),
+    ("REHEARSAL_CLEANUP", "elite_prepare_rehearsal.py", "--cleanup"),
+    ("MIGRATION_STORAGE", "elite_derive_migration_storage_receipt.py", "--write"),
 )
 
 
@@ -39,9 +41,9 @@ def identity(approval):
     return sha, expected
 
 
-def run_step(script, sha, expected):
+def run_step(script, mode, sha, expected):
     proc = subprocess.run(
-        ["/usr/bin/python3", "-I", "-B", str(HERE / script), "--write", sha, expected],
+        ["/usr/bin/python3", "-I", "-B", str(HERE / script), mode, sha, expected],
         cwd="/", env={"PATH": "/usr/bin:/bin", "LANG": "C"}, stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL, text=True, check=False, timeout=7200)
     return proc.returncode == 0
@@ -59,10 +61,10 @@ def main(runner=run_step, approval=None):
         print("KMJ_COLLECT_ALL=" + str(exc))
         return 2
     failed = []
-    for label, script in STEPS:
+    for label, script, mode in STEPS:
         ok = False
         try:
-            ok = runner(script, sha, expected)
+            ok = runner(script, mode, sha, expected)
         except (OSError, subprocess.SubprocessError):
             ok = False
         print("KMJ_COLLECT_{}={}".format(label, "PASS" if ok else "FAIL"))

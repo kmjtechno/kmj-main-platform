@@ -20,15 +20,20 @@ UNITS = ROOT / "infra" / "server" / "systemd"
 class CollectAllTests(unittest.TestCase):
     def test_runs_fixed_steps_in_order_with_approval_identity_only(self):
         calls = []
-        rc = allc.main(lambda s, sha, exp: (calls.append((s, sha, exp)), True)[1], APPROVAL)
+        rc = allc.main(lambda s, m, sha, exp: (calls.append((s, m, sha, exp)), True)[1], APPROVAL)
         self.assertEqual(rc, 0)
-        self.assertEqual([c[0] for c in calls], [s for _, s in allc.STEPS])
-        self.assertTrue(all(c[1:] == (SHA, PREV) for c in calls))
+        self.assertEqual([(c[0], c[1]) for c in calls], [(s, m) for _, s, m in allc.STEPS])
+        self.assertTrue(all(c[2:] == (SHA, PREV) for c in calls))
+        modes = [m for _, _, m in allc.STEPS]
+        self.assertLess(modes.index("--cleanup"), len(modes))
+        labels = [l for l, _, _ in allc.STEPS]
+        self.assertLess(labels.index("REHEARSAL_WORKSPACE"), labels.index("ROLLBACK_REHEARSAL"))
+        self.assertLess(labels.index("ROLLBACK_REHEARSAL"), labels.index("REHEARSAL_CLEANUP"))
 
     def test_failing_step_does_not_stop_others_and_exit_nonzero(self):
         calls = []
 
-        def runner(script, sha, exp):
+        def runner(script, mode, sha, exp):
             calls.append(script)
             return script != "elite_collect_public_qa_receipt.py"
         self.assertEqual(allc.main(runner, APPROVAL), 1)

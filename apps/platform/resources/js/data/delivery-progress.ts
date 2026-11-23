@@ -146,6 +146,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'release-rehearsal-workspace-20261123',
+        title: 'Release rehearsal workspace: disposable database and secret-free code-tree copies',
+        state: 'active',
+        detail: 'Source-only root helper that copies the previous and candidate code trees without any env file, cached config, storage or symlink, creates a loopback-only non-superuser disposable database stamped with a random attestation nonce, writes the root-protected rehearsal config, and cleans everything up afterwards. It never touches production databases, releases, approvals or the live pointer.',
+        evidence:
+            'Unit tests and exact-head CI only. Not installed or run on Elite. Elite has PHP 8.4, psql, local PostgreSQL 16 and rsync; the real rsync filter test is skipped where rsync is absent.',
+    },
+    {
         id: 'release-evidence-installer-20261122',
         title: 'Pinned owner installer for the release evidence collectors and admission broker',
         state: 'active',
