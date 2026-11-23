@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Payments;
 
+use App\Services\Licensing\OmniDeskLicenseContract;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -34,6 +35,25 @@ final class RazorpayCheckoutOrders
             $order = CommercialOrder::query()->whereKey($commercialOrderId)->lockForUpdate()->firstOrFail();
             if ((string) $order->getAttribute('status') !== 'requested') {
                 throw new DomainException('RAZORPAY_ORDER_NOT_OPENABLE');
+            }
+
+            // OmniDesk paid checkouts MUST have an immutable, server-approved
+            // plan/price/term before any payment provider order is created.
+            // Do not infer a subscription from client-supplied amounts.
+            $omniDeskProductId = DB::table('products')
+                ->where('slug', OmniDeskLicenseContract::PRODUCT_SLUG)
+                ->value('id');
+            if ($omniDeskProductId !== null
+                && (string) $order->getAttribute('product_id') === (string) $omniDeskProductId) {
+                $snapshot = DB::table('commerce_order_plan_snapshots')
+                    ->where('commercial_order_id', $commercialOrderId)->first();
+                if ($snapshot === null
+                    || (string) $snapshot->product_id !== (string) $omniDeskProductId
+                    || (string) $snapshot->organization_id !== (string) $order->getAttribute('organization_id')
+                    || (int) $snapshot->amount_minor !== $expectedAmountMinor
+                    || (string) $snapshot->currency !== 'INR') {
+                    throw new DomainException('OMNIDESK_CHECKOUT_PLAN_OR_PRICE_MISMATCH');
+                }
             }
 
             $existing = DB::table('commerce_provider_orders')
