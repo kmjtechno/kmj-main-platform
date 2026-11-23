@@ -148,6 +148,32 @@ final class KslpResellerSettlementReadinessInspectorTest extends TestCase
         $this->assertDatabaseCount('kslp_licenses', 0);
     }
 
+    public function test_forged_live_link_with_reconciled_inbox_stays_blocked_without_real_settlement(): void
+    {
+        $actor = User::factory()->create(['email_verified_at' => now()]);
+        [$org, $product, $order] = $this->seedOrder($actor, 'ZETA');
+        app(CommercialOrderService::class)->confirm(
+            $order, $actor->id, 'INR', 25000, 'razorpay:pay_FUNDING1'
+        );
+        // Forged local rows cannot substitute for independent live merchant,
+        // refund, KYC, price/SKU or product-signature validation.
+        $this->providerLink($order, ['environment' => 'live']);
+        $this->receipt();
+
+        $evidence = app(KslpResellerSettlementReadinessInspector::class)
+            ->inspect($actor->id, $org, $product, $order);
+
+        self::assertNotContains('PROVIDER_NOT_LIVE', $evidence['blocked_reasons']);
+        self::assertContains('LIVE_MERCHANT_SETTLEMENT_UNVERIFIED', $evidence['blocked_reasons']);
+        self::assertContains('PRODUCT_ORDER_SKU_MAPPING_UNVERIFIED', $evidence['blocked_reasons']);
+        self::assertContains('REFUND_CHARGEBACK_LIFECYCLE_NOT_READY', $evidence['blocked_reasons']);
+        self::assertFalse($evidence['verified_live_settlement']);
+        self::assertFalse($evidence['paid_issuance_enabled']);
+        self::assertNull($evidence['available_credits']);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+        $this->assertDatabaseCount('entitlements', 0);
+    }
+
     public function test_other_tenant_is_denied_before_any_payment_inspection(): void
     {
         $ownerA = User::factory()->create(['email_verified_at' => now()]);
