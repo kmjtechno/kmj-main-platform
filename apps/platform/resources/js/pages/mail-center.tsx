@@ -1222,10 +1222,11 @@ export default function MailCenter({
                                           : 'Compose'}
                                 </h2>
                                 <p className="text-muted-foreground mt-2 text-xs leading-6">
-                                    Draft or refine this message with KMJ AI Copilot.
-                                    Every AI suggestion must be reviewed before
-                                    a separate manual Send action. Queued email
-                                    is not proof of inbox delivery.
+                                    Draft or refine this message with KMJ AI
+                                    Copilot. Every AI suggestion must be
+                                    reviewed before a separate manual Send
+                                    action. Queued email is not proof of inbox
+                                    delivery.
                                 </p>
                                 <div className="mt-6 space-y-4">
                                     <div
