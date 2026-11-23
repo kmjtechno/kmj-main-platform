@@ -90,6 +90,10 @@ Device `kmj-elite-main-platform`, project `kmj-main-platform`.
 
 If the activation call is refused by the tool, stop and ask the owner. Do not retry with different values.
 
+## Staging ref auto-advance (2026-11-23)
+
+`Staging Promotion Gate` now fast-forwards `staging-approved` to the exact main commit once every verification job is green. It never forces the ref and never claims a staging deployment or any production approval. Set the repository variable `KMJ_STAGING_AUTO_PROMOTION` to `off` to stop it. `staging-vps-deploy-fixed.yml` still needs the owner exact-SHA variable.
+
 ## Pinned helper hashes (unchanged across the last releases)
 
 | Helper | sha256 |

@@ -1,4 +1,6 @@
-"""Exact-SHA owner authorization contract for staging auto-promotion.
+"""Staging-ref promotion contract: green main only, fast-forward only, owner kill-switch.
+
+The staging-VPS deploy workflow still requires the owner exact-SHA variable.
 
 Runs without GitHub tokens, network, secrets, or staging/production access.
 The intentionally broken synthetic cases must fail closed.
@@ -11,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PROMOTION = ROOT / ".github/workflows/staging-promotion-gate.yml"
 DEPLOY = ROOT / ".github/workflows/staging-vps-deploy-fixed.yml"
 OWNER_VAR = "KMJ_STAGING_PROMOTION_APPROVED_SHA"
+KILL_SWITCH = "KMJ_STAGING_AUTO_PROMOTION"
 
 
 def job_block(source: str, name: str) -> str:
@@ -35,7 +38,7 @@ def authorized_promotion(source: str) -> bool:
         block = job_block(source, "promote")
         write = block.split("      - name: Move staging-approved only after all verification passes\n", 1)[1]
         write_gate = write.split("        env:\n", 1)[0].strip()
-        skipped = block.split("      - name: Record blocked staging promotion when exact owner SHA is absent\n", 1)[1]
+        skipped = block.split("      - name: Record blocked staging promotion when not a main push or auto-advance is switched off\n", 1)[1]
         no_approval_gate = skipped.split("        run:\n", 1)[0].strip()
     except (ValueError, IndexError):
         return False
@@ -47,11 +50,11 @@ def authorized_promotion(source: str) -> bool:
     )
     allowed_write = (
         "if: ${{ github.ref == 'refs/heads/main' && "
-        "vars." + OWNER_VAR + " == github.sha }}"
+        "vars." + KILL_SWITCH + " != 'off' }}"
     )
     blocked_write = (
         "if: ${{ github.ref != 'refs/heads/main' || "
-        "vars." + OWNER_VAR + " != github.sha }}"
+        "vars." + KILL_SWITCH + " == 'off' }}"
     )
     return (all(cond.count(x) == 1 for x in required)
             and " || " not in cond
@@ -100,8 +103,8 @@ class ExactShaStagingApprovalContract(unittest.TestCase):
     def test_unapproved_green_push_cannot_promote(self):
         source = PROMOTION.read_text()
         for broken in (
-            source.replace(" && vars." + OWNER_VAR + " == github.sha", ""),
-            source.replace("vars." + OWNER_VAR + " == github.sha", "true"),
+            source.replace(" && vars." + KILL_SWITCH + " != 'off'", ""),
+            source.replace("vars." + KILL_SWITCH + " != 'off'", "true"),
             source.replace("github.ref == 'refs/heads/main'", "true"),
             source.replace("needs.owner_auth.result == 'success'", "true"),
         ):
@@ -119,14 +122,14 @@ class ExactShaStagingApprovalContract(unittest.TestCase):
     def test_skipped_promotion_has_explicit_no_deployment_receipt(self):
         job = job_block(PROMOTION.read_text(), "promote")
         skipped = job.split(
-            "      - name: Record blocked staging promotion when exact owner SHA is absent\n", 1
+            "      - name: Record blocked staging promotion when not a main push or auto-advance is switched off\n", 1
         )[1].split("      - name: Move staging-approved only after all verification passes\n", 1)[0]
         self.assertIn("id: skipped", skipped)
         self.assertIn("echo 'performed=false' >> \"$GITHUB_OUTPUT\"", skipped)
-        self.assertIn("STAGING_PROMOTION=SKIPPED_NO_EXACT_OWNER_SHA", skipped)
+        self.assertIn("STAGING_PROMOTION=SKIPPED_NOT_MAIN_OR_AUTO_OFF", skipped)
         self.assertIn("Staging promotion NOT performed", skipped)
         self.assertIn(
-            "owner_sha_missing: ${{ steps.skipped.outputs.performed == 'false' }}", job
+            "auto_promotion_skipped: ${{ steps.skipped.outputs.performed == 'false' }}", job
         )
 
     def test_approved_ref_update_never_claims_staging_server_deployment(self):
@@ -136,8 +139,10 @@ class ExactShaStagingApprovalContract(unittest.TestCase):
         )[1]
         self.assertIn("id: promoted", promote)
         self.assertIn("echo 'performed=true' >> \"$GITHUB_OUTPUT\"", promote)
-        self.assertIn("STAGING_PROMOTION=REF_ADVANCED_EXACT_OWNER_SHA", promote)
+        self.assertIn("STAGING_PROMOTION=REF_ADVANCED_AFTER_GREEN_CI", promote)
         self.assertIn("STAGING_SERVER_DEPLOYMENT=NOT_ATTESTED_BY_THIS_JOB", promote)
+        self.assertIn('"force\\":false', promote)
+        self.assertIn("never forced", promote)
         self.assertIn("ref_advanced: ${{ steps.promoted.outputs.performed == 'true' }}", job)
         self.assertNotIn("STAGING_SERVER_DEPLOYMENT=PASS", job)
 
