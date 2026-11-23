@@ -143,7 +143,18 @@ type EliteRelease = {
     deploy_triggered?: boolean;
 };
 
+type ReleasePrepare = {
+    main_head: string | null;
+    status: {
+        state: string;
+        approved_sha: string;
+        detail: string;
+        updated_at_unix: number;
+    } | null;
+};
+
 type Props = {
+    releasePrepare: ReleasePrepare;
     codebridgeStage: {
         status: string;
         configured: boolean;
@@ -294,12 +305,16 @@ export default function OperatorOps({
     recentActions,
     outbox,
     eliteRelease,
+    releasePrepare,
 }: Props) {
     const [refreshing, setRefreshing] = useState(false);
     const [restarting, setRestarting] = useState(false);
     const [activationRequesting, setActivationRequesting] = useState(false);
     const [admissionRequesting, setAdmissionRequesting] = useState(false);
     const [qaAttested, setQaAttested] = useState(false);
+    const [prepareRequesting, setPrepareRequesting] = useState(false);
+    const [backupRollbackAttested, setBackupRollbackAttested] = useState(false);
+    const [migrateAccepted, setMigrateAccepted] = useState(false);
 
     const refresh = () => {
         setRefreshing(true);
@@ -308,6 +323,7 @@ export default function OperatorOps({
                 'snapshot',
                 'readiness',
                 'eliteRelease',
+                'releasePrepare',
                 'outbox',
                 'recentActions',
             ],
@@ -326,6 +342,7 @@ export default function OperatorOps({
                     'snapshot',
                     'readiness',
                     'eliteRelease',
+                    'releasePrepare',
                     'outbox',
                     'recentActions',
                 ],
@@ -448,6 +465,51 @@ export default function OperatorOps({
             {
                 preserveScroll: true,
                 onFinish: () => setAdmissionRequesting(false),
+            },
+        );
+    };
+
+    const prepareSha = releasePrepare.main_head;
+    const prepareBusy =
+        releasePrepare.status?.state === 'preparing' ||
+        releasePrepare.status?.state === 'migrating';
+    const canRequestPrepare =
+        typeof prepareSha === 'string' &&
+        /^[a-f0-9]{40}$/.test(prepareSha) &&
+        eliteRelease.current_release !==
+            `platform-${prepareSha.slice(0, 12)}` &&
+        !prepareBusy;
+
+    const requestPrepare = () => {
+        if (
+            !canRequestPrepare ||
+            !backupRollbackAttested ||
+            !migrateAccepted ||
+            !prepareSha
+        ) {
+            return;
+        }
+
+        if (
+            !window.confirm(
+                `Ask the root broker to stage and approve exact main SHA ${prepareSha}? It re-checks main head, every CI check and the pinned helper, never activates, and runs migrations only after this SHA is live.`,
+            )
+        ) {
+            return;
+        }
+
+        setPrepareRequesting(true);
+        router.post(
+            '/operator/ops/actions/release-prepare-intent',
+            {
+                approved_sha: prepareSha,
+                confirmation: 'REQUEST_RELEASE_PREPARE',
+                owner_backup_rollback_attested: true,
+                migrate_after_activation_accepted: true,
+            },
+            {
+                preserveScroll: true,
+                onFinish: () => setPrepareRequesting(false),
             },
         );
     };
@@ -642,6 +704,69 @@ export default function OperatorOps({
                         never overwrites a pending request, and never proves a
                         production switch. The fixed root broker must be
                         independently installed and verify every protected gate.
+                    </p>
+                </section>
+
+                <section className="rounded-2xl border p-4">
+                    <h2 className="text-sm font-bold">
+                        Prepare release (stage and approve)
+                    </h2>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                        Candidate: current main{' '}
+                        <code>{prepareSha ?? 'unverified'}</code>
+                        {releasePrepare.status
+                            ? ` | broker status: ${releasePrepare.status.state} (${releasePrepare.status.detail})`
+                            : ' | broker status: none reported'}
+                    </p>
+                    <label className="mt-3 flex max-w-xl items-start gap-2 text-xs">
+                        <input
+                            type="checkbox"
+                            checked={backupRollbackAttested}
+                            onChange={(event) =>
+                                setBackupRollbackAttested(event.target.checked)
+                            }
+                            className="mt-0.5"
+                        />
+                        <span>
+                            I attest the backup and rollback checks the release
+                            helper performs are my approval for this exact SHA.
+                        </span>
+                    </label>
+                    <label className="mt-2 flex max-w-xl items-start gap-2 text-xs">
+                        <input
+                            type="checkbox"
+                            checked={migrateAccepted}
+                            onChange={(event) =>
+                                setMigrateAccepted(event.target.checked)
+                            }
+                            className="mt-0.5"
+                        />
+                        <span>
+                            Run database migrations automatically once this SHA
+                            is live.
+                        </span>
+                    </label>
+                    <button
+                        type="button"
+                        onClick={requestPrepare}
+                        disabled={
+                            !canRequestPrepare ||
+                            !backupRollbackAttested ||
+                            !migrateAccepted ||
+                            prepareRequesting
+                        }
+                        className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        <ShieldCheck className="size-4" aria-hidden="true" />
+                        {prepareRequesting
+                            ? 'Submitting prepare request...'
+                            : 'Request release prepare'}
+                    </button>
+                    <p className="text-muted-foreground mt-2 text-[11px]">
+                        This only queues an intent. The root broker re-verifies
+                        main head, exact-head CI and the pinned helper, never
+                        activates production, and a status here is a report, not
+                        proof of a release.
                     </p>
                 </section>
 

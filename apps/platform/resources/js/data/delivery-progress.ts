@@ -146,6 +146,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature test (advisory fields, degrades to unavailable without a receipt, no entry for other projects), tsc and exact-head CI only. Not deployed and not yet viewed in a browser by the owner.',
     },
     {
+        id: 'ops-release-prepare-click-20261123',
+        title: 'Ops release prepare click: owner intent for the root prepare broker',
+        state: 'active',
+        detail: 'The owner Ops page shows the verified main head and broker status and can queue one prepare intent with two explicit attestations. The intent is never an approval or an activation.',
+        evidence:
+            'Feature tests and exact-head CI only. Broker not installed on Elite; the click has not run a real release.',
+    },
+    {
         id: 'release-prepare-broker-20261123',
         title: 'Release prepare broker: root intent broker that runs the pinned owner helper in bounded modes',
         state: 'active',
