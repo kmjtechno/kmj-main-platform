@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Commerce;
 
 use App\Models\User;
+use App\Services\Licensing\OmniDesk\OmniDeskOfferCatalog;
 use App\Services\Licensing\OmniDeskLicenseContract;
 use App\Services\Payments\OmniDeskVerifiedLiveCapture;
 use App\Services\Payments\OmniDeskVerifiedLivePaymentSource;
@@ -33,6 +34,12 @@ final class OmniDeskVerifiedPaidFulfillment
         'omnidesk.professional' => 'professional',
         'omnidesk.business' => 'business',
         'omnidesk.enterprise' => 'enterprise',
+        'omnidesk.professional.monthly' => 'professional',
+        'omnidesk.professional.yearly' => 'professional',
+        'omnidesk.business.monthly' => 'business',
+        'omnidesk.business.yearly' => 'business',
+        'omnidesk.enterprise.monthly' => 'enterprise',
+        'omnidesk.enterprise.yearly' => 'enterprise',
     ];
 
     public const POLICY_CODE = 'omnidesk.paid.remote_access';
@@ -176,6 +183,17 @@ final class OmniDeskVerifiedPaidFulfillment
                 || (int) $plan->getAttribute('amount_minor') !== (int) $snapshot['amount_minor']
                 || (string) $plan->getAttribute('billing_interval') !== $snapshot['billing_interval']
                 || ! in_array($snapshot['billing_interval'], ['monthly', 'yearly'], true)) {
+                throw new DomainException('OMNIDESK_COMMERCIAL_POLICY_NOT_APPROVED');
+            }
+
+            $catalogOffer = OmniDeskOfferCatalog::offers()[$snapshot['plan_code']] ?? null;
+            if ($catalogOffer !== null && (
+                $catalogOffer['amount_minor'] !== (int) $snapshot['amount_minor']
+                || $catalogOffer['billing_interval'] !== $snapshot['billing_interval']
+                || $catalogOffer['currency'] !== $snapshot['currency']
+                || $catalogOffer['features'] !== $plan->getAttribute('features')
+                || $catalogOffer['limits'] !== $plan->getAttribute('limits')
+            )) {
                 throw new DomainException('OMNIDESK_COMMERCIAL_POLICY_NOT_APPROVED');
             }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Commerce;
 
 use App\Models\User;
+use App\Services\Licensing\OmniDesk\OmniDeskOfferCatalog;
 use App\Services\Licensing\OmniDeskLicenseContract;
 use DomainException;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +28,12 @@ final class OmniDeskOrderPlanBinder
         'omnidesk.professional',
         'omnidesk.business',
         'omnidesk.enterprise',
+        'omnidesk.professional.monthly',
+        'omnidesk.professional.yearly',
+        'omnidesk.business.monthly',
+        'omnidesk.business.yearly',
+        'omnidesk.enterprise.monthly',
+        'omnidesk.enterprise.yearly',
     ];
 
     private const PERMITTED_INTERVALS = ['monthly', 'yearly'];
@@ -86,6 +93,21 @@ final class OmniDeskOrderPlanBinder
                 || $plan->getAttribute('amount_minor') > 100000000
                 || (int) $plan->getAttribute('trial_days') !== 0) {
                 throw new DomainException('OMNIDESK_PLAN_NOT_APPROVED');
+            }
+
+            // New price codes are version-locked to the owner-selected
+            // market catalog. Legacy existing plan codes are independently
+            // approved DB offers and retained for prior checkout compatibility.
+            $offer = OmniDeskOfferCatalog::offers()[(string) $plan->getAttribute('code')] ?? null;
+            if ($offer !== null && (
+                $offer['pricing_model'] !== 'subscription'
+                || $offer['amount_minor'] !== $plan->getAttribute('amount_minor')
+                || $offer['currency'] !== $plan->getAttribute('currency')
+                || $offer['billing_interval'] !== $plan->getAttribute('billing_interval')
+                || $offer['features'] !== $plan->getAttribute('features')
+                || $offer['limits'] !== $plan->getAttribute('limits')
+            )) {
+                throw new DomainException('OMNIDESK_PLAN_PRICE_OR_QUOTA_CONFLICT');
             }
 
             $snapshot = [

@@ -1,9 +1,10 @@
+import type { OmniDeskOffer } from '@/components/omnidesk-pricing-cards';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
 import {
     DeveloperAppsWorkspace,
     type DeveloperWorkspaceProps,
 } from './developer-apps';
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import {
     KeyRound,
@@ -74,6 +75,13 @@ type Props = {
     customerOptions: { id: string; name: string; email: string }[];
     productEntitlements: ProductEntitlement[];
     issuerWorkspaces: IssuerWorkspace[];
+    omnideskOffers: OmniDeskOffer[];
+    omnideskOfferVersion: string;
+    omnideskReleaseFlags: {
+        trial: boolean;
+        paid: boolean;
+        gateway: boolean;
+    };
     developerIssuanceEnabled: boolean;
     developerWorkspace: DeveloperWorkspaceProps;
     unverifiedEmailCleanup: {
@@ -150,6 +158,9 @@ export default function OperatorKslp({
     customerOptions,
     productEntitlements,
     issuerWorkspaces,
+    omnideskOffers,
+    omnideskOfferVersion,
+    omnideskReleaseFlags,
     developerIssuanceEnabled,
     developerWorkspace,
     unverifiedEmailCleanup,
@@ -264,6 +275,7 @@ export default function OperatorKslp({
                 >
                     {[
                         ['#license-overview', 'Overview'],
+                        ['#omnidesk-offers', 'OmniDesk pricing'],
                         ['#issuer-workspaces', 'Developer issuers'],
                         ['#developer-workspace', 'Apps, Keys & SDK'],
                         ['#unverified-accounts', 'Unverified accounts'],
@@ -282,6 +294,105 @@ export default function OperatorKslp({
                         </a>
                     ))}
                 </nav>
+                <section
+                    id="omnidesk-offers"
+                    aria-labelledby="omnidesk-offers-title"
+                    className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
+                >
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                            <h2
+                                id="omnidesk-offers-title"
+                                className="text-lg font-extrabold"
+                            >
+                                OmniDesk · India launch pricing
+                            </h2>
+                            <p className="text-muted-foreground mt-2 max-w-2xl text-xs leading-5">
+                                Version {omnideskOfferVersion}. A no-card trial,
+                                personal free tier and monthly/yearly business
+                                offers live in this ONE Licensing Hub. Preparing
+                                a price creates PAUSED catalog plans only: no
+                                payment, customer entitlement, signed lease or
+                                automatic renewal is enabled.
+                            </p>
+                            <p className="text-muted-foreground mt-2 text-xs">
+                                Trial rollout:{' '}
+                                {omnideskReleaseFlags.trial
+                                    ? 'configured'
+                                    : 'off'}
+                                {' · '}
+                                Paid fulfillment:{' '}
+                                {omnideskReleaseFlags.paid
+                                    ? 'configured'
+                                    : 'off'}
+                                {' · '}
+                                Live gateway:{' '}
+                                {omnideskReleaseFlags.gateway
+                                    ? 'configured'
+                                    : 'off'}
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    router.post(
+                                        '/operator/kslp/omnidesk/offers/prepare',
+                                        {},
+                                        { preserveScroll: true },
+                                    )
+                                }
+                                className="min-h-11 rounded-xl bg-red-600 px-4 text-xs font-bold text-white hover:bg-red-500"
+                            >
+                                Prepare paused INR plans
+                            </button>
+                            <Link
+                                href="/operator/payments"
+                                className="inline-flex min-h-11 items-center rounded-xl border px-4 text-xs font-bold hover:bg-red-500/10"
+                            >
+                                Verify Razorpay / Cashfree gateway
+                            </Link>
+                        </div>
+                    </div>
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {omnideskOffers.map((offer) => (
+                            <article
+                                key={offer.code}
+                                className="border-border rounded-xl border p-4"
+                            >
+                                <p className="text-sm font-bold">
+                                    {offer.name}
+                                </p>
+                                <p className="mt-1 text-lg font-black tabular-nums">
+                                    {offer.amount_minor === null
+                                        ? offer.trial_days > 0
+                                            ? `${offer.trial_days} days free`
+                                            : 'Free / quote'
+                                        : `₹${(offer.amount_minor / 100).toLocaleString('en-IN')} / ${offer.billing_interval}`}
+                                </p>
+                                <p className="text-muted-foreground mt-2 text-xs">
+                                    {offer.licensed_users} users ·{' '}
+                                    {offer.managed_devices} devices
+                                    {' · '}
+                                    {offer.concurrent_sessions} concurrent
+                                    sessions
+                                </p>
+                                <p className="text-muted-foreground mt-2 text-xs">
+                                    {offer.available
+                                        ? 'Catalog active (other release gates still apply)'
+                                        : 'Not for sale · prepared or awaiting approval'}
+                                </p>
+                            </article>
+                        ))}
+                    </div>
+                    <p className="text-muted-foreground mt-4 text-xs">
+                        Launch pricing excludes applicable taxes. Owner merchant
+                        onboarding and verified LIVE provider payment must pass
+                        before activating any paid plan. Personal Free is
+                        non-commercial and direct-only.
+                    </p>
+                </section>
+
                 <section
                     id="license-overview"
                     className="owner-admin-hero kmj-admin-hero scroll-mt-6 rounded-[1.65rem] p-6 sm:p-8"

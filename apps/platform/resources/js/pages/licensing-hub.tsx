@@ -111,6 +111,12 @@ export default function LicensingHub({
             },
         );
     };
+    // Server-derived KSLP trial state is only a record, not evidence of
+    // a working signed remote-control lease or active payment mandate.
+    const omniTrial = licenses.find(
+        (license) =>
+            license.product === 'KMJ_OMNIDESK' && license.plan === 'trial',
+    );
     const activeLicenses = licenses.filter((license) =>
         ['ACTIVE', 'RENEWAL_DUE', 'GRACE'].includes(license.state),
     ).length;
@@ -216,6 +222,43 @@ export default function LicensingHub({
                                 {trialFeedback}
                             </p>
                         )}
+                    </section>
+                )}
+
+                {omniTrial && (
+                    <section
+                        aria-labelledby="omnidesk-trial-status-heading"
+                        className="border-border bg-card rounded-2xl border p-5 sm:p-6"
+                    >
+                        <div className="flex flex-wrap items-center justify-between gap-4">
+                            <div>
+                                <h2
+                                    id="omnidesk-trial-status-heading"
+                                    className="text-base font-bold"
+                                >
+                                    OmniDesk · Your trial record
+                                </h2>
+                                <p className="text-muted-foreground mt-2 text-xs leading-5">
+                                    {stateLabels[omniTrial.state] ??
+                                        'Restricted'}
+                                    {' · '}
+                                    Expires {readableDate(omniTrial.expires_at)}
+                                    . No automatic paid charge follows trial
+                                    expiry. A real signed device activation
+                                    remains a separate security requirement.
+                                </p>
+                            </div>
+                            <Link
+                                href="/purchase#omnidesk-offers"
+                                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-red-500/30 px-4 text-xs font-bold hover:bg-red-500/5"
+                            >
+                                Compare transparent upgrade plans
+                                <ArrowRight
+                                    className="size-4"
+                                    aria-hidden="true"
+                                />
+                            </Link>
+                        </div>
                     </section>
                 )}
 
