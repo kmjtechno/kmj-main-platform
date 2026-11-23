@@ -1,0 +1,12 @@
+[Unit]
+Description=KMJ TECHNO release prepare intent and post-activation check (Elite-only, no external VPS)
+
+[Timer]
+OnBootSec=90s
+OnUnitInactiveSec=20s
+AccuracySec=5s
+Persistent=false
+Unit=kmj-elite-release-prepare-broker.service
+
+[Install]
+WantedBy=timers.target
