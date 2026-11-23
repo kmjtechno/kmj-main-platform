@@ -28,9 +28,10 @@ final class NativeMailController
     {
         $user = $this->user($request, $portal);
         $values = $request->validate([
-            'folder' => ['sometimes', 'in:inbox,sent,drafts,trash'],
+            'folder' => ['sometimes', 'in:inbox,sent,drafts,archive,starred,trash'],
             'q' => ['sometimes', 'nullable', 'string', 'max:80'],
             'message' => ['sometimes', 'integer', 'min:1'],
+            'page' => ['sometimes', 'integer', 'min:1', 'max:1000'],
         ]);
         $folder = (string) ($values['folder'] ?? 'inbox');
         $search = trim((string) ($values['q'] ?? ''));
@@ -40,7 +41,7 @@ final class NativeMailController
             'audience' => $portal === 'operator' ? 'owner' : 'staff',
             'templates' => WorkforceMailCatalog::forAudience($portal === 'operator' ? 'owner' : 'team'),
             'workspaceMode' => 'native_internal',
-            'mailbox' => $this->mail->mailbox($user, $folder, $search),
+            'mailbox' => $this->mail->mailbox($user, $folder, $search, (int) ($values['page'] ?? 1)),
             'folder' => $folder,
             'q' => $search,
             'selectedThread' => $thread,
@@ -156,6 +157,22 @@ final class NativeMailController
 
         return redirect()->to('/'.$portal.'/mail')
             ->with('status', 'Message restored to its previous folder.');
+    }
+
+    public function manage(Request $request, string $portal): RedirectResponse
+    {
+        $user = $this->user($request, $portal);
+        $values = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:40'],
+            'ids.*' => ['required', 'integer', 'distinct', 'min:1'],
+            'action' => ['required', 'in:star,unstar,read,unread,archive,unarchive,trash,restore'],
+            'folder' => ['sometimes', 'in:inbox,sent,drafts,archive,starred,trash'],
+        ]);
+        $count = $this->mail->manage($user, $values['ids'], (string) $values['action']);
+        $folder = (string) ($values['folder'] ?? 'inbox');
+
+        return redirect()->to('/'.$portal.'/mail?folder='.$folder)
+            ->with('status', $count.' KMJ Mail message(s) updated. Other users’ copies were not changed.');
     }
 
     public function grantStaff(Request $request): RedirectResponse
