@@ -2114,19 +2114,19 @@ export default function MailCenter({
                                             PRIVATE COMMUNICATIONS
                                         </p>
                                         <h2 className="mt-2 text-2xl leading-tight font-black tracking-tight sm:text-[30px]">
-                                            {activeSearch
-                                                ? 'No matching conversations.'
-                                                : mailbox.items.length
-                                                  ? 'Your next conversation starts here.'
+                                            {mailbox.items.length
+                                                ? 'Your next conversation starts here.'
+                                                : activeSearch
+                                                  ? 'No matching conversations.'
                                                   : 'A clear space for every conversation.'}
                                         </h2>
                                         <p className="text-muted-foreground mt-3 max-w-md text-sm leading-7">
-                                            {activeSearch
-                                                ? 'The search “' +
-                                                  activeSearch +
-                                                  '” found no matching messages in this folder. Clear the search to browse the full folder.'
-                                                : mailbox.items.length
-                                                  ? 'Choose a message to view its full thread, sender details and delivery status.'
+                                            {mailbox.items.length
+                                                ? 'Choose a message to view its full thread, sender details and delivery status.'
+                                                : activeSearch
+                                                  ? 'The search “' +
+                                                    activeSearch +
+                                                    '” found no matching messages in this folder. Clear the search to browse the full folder.'
                                                   : 'This folder has no matching private messages. Compose a new message or choose another folder.'}
                                         </p>
                                         {folder === 'inbox' && latestSent && (
