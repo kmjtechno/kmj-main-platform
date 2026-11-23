@@ -39,7 +39,7 @@ $omnideskError = static function (Throwable $error) {
 
     [$code, $status] = match ($error->getMessage()) {
         'OMNIDESK_UNAUTHENTICATED' => ['UNAUTHENTICATED', 401],
-        'OMNIDESK_FORBIDDEN' => ['FORBIDDEN', 403],
+        'OMNIDESK_FORBIDDEN', 'FORBIDDEN' => ['FORBIDDEN', 403],
         'OMNIDESK_ACTIVATION_NOT_FOUND' => ['ACTIVATION_REVOKED', 404],
         'OMNIDESK_RENEWAL_CHALLENGE_DENIED' => ['ACTIVATION_REVOKED', 404],
         'OMNIDESK_REASON_REQUIRED', 'INVALID_REQUEST' => ['INVALID_REQUEST', 422],
