@@ -8,7 +8,7 @@
 @media only screen and (max-width:620px) {
 .kmj-wrap{width:100%!important;max-width:100%!important}
 .kmj-pad{padding:25px!important}
-.kmj-logo{width:300px!important;max-width:100%!important}
+.kmj-mark{width:58px!important;height:58px!important}
 }
 </style>
 </head>
@@ -18,10 +18,21 @@
 <table class="kmj-wrap" width="620" cellpadding="0" cellspacing="0" role="presentation" style="width:620px;max-width:620px;border-collapse:collapse">
 <tr><td height="5" style="background:#cd2141;line-height:5px">&nbsp;</td></tr>
 <tr><td class="kmj-pad" style="padding:32px 40px;background:#101722">
-<a href="https://kmjtechno.com" style="text-decoration:none">
-<img class="kmj-logo" src="https://kmjtechno.com/assets/brand/kmj-email-lockup-dark.png" width="360" alt="KMJ TECHNO — INNOVATE | BUILD | SCALE" style="display:block;border:0;width:360px;max-width:100%;height:auto;color:#fff;font-size:17px;font-weight:bold">
-</a>
-<p style="margin:25px 0 0;color:#bec8d7;font-size:11px;font-weight:bold;letter-spacing:2px">KMJ MAIL · PROFESSIONAL CORRESPONDENCE</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+    <tr>
+        <td width="62" valign="middle" style="width:62px;padding:0;">
+            <a href="https://kmjtechno.com" style="text-decoration:none;display:block;">
+                <img class="kmj-mark" src="https://kmjtechno.com/assets/brand/kmj-sender-avatar.png" width="58" height="58" alt="KMJ TECHNO logo" style="display:block;border:0;outline:none;width:58px;height:58px;">
+            </a>
+        </td>
+        <td valign="middle" style="padding:0 0 0 8px;white-space:nowrap;">
+            <a href="https://kmjtechno.com" style="color:#ffffff;text-decoration:none;display:block;">
+                <span style="display:block;font-family:Arial,Helvetica,sans-serif;font-size:22px;line-height:27px;font-weight:800;white-space:nowrap;"><span style="color:#f52237;">KMJ</span> <span style="color:#ffffff;">TECHNO</span></span>
+                <span class="kmj-tagline" style="display:block;font-family:Arial,Helvetica,sans-serif;color:#ffffff;font-size:11px;line-height:16px;font-weight:700;letter-spacing:0.1px;white-space:nowrap;">INNOVATE <span style="color:#f52237;">|</span> BUILD <span style="color:#f52237;">|</span> SCALE</span>
+            </a>
+        </td>
+    </tr>
+</table>p style="margin:25px 0 0;color:#bec8d7;font-size:11px;font-weight:bold;letter-spacing:2px">KMJ MAIL · PROFESSIONAL CORRESPONDENCE</p>
 </td></tr>
 <tr><td class="kmj-pad" style="padding:35px 40px 40px;background:#fff;border:1px solid #dfe4ea">
 <h1 style="margin:0 0 24px;font-size:27px;line-height:35px;color:#172236">{{ $heading }}</h1>
