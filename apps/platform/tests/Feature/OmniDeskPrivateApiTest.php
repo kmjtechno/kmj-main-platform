@@ -472,6 +472,84 @@ final class OmniDeskPrivateApiTest extends TestCase
         ]);
     }
 
+    public function test_renewal_challenge_denies_unissued_lease_cursor_without_a_challenge(): void
+    {
+        $f = $this->fixture();
+        DB::table('omnidesk_activation_bindings')
+            ->where('activation_id', $f['activation_id'])
+            ->update(['current_jti' => null, 'current_sequence' => 0]);
+        $store = app(OmniDeskRenewalChallengeStore::class);
+
+        try {
+            $store->issue($f['activation_id'], $f['organization_id']);
+            self::fail('Unissued lease cannot receive a renewal challenge.');
+        } catch (DomainException $e) {
+            self::assertSame('OMNIDESK_RENEWAL_CHALLENGE_DENIED', $e->getMessage());
+        }
+
+        $this->assertDatabaseCount('omnidesk_renewal_challenges', 0);
+    }
+
+    public function test_renewal_challenge_denies_reassigned_license_before_consuming_device_proof(): void
+    {
+        [$f, $secret] = $this->renewalFixture();
+        $store = app(OmniDeskRenewalChallengeStore::class);
+        $issued = $store->issue($f['activation_id'], $f['organization_id']);
+        $proof = $this->signedRenewalRequest($f, $secret, $issued['server_challenge']);
+
+        $other = Organization::query()->create(['name' => 'Reassigned license tenant']);
+        DB::table('kslp_licenses')->where('id', $f['license_id'])
+            ->update(['customer_id' => $other->getKey()]);
+
+        try {
+            $store->verifyAndConsume($proof, $f['organization_id']);
+            self::fail('A re-parented license must not consume device proof.');
+        } catch (DomainException $e) {
+            self::assertSame('OMNIDESK_RENEWAL_CHALLENGE_DENIED', $e->getMessage());
+        }
+
+        $this->assertDatabaseHas('omnidesk_renewal_challenges', [
+            'activation_id' => $f['activation_id'],
+            'consumed_at' => null,
+        ]);
+    }
+
+    public function test_renewal_challenge_denies_changed_entitlement_and_deactivation(): void
+    {
+        [$f, $secret] = $this->renewalFixture();
+        $store = app(OmniDeskRenewalChallengeStore::class);
+        $issued = $store->issue($f['activation_id'], $f['organization_id']);
+        $proof = $this->signedRenewalRequest($f, $secret, $issued['server_challenge']);
+
+        DB::table('entitlements')->where('id', $f['entitlement_id'])
+            ->update(['capability' => 'unrelated.capability']);
+        try {
+            $store->verifyAndConsume($proof, $f['organization_id']);
+            self::fail('Retargeted entitlement must not renew OmniDesk.');
+        } catch (DomainException $e) {
+            self::assertSame('OMNIDESK_RENEWAL_CHALLENGE_DENIED', $e->getMessage());
+        }
+        $this->assertDatabaseHas('omnidesk_renewal_challenges', [
+            'activation_id' => $f['activation_id'],
+            'consumed_at' => null,
+        ]);
+
+        DB::table('entitlements')->where('id', $f['entitlement_id'])
+            ->update(['capability' => OmniDeskLicenseContract::CAPABILITY]);
+        DB::table('kslp_activations')->where('id', $f['activation_id'])
+            ->update(['deactivated_at' => now()]);
+        try {
+            $store->verifyAndConsume($proof, $f['organization_id']);
+            self::fail('A deactivated device must not renew OmniDesk.');
+        } catch (DomainException $e) {
+            self::assertSame('OMNIDESK_RENEWAL_CHALLENGE_DENIED', $e->getMessage());
+        }
+        $this->assertDatabaseHas('omnidesk_renewal_challenges', [
+            'activation_id' => $f['activation_id'],
+            'consumed_at' => null,
+        ]);
+    }
+
     public function test_expired_server_challenge_and_stale_cursor_fail_closed(): void
     {
         [$f, $secret] = $this->renewalFixture();
