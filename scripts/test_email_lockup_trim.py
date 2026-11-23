@@ -80,7 +80,7 @@ class EmailLockupTrimTest(unittest.TestCase):
             html = (VIEWS / f"{name}.blade.php").read_text(encoding="utf-8")
             self.assertIn("/assets/brand/kmj-sender-avatar.png", html, name)
             self.assertIn('class="kmj-tagline"', html, name)
-            self.assertIn('font-size:13px;line-height:19px;font-weight:700', html, name)
+            self.assertIn('font-size:15px;line-height:21px;font-weight:700', html, name)
             self.assertNotIn("kmj-email-lockup-dark-trim.png", html, name)
             self.assertIn('width="64" height="64" alt="KMJ TECHNO"', html, name)
 
