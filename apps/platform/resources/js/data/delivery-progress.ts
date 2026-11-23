@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-mail-locked-reference-visual-parity-20261123',
+        title: 'KMJ Mail approved owner screenshot: actual four-pane visual implementation',
+        state: 'active',
+        detail: 'PR #1086 source candidate applies the owner-approved screenshot to the real React/owner Shell: mail search Ctrl+K, CSS red globe and premium hero, five owner-scoped real KPI metrics, compact folders with subject-search shortcuts, on-page filters and avatar list, private branded reader, floating Compose and consent-first KMJ AI Assistant rail. This is source-only until tested, merged and Elite-approved; sample counts are NEVER fabricated. Real Internet incoming, Spam/Snooze, CC/BCC and MIME attachments are not advertised as working.',
+        evidence:
+            'PR #1086 branch design/kmj-mail-approved-visual-parity-20261123, Laravel owner mailbox metrics isolation test and actual owner-browser/CI acceptance gates pending. Explicit owner screenshot approval and exact SHA owner-pinned production release required.',
+    },
+    {
         id: 'kmj-mail-ai-copilot-20261123',
         title: 'KMJ Mail: AI-assisted Hinglish compose, Hindi explain and smart reply',
         state: 'active',
