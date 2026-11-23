@@ -97,12 +97,23 @@ const HUB_WORKSPACES: ReadonlyArray<{
 }> = [
     { id: 'overview', label: 'Overview', href: '#license-overview' },
     { id: 'licenses', label: 'Customers & licenses', href: '#license-search' },
-    { id: 'developers', label: 'Developer apps & keys', href: '#issuer-workspaces' },
+    {
+        id: 'developers',
+        label: 'Developer apps & keys',
+        href: '#issuer-workspaces',
+    },
     { id: 'security', label: 'Security & audit', href: '#unverified-accounts' },
 ];
 
 function workspaceForHash(hash: string): HubWorkspace {
-    if (['#license-search', '#license-issue', '#license-register', '#license-entitlements'].includes(hash)) {
+    if (
+        [
+            '#license-search',
+            '#license-issue',
+            '#license-register',
+            '#license-entitlements',
+        ].includes(hash)
+    ) {
         return 'licenses';
     }
     if (['#issuer-workspaces', '#developer-workspace'].includes(hash)) {
@@ -180,7 +191,8 @@ export default function OperatorKslp({
     developerWorkspace,
     unverifiedEmailCleanup,
 }: Props) {
-    const [activeWorkspace, setActiveWorkspace] = useState<HubWorkspace>('overview');
+    const [activeWorkspace, setActiveWorkspace] =
+        useState<HubWorkspace>('overview');
     useEffect(() => {
         const syncWorkspace = () =>
             setActiveWorkspace(workspaceForHash(window.location.hash));
@@ -300,11 +312,15 @@ export default function OperatorKslp({
                         <a
                             key={workspace.id}
                             href={workspace.href}
-                            aria-current={activeWorkspace === workspace.id ? 'page' : undefined}
+                            aria-current={
+                                activeWorkspace === workspace.id
+                                    ? 'page'
+                                    : undefined
+                            }
                             onClick={() => setActiveWorkspace(workspace.id)}
                             className={`rounded-lg border px-3 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-red-500 ${
                                 activeWorkspace === workspace.id
-                                    ? 'border-red-500/60 bg-red-500/10 text-foreground'
+                                    ? 'text-foreground border-red-500/60 bg-red-500/10'
                                     : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                             }`}
                         >
@@ -313,7 +329,7 @@ export default function OperatorKslp({
                     ))}
                     <a
                         href="/operator/payments"
-                        className="ml-auto rounded-lg border border-dashed px-3 py-2 text-muted-foreground hover:border-red-500/40 hover:text-foreground"
+                        className="text-muted-foreground hover:text-foreground ml-auto rounded-lg border border-dashed px-3 py-2 hover:border-red-500/40"
                     >
                         Payment gateway setup
                     </a>
@@ -344,7 +360,10 @@ export default function OperatorKslp({
                         </div>
                     </div>
                 </section>
-                <section hidden={activeWorkspace !== 'overview'} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+                <section
+                    hidden={activeWorkspace !== 'overview'}
+                    className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6"
+                >
                     {cards.map(([l, v]) => (
                         <div key={l} className="bg-card rounded-xl border p-4">
                             <div className="text-muted-foreground text-xs">
@@ -364,11 +383,14 @@ export default function OperatorKslp({
                         onClick={() => setActiveWorkspace('licenses')}
                         className="bg-card rounded-2xl border p-5 hover:border-red-500/50 focus-visible:outline-2 focus-visible:outline-red-500"
                     >
-                        <h2 className="text-base font-bold">1. Customers & licenses</h2>
+                        <h2 className="text-base font-bold">
+                            1. Customers & licenses
+                        </h2>
                         <p className="text-muted-foreground mt-2 text-sm leading-6">
                             Find a customer, inspect product entitlements, and
                             manage the supported CloudOS license lifecycle.
-                            Payment and a signed device lease remain separate verified stages.
+                            Payment and a signed device lease remain separate
+                            verified stages.
                         </p>
                     </a>
                     <a
@@ -376,7 +398,9 @@ export default function OperatorKslp({
                         onClick={() => setActiveWorkspace('developers')}
                         className="bg-card rounded-2xl border p-5 hover:border-red-500/50 focus-visible:outline-2 focus-visible:outline-red-500"
                     >
-                        <h2 className="text-base font-bold">2. Developer apps & keys</h2>
+                        <h2 className="text-base font-bold">
+                            2. Developer apps & keys
+                        </h2>
                         <p className="text-muted-foreground mt-2 text-sm leading-6">
                             AuthSP-style application registration, organization
                             subscriptions, issuer quotas, SDKs and keys. Access
@@ -387,11 +411,14 @@ export default function OperatorKslp({
                         href="/operator/payments"
                         className="bg-card rounded-2xl border p-5 hover:border-red-500/50 focus-visible:outline-2 focus-visible:outline-red-500"
                     >
-                        <h2 className="text-base font-bold">3. Payments & subscriptions</h2>
+                        <h2 className="text-base font-bold">
+                            3. Payments & subscriptions
+                        </h2>
                         <p className="text-muted-foreground mt-2 text-sm leading-6">
                             Configure and verify Razorpay or Cashfree sandbox
                             connections. Live checkout, settlement and automatic
-                            license issuance are not enabled by configuration alone.
+                            license issuance are not enabled by configuration
+                            alone.
                         </p>
                     </a>
                 </section>
