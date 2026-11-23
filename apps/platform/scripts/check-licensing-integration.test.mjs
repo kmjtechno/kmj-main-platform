@@ -320,7 +320,9 @@ void test('reseller credit evidence is zero-credit, tenant-scoped and never paid
     );
 
     assert.ok(ledger.includes('license.manage'));
-    assert.ok(ledger.includes("->where('organization_id', $issuerOrganizationId)"));
+    assert.ok(
+        ledger.includes("->where('organization_id', $issuerOrganizationId)"),
+    );
     assert.ok(ledger.includes("->where('event_key_hash', $eventHash)"));
     assert.ok(ledger.includes("'credits_delta' => 0"));
     assert.ok(ledger.includes("'available_credits' => null"));
