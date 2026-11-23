@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'razorpay-mainline-consolidated-reconciliation-20261123',
+        title: 'Razorpay sandbox race safety: durable intent, early signed webhook and bounded reconciliation',
+        state: 'active',
+        detail: 'SOURCE ONLY: current-main candidate ports reviewed fixes #928/#929 and sandbox-reconciler #1056. Provider-order intent is reserved before outbound HTTP; a verified early webhook gets bounded retry; sandbox environment is checked before trusted provider capture confirmation; a production app skips the scheduled sandbox command. These tests/commands do not collect live payments, issue entitlements or license keys.',
+        evidence:
+            'New current-main consolidation PR re-runs exact-head CI and PostgreSQL rollback/negative tests after #1065 changed main. Earlier PR #1064 was green (13/13 checks, 11/11 workflows) but became non-mergeable as main advanced. Live merchant approval, refunds, subscription-to-entitlement ledger, multi-product signing and independent DR restore remain unverified; not deployed.',
+    },
+    {
         id: 'owner-codebridge-stage-dispatch-draft-20261123',
         title: 'CodeBridge Release Center: owner-only one-click source staging (draft)',
         state: 'active',
