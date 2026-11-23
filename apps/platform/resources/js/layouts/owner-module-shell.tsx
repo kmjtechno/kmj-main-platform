@@ -197,11 +197,17 @@ export default function OwnerModuleShell({
     useEffect(() => {
         if (!isMailPage) return;
         const shortcut = (event: KeyboardEvent) => {
-            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+            if (
+                (event.ctrlKey || event.metaKey) &&
+                event.key.toLowerCase() === 'k'
+            ) {
                 event.preventDefault();
                 searchRef.current?.focus();
             }
-            if (event.key === 'Escape' && document.activeElement === searchRef.current) {
+            if (
+                event.key === 'Escape' &&
+                document.activeElement === searchRef.current
+            ) {
                 searchRef.current?.blur();
             }
         };
@@ -268,7 +274,9 @@ export default function OwnerModuleShell({
                                 name="q"
                                 maxLength={80}
                                 value={mailSearch}
-                                onChange={(event) => setMailSearch(event.target.value)}
+                                onChange={(event) =>
+                                    setMailSearch(event.target.value)
+                                }
                                 placeholder="Search mail, people or subject"
                                 aria-label="Search your private KMJ mailbox"
                             />
@@ -316,7 +324,9 @@ export default function OwnerModuleShell({
                         <Link
                             href="/operator/ops"
                             className="owner-status"
-                            aria-current={url === '/operator/ops' ? 'page' : undefined}
+                            aria-current={
+                                url === '/operator/ops' ? 'page' : undefined
+                            }
                         >
                             <span />
                             System Status
