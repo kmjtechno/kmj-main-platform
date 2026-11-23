@@ -6,9 +6,7 @@ import {
     Archive,
     HardDrive,
     Mail,
-    Tag,
     SlidersHorizontal,
-    Clock3,
     Sparkles,
     X,
     ArrowLeft,
@@ -216,6 +214,7 @@ export default function MailCenter({
         setBody('');
         setDraftId(null);
         setReplyId(null);
+        setComposerMinimized(false);
         setView('compose');
     };
 
@@ -246,6 +245,7 @@ export default function MailCenter({
         setBody('');
         setDraftId(null);
         setReplyId(latest.id);
+        setComposerMinimized(false);
         setView('compose');
     };
 
@@ -262,6 +262,7 @@ export default function MailCenter({
         setBody(selected.body);
         setDraftId(selected.id);
         setReplyId(null);
+        setComposerMinimized(false);
         setView('compose');
     };
 
@@ -393,6 +394,7 @@ export default function MailCenter({
         );
         setDraftId(null);
         setReplyId(null);
+        setComposerMinimized(false);
         setView('compose');
     };
 
