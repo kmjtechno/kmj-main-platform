@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-competitive-owner-pricebook-20261123',
+        title: 'KMJ revenue: competitive owner-only draft prices across 15 canonical products',
+        state: 'active',
+        detail: 'SOURCE ONLY. A versioned INR price proposal and collapsed Product Management owner preview cover all 15 canonical product registrations plus four explicitly unregistered concepts. The existing owner-approved CodeBridge price is preserved. All checkout, publication, live-payment, commercial-order and automatic signed-license flags remain false. Server-rendered candidate amounts are not source authority for payment orders, current subscriptions or entitlement issuance.',
+        evidence:
+            'PR #1061 draft. Price comparisons reference official vendor pricing dated 23 Nov 2026; machine-readable book, owner-only authentication and independent regression checks are under exact-head CI. A measured margin, approved plan/version ledger, actual merchant verification, refund/cancellation, signed product-client acceptance and Elite production release are NOT proven. No price changed in live PostgreSQL and no customer was charged.',
+    },
+    {
         id: 'owner-codebridge-stage-dispatch-draft-20261123',
         title: 'CodeBridge Release Center: owner-only one-click source staging (draft)',
         state: 'active',
