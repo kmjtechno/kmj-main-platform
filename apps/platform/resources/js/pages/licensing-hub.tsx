@@ -171,8 +171,8 @@ export default function LicensingHub({
                                 </h2>
                                 <p className="text-muted-foreground mt-2 text-xs leading-5">
                                     Eligible verified organizations can create
-                                    one no-charge trial record automatically.
-                                    A trial is not a signed remote-access lease,
+                                    one no-charge trial record automatically. A
+                                    trial is not a signed remote-access lease,
                                     and device activation remains separately
                                     verified by KMJ Main Platform.
                                 </p>
@@ -183,25 +183,29 @@ export default function LicensingHub({
                             />
                         </div>
                         <div className="mt-4 flex flex-wrap gap-3">
-                            {omnidesk_trial_organizations.map((organization) => (
-                                <button
-                                    key={organization.organization_id}
-                                    type="button"
-                                    disabled={trialSubmitting}
-                                    onClick={() =>
-                                        requestTrial(organization.organization_id)
-                                    }
-                                    className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    <BadgeCheck
-                                        className="size-4"
-                                        aria-hidden="true"
-                                    />
-                                    {trialSubmitting
-                                        ? 'Submitting…'
-                                        : `Start ${organization.trial_days}-day trial · ${organization.organization_name}`}
-                                </button>
-                            ))}
+                            {omnidesk_trial_organizations.map(
+                                (organization) => (
+                                    <button
+                                        key={organization.organization_id}
+                                        type="button"
+                                        disabled={trialSubmitting}
+                                        onClick={() =>
+                                            requestTrial(
+                                                organization.organization_id,
+                                            )
+                                        }
+                                        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <BadgeCheck
+                                            className="size-4"
+                                            aria-hidden="true"
+                                        />
+                                        {trialSubmitting
+                                            ? 'Submitting…'
+                                            : `Start ${organization.trial_days}-day trial · ${organization.organization_name}`}
+                                    </button>
+                                ),
+                            )}
                         </div>
                         {trialFeedback && (
                             <p
