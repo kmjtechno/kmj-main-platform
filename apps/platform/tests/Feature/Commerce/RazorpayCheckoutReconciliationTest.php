@@ -8,8 +8,10 @@ use App\Models\User;
 use App\Services\Payments\RazorpayCheckoutOrders;
 use App\Services\Payments\RazorpayWebhookReconciler;
 use DomainException;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -111,6 +113,130 @@ final class RazorpayCheckoutReconciliationTest extends TestCase
         $this->assertDatabaseCount('entitlements', 0);
     }
 
+    public function test_provider_create_http_runs_outside_the_locked_database_transaction(): void
+    {
+        $this->vault();
+        $order = $this->commercialOrder('request:rzp-checkout:no-network-lock');
+        $testTransactionDepth = DB::transactionLevel();
+        Http::fake([
+            'api.razorpay.com/v1/orders' => function (Request $request) use ($testTransactionDepth) {
+                $this->assertSame($testTransactionDepth, DB::transactionLevel(), 'Provider HTTP must not hold a new order transaction.');
+
+                return Http::response([
+                    'id' => 'order_TEST1',
+                    'receipt' => $request['receipt'],
+                    'currency' => 'INR',
+                    'amount' => $request['amount'],
+                    'status' => 'created',
+                    'amount_paid' => 0,
+                    'amount_due' => $request['amount'],
+                ]);
+            },
+        ]);
+
+        $created = app(RazorpayCheckoutOrders::class)->open($order->getKey(), self::AMOUNT);
+
+        $this->assertSame('order_TEST1', $created['provider_order_id']);
+        $this->assertDatabaseHas('commerce_provider_order_intents', [
+            'commercial_order_id' => $order->getKey(),
+            'provider' => 'razorpay',
+            'amount_minor' => self::AMOUNT,
+            'creation_status' => 'linked',
+        ]);
+        Http::assertSentCount(1);
+        $this->assertDatabaseCount('entitlements', 0);
+    }
+
+    public function test_provider_success_then_local_link_failure_never_creates_second_provider_order(): void
+    {
+        $this->vault();
+        $order = $this->commercialOrder('request:rzp-checkout:provider-success-db-fail');
+        $collider = $this->commercialOrder('request:rzp-checkout:other-order');
+        $testTransactionDepth = DB::transactionLevel();
+        Http::fake([
+            'api.razorpay.com/v1/orders' => function (Request $request) use ($collider, $testTransactionDepth) {
+                // Assert no extra order lock above the RefreshDatabase test transaction.
+                $this->assertSame($testTransactionDepth, DB::transactionLevel());
+                // Inject a real unique constraint failure after provider success.
+                DB::table('commerce_provider_orders')->insert([
+                    'commercial_order_id' => $collider->getKey(),
+                    'provider' => 'razorpay',
+                    'provider_order_id' => 'order_TEST1',
+                    'amount_minor' => self::AMOUNT,
+                    'currency' => 'INR',
+                    'environment' => 'sandbox',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                return Http::response([
+                    'id' => 'order_TEST1',
+                    'receipt' => $request['receipt'],
+                    'currency' => 'INR',
+                    'amount' => $request['amount'],
+                    'status' => 'created',
+                    'amount_paid' => 0,
+                    'amount_due' => $request['amount'],
+                ]);
+            },
+        ]);
+
+        $service = app(RazorpayCheckoutOrders::class);
+        try {
+            $service->open($order->getKey(), self::AMOUNT);
+            $this->fail('Local provider-link conflict must not be hidden.');
+        } catch (QueryException) {
+            $this->addToAssertionCount(1);
+        }
+
+        $this->assertDatabaseHas('commerce_provider_order_intents', [
+            'commercial_order_id' => $order->getKey(),
+            'creation_status' => 'creating',
+        ]);
+        $this->assertDatabaseMissing('commerce_provider_orders', [
+            'commercial_order_id' => $order->getKey(),
+        ]);
+
+        try {
+            $service->open($order->getKey(), self::AMOUNT);
+            $this->fail('A retry must not create another remote order after an uncertain outcome.');
+        } catch (DomainException $exception) {
+            $this->assertSame('RAZORPAY_ORDER_CREATION_PENDING_REVIEW', $exception->getMessage());
+        }
+        Http::assertSentCount(1);
+        $this->assertDatabaseCount('entitlements', 0);
+    }
+
+    public function test_provider_unavailable_keeps_durable_reservation_and_blocks_duplicate_create(): void
+    {
+        $this->vault();
+        $order = $this->commercialOrder('request:rzp-checkout:provider-unavailable');
+        Http::fake(['api.razorpay.com/v1/orders' => Http::response([], 503)]);
+        $service = app(RazorpayCheckoutOrders::class);
+
+        try {
+            $service->open($order->getKey(), self::AMOUNT);
+            $this->fail('HTTP failure must never be mistaken for provider order creation.');
+        } catch (DomainException $exception) {
+            $this->assertSame('RAZORPAY_SANDBOX_PROVIDER_UNAVAILABLE', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('commerce_provider_order_intents', [
+            'commercial_order_id' => $order->getKey(),
+            'creation_status' => 'creating',
+        ]);
+
+        try {
+            $service->open($order->getKey(), self::AMOUNT);
+            $this->fail('Uncertain external result must be reconciled before any retry.');
+        } catch (DomainException $exception) {
+            $this->assertSame('RAZORPAY_ORDER_CREATION_PENDING_REVIEW', $exception->getMessage());
+        }
+        Http::assertSentCount(1);
+        $this->assertDatabaseCount('commerce_provider_orders', 0);
+        $this->assertDatabaseCount('entitlements', 0);
+    }
+
     public function test_open_rejects_bad_amount_conflicts_and_non_requested_orders(): void
     {
         $this->vault();
@@ -168,18 +294,62 @@ final class RazorpayCheckoutReconciliationTest extends TestCase
         $this->assertSame(['reconciled' => 0, 'unmatched' => 0, 'rejected' => 0, 'retry_later' => 0], $again);
     }
 
-    public function test_event_for_unknown_provider_order_is_unmatched_and_changes_nothing(): void
+    public function test_event_for_unknown_provider_order_retries_then_expires_without_confirmation(): void
     {
         $this->vault();
         $this->fakeProvider();
         $order = $this->commercialOrder();
         $this->inbox('evt_2', orderId: 'order_UNKNOWN9');
 
-        $totals = app(RazorpayWebhookReconciler::class)->reconcilePending();
+        $first = app(RazorpayWebhookReconciler::class)->reconcilePending();
 
-        $this->assertSame(1, $totals['unmatched']);
+        $this->assertSame(1, $first['retry_later']);
+        $this->assertSame('awaiting_link', DB::table('payment_webhook_events')->value('processing_status'));
+        Http::assertNothingSent();
+
+        // A foreign provider order cannot keep a verified inbox row forever.
+        $this->travel(61)->minutes();
+        $expired = app(RazorpayWebhookReconciler::class)->reconcilePending();
+
+        $this->assertSame(1, $expired['unmatched']);
+        $this->assertSame('LINK_WINDOW_EXPIRED', DB::table('payment_webhook_events')->value('processing_note'));
         $this->assertSame('requested', $order->refresh()->status);
         $this->assertSame('unmatched', DB::table('payment_webhook_events')->value('processing_status'));
+        $this->assertDatabaseCount('entitlements', 0);
+        Http::assertNothingSent();
+    }
+
+    public function test_signed_webhook_arriving_before_link_is_retried_and_reconciled_once(): void
+    {
+        $this->vault();
+        $this->fakeProvider();
+        $order = $this->commercialOrder('request:rzp-checkout:before-link');
+        $this->inbox('evt_before_link');
+
+        $reconciler = app(RazorpayWebhookReconciler::class);
+        $first = $reconciler->reconcilePending();
+
+        $this->assertSame(1, $first['retry_later']);
+        $this->assertSame('awaiting_link', DB::table('payment_webhook_events')->value('processing_status'));
+        $this->assertSame('requested', $order->refresh()->status);
+        Http::assertNothingSent();
+
+        app(RazorpayCheckoutOrders::class)->open($order->getKey(), self::AMOUNT);
+
+        // Avoid retry storm: an event waiting for a link has a short backoff.
+        $tooEarly = $reconciler->reconcilePending();
+        $this->assertSame(['reconciled' => 0, 'unmatched' => 0, 'rejected' => 0, 'retry_later' => 0], $tooEarly);
+
+        $this->travel(61)->seconds();
+        $later = $reconciler->reconcilePending();
+
+        $this->assertSame(1, $later['reconciled']);
+        $this->assertSame('confirmed', $order->refresh()->status);
+        $this->assertSame('razorpay:pay_ABC123', $order->confirmation_reference);
+        $this->assertSame('reconciled', DB::table('payment_webhook_events')->value('processing_status'));
+        $this->assertDatabaseCount('entitlements', 0);
+        $this->assertSame(['reconciled' => 0, 'unmatched' => 0, 'rejected' => 0, 'retry_later' => 0], $reconciler->reconcilePending());
+        Http::assertSentCount(2);
     }
 
     public function test_amount_mismatch_with_the_server_expected_amount_is_rejected(): void
@@ -224,6 +394,74 @@ final class RazorpayCheckoutReconciliationTest extends TestCase
         $this->assertSame(1, $totals['retry_later']);
         $this->assertSame('requested', $order->refresh()->status);
         $this->assertSame('received', DB::table('payment_webhook_events')->value('processing_status'));
+    }
+
+    public function test_scheduled_sandbox_payment_reconciler_confirms_verified_order_without_issuing_license(): void
+    {
+        $this->vault();
+        $this->fakeProvider();
+        $order = $this->commercialOrder('auto:reconcile:1');
+        app(RazorpayCheckoutOrders::class)->open($order->getKey(), self::AMOUNT);
+        $this->inbox('evt_AUTO1');
+
+        self::assertSame(0, Artisan::call('payments:reconcile-razorpay-sandbox'));
+        self::assertSame('confirmed', $order->refresh()->status);
+        $this->assertDatabaseHas('payment_webhook_events', [
+            'event_id' => 'evt_AUTO1',
+            'processing_status' => 'reconciled',
+            'processing_note' => 'CONFIRMED',
+        ]);
+        $this->assertDatabaseCount('entitlements', 0);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+        $this->assertDatabaseCount('kslp_activations', 0);
+        self::assertSame(0, Artisan::call('payments:reconcile-razorpay-sandbox'));
+        $this->assertDatabaseCount('commerce_ledger', 2);
+    }
+
+    public function test_automatic_sandbox_reconciliation_without_owner_vault_credentials_is_safe_noop(): void
+    {
+        $order = $this->commercialOrder('auto:no-credentials');
+        $this->inbox('evt_AUTONOKEY');
+
+        self::assertSame(0, Artisan::call('payments:reconcile-razorpay-sandbox'));
+        self::assertSame('requested', $order->refresh()->status);
+        $this->assertDatabaseHas('payment_webhook_events', [
+            'event_id' => 'evt_AUTONOKEY',
+            'processing_status' => 'received',
+        ]);
+        $this->assertDatabaseCount('entitlements', 0);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+    }
+
+    public function test_reconciler_rejects_non_sandbox_order_link_without_calling_provider(): void
+    {
+        $this->vault();
+        $this->fakeProvider();
+        $order = $this->commercialOrder('auto:foreign-environment');
+        app(RazorpayCheckoutOrders::class)->open($order->getKey(), self::AMOUNT);
+        DB::table('commerce_provider_orders')
+            ->where('commercial_order_id', $order->getKey())
+            ->update(['environment' => 'live']);
+        $this->inbox('evt_AUTOLIVE');
+
+        Http::assertSentCount(1);
+        self::assertSame(0, Artisan::call('payments:reconcile-razorpay-sandbox'));
+        Http::assertSentCount(1);
+        self::assertSame('requested', $order->refresh()->status);
+        $this->assertDatabaseHas('payment_webhook_events', [
+            'event_id' => 'evt_AUTOLIVE',
+            'processing_status' => 'rejected',
+            'processing_note' => 'PROVIDER_ENVIRONMENT_MISMATCH',
+        ]);
+        $this->assertDatabaseCount('entitlements', 0);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+    }
+
+    public function test_automatic_reconciler_invalid_limit_rejected_before_provider_access(): void
+    {
+        self::assertSame(2, Artisan::call('payments:reconcile-razorpay-sandbox', ['--limit' => '0']));
+        $this->assertDatabaseCount('entitlements', 0);
+        $this->assertDatabaseCount('kslp_licenses', 0);
     }
 
     public function test_non_trigger_events_are_left_untouched(): void
