@@ -11,6 +11,7 @@ use DomainException;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -393,6 +394,74 @@ final class RazorpayCheckoutReconciliationTest extends TestCase
         $this->assertSame(1, $totals['retry_later']);
         $this->assertSame('requested', $order->refresh()->status);
         $this->assertSame('received', DB::table('payment_webhook_events')->value('processing_status'));
+    }
+
+    public function test_scheduled_sandbox_payment_reconciler_confirms_verified_order_without_issuing_license(): void
+    {
+        $this->vault();
+        $this->fakeProvider();
+        $order = $this->commercialOrder('auto:reconcile:1');
+        app(RazorpayCheckoutOrders::class)->open($order->getKey(), self::AMOUNT);
+        $this->inbox('evt_AUTO1');
+
+        self::assertSame(0, Artisan::call('payments:reconcile-razorpay-sandbox'));
+        self::assertSame('confirmed', $order->refresh()->status);
+        $this->assertDatabaseHas('payment_webhook_events', [
+            'event_id' => 'evt_AUTO1',
+            'processing_status' => 'reconciled',
+            'processing_note' => 'CONFIRMED',
+        ]);
+        $this->assertDatabaseCount('entitlements', 0);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+        $this->assertDatabaseCount('kslp_activations', 0);
+        self::assertSame(0, Artisan::call('payments:reconcile-razorpay-sandbox'));
+        $this->assertDatabaseCount('commerce_ledger', 2);
+    }
+
+    public function test_automatic_sandbox_reconciliation_without_owner_vault_credentials_is_safe_noop(): void
+    {
+        $order = $this->commercialOrder('auto:no-credentials');
+        $this->inbox('evt_AUTONOKEY');
+
+        self::assertSame(0, Artisan::call('payments:reconcile-razorpay-sandbox'));
+        self::assertSame('requested', $order->refresh()->status);
+        $this->assertDatabaseHas('payment_webhook_events', [
+            'event_id' => 'evt_AUTONOKEY',
+            'processing_status' => 'received',
+        ]);
+        $this->assertDatabaseCount('entitlements', 0);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+    }
+
+    public function test_reconciler_rejects_non_sandbox_order_link_without_calling_provider(): void
+    {
+        $this->vault();
+        $this->fakeProvider();
+        $order = $this->commercialOrder('auto:foreign-environment');
+        app(RazorpayCheckoutOrders::class)->open($order->getKey(), self::AMOUNT);
+        DB::table('commerce_provider_orders')
+            ->where('commercial_order_id', $order->getKey())
+            ->update(['environment' => 'live']);
+        $this->inbox('evt_AUTOLIVE');
+
+        Http::assertSentCount(1);
+        self::assertSame(0, Artisan::call('payments:reconcile-razorpay-sandbox'));
+        Http::assertSentCount(1);
+        self::assertSame('requested', $order->refresh()->status);
+        $this->assertDatabaseHas('payment_webhook_events', [
+            'event_id' => 'evt_AUTOLIVE',
+            'processing_status' => 'rejected',
+            'processing_note' => 'PROVIDER_ENVIRONMENT_MISMATCH',
+        ]);
+        $this->assertDatabaseCount('entitlements', 0);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+    }
+
+    public function test_automatic_reconciler_invalid_limit_rejected_before_provider_access(): void
+    {
+        self::assertSame(2, Artisan::call('payments:reconcile-razorpay-sandbox', ['--limit' => '0']));
+        $this->assertDatabaseCount('entitlements', 0);
+        $this->assertDatabaseCount('kslp_licenses', 0);
     }
 
     public function test_non_trigger_events_are_left_untouched(): void
