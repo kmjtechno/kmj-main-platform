@@ -78,6 +78,7 @@ final class KslpResellerSettlementReadinessInspectorTest extends TestCase
     {
         $actor = User::factory()->create(['email_verified_at' => now()]);
         [$org, $product, $order] = $this->seedOrder($actor, 'ALPHA');
+        $initialEntitlements = DB::table('entitlements')->count();
         $inspector = app(KslpResellerSettlementReadinessInspector::class);
 
         $pending = $inspector->inspect($actor->id, $org, $product, $order);
@@ -96,13 +97,14 @@ final class KslpResellerSettlementReadinessInspectorTest extends TestCase
         self::assertFalse($confirmed['paid_issuance_enabled']);
         self::assertNull($confirmed['available_credits']);
         $this->assertDatabaseCount('kslp_licenses', 0);
-        $this->assertDatabaseCount('entitlements', 0);
+        $this->assertDatabaseCount('entitlements', $initialEntitlements);
     }
 
     public function test_matching_reconciled_sandbox_webhook_still_never_authorizes_live_credits(): void
     {
         $actor = User::factory()->create(['email_verified_at' => now()]);
         [$org, $product, $order] = $this->seedOrder($actor, 'BETA');
+        $initialEntitlements = DB::table('entitlements')->count();
         app(CommercialOrderService::class)->confirm(
             $order, $actor->id, 'INR', 25000, 'razorpay:pay_FUNDING1'
         );
@@ -121,7 +123,7 @@ final class KslpResellerSettlementReadinessInspectorTest extends TestCase
         self::assertFalse($evidence['paid_issuance_enabled']);
         self::assertNull($evidence['available_credits']);
         $this->assertDatabaseCount('kslp_licenses', 0);
-        $this->assertDatabaseCount('entitlements', 0);
+        $this->assertDatabaseCount('entitlements', $initialEntitlements);
     }
 
     public function test_refund_signal_and_wrong_provider_amount_are_exposed_as_blockers_only(): void
@@ -152,6 +154,7 @@ final class KslpResellerSettlementReadinessInspectorTest extends TestCase
     {
         $actor = User::factory()->create(['email_verified_at' => now()]);
         [$org, $product, $order] = $this->seedOrder($actor, 'ZETA');
+        $initialEntitlements = DB::table('entitlements')->count();
         app(CommercialOrderService::class)->confirm(
             $order, $actor->id, 'INR', 25000, 'razorpay:pay_FUNDING1'
         );
@@ -171,7 +174,7 @@ final class KslpResellerSettlementReadinessInspectorTest extends TestCase
         self::assertFalse($evidence['paid_issuance_enabled']);
         self::assertNull($evidence['available_credits']);
         $this->assertDatabaseCount('kslp_licenses', 0);
-        $this->assertDatabaseCount('entitlements', 0);
+        $this->assertDatabaseCount('entitlements', $initialEntitlements);
     }
 
     public function test_other_tenant_is_denied_before_any_payment_inspection(): void
