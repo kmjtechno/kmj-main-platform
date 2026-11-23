@@ -131,7 +131,7 @@ final class NativeMailService
         DB::table('kmj_mail_messages')
             ->where('mailbox_user_id', (int) $user->getKey())
             ->where('thread_id', (string) $anchor->thread_id)
-            ->where('folder', 'inbox')->whereNull('read_at')
+            ->whereIn('folder', ['inbox', 'archive'])->whereNull('read_at')
             ->update(['read_at' => now(), 'updated_at' => now()]);
 
         return [
