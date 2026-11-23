@@ -191,3 +191,38 @@ void test('disabled cleanup reports unknown eligibility instead of misleading ze
     assert.match(routes, /'status' => 'PREVIEW_ONLY'/);
     assert.match(routes, /'status'\] = 'PREVIEW_BLOCKED'/);
 });
+
+void test('Licensing Hub uses guided owner workspaces and preserves routes', () => {
+    const hub = read('resources/js/pages/operator-kslp.tsx');
+    const ownerRoutes = read('routes/kslp-admin.php');
+    for (const label of [
+        'Customers & licenses',
+        'Developer apps & keys',
+        'Security & audit',
+        'Payment gateway setup',
+    ]) {
+        assert.ok(hub.includes(label), label);
+    }
+    for (const [section, workspace] of [
+        ['issuer-workspaces', 'developers'],
+        ['developer-workspace', 'developers'],
+        ['unverified-accounts', 'security'],
+        ['license-issue', 'licenses'],
+        ['license-search', 'licenses'],
+        ['license-register', 'licenses'],
+        ['license-entitlements', 'licenses'],
+        ['license-audit', 'security'],
+    ]) {
+        assert.ok(hub.includes(`id="${section}"`), section);
+        assert.ok(
+            hub.includes(`hidden={activeWorkspace !== '${workspace}'}`),
+            workspace,
+        );
+    }
+    assert.match(hub, /workspaceForHash\(window\.location\.hash\)/);
+    assert.match(hub, /window\.addEventListener\('hashchange'/);
+    assert.match(hub, /DeveloperAppsWorkspace/);
+    assert.match(hub, /Live checkout, settlement and automatic/);
+    assert.match(ownerRoutes, /PlatformOwnerAccess/);
+    assert.match(ownerRoutes, /'password\.confirm'/);
+});
