@@ -96,6 +96,15 @@ def codebridge_github_repositories() -> set[str]:
         and bool(os.getenv("GITHUB_TOKEN", ""))
     ):
         repositories.add("kmjtechno/KMJ-Calibration-Studio")
+    # Independent upstream gate for the explicitly reviewed OmniDesk repo.
+    # Default off, exact-only, credential-required. Does not grant writes,
+    # merge authority, new secrets, tenants or other repository access.
+    if (
+        os.getenv("KMJ_CODEBRIDGE_ENABLE_OMNIDESK_REPOSITORY") == "true"
+        and len(os.getenv("KMJ_CODEBRIDGE_GITHUB_PROXY_TOKEN", "")) >= 32
+        and bool(os.getenv("GITHUB_TOKEN", ""))
+    ):
+        repositories.add("kmjtechno/kmj-omnidesk")
     return repositories
 
 

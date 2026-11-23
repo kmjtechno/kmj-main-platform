@@ -173,6 +173,46 @@ class CodeBridgeGitHubProxyHttpTest(unittest.TestCase):
         self.assertEqual(self.http.get(path, headers=self.auth).status_code, 200)
         self.assertEqual(len(_Client.calls), 1)
 
+    def test_omnidesk_upstream_optin_is_exact_default_off_and_preserves_existing_grants(self) -> None:
+        repository = "kmjtechno/kmj-omnidesk"
+        path = "/codebridge/github/repos/kmjtechno/kmj-omnidesk/pulls"
+        self.assertNotIn(repository, main.codebridge_github_repositories())
+        self.assertEqual(self.http.get(path, headers=self.auth).status_code, 404)
+        self.assertEqual(_Client.calls, [])
+        with patch.dict(os.environ, {"KMJ_CODEBRIDGE_ENABLE_OMNIDESK_REPOSITORY": "true"}):
+            self.assertEqual(
+                main.codebridge_github_repositories(),
+                {"kmjtechno/kmj-codebridge", repository},
+            )
+            self.assertEqual(self.http.get(path, headers=self.auth).status_code, 200)
+            self.assertEqual(len(_Client.calls), 1)
+            self.assertEqual(self.http.get(
+                "/codebridge/github/repos/kmjtechno/unrelated/pulls", headers=self.auth
+            ).status_code, 404)
+            self.assertEqual(self.http.put(
+                "/codebridge/github/repos/kmjtechno/kmj-omnidesk/pulls/7/merge",
+                json={"sha": "a" * 40, "merge_method": "squash"},
+                headers=self.auth,
+            ).status_code, 405)
+            self.assertEqual(len(_Client.calls), 1)
+        self.assertNotIn(repository, main.codebridge_github_repositories())
+
+    def test_omnidesk_upstream_optin_never_uses_absent_or_invalid_credentials(self) -> None:
+        path = "/codebridge/github/repos/kmjtechno/kmj-omnidesk/pulls"
+        for flag in ("TRUE", "1", "false", ""):
+            with self.subTest(flag=flag), patch.dict(os.environ, {
+                "KMJ_CODEBRIDGE_ENABLE_OMNIDESK_REPOSITORY": flag
+            }):
+                self.assertNotIn("kmjtechno/kmj-omnidesk", main.codebridge_github_repositories())
+                self.assertEqual(self.http.get(path, headers=self.auth).status_code, 404)
+        for key in ("GITHUB_TOKEN", "KMJ_CODEBRIDGE_GITHUB_PROXY_TOKEN"):
+            with self.subTest(key=key), patch.dict(os.environ, {
+                "KMJ_CODEBRIDGE_ENABLE_OMNIDESK_REPOSITORY": "true",
+                key: "",
+            }):
+                self.assertNotIn("kmjtechno/kmj-omnidesk", main.codebridge_github_repositories())
+        self.assertEqual(_Client.calls, [])
+
     def test_content_path_is_percent_encoded_upstream(self) -> None:
         self.http.put(
             "/codebridge/github/repos/kmjtechno/kmj-codebridge/contents/docs/a%20b.md",
