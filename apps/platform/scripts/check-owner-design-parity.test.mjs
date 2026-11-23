@@ -147,7 +147,7 @@ void test('locked KMJ Mail reference uses real four-pane UI and functional contr
     const page = read('resources/js/pages/mail-center.tsx');
     const ai = read('resources/js/components/mail-ai-copilot.tsx');
     const ownerShell = read('resources/js/layouts/owner-module-shell.tsx');
-    const css = read('../css/kmj-mail-approved.css');
+    const css = read('resources/css/kmj-mail-approved.css');
     assert.match(page, /kmj-mail-approved-shell/);
     assert.match(page, /kmj-mail-hero/);
     assert.match(page, /mailMetrics\.total_messages/);
