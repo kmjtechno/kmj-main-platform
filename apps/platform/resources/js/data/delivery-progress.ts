@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-omnidesk-exact-upstream-github-scope-20261123',
+        title: 'CodeBridge OmniDesk upstream GitHub repository opt-in (review only)',
+        state: 'active',
+        detail: 'SOURCE ONLY: existing CodeBridge Render GitHub proxy gains a separate default-OFF, credential-gated opt-in for exactly kmjtechno/kmj-omnidesk. It retains all existing repository scopes, blocks anonymous access and unrelated repositories, and does not authorize GitHub merge, branch writes, customer licensing or a signed OmniDesk session. The gateway-side scoped option is already merged and deployed, but neither upstream nor gateway runtime permission is active.',
+        evidence:
+            'Isolated controller/main.py exact-repository parser and FastAPI HTTP regression tests in PR #1100. Its independent owner review, exact-head CI, guarded controller Render deploy, protected single-key environment activation on controller and gateway, native github_connection_doctor read_ready and negative unrelated-repo probe remain pending. OmniDesk release and two-PC acceptance unchanged.',
+    },
+    {
         id: 'kslp-customer-renewal-guidance-20261123',
         title: 'KSLP customer renewal and restricted-license recovery guidance (source only)',
         state: 'active',
