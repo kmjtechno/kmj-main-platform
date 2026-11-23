@@ -75,12 +75,14 @@ class EmailLockupTrimTest(unittest.TestCase):
                 f"row {y} differs from the canonical lockup",
             )
 
-    def test_all_email_templates_use_trim_at_readable_width(self):
+    def test_all_email_templates_use_reference_readable_html_wordmark(self):
         for name in ("kmj-transactional", "kmj-auth-transactional", "kmj-native-outgoing"):
             html = (VIEWS / f"{name}.blade.php").read_text(encoding="utf-8")
-            self.assertIn("/assets/brand/kmj-email-lockup-dark-trim.png", html, name)
-            self.assertIn('width="440" alt="KMJ TECHNO', html, name)
-            self.assertRegex(html, r"\.kmj-logo\s*\{\s*width:320px!important", name)
+            self.assertIn("/assets/brand/kmj-sender-avatar.png", html, name)
+            self.assertIn('class="kmj-tagline"', html, name)
+            self.assertIn('font-size:13px;line-height:19px;font-weight:700', html, name)
+            self.assertNotIn("kmj-email-lockup-dark-trim.png", html, name)
+            self.assertIn('width="64" height="64" alt="KMJ TECHNO"', html, name)
 
 
 if __name__ == "__main__":
