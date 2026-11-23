@@ -30,7 +30,7 @@ import subprocess
 import sys
 import tempfile
 
-SOURCE_COMMIT = "cbe4133b5d0e97d3bc68ce081964f5521bdd3abd"
+SOURCE_COMMIT = "b480e7ca6af60c81aa68e3d3fecedc703135d585"
 SOURCE_URL = "https://github.com/kmjtechno/kmj-main-platform.git"
 EXPECTED_HOST = "KMJ-elite"
 GATE = Path("/opt/kmj-main-platform-autopublish/main_platform_autopublish_gate.py")
@@ -51,6 +51,9 @@ PY_FILES = (
 REPLACEABLE = {
     "elite_collect_all_receipts.py": frozenset({
         "20a94a07e66e5e9a99f69cb46e38a7d2c093a73d1f3b1f182242c9ef47af4a59"}),
+    # Prepare broker as installed from cbe4133b (before the root-only helper log was added).
+    "elite_release_prepare_broker.py": frozenset({
+        "bc354bc042cb9e76d3e665eb8a45fb6df5627dfe1dbfcdc69700b4e90a6e7a7c"}),
 }
 UNITS = (
     "kmj-elite-release-admission-broker.service",

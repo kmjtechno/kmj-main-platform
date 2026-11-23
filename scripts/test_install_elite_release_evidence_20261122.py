@@ -24,7 +24,7 @@ spec.loader.exec_module(mod)
 
 class EliteEvidenceInstallerTests(unittest.TestCase):
     def test_source_is_exact_reviewed_commit_and_never_branched_latest(self):
-        self.assertEqual(mod.SOURCE_COMMIT, "cbe4133b5d0e97d3bc68ce081964f5521bdd3abd")
+        self.assertEqual(mod.SOURCE_COMMIT, "b480e7ca6af60c81aa68e3d3fecedc703135d585")
         self.assertEqual(mod.SOURCE_URL, "https://github.com/kmjtechno/kmj-main-platform.git")
         self.assertEqual(len(mod.TARGETS), 19)
         for source, path, mode, bound in mod.TARGETS:
@@ -236,8 +236,9 @@ class EliteEvidenceInstallerTests(unittest.TestCase):
                         mod.ensure_dir(d, 0o700)
 
     def test_only_the_known_earlier_collect_all_may_be_replaced(self):
-        self.assertEqual(set(mod.REPLACEABLE), {"elite_collect_all_receipts.py"})
+        self.assertEqual(set(mod.REPLACEABLE), {"elite_collect_all_receipts.py", "elite_release_prepare_broker.py"})
         self.assertEqual(len(mod.REPLACEABLE["elite_collect_all_receipts.py"]), 1)
+        self.assertEqual(len(mod.REPLACEABLE["elite_release_prepare_broker.py"]), 1)
         names = [t[1].name for t in mod.TARGETS]
         self.assertIn("elite_prepare_rehearsal.py", names)
 
