@@ -428,7 +428,7 @@ export default function MailCenter({
     // Nesting AppLayout here duplicates the entire top bar and sidebar.
     return (
         <>
-            <Head title="KMJ Mail · Private enterprise communications" />
+            <Head title="KMJ Mail · Enterprise inbox and correspondence" />
             <div
                 data-test="kmj-native-mail"
                 className="owner-admin-page kmj-admin-shell mx-auto flex w-full max-w-[1500px] min-w-0 flex-col gap-4 px-4 py-5 sm:px-6 lg:px-8"
@@ -1187,6 +1187,11 @@ export default function MailCenter({
                                             {body.length}/12,000
                                         </span>
                                     </label>
+                                    <p className="text-muted-foreground rounded-xl border border-dashed p-3 text-xs leading-5">
+                                        Recipient privacy is enforced. This release supports one
+                                        external recipient per message; CC/BCC and attachments
+                                        require separately reviewed transport and scanning.
+                                    </p>
                                     <div className="flex flex-wrap gap-2">
                                         <button
                                             type="button"
@@ -1232,12 +1237,24 @@ export default function MailCenter({
                                 <div className="bg-[#edf0f4] p-5">
                                     <div className="mx-auto max-w-xl overflow-hidden rounded-xl border bg-white shadow-sm">
                                         <div className="border-t-4 border-[#d61f42] bg-[#111927] p-6">
-                                            <img
-                                                src="/assets/brand/kmj-email-lockup-dark-trim.png"
-                                                width="440"
-                                                className="h-auto max-w-full"
-                                                alt="KMJ TECHNO — INNOVATE | BUILD | SCALE"
-                                            />
+                                            <div className="flex items-center gap-3">
+                                                <img
+                                                    src="/assets/brand/kmj-sender-avatar.png"
+                                                    width="64"
+                                                    height="64"
+                                                    className="size-16 shrink-0 object-contain"
+                                                    alt="KMJ TECHNO"
+                                                />
+                                                <div className="min-w-0">
+                                                    <p className="text-[27px] leading-8 font-extrabold tracking-tight">
+                                                        <span className="text-[#ff263f]">KMJ</span>{' '}
+                                                        <span className="text-white">TECHNO</span>
+                                                    </p>
+                                                    <p className="text-[13px] leading-5 font-bold text-white">
+                                                        INNOVATE <span className="text-[#ff314a]">|</span> BUILD <span className="text-[#ff314a]">|</span> SCALE
+                                                    </p>
+                                                </div>
+                                            </div>
                                             <p className="mt-6 text-[11px] font-bold tracking-widest text-[#bec8d7] uppercase">
                                                 {activeTemplate.category}
                                             </p>
@@ -1321,6 +1338,63 @@ export default function MailCenter({
                                                 Reply
                                             </button>
                                         ) : null}
+                                        {folder !== 'drafts' && folder !== 'trash' && selected && (
+                                            <>
+                                                <button
+                                                    type="button"
+                                                    onClick={forwardMessage}
+                                                    className="flex min-h-10 items-center gap-1 rounded-xl border px-3 text-xs font-semibold"
+                                                >
+                                                    <Forward className="size-3.5" />
+                                                    Forward
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={busy}
+                                                    onClick={() =>
+                                                        manageMessages(
+                                                            selected.starred ? 'unstar' : 'star',
+                                                            [selected.id],
+                                                        )
+                                                    }
+                                                    className="flex min-h-10 items-center gap-1 rounded-xl border px-3 text-xs font-semibold"
+                                                >
+                                                    <Star className="size-3.5" />
+                                                    {selected.starred ? 'Unstar' : 'Star'}
+                                                </button>
+                                                {(selected.folder === 'inbox' || selected.folder === 'archive') && (
+                                                    <button
+                                                        type="button"
+                                                        disabled={busy}
+                                                        onClick={() => manageMessages('unread', [selected.id])}
+                                                        className="min-h-10 rounded-xl border px-3 text-xs font-semibold"
+                                                    >
+                                                        Mark unread
+                                                    </button>
+                                                )}
+                                                {selected.folder === 'inbox' && (
+                                                    <button
+                                                        type="button"
+                                                        disabled={busy}
+                                                        onClick={() => manageMessages('archive', [selected.id])}
+                                                        className="flex min-h-10 items-center gap-1 rounded-xl border px-3 text-xs font-semibold"
+                                                    >
+                                                        <Archive className="size-3.5" />
+                                                        Archive
+                                                    </button>
+                                                )}
+                                                {selected.folder === 'archive' && (
+                                                    <button
+                                                        type="button"
+                                                        disabled={busy}
+                                                        onClick={() => manageMessages('unarchive', [selected.id])}
+                                                        className="min-h-10 rounded-xl border px-3 text-xs font-semibold"
+                                                    >
+                                                        To inbox
+                                                    </button>
+                                                )}
+                                            </>
+                                        )}
                                         {folder === 'trash' ? (
                                             <button
                                                 type="button"
