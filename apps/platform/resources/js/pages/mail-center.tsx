@@ -650,7 +650,7 @@ export default function MailCenter({
                                 </button>
                             )}
                         </div>
-                        <div className="mt-5 rounded-xl border border-white/10 bg-gradient-to-br from-[#182131] to-[#111822] p-3 text-xs leading-5 text-slate-300">
+                        <div id="kmj-mail-help" className="mt-5 rounded-xl border border-white/10 bg-gradient-to-br from-[#182131] to-[#111822] p-3 text-xs leading-5 text-slate-300">
                             <p className="flex items-center gap-2 font-bold text-white">
                                 <LockKeyhole
                                     size={14}
@@ -659,8 +659,9 @@ export default function MailCenter({
                                 Private by default
                             </p>
                             <p className="mt-2">
-                                Only authorized KMJ staff can open private team
-                                mail.
+                                Only authorized KMJ staff can open private team mail.
+                                External incoming mail, attachments and CC/BCC
+                                require separate verified services.
                             </p>
                         </div>
                     </aside>
@@ -1584,8 +1585,19 @@ export default function MailCenter({
                             </div>
                         ) : selectedThread &&
                           selectedThread.items.length > 0 ? (
-                            <div className="p-5 sm:p-7">
-                                <div className="border-border/60 flex flex-wrap items-center justify-between gap-3 border-b pb-6">
+                            <div className="p-4 sm:p-5">
+                                <div className="kmj-mail-reader-toolbar flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate(folder, undefined, q, mailbox.page)}
+                                        className="flex min-h-9 items-center gap-2 rounded-lg border border-white/15 px-3 text-xs"
+                                    >
+                                        <ArrowLeft className="size-4" />
+                                        Back to {folder}
+                                    </button>
+                                    <span className="text-[11px] text-slate-400">Private owner-scoped thread</span>
+                                </div>
+                                <div className="border-border/60 flex flex-wrap items-center justify-between gap-3 border-b py-4">
                                     <div>
                                         <p className="text-[11px] font-bold tracking-widest text-red-500 uppercase">
                                             PRIVATE CONVERSATION
@@ -1594,7 +1606,7 @@ export default function MailCenter({
                                             {selectedThread.items[0].subject}
                                         </h2>
                                     </div>
-                                    <div className="flex flex-wrap gap-2">
+                                    <div className="kmj-mail-read-actions flex flex-wrap gap-2">
                                         {folder === 'drafts' ? (
                                             <>
                                                 <button
@@ -1752,7 +1764,20 @@ export default function MailCenter({
                                         )}
                                     </div>
                                 </div>
-                                <div className="mt-6 space-y-4">
+                                <div className="kmj-mail-message-brand mt-4 flex flex-wrap items-center justify-between gap-4 rounded-t-xl p-4">
+                                    <img
+                                        src="/assets/brand/kmj-logo-horizontal-readable.svg"
+                                        width="210"
+                                        height="55"
+                                        alt="KMJ TECHNO — INNOVATE | BUILD | SCALE"
+                                        className="h-11 w-auto object-contain"
+                                    />
+                                    <div className="text-right">
+                                        <strong className="block text-base">KMJ Mail Enterprise</strong>
+                                        <small className="text-[11px]">Private official correspondence</small>
+                                    </div>
+                                </div>
+                                <div className="kmj-mail-thread-messages mt-0 space-y-4">
                                     {selectedThread.items.map((item) => (
                                         <article
                                             key={item.id}
