@@ -307,15 +307,18 @@ final class OmniDeskVerifiedPaidFulfillment
         object $link,
         string $paymentReference,
     ): void {
+        /** @var array{provider_order_id:string,currency:string,amount_minor:int|string} $linkData */
+        $linkData = (array) $link;
+
         if ($proof->provider !== 'razorpay'
-            || $proof->providerOrderId !== (string) $link->provider_order_id
+            || $proof->providerOrderId !== (string) $linkData['provider_order_id']
             || $proof->paymentReference !== $paymentReference
             || $proof->environment !== 'live'
             || ! $proof->captured
             || $proof->refundedMinor !== 0
             || $proof->currency !== 'INR'
-            || $proof->currency !== (string) $link->currency
-            || $proof->amountMinor !== (int) $link->amount_minor) {
+            || $proof->currency !== (string) $linkData['currency']
+            || $proof->amountMinor !== (int) $linkData['amount_minor']) {
             throw new DomainException('OMNIDESK_PAYMENT_NOT_VERIFIED_LIVE');
         }
     }
