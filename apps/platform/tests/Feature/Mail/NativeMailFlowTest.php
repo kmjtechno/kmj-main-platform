@@ -115,27 +115,27 @@ final class NativeMailFlowTest extends TestCase
 
         $this->actingAs($owner)->get('/operator/mail')
             ->assertOk()->assertInertia(fn (Assert $page) => $page
-                ->where('folder', 'inbox')
-                ->where('mailbox.total', 0)
-                ->has('mailbox.items', 0)
-                ->where('recentSent.total', 1)
-                ->has('recentSent.items', 1)
-                ->where('recentSent.items.0.subject', 'Actual private progress update'));
+            ->where('folder', 'inbox')
+            ->where('mailbox.total', 0)
+            ->has('mailbox.items', 0)
+            ->where('recentSent.total', 1)
+            ->has('recentSent.items', 1)
+            ->where('recentSent.items.0.subject', 'Actual private progress update'));
 
         $this->actingAs($owner)->get('/operator/mail?q=missing')
             ->assertOk()->assertInertia(fn (Assert $page) => $page
-                ->where('mailbox.total', 0)
-                ->where('recentSent', null));
+            ->where('mailbox.total', 0)
+            ->where('recentSent', null));
 
         $this->actingAs($owner)->get('/operator/mail?folder=sent')
             ->assertOk()->assertInertia(fn (Assert $page) => $page
-                ->where('mailbox.total', 1)
-                ->where('recentSent', null));
+            ->where('mailbox.total', 1)
+            ->where('recentSent', null));
 
         $this->actingAs($staff)->get('/team/mail')
             ->assertOk()->assertInertia(fn (Assert $page) => $page
-                ->where('mailbox.total', 1)
-                ->where('recentSent', null));
+            ->where('mailbox.total', 1)
+            ->where('recentSent', null));
         Mail::assertNothingOutgoing();
         Notification::assertNothingSent();
     }
