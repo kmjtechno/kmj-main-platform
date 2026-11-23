@@ -466,7 +466,6 @@ export default function MailCenter({
     const allPageSelected =
         visibleItems.length > 0 &&
         visibleItems.every((item) => selectedIds.includes(item.id));
-    const back = isOwner ? '/operator' : '/dashboard';
 
     // app.tsx already mounts AppLayout (owner: OwnerModuleShell; staff: sidebar).
     // Nesting AppLayout here duplicates the entire top bar and sidebar.
