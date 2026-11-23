@@ -10,12 +10,12 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
-        id: 'razorpay-sandbox-current-main-reconciliation-20261123',
-        title: 'Razorpay payment trust: verified sandbox capture, durable order intent and early webhook recovery',
+        id: 'kmj-mail-inbox-management-20261123',
+        title: 'KMJ Mail: functional inbox management and private bulk organization',
         state: 'active',
-        detail: 'SOURCE ONLY: previously green #928/#929/#1056/#1064/#1068 Razorpay sandbox guards consolidated on main after #1071. One committed intent before external provider order call prevents duplicate create on uncertain outcome; bounded early signed webhook retry; production skips the sandbox worker. No live charges, refunds, subscriptions, entitlements or signed licenses.',
+        detail: 'PR #1073 adds owner-scoped Archive/Unarchive, Starred and Mark Read/Unread, 40-message pagination, selected-message bulk actions (max 40, atomic), manual forwarding, compact owner UI and truthful outbound-vs-inbound labels. Existing verified owner/staff, password confirmation, per-mailbox copies, rate limits and outbound idempotency remain unchanged. This is NOT a claim of Internet inbound, attachments, CC/BCC or new SMTP transport.',
         evidence:
-            'New exact-main PR under review. Prior combined #1068 had 14/14 checks and 12/12 workflow PASS but became non-mergeable as main advanced. Latest Fast Release Guide SHA pin correction independently MERGED in #1071, so this PR intentionally does not touch that guide. New exact-head QA, migration rollback and authenticated staging are still required before any merge. Elite production mutation NONE.',
+            'PR #1073 source and PHP feature regressions for cross-mailbox isolation, atomic rollback, archive restore, validation and pagination. Exact-head CI, migration rollback, merged-main acceptance, owner-pinned Elite release and authenticated inbox click acceptance all required before LIVE.',
     },
     {
         id: 'owner-codebridge-stage-dispatch-draft-20261123',
@@ -1409,6 +1409,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         detail: 'Source-only production activation intent: password-confirmed Platform Owner can queue a short-lived exact-SHA predecessor request only if the root-attested preflight is fresh. The independent Elite broker rechecks owner-protected admission and LIVE CAS before starting ONLY the fixed production release systemd unit, with a root-only no-replay claim. No new timer is installed and accepted is never called deployed.',
         evidence:
             'PR source implements Laravel owner request and audit, unique no-clobber inbox, Python root broker, optional systemd unit/timer templates and negative CI. Requires reviewed root installation and legitimate staging, disposable restore, rollback and owner approval; DR remains NOT_VERIFIED.',
+    },
+    {
+        id: 'razorpay-sandbox-current-main-reconciliation-20261123',
+        title: 'Razorpay payment trust: verified sandbox capture, durable order intent and early webhook recovery',
+        state: 'active',
+        detail: 'SOURCE ONLY: previously green #928/#929/#1056/#1064/#1068 Razorpay sandbox guards consolidated on main after #1071. One committed intent before external provider order call prevents duplicate create on uncertain outcome; bounded early signed webhook retry; production skips the sandbox worker. No live charges, refunds, subscriptions, entitlements or signed licenses.',
+        evidence:
+            'New exact-main PR under review. Prior combined #1068 had 14/14 checks and 12/12 workflow PASS but became non-mergeable as main advanced. Latest Fast Release Guide SHA pin correction independently MERGED in #1071, so this PR intentionally does not touch that guide. New exact-head QA, migration rollback and authenticated staging are still required before any merge. Elite production mutation NONE.',
     },
 ];
 
