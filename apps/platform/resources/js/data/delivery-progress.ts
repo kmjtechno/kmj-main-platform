@@ -1426,6 +1426,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence:
             'New exact-main PR under review. Prior combined #1068 had 14/14 checks and 12/12 workflow PASS but became non-mergeable as main advanced. Latest Fast Release Guide SHA pin correction independently MERGED in #1071, so this PR intentionally does not touch that guide. New exact-head QA, migration rollback and authenticated staging are still required before any merge. Elite production mutation NONE.',
     },
+    {
+        id: 'razorpay-provider-evidence-hardening-20261123',
+        title: 'Razorpay sandbox checkout and settlement evidence fail-closed hardening',
+        state: 'active',
+        detail: 'SOURCE ONLY: reject reusing a non-sandbox or non-INR Razorpay provider-order link in the sandbox checkout; never treat missing, non-integer or malformed refunded amounts as independent proof of a captured, unrefunded payment. Merchant live transactions, refunds, subscription rights, product entitlements and signed license activation remain disabled.',
+        evidence:
+            'Targeted feature regressions in RazorpayCheckoutReconciliationTest, exact-head CI and reviewed PR #1078. Not merged, not staged or deployed to Elite. Requires independent review, fresh owner-pinned release approval, actual merchant acceptance and separate settlement/reversal ledger.',
+    },
 ];
 
 export const verifiedDeliveryMilestones = deliveryMilestones.filter(
