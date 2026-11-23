@@ -107,6 +107,13 @@ Schedule::command('payments:reconcile-razorpay-sandbox --limit=25')
     ->everyFiveMinutes()
     ->withoutOverlapping(5);
 
+// Persist a first-party OmniDesk trial's already-enforced expiry in the
+// licensing/entitlement ledgers. The command itself is disabled until the
+// owner explicitly enables its rollout; no paid plan or device is changed.
+Schedule::command('licensing:expire-omnidesk-trials --limit=50')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(5);
+
 /*
 | Read-only operator diagnostic for Home Office device enrollment.
 | Does NOT revoke, enroll, configure, deploy or output any credentials/URLs.
