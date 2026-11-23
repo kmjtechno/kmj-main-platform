@@ -150,8 +150,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         title: 'Evidence installer v2: adds the rehearsal workspace helper with a bounded atomic upgrade',
         state: 'active',
         detail: 'Updated owner installer pinned to a newer exact merge commit. It adds the rehearsal workspace helper and may atomically replace only the one previously installed runner whose exact earlier digest it knows; any other differing file is still refused.',
-        evidence:
-            'Offline tests and exact-head CI only. Not run on Elite yet.',
+        evidence: 'Offline tests and exact-head CI only. Not run on Elite yet.',
     },
     {
         id: 'release-rehearsal-workspace-20261123',
