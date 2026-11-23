@@ -1041,12 +1041,24 @@ export default function MailCenter({
                                 <div className="bg-[#edf0f4] p-5">
                                     <div className="mx-auto max-w-xl overflow-hidden rounded-xl border bg-white shadow-sm">
                                         <div className="border-t-4 border-[#d61f42] bg-[#111927] p-6">
-                                            <img
-                                                src="/assets/brand/kmj-email-lockup-dark.png"
-                                                width="320"
-                                                className="h-auto max-w-full"
-                                                alt="KMJ TECHNO — INNOVATE | BUILD | SCALE"
-                                            />
+                                            <div className="flex items-center gap-2">
+                                                <img
+                                                    src="/assets/brand/kmj-sender-avatar.png"
+                                                    width="58"
+                                                    height="58"
+                                                    className="h-[58px] w-[58px] object-contain"
+                                                    alt="KMJ TECHNO logo"
+                                                />
+                                                <div>
+                                                    <div className="whitespace-nowrap text-[22px] leading-[27px] font-extrabold">
+                                                        <span className="text-[#f52237]">KMJ</span>{' '}
+                                                        <span className="text-white">TECHNO</span>
+                                                    </div>
+                                                    <div className="whitespace-nowrap text-[11px] leading-4 font-bold text-white">
+                                                        INNOVATE <span className="text-[#f52237]">|</span> BUILD <span className="text-[#f52237]">|</span> SCALE
+                                                    </div>
+                                                </div>
+                                            </div>
                                             <p className="mt-6 text-[11px] font-bold tracking-widest text-[#bec8d7] uppercase">
                                                 {activeTemplate.category}
                                             </p>
