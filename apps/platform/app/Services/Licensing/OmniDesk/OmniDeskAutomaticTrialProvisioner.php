@@ -61,7 +61,7 @@ final class OmniDeskAutomaticTrialProvisioner
                 ->where('user_id', $account->getKey())
                 ->lockForUpdate()
                 ->first();
-            if ($membership === null || ! in_array($membership->role, ['owner', 'admin'], true)) {
+            if ($membership === null || ! in_array($membership->getAttribute('role'), ['owner', 'admin'], true)) {
                 throw new DomainException('OMNIDESK_TRIAL_FORBIDDEN');
             }
 
@@ -101,10 +101,10 @@ final class OmniDeskAutomaticTrialProvisioner
                 ->where('slug', OmniDeskLicenseContract::PRODUCT_SLUG)
                 ->lockForUpdate()
                 ->first();
-            if ($product === null || $product->status !== 'active'
-                || ! $product->licensing_enabled
-                || ! $product->is_public
-                || ! in_array($product->lifecycle, ['available', 'public-beta'], true)) {
+            if ($product === null || $product->getAttribute('status') !== 'active'
+                || ! $product->getAttribute('licensing_enabled')
+                || ! $product->getAttribute('is_public')
+                || ! in_array($product->getAttribute('lifecycle'), ['available', 'public-beta'], true)) {
                 throw new DomainException('OMNIDESK_TRIAL_NOT_ENABLED');
             }
 
@@ -113,10 +113,10 @@ final class OmniDeskAutomaticTrialProvisioner
                 ->where('code', self::TRIAL_PLAN)
                 ->lockForUpdate()
                 ->first();
-            if ($plan === null || $plan->status !== 'active'
-                || $plan->pricing_model !== 'trial'
-                || $plan->amount_minor !== null
-                || (int) $plan->trial_days < 1 || (int) $plan->trial_days > 30) {
+            if ($plan === null || $plan->getAttribute('status') !== 'active'
+                || $plan->getAttribute('pricing_model') !== 'trial'
+                || $plan->getAttribute('amount_minor') !== null
+                || (int) $plan->getAttribute('trial_days') < 1 || (int) $plan->getAttribute('trial_days') > 30) {
                 throw new DomainException('OMNIDESK_TRIAL_NOT_ENABLED');
             }
 
@@ -132,11 +132,11 @@ final class OmniDeskAutomaticTrialProvisioner
             }
 
             $now = now();
-            $endsAt = $now->copy()->addDays((int) $plan->trial_days);
+            $endsAt = $now->copy()->addDays((int) $plan->getAttribute('trial_days'));
             $entitlement = $this->entitlements->issue($organizationId, $policy, $idempotencyKey);
-            if ($entitlement->status !== 'active'
-                || $entitlement->ends_at !== null
-                || $entitlement->organization_id !== $organizationId) {
+            if ($entitlement->getAttribute('status') !== 'active'
+                || $entitlement->getAttribute('ends_at') !== null
+                || $entitlement->getAttribute('organization_id') !== $organizationId) {
                 throw new DomainException('OMNIDESK_TRIAL_CONFLICT');
             }
             $entitlement->forceFill(['starts_at' => $now, 'ends_at' => $endsAt])->save();
@@ -165,7 +165,7 @@ final class OmniDeskAutomaticTrialProvisioner
                 'correlation_id' => (string) Str::uuid(),
                 'metadata' => json_encode([
                     'entitlement_id' => (string) $entitlement->getKey(),
-                    'trial_days' => (int) $plan->trial_days,
+                    'trial_days' => (int) $plan->getAttribute('trial_days'),
                 ], JSON_THROW_ON_ERROR),
                 'created_at' => $now,
             ]);
@@ -182,12 +182,18 @@ final class OmniDeskAutomaticTrialProvisioner
 
     private function isActive(object $license, object $entitlement): bool
     {
-        return (string) $license->status === 'active'
-            && $license->revoked_at === null
-            && now()->gte($license->starts_at)
-            && now()->lt($license->expires_at)
-            && (string) $entitlement->status === 'active'
-            && now()->gte($entitlement->starts_at)
-            && ($entitlement->ends_at === null || now()->lt($entitlement->ends_at));
+        /** @var array{status:string,revoked_at:mixed,starts_at:string,expires_at:string} $licenseFields */
+        $licenseFields = (array) $license;
+        /** @var array{status:string,starts_at:string,ends_at:?string} $entitlementFields */
+        $entitlementFields = (array) $entitlement;
+
+        return $licenseFields['status'] === 'active'
+            && $licenseFields['revoked_at'] === null
+            && now()->gte($licenseFields['starts_at'])
+            && now()->lt($licenseFields['expires_at'])
+            && $entitlementFields['status'] === 'active'
+            && now()->gte($entitlementFields['starts_at'])
+            && ($entitlementFields['ends_at'] === null
+                || now()->lt($entitlementFields['ends_at']));
     }
 }
