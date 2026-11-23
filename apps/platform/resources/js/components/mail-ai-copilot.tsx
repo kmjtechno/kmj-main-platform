@@ -54,7 +54,9 @@ export default function MailAiCopilot({
     const [consent, setConsent] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [results, setResults] = useState<Partial<Record<MailAiMode, AiResponse>>>({});
+    const [results, setResults] = useState<
+        Partial<Record<MailAiMode, AiResponse>>
+    >({});
     const [showTools, setShowTools] = useState(false);
     const result = results[mode] ?? null;
     const selectedRef = useRef(selectedMessageId);
@@ -206,8 +208,12 @@ export default function MailAiCopilot({
                     type="button"
                     aria-expanded={showTools}
                     onClick={() => setShowTools((value) => !value)}
-                    className={'flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-xl border p-1 text-center text-[11px] font-semibold transition ' +
-                        (showTools ? 'border-fuchsia-400/60 bg-fuchsia-500/20 text-white' : 'border-white/10 bg-white/[0.04] text-slate-300')}
+                    className={
+                        'flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-xl border p-1 text-center text-[11px] font-semibold transition ' +
+                        (showTools
+                            ? 'border-fuchsia-400/60 bg-fuchsia-500/20 text-white'
+                            : 'border-white/10 bg-white/[0.04] text-slate-300')
+                    }
                 >
                     <SlidersHorizontal className="size-4" />
                     Tools
@@ -215,7 +221,9 @@ export default function MailAiCopilot({
             </div>
             {showTools && (
                 <div className="kmj-mail-ai-card mt-3 space-y-2 rounded-xl border p-3 text-xs">
-                    <p className="font-semibold text-fuchsia-100">Writing tools</p>
+                    <p className="font-semibold text-fuchsia-100">
+                        Writing tools
+                    </p>
                     <label className="flex items-center justify-between gap-2">
                         Tone
                         <select
@@ -233,7 +241,9 @@ export default function MailAiCopilot({
                         Output language
                         <select
                             value={language}
-                            onChange={(event) => setLanguage(event.target.value)}
+                            onChange={(event) =>
+                                setLanguage(event.target.value)
+                            }
                             className="rounded-lg border border-white/15 bg-[#111827] px-2 py-1.5"
                         >
                             <option value="english">English</option>
@@ -359,26 +369,41 @@ export default function MailAiCopilot({
                 )}
             </div>
 
-            <section className="kmj-mail-ai-actions mt-5" aria-label="KMJ AI quick actions">
-                <h3 className="mb-2 text-xs font-bold text-white">Quick Actions</h3>
+            <section
+                className="kmj-mail-ai-actions mt-5"
+                aria-label="KMJ AI quick actions"
+            >
+                <h3 className="mb-2 text-xs font-bold text-white">
+                    Quick Actions
+                </h3>
                 <div className="space-y-1.5">
                     <button type="button" onClick={() => selectMode('compose')}>
                         <FilePenLine size={15} /> नई ईमेल लिखें (AI Compose)
                     </button>
-                    <button type="button" onClick={() => selectMode('explain')} disabled={selectedMessageId === null}>
+                    <button
+                        type="button"
+                        onClick={() => selectMode('explain')}
+                        disabled={selectedMessageId === null}
+                    >
                         <ClipboardList size={15} /> ईमेल का हिंदी सार (Summarize)
                     </button>
-                    <button type="button" onClick={() => selectMode('reply')} disabled={selectedMessageId === null}>
+                    <button
+                        type="button"
+                        onClick={() => selectMode('reply')}
+                        disabled={selectedMessageId === null}
+                    >
                         <MessageCircle size={15} /> Reply सुझाव (Smart Reply)
                     </button>
                     <button type="button" onClick={() => setShowTools(true)}>
-                        <SlidersHorizontal size={15} /> Professional / Formal / Friendly
+                        <SlidersHorizontal size={15} /> Professional / Formal /
+                        Friendly
                     </button>
                     <a
                         href="/operator/modelfabric"
                         className="flex min-h-9 items-center gap-2 rounded-lg border border-white/20 px-3 text-[11px] text-slate-300 hover:bg-white/10"
                     >
-                        <Sparkles size={15} /> Verified ModelFabric provider settings
+                        <Sparkles size={15} /> Verified ModelFabric provider
+                        settings
                     </a>
                 </div>
             </section>
