@@ -466,9 +466,9 @@ export function DeveloperAppsWorkspace({
                                 Issuer quota is not a reseller wallet balance.
                                 Counts use the same server-month window as the
                                 delegated license gate. Revoked keys still count
-                                toward issued licenses. Only organizations
-                                where you have license management permission
-                                are shown.
+                                toward issued licenses. Only organizations where
+                                you have license management permission are
+                                shown.
                             </p>
                         </div>
                         <span className="rounded-full border px-3 py-1 text-xs font-semibold">
@@ -503,7 +503,9 @@ export function DeveloperAppsWorkspace({
                                                 Registered apps
                                             </dt>
                                             <dd className="mt-1 font-semibold tabular-nums">
-                                                {organization.registered_products}
+                                                {
+                                                    organization.registered_products
+                                                }
                                                 {' / '}
                                                 {organization.issuer_status ===
                                                 'not_subscribed'
