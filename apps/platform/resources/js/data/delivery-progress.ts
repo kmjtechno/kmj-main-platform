@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-mail-inbox-management-20261123',
+        title: 'KMJ Mail: functional inbox management and private bulk organization',
+        state: 'active',
+        detail: 'PR #1073 adds owner-scoped Archive/Unarchive, Starred and Mark Read/Unread, 40-message pagination, selected-message bulk actions (max 40, atomic), manual forwarding, compact owner UI and truthful outbound-vs-inbound labels. Existing verified owner/staff, password confirmation, per-mailbox copies, rate limits and outbound idempotency remain unchanged. This is NOT a claim of Internet inbound, attachments, CC/BCC or new SMTP transport.',
+        evidence:
+            'PR #1073 source and PHP feature regressions for cross-mailbox isolation, atomic rollback, archive restore, validation and pagination. Exact-head CI, migration rollback, merged-main acceptance, owner-pinned Elite release and authenticated inbox click acceptance all required before LIVE.',
+    },
+    {
         id: 'owner-codebridge-stage-dispatch-draft-20261123',
         title: 'CodeBridge Release Center: owner-only one-click source staging (draft)',
         state: 'active',
