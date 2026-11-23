@@ -152,12 +152,15 @@ final class KslpResellerCreditEvidenceLedger
         string $licensedProductId,
         string $commercialOrderId,
     ): void {
-        if ($record->issuer_organization_id !== $issuerOrganizationId
-            || $record->licensed_product_id !== $licensedProductId
-            || $record->commercial_order_id !== $commercialOrderId
-            || $record->event_type !== 'evidence_pending'
-            || (int) $record->credits_delta !== 0
-            || $record->evidence_state !== 'unverified') {
+        // Illuminate's query builder returns a generic object; normalize it
+        // before inspecting fixed ledger columns, including under PHPStan.
+        $row = (array) $record;
+        if (($row['issuer_organization_id'] ?? null) !== $issuerOrganizationId
+            || ($row['licensed_product_id'] ?? null) !== $licensedProductId
+            || ($row['commercial_order_id'] ?? null) !== $commercialOrderId
+            || ($row['event_type'] ?? null) !== 'evidence_pending'
+            || (int) ($row['credits_delta'] ?? -1) !== 0
+            || ($row['evidence_state'] ?? null) !== 'unverified') {
             throw new DomainException('KSLP_RESELLER_EVIDENCE_IDEMPOTENCY_CONFLICT');
         }
     }
