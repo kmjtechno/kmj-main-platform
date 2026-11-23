@@ -273,7 +273,9 @@ void test('customer renewal guidance distinguishes real license states and block
     assert.ok(customer.includes('license.grace_until'));
     assert.ok(customer.includes('license.starts_at'));
     assert.ok(customer.includes('licenses_truncated &&'));
-    assert.ok(customer.includes('remains disabled until signed device verification'));
+    assert.ok(
+        customer.includes('remains disabled until signed device verification'),
+    );
     assert.ok(!customer.includes("href='/licensing/renew'"));
     assert.ok(!customer.includes('Automatic renewal successful'));
 });
