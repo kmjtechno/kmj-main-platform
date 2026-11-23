@@ -440,7 +440,7 @@ export default function MailCenter({
             <Head title="KMJ Mail · Enterprise inbox and correspondence" />
             <div
                 data-test="kmj-native-mail"
-                className="owner-admin-page kmj-admin-shell mx-auto flex w-full max-w-[1500px] min-w-0 flex-col gap-4 px-4 py-5 sm:px-6 lg:px-8"
+                className="owner-admin-page kmj-admin-shell mx-auto flex w-full max-w-[1720px] min-w-0 flex-col gap-3 px-3 py-4 sm:px-5 lg:px-6"
             >
                 <header className="relative overflow-hidden rounded-2xl border border-[#293447] bg-gradient-to-br from-[#111827] via-[#121d2d] to-[#1b273b] p-5 text-white shadow-[0_24px_55px_-32px_rgba(0,0,0,0.8)] sm:p-6">
                     <div aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-[#ff3853] to-[#a5092f]" />
@@ -539,20 +539,20 @@ export default function MailCenter({
 
                 <div
                     className={
-                        'grid min-h-[570px] min-w-0 gap-3 ' +
+                        'grid min-h-[640px] min-w-0 gap-3 ' +
                         (view === 'compose'
-                            ? 'lg:grid-cols-[190px_minmax(0,1fr)]'
-                            : 'lg:grid-cols-[190px_minmax(270px,380px)_minmax(0,1fr)]')
+                            ? 'lg:grid-cols-[205px_minmax(0,1fr)]'
+                            : 'lg:grid-cols-[205px_minmax(285px,390px)_minmax(0,1fr)]')
                     }
                 >
                     <aside
                         aria-label="Mail folders"
-                        className="bg-card min-w-0 rounded-2xl border p-3"
+                        className="min-w-0 rounded-2xl border border-slate-700/40 bg-gradient-to-b from-card to-background p-3 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)]"
                     >
                         <button
                             type="button"
                             onClick={startCompose}
-                            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white hover:bg-red-500"
+                            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#e32143] to-[#b91035] px-4 text-sm font-bold text-white shadow-[0_12px_25px_-15px_rgba(240,42,76,0.9)] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
                         >
                             <Pencil className="size-4" /> Compose
                         </button>
@@ -571,10 +571,10 @@ export default function MailCenter({
                                             : undefined
                                     }
                                     className={
-                                        'flex min-h-11 items-center gap-2 rounded-xl px-3 text-left text-sm transition ' +
+                                        'flex min-h-11 items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium transition focus-visible:outline-2 focus-visible:outline-red-500 ' +
                                         (folder === id && view === 'mail'
-                                            ? 'bg-red-500/10 font-semibold text-red-500'
-                                            : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground')
+                                            ? 'border border-red-500/25 bg-red-500/10 font-bold text-red-400 shadow-[inset_3px_0_0_0_#e52945]'
+                                            : 'border border-transparent text-muted-foreground hover:bg-muted/70 hover:text-foreground')
                                     }
                                 >
                                     <Icon className="size-4 shrink-0" />
@@ -605,15 +605,13 @@ export default function MailCenter({
                                 </button>
                             )}
                         </div>
-                        <div className="text-muted-foreground mt-5 rounded-xl border border-dashed p-3 text-xs leading-5">
-                            <p className="text-foreground flex items-center gap-2 font-bold">
-                                <KeyRound size={14} /> Privacy by default
+                        <div className="mt-5 rounded-xl border border-white/10 bg-gradient-to-br from-[#182131] to-[#111822] p-3 text-xs leading-5 text-slate-300">
+                            <p className="flex items-center gap-2 font-bold text-white">
+                                <LockKeyhole size={14} className="text-[#ff6076]" />
+                                Private by default
                             </p>
                             <p className="mt-2">
-                                Only approved KMJ employees can receive internal
-                                mail. Customer organization membership alone
-                                grants no access. No customer inbox or external
-                                Gmail data is shared.
+                                Only authorized KMJ staff can open private team mail.
                             </p>
                         </div>
                     </aside>
@@ -621,13 +619,13 @@ export default function MailCenter({
                     <section
                         aria-label="Mail list"
                         className={
-                            'bg-card min-w-0 overflow-hidden rounded-2xl border p-3 ' +
+                            'min-w-0 overflow-hidden rounded-2xl border border-slate-700/40 bg-card/90 p-3 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)] ' +
                             (view === 'compose' ? 'hidden' : '')
                         }
                     >
                         <div className="flex items-center justify-between gap-2 px-2 pt-2">
                             <div>
-                                <h2 className="text-base font-bold">
+                                <h2 className="text-lg font-extrabold tracking-tight">
                                     {view === 'templates'
                                         ? 'Original KMJ templates'
                                         : view === 'staff'
@@ -853,7 +851,7 @@ export default function MailCenter({
                                                                   ),
                                                     )
                                                 }
-                                                className="mt-4 size-4 shrink-0 accent-red-500"
+                                                className="mt-5 size-4 shrink-0 accent-red-500"
                                             />
                                             <button
                                                 type="button"
@@ -866,14 +864,14 @@ export default function MailCenter({
                                                     )
                                                 }
                                                 className={
-                                                    'min-w-0 flex-1 rounded-xl border p-3 text-left transition hover:border-red-500/40 ' +
+                                                    'min-w-0 flex-1 rounded-xl border p-4 text-left shadow-sm transition hover:border-red-500/40 hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-red-500 ' +
                                                     (selected?.id === item.id
                                                         ? 'border-red-500/50 bg-red-500/5'
-                                                        : 'bg-background/30')
+                                                        : 'border-border/70 bg-background/35')
                                                 }
                                             >
                                                 <div className="flex items-center justify-between gap-2">
-                                                    <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold">
+                                                    <span className="flex min-w-0 items-center gap-1.5 truncate text-[13px] font-semibold">
                                                         {item.unread && (
                                                             <span className="size-2 rounded-full bg-red-500" />
                                                         )}
@@ -893,24 +891,31 @@ export default function MailCenter({
                                                                   item.recipient_user_id,
                                                               ))}
                                                     </span>
-                                                    <span className="text-muted-foreground shrink-0 text-[10px]">
+                                                    <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
                                                         {item.at.slice(0, 16)}
                                                     </span>
                                                 </div>
                                                 {deliveryLabel(
                                                     item.delivery_state,
                                                 ) && (
-                                                    <span className="mt-1 inline-block rounded-md border border-red-500/20 px-2 py-0.5 text-[10px] font-semibold text-red-500">
+                                                    <span className={
+                                                        'mt-2 inline-block rounded-md border px-2 py-1 text-[10px] font-semibold ' +
+                                                        (item.delivery_state === 'failed' || item.delivery_state === 'blocked'
+                                                            ? 'border-red-500/30 bg-red-500/10 text-red-400'
+                                                            : item.delivery_state === 'queued' || item.delivery_state === 'submitting'
+                                                              ? 'border-amber-500/25 bg-amber-500/10 text-amber-300'
+                                                              : 'border-slate-500/25 bg-slate-500/10 text-slate-300')
+                                                    }">
                                                         {deliveryLabel(
                                                             item.delivery_state,
                                                         )}
                                                     </span>
                                                 )}
-                                                <div className="mt-1 truncate text-sm font-bold">
+                                                <div className="mt-2 truncate text-[15px] font-bold leading-6">
                                                     {item.subject ||
                                                         '(No subject)'}
                                                 </div>
-                                                <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-5">
+                                                <p className="text-muted-foreground mt-1 line-clamp-2 text-[13px] leading-[21px]">
                                                     {item.snippet}
                                                 </p>
                                             </button>
@@ -1160,7 +1165,7 @@ export default function MailCenter({
 
                     <section
                         aria-label="KMJ private message"
-                        className="bg-card min-w-0 overflow-hidden rounded-2xl border"
+                        className="min-w-0 overflow-hidden rounded-2xl border border-slate-700/40 bg-card/95 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.8)]"
                     >
                         {view === 'compose' ? (
                             <div className="p-5 sm:p-6">
