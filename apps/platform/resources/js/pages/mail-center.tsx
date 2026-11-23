@@ -518,7 +518,7 @@ export default function MailCenter({
                             </div>
                         </div>
                     </div>
-                </header>       </header>
+                </header>
 
                 {status && (
                     <p
@@ -905,7 +905,7 @@ export default function MailCenter({
                                                             : item.delivery_state === 'queued' || item.delivery_state === 'submitting'
                                                               ? 'border-amber-500/25 bg-amber-500/10 text-amber-300'
                                                               : 'border-slate-500/25 bg-slate-500/10 text-slate-300')
-                                                    }">
+                                                    }>
                                                         {deliveryLabel(
                                                             item.delivery_state,
                                                         )}
