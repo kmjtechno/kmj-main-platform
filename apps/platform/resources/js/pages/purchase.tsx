@@ -1,3 +1,6 @@
+import OmniDeskPricingCards, {
+    type OmniDeskOffer,
+} from '@/components/omnidesk-pricing-cards';
 import type { FormEvent } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import {
@@ -37,6 +40,9 @@ type PurchaseProps = {
     organizations: Organization[];
     products: Product[];
     recentOrders: Order[];
+    omnideskOffers: OmniDeskOffer[];
+    omnideskTrialEnabled: boolean;
+    omnideskPaidCheckoutEnabled: boolean;
     requestKey: string;
 };
 
@@ -65,6 +71,9 @@ export default function Purchase({
     organizations,
     products,
     recentOrders,
+    omnideskOffers,
+    omnideskTrialEnabled,
+    omnideskPaidCheckoutEnabled,
     requestKey,
 }: PurchaseProps) {
     const form = useForm({
@@ -115,6 +124,12 @@ export default function Purchase({
                         </div>
                     </div>
                 </section>
+
+                <OmniDeskPricingCards
+                    offers={omnideskOffers}
+                    trialEnabled={omnideskTrialEnabled}
+                    paidCheckoutEnabled={omnideskPaidCheckoutEnabled}
+                />
 
                 <div className="grid gap-6 xl:grid-cols-[1fr_1.35fr]">
                     <section className="bg-card rounded-2xl border p-5 sm:p-6">
