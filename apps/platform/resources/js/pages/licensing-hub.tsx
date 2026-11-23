@@ -580,7 +580,9 @@ export default function LicensingHub({
                                         {license.state === 'NOT_STARTED' && (
                                             <span>
                                                 Starts{' '}
-                                                {readableDate(license.starts_at)}
+                                                {readableDate(
+                                                    license.starts_at,
+                                                )}
                                             </span>
                                         )}
                                         {license.state === 'GRACE' &&
@@ -617,9 +619,9 @@ export default function LicensingHub({
                                 Renewals &amp; access review
                             </h2>
                             <p className="text-muted-foreground mt-2 text-xs leading-5">
-                                Your next step is based only on your visible KSLP
-                                license records. A renewal-due or grace status
-                                is not proof of a charge, auto-renewal or
+                                Your next step is based only on your visible
+                                KSLP license records. A renewal-due or grace
+                                status is not proof of a charge, auto-renewal or
                                 newly signed license. Plans are for discovery,
                                 not an immediate license extension.
                             </p>
@@ -660,7 +662,8 @@ export default function LicensingHub({
                                         {license.state === 'GRACE' &&
                                             license.grace_until && (
                                                 <>
-                                                    {' '}· Grace ends{' '}
+                                                    {' '}
+                                                    · Grace ends{' '}
                                                     {readableDate(
                                                         license.grace_until,
                                                     )}
@@ -700,10 +703,10 @@ export default function LicensingHub({
                                     </div>
                                     <p className="text-muted-foreground mt-2 text-xs leading-5">
                                         {license.subject_label} · Ref{' '}
-                                        {license.id.slice(0, 8)}. Access requires
-                                        an authorized review. Buying another
-                                        plan cannot bypass revocation or an
-                                        unknown restriction; use KMJ account
+                                        {license.id.slice(0, 8)}. Access
+                                        requires an authorized review. Buying
+                                        another plan cannot bypass revocation or
+                                        an unknown restriction; use KMJ account
                                         support for next steps.
                                     </p>
                                 </article>
