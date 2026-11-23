@@ -100,6 +100,13 @@ Schedule::command('outbox:work --limit=25 --max-attempts=8 --base-delay=15')
     ->everyMinute()
     ->withoutOverlapping(2);
 
+// Automatically reconcile verified SANDBOX Razorpay inbox events against
+// independently retrieved, captured and unrefunded provider evidence.
+// In production, the command skips; no entitlement, license or charge occurs.
+Schedule::command('payments:reconcile-razorpay-sandbox --limit=25')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(5);
+
 /*
 | Read-only operator diagnostic for Home Office device enrollment.
 | Does NOT revoke, enroll, configure, deploy or output any credentials/URLs.
