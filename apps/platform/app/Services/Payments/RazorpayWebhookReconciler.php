@@ -82,6 +82,12 @@ final class RazorpayWebhookReconciler
             return ['bucket' => 'unmatched', 'status' => 'unmatched', 'note' => 'NO_LINKED_ORDER'];
         }
 
+        // Never let a sandbox provider adapter confirm an imported/live order.
+        // A signature-verified inbox row alone is not a paid order.
+        if ((string) $link->environment !== 'sandbox') {
+            return ['bucket' => 'rejected', 'status' => 'rejected', 'note' => 'PROVIDER_ENVIRONMENT_MISMATCH'];
+        }
+
         try {
             $evidence = $this->adapter->confirmationForProviderOrder($paymentRef, $orderRef);
         } catch (InvalidArgumentException) {
