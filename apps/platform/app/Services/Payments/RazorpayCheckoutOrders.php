@@ -48,6 +48,16 @@ final class RazorpayCheckoutOrders
                     throw new DomainException('RAZORPAY_ORDER_AMOUNT_CONFLICT');
                 }
 
+                // This is a sandbox-only entry point. An old or manually
+                // reconciled LIVE/foreign-currency link must never be handed
+                // back to a sandbox checkout as an apparently valid order.
+                if ((string) $existing->environment !== 'sandbox') {
+                    throw new DomainException('RAZORPAY_ORDER_ENVIRONMENT_CONFLICT');
+                }
+                if ((string) $existing->currency !== 'INR') {
+                    throw new DomainException('RAZORPAY_ORDER_CURRENCY_CONFLICT');
+                }
+
                 return ['linked' => $this->shape((string) $existing->provider_order_id, (int) $existing->amount_minor, (string) $existing->currency), 'credentials' => null];
             }
 
