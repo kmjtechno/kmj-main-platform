@@ -1,5 +1,6 @@
 """Hardware-free contract for the one-command owner release helper."""
 from pathlib import Path
+import hashlib
 import re
 import subprocess
 import unittest
@@ -12,6 +13,15 @@ SHA256 = re.compile(r"^[a-f0-9]{64}$")
 class OwnerReleaseOneCommandContract(unittest.TestCase):
     def call(self, *args: str):
         return subprocess.run(["bash", str(SCRIPT), *args], capture_output=True, text=True, timeout=8)
+
+    def test_fast_guide_helper_pin_matches_exact_current_bytes_and_broker(self):
+        root = SCRIPT.parents[2]
+        guide = (root / "docs" / "operations" / "FAST_RELEASE_GUIDE_ELITE.md").read_text()
+        broker = (root / "scripts" / "operations" / "elite_release_prepare_broker.py").read_text()
+        helper_sha = hashlib.sha256(SCRIPT.read_bytes()).hexdigest()
+        self.assertIn(helper_sha + "  /root/orm.sh", guide)
+        self.assertIn('HELPER_SHA256 = "' + helper_sha + '"', broker)
+        self.assertNotIn("71f77d40d32e46fdf1f62172c49187dfe24171bef92bafdb8adc08cac904b538  /root/orm.sh", guide)
 
     def test_requires_exact_sha_before_any_filesystem_or_network_action(self):
         for arguments in [(), ("a" * 39,), ("not-a-sha",), ("a" * 41,), ("a" * 40, "extra")]:

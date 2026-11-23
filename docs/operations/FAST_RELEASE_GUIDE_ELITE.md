@@ -1,6 +1,6 @@
 # Fast release guide: KMJ Main Platform on Elite (for Claude, ChatGPT and the owner)
 
-Status: operating guide, 2026-11-22. It describes the release path used for `platform-f8928845aae8` and
+Status: operating guide, updated 2026-11-23. It describes the release path used for `platform-f8928845aae8` and
 `platform-5ebee1e786fd`. It is not a proof that any given commit is release ready: that still needs
 `RELEASE_GATE.md` and exact-head evidence. The longer reference is `ELITE_RELEASE_RUNBOOK_20261121.md`.
 
@@ -36,8 +36,10 @@ The helper also has two bounded modes so nobody has to keep one terminal open fo
 - `bash orm.sh --post-activation <SHA>`: runs only `migrate --force` on the live app and refuses with
   `BLOCKED_CANDIDATE_NOT_LIVE` unless `current` is exactly `platform-<sha12>`. It downloads, stages and approves nothing.
 
-The no-flag form is unchanged (full chain with the 15 minute wait). The helper's sha256 changes with this edit; always
-use the hash from the exact merge commit you are releasing.
+The no-flag form is unchanged (full chain with the 15 minute wait). **The old 71f77d40 helper pin is obsolete**;
+current 2026-11-23 helper SHA256 is `325b24d32ebcf01b42994276a7beb550ed72c69cb044f8ffab03db6f1e218cec`.
+The release helper has been hashed against the exact `main` source and matches the broker pin.
+Always verify the helper digest again at the exact final merged candidate SHA.
 
 ## Release (owner, root, one command)
 
@@ -47,13 +49,21 @@ plus the approval tool, each pinned by sha256 (a mismatch aborts before anything
 ```bash
 SHA=<SHA>
 curl -fsSL "https://raw.githubusercontent.com/kmjtechno/kmj-main-platform/$SHA/scripts/operations/owner-release-main-platform.sh" -o /root/orm.sh \
- && echo "71f77d40d32e46fdf1f62172c49187dfe24171bef92bafdb8adc08cac904b538  /root/orm.sh" | sha256sum -c - \
+ && echo "325b24d32ebcf01b42994276a7beb550ed72c69cb044f8ffab03db6f1e218cec  /root/orm.sh" | sha256sum -c - \
  && bash /root/orm.sh "$SHA"
 ```
 
 If the helper file changes in a later commit, its pinned sha256 changes too. Compute it from the reviewed merge
 commit (`git show <commit>:scripts/operations/owner-release-main-platform.sh | sha256sum`) and do not take it from
 an unreviewed source.
+
+**Short terminal mode (recommended when owner prefers not to leave the terminal open):** after verifying the
+exact final SHA and digest, run `bash /root/orm.sh --prepare-only "$SHA"`; it produces
+`APPROVAL_DONE_PREPARE_ONLY_ACTIVATE_THEN_RUN_POST_ACTIVATION` without activating or migrating.
+Only after the trusted Supervisor independently confirms `readyToActivate=true` with the same SHA and predecessor
+may the agent activate. After a fresh live pointer verification, the owner runs
+`bash /root/orm.sh --post-activation "$SHA"` for pending migrations. Never interpret preparation as activation.
+If main has changed or a release lock is busy, stop and re-evaluate rather than substituting a different SHA.
 
 The script runs: stage, storage switch, materialize, local recovery, owner approval, then waits up to 15 minutes
 for activation, and after activation runs `artisan migrate --force` as `kmjprod`. It prints
