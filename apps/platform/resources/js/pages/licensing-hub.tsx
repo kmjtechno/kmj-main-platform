@@ -49,6 +49,27 @@ type Props = {
     authorization_source: 'authenticated_verified_membership';
     device_reset_enabled: false;
     paid_issuance_enabled: false;
+    codebridge_usage_preview: {
+        status: 'proposal_only';
+        meter_live: false;
+        checkout_live: false;
+        trial_live: false;
+        used_calls: null;
+        remaining_calls: null;
+        next_reset_at: null;
+        active_plan: null;
+        unit: 'completed_remote_tool_calls';
+        period: 'calendar_month_utc';
+        self_hosted_unmetered: true;
+        ai_provider_fees_included: false;
+        plans: {
+            id: string;
+            label: string;
+            monthly_calls: number | null;
+            monthly_price_inr: number | null;
+            per_user: boolean;
+        }[];
+    };
     trusted_download_source: string;
 };
 
@@ -80,6 +101,7 @@ export default function LicensingHub({
     product_entitlements,
     organizations,
     trusted_download_source,
+    codebridge_usage_preview,
 }: Props) {
     const activeLicenses = licenses.filter((license) =>
         ['ACTIVE', 'RENEWAL_DUE', 'GRACE'].includes(license.state),
@@ -123,6 +145,77 @@ export default function LicensingHub({
                         >
                             Plans & purchases
                         </Link>
+                    </div>
+                </section>
+
+                <section
+                    id="codebridge-usage-preview"
+                    aria-labelledby="codebridge-usage-heading"
+                    className="border-border bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
+                >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <p className="text-xs font-bold tracking-wider text-red-500 uppercase">
+                                KMJ CodeBridge · Monthly usage
+                            </p>
+                            <h2
+                                id="codebridge-usage-heading"
+                                className="mt-1 text-lg font-bold"
+                            >
+                                Free forever. Grow when you need more.
+                            </h2>
+                            <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
+                                Planned hosted remote tool-call allowances. No
+                                card needed for the proposed Free plan.
+                                Self-hosted open-source CodeBridge is not
+                                subject to a KMJ monthly hosted-call meter. AI
+                                provider fees, if any, are separate.
+                            </p>
+                        </div>
+                        <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-300">
+                            Proposal · Not live
+                        </span>
+                    </div>
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        {codebridge_usage_preview.plans.map((plan) => (
+                            <article
+                                key={plan.id}
+                                className="border-border rounded-xl border p-4"
+                            >
+                                <h3 className="text-sm font-bold">
+                                    {plan.label}
+                                </h3>
+                                <p className="mt-2 text-2xl font-extrabold tabular-nums">
+                                    {plan.monthly_price_inr === null
+                                        ? 'Custom'
+                                        : `₹${plan.monthly_price_inr}`}
+                                    {plan.monthly_price_inr !== null && (
+                                        <span className="text-muted-foreground ml-1 text-xs font-medium">
+                                            /
+                                            {plan.per_user
+                                                ? 'user/month'
+                                                : 'month'}
+                                        </span>
+                                    )}
+                                </p>
+                                <p className="text-muted-foreground mt-2 text-xs">
+                                    {plan.monthly_calls === null
+                                        ? 'Contract-specific monthly allowance'
+                                        : `${plan.monthly_calls.toLocaleString('en-IN')} planned remote calls/month`}
+                                </p>
+                            </article>
+                        ))}
+                    </div>
+                    <div
+                        className="mt-4 rounded-xl border border-dashed p-3 text-sm"
+                        role="status"
+                    >
+                        <strong>Live usage: Not available yet.</strong> The
+                        account-wide meter, remaining calls and UTC reset date
+                        will appear only after authenticated gateway tracking
+                        and licensing verification are production ready. No
+                        usage numbers or purchases are inferred from this
+                        preview.
                     </div>
                 </section>
 

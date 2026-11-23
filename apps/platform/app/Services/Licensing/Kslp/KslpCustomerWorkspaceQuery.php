@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Licensing\Kslp;
 
 use App\Models\User;
+use App\Services\CodeBridge\HostedUsagePreview;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
@@ -18,7 +19,10 @@ use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
  */
 final class KslpCustomerWorkspaceQuery
 {
-    public function __construct(private readonly OrganizationDirectory $organizations) {}
+    public function __construct(
+        private readonly OrganizationDirectory $organizations,
+        private readonly HostedUsagePreview $usagePreview,
+    ) {}
 
     /** @return array<string, mixed> */
     public function forUser(User $actor): array
@@ -115,6 +119,9 @@ final class KslpCustomerWorkspaceQuery
             'device_reset_enabled' => false,
             'paid_issuance_enabled' => false,
             'trusted_download_source' => '/dashboard',
+            // All users see the same non-billable proposal. No unverified
+            // seat/tenant counters or live payment assertions are exposed.
+            'codebridge_usage_preview' => $this->usagePreview->catalog(),
         ];
     }
 
