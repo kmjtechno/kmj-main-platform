@@ -80,8 +80,10 @@ final class HostedUsagePreviewHttpTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $response = $this->actingAs($customer)
-            ->get('/licensing?organization_id='.$foreignOrganization.'&subject_key='.$foreignSubject);
+        // Inertia includes the requested URL in its HTML payload. Do not
+        // mistake a query parameter echoed in the URL for leaked ledger data.
+        // The data isolation check uses an unrelated seeded tenant row.
+        $response = $this->actingAs($customer)->get('/licensing?usage_probe=untrusted');
         $response->assertOk()->assertInertia(fn (Assert $page) => $page
             ->where('codebridge_usage_preview.status', 'proposal_only')
             ->where('codebridge_usage_preview.used_calls', null)
