@@ -442,78 +442,83 @@ export default function MailCenter({
                 data-test="kmj-native-mail"
                 className="owner-admin-page kmj-admin-shell mx-auto flex w-full max-w-[1500px] min-w-0 flex-col gap-4 px-4 py-5 sm:px-6 lg:px-8"
             >
-                <header className="owner-admin-hero kmj-admin-hero overflow-hidden rounded-2xl border p-4 sm:p-5">
-                    <Link
-                        href={back}
-                        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-xs"
-                    >
-                        <ArrowLeft size={14} /> Back to workspace
-                    </Link>
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                            <div className="flex items-center gap-2 text-xs font-bold tracking-[0.14em] text-red-500 uppercase">
-                                <ShieldCheck className="size-4" />
-                                KMJ TECHNO · Enterprise Communications
+                <header className="relative overflow-hidden rounded-2xl border border-[#293447] bg-gradient-to-br from-[#111827] via-[#121d2d] to-[#1b273b] p-5 text-white shadow-[0_24px_55px_-32px_rgba(0,0,0,0.8)] sm:p-6">
+                    <div aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-[#ff3853] to-[#a5092f]" />
+                    <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-32 size-80 rounded-full bg-red-500/[0.055] blur-3xl" />
+                    <div className="relative flex flex-wrap items-start justify-between gap-5">
+                        <div className="min-w-0 flex-1">
+                            <Link
+                                href={back}
+                                className="inline-flex min-h-8 items-center gap-2 text-xs font-semibold text-slate-300 transition hover:text-white"
+                            >
+                                <ArrowLeft className="size-3.5" />
+                                Command Center
+                            </Link>
+                            <div className="mt-2 flex items-center gap-4">
+                                <div className="hidden size-14 shrink-0 items-center justify-center rounded-2xl border border-red-500/25 bg-red-500/10 sm:flex">
+                                    <MailOpen className="size-7 text-[#ff405a]" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[11px] font-bold tracking-[0.2em] text-[#ff6076] uppercase">
+                                        KMJ TECHNO / COMMUNICATIONS
+                                    </p>
+                                    <h1 className="mt-0.5 text-[30px] font-black tracking-[-0.04em] sm:text-[34px]">
+                                        KMJ Mail
+                                    </h1>
+                                    <p className="mt-1 max-w-[620px] text-sm leading-6 text-slate-300">
+                                        A dedicated workspace for private team conversations and
+                                        authorized outbound correspondence.
+                                    </p>
+                                </div>
                             </div>
-                            <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">
-                                KMJ Mail
-                            </h1>
-                            <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-6">
-                                Organize private KMJ team mail and send guarded
-                                external correspondence from your authorized
-                                company address. Internet inbound reception is
-                                not yet activated in this workspace.
-                            </p>
                         </div>
-                        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs">
-                            <span className="flex items-center gap-2 font-semibold text-red-500">
-                                <LockKeyhole size={14} />
-                                {isOwner ? 'Super Admin' : 'Approved KMJ Staff'}
+                        <div className="flex max-w-full flex-col items-start gap-2 sm:items-end">
+                            <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 text-xs font-semibold text-slate-200">
+                                <ShieldCheck className="size-4 text-[#ff6076]" />
+                                {isOwner ? 'Owner workspace' : 'Approved KMJ staff'}
                             </span>
-                            <span className="text-muted-foreground mt-1 block">
-                                Private internal delivery · Guarded external
-                                SMTP
+                            <span className="rounded-full border border-white/10 px-3 py-1.5 text-[11px] text-slate-300">
+                                Internet inbound: Not connected
                             </span>
                         </div>
                     </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                        <div className="bg-background/45 rounded-xl border p-3">
-                            <span className="text-muted-foreground text-xs">
-                                Unread inbox
-                            </span>
-                            <strong className="mt-1 block text-2xl font-bold tabular-nums">
-                                {mailbox.unread}
-                            </strong>
+                    <div className="relative mt-5 grid gap-3 border-t border-white/10 pt-4 sm:grid-cols-3">
+                        <div className="flex items-center gap-3">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.07]">
+                                <Inbox className="size-5 text-slate-200" />
+                            </div>
+                            <div>
+                                <p className="text-[11px] text-slate-300">Unread messages</p>
+                                <p className="text-xl font-extrabold tabular-nums">{mailbox.unread}</p>
+                            </div>
                         </div>
-                        <div className="bg-background/45 rounded-xl border p-3">
-                            <span className="text-muted-foreground text-xs">
-                                KMJ team recipients
-                            </span>
-                            <strong className="mt-1 block text-2xl font-bold tabular-nums">
-                                {
-                                    directory.filter(
-                                        (person) => person.id !== myUserId,
-                                    ).length
-                                }
-                            </strong>
+                        <div className="flex items-center gap-3">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.07]">
+                                <Users className="size-5 text-slate-200" />
+                            </div>
+                            <div>
+                                <p className="text-[11px] text-slate-300">Approved recipients</p>
+                                <p className="text-xl font-extrabold tabular-nums">
+                                    {directory.filter((person) => person.id !== myUserId).length}
+                                </p>
+                            </div>
                         </div>
-                        <div className="bg-background/45 rounded-xl border p-3">
-                            <span className="text-muted-foreground text-xs">
-                                Internet mail
-                            </span>
-                            <strong className="mt-1 block text-sm font-semibold">
-                                {externalOutbound.state === 'ready_to_queue'
-                                    ? 'Postfix outbound ready'
-                                    : 'External sending not activated'}
-                            </strong>
-                            <span className="text-muted-foreground mt-1 block text-[11px]">
-                                SMTP acceptance is not recipient delivery.
-                                External incoming mail requires a separately
-                                verified inbound gateway.
-                            </span>
+                        <div className="flex items-center gap-3">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.07]">
+                                <Send className="size-5 text-slate-200" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[11px] text-slate-300">Outgoing transport</p>
+                                <p className="text-sm font-bold text-white">
+                                    {externalOutbound.state === 'ready_to_queue'
+                                        ? 'SMTP queue available'
+                                        : 'Not activated'}
+                                </p>
+                                <p className="text-[10px] text-slate-400">Queued ≠ delivered</p>
+                            </div>
                         </div>
                     </div>
-                </header>
+                </header>       </header>
 
                 {status && (
                     <p
