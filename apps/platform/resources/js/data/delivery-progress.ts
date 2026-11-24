@@ -1578,6 +1578,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence:
             'KslpOwnerResellerReviewDirectory, protected operator routes, existing owner Licensing Hub component and HTTP regressions covering non-owner denial, step-up, default-off, scoped grant, revoke with creation disabled and no financial side effects. Exact-head CI and independent owner source review required; no deployment or live activation.',
     },
+    {
+        id: 'kslp-commercial-order-terms-20261124',
+        title: 'ONE Licensing Hub: exact owner-reviewed commercial order terms',
+        state: 'active',
+        detail: 'SOURCE ONLY: one immutable application-contract binding per requested commercial order, explicitly connecting the same tenant, licensed product code, catalog product ID and slug, currency and integer minor-unit amount. Owner authorization and reason-bound audit are mandatory; existing provider links, already-processed orders and duplicate terms deny recording. Read inspection distinguishes missing or changed bindings and mismatched amount/currency. Matching terms are not settlement or authorization to issue paid licenses.',
+        evidence:
+            'KslpCommercialOrderTerms, additive migration and feature regressions for mismatched catalog/product/tenant, immutable terms, retroactive recording denial and amount/currency/slug drift. Internal-only; no checkout caller or live migration. Before future integration, checkout must lock and require the reviewed binding, then verify merchant settlement and refund lifecycle independently.',
+    },
 ];
 
 export const verifiedDeliveryMilestones = deliveryMilestones.filter(
