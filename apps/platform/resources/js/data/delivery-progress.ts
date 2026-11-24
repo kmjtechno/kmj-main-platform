@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-explicit-windows-connector-mode-20261124',
+        title: 'CodeBridge Windows setup: generic and Calibration recovery separated',
+        state: 'active',
+        detail: 'SOURCE ONLY: two fixed first-party CMD downloads now choose explicit generic local enrollment or the P520 Calibration-only recovery mode. Calibration mode rejects other hostnames before runtime setup; generic mode does not auto-select Calibration on P520. Both pin the same script hash, refuse redirects and use no-store responses. New enrollment still requires explicit local project selection and browser approval.',
+        evidence:
+            'Windows bootstrap contract tests verify exact fixed modes, checksum and query-parameter isolation. Exact-head CI, owner review and real Windows acceptance remain pending. The legacy direct PowerShell default and runtime source pin remain unchanged; no signed updater or deployment is claimed.',
+    },
+    {
         id: 'codebridge-private-dashboard-presence-consumer-20261124',
         title: 'CodeBridge: authenticated same-host dashboard presence snapshot',
         state: 'active',
