@@ -307,7 +307,7 @@ void test('one-click routing never sends normal Linux or project-specific Window
             { ...windows, platform: 'darwin' },
             'kmj-codebridge',
         )?.href,
-        '/codebridge-connect.html',
+        '/codebridge/pair',
     );
     const calibration = {
         id: 'kmj-homeoffice-desktop-5fvjmet',
@@ -319,6 +319,16 @@ void test('one-click routing never sends normal Linux or project-specific Window
     assert.equal(
         deviceProjectConnectPlan(calibration, 'kmj-calibration-pro')?.href,
         '/install-codebridge-windows.cmd',
+    );
+    assert.equal(
+        deviceProjectConnectPlan(
+            {
+                ...calibration,
+                projects: [{ id: 'kmj-codebridge', name: 'CodeBridge' }],
+            },
+            'kmj-codebridge',
+        )?.href,
+        '/codebridge/pair',
     );
     assert.equal(
         deviceProjectConnectPlan(
@@ -383,4 +393,13 @@ void test('CodeBridge owner quick actions are grouped responsively without losin
     assert.match(ui, /href=\{vscodeInstallUrl\(service\.endpoint\)\}/);
     assert.match(ui, /download="KMJ-CodeBridge-Connect-Windows\.cmd"/);
     assert.match(ui, /onClick=\{\(\) => setActiveSection\('devices'\)\}/);
+});
+
+void test('generic Windows action opens scoped device selection, not a Calibration installer', () => {
+    assert.match(
+        ui,
+        /<button[^>]*onClick=\{\(\) => setActiveSection\('devices'\)\}[^>]*>[\s\S]*?Connect Windows PC\s*<\/button>/,
+    );
+    assert.match(ui, /Download Calibration Pro connector/);
+    assert.match(deviceCenter, /P520 Calibration setup/);
 });
