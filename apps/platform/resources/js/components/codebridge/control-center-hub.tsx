@@ -296,9 +296,7 @@ export default function CodeBridgeControlCenterHub({
                         />
                     </div>
                     <p className="text-muted-foreground mt-3 text-xs">
-                        Monthly remaining usage is not reported. Device allocation
-                        is a separate entitlement, not a monthly execution quota.
-                        Provider limits and concurrency are independently enforced.
+                        Device allocation is not a monthly execution quota.
                     </p>
                 </section>
 
