@@ -6,6 +6,7 @@ namespace App\Services\Payments;
 
 use DomainException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 use KMJ\MainPlatform\Commerce\Models\CommercialOrder;
 
@@ -29,17 +30,40 @@ final class RazorpayCheckoutOrders
      */
     public function open(string $commercialOrderId, int $expectedAmountMinor): array
     {
+        return $this->openInternal($commercialOrderId, $expectedAmountMinor, null);
+    }
+
+    /**
+     * Internal KSLP sandbox checkout entry point. The caller supplies the
+     * licensed product scope, never a merchant-approved settlement claim.
+     *
+     * @return array{provider_order_id: string, amount_minor: int, currency: string}
+     */
+    public function openReviewed(string $commercialOrderId, string $licensedProductId, int $expectedAmountMinor): array
+    {
+        if ($licensedProductId === '') {
+            throw new DomainException('RAZORPAY_REVIEWED_TERMS_REQUIRED');
+        }
+
+        return $this->openInternal($commercialOrderId, $expectedAmountMinor, $licensedProductId);
+    }
+
+    /** @return array{provider_order_id: string, amount_minor: int, currency: string} */
+    private function openInternal(string $commercialOrderId, int $expectedAmountMinor, ?string $licensedProductId): array
+    {
         if ($expectedAmountMinor < 100 || $expectedAmountMinor > 100000000) {
             throw new InvalidArgumentException('RAZORPAY_EXPECTED_AMOUNT_INVALID');
         }
 
         // Only the reservation needs a DB lock. Never hold it while waiting
         // on an external payment provider's network response.
-        $decision = DB::transaction(function () use ($commercialOrderId, $expectedAmountMinor): array {
+        $decision = DB::transaction(function () use ($commercialOrderId, $expectedAmountMinor, $licensedProductId): array {
             $order = CommercialOrder::query()->whereKey($commercialOrderId)->lockForUpdate()->firstOrFail();
             if ((string) $order->getAttribute('status') !== 'requested') {
                 throw new DomainException('RAZORPAY_ORDER_NOT_OPENABLE');
             }
+
+            $this->assertReviewedTerms($order, $expectedAmountMinor, $licensedProductId);
 
             $existing = DB::table('commerce_provider_orders')
                 ->where('commercial_order_id', $commercialOrderId)->where('provider', 'razorpay')->first();
@@ -110,11 +134,13 @@ final class RazorpayCheckoutOrders
             $credentials['client_secret'],
         );
 
-        return DB::transaction(function () use ($commercialOrderId, $expectedAmountMinor, $created): array {
+        return DB::transaction(function () use ($commercialOrderId, $expectedAmountMinor, $created, $licensedProductId): array {
             $order = CommercialOrder::query()->whereKey($commercialOrderId)->lockForUpdate()->firstOrFail();
             if ((string) $order->getAttribute('status') !== 'requested') {
                 throw new DomainException('RAZORPAY_ORDER_NOT_OPENABLE');
             }
+
+            $this->assertReviewedTerms($order, $expectedAmountMinor, $licensedProductId);
 
             $intent = DB::table('commerce_provider_order_intents')
                 ->where('commercial_order_id', $commercialOrderId)->where('provider', 'razorpay')->first();
@@ -141,6 +167,46 @@ final class RazorpayCheckoutOrders
 
             return $this->shape($created['order_id'], $created['amount_minor'], $created['currency']);
         });
+    }
+
+    /**
+     * Called only while holding the commercial-order lock, before reserving
+     * provider creation and again before linking the response. Legacy
+     * unbound sandbox orders retain their existing test-only path, but an
+     * existing reviewed binding cannot be bypassed by using open().
+     */
+    private function assertReviewedTerms(CommercialOrder $order, int $amountMinor, ?string $licensedProductId): void
+    {
+        $terms = Schema::hasTable('kslp_commercial_order_terms')
+            ? DB::table('kslp_commercial_order_terms')->where('commercial_order_id', $order->getKey())->first()
+            : null;
+
+        if ($terms === null) {
+            if ($licensedProductId !== null) {
+                throw new DomainException('RAZORPAY_REVIEWED_TERMS_REQUIRED');
+            }
+
+            return;
+        }
+
+        $organizationId = (string) $order->getAttribute('organization_id');
+        $catalogId = (string) $order->getAttribute('product_id');
+        $product = DB::table('kslp_licensed_products')
+            ->where('id', $terms->licensed_product_id)
+            ->where('organization_id', $organizationId)
+            ->where('status', 'active')->first(['product_code']);
+        $slug = DB::table('products')->where('id', $catalogId)->value('slug');
+
+        if ($terms->issuer_organization_id !== $organizationId
+            || $terms->catalog_product_id !== $catalogId
+            || ($licensedProductId !== null && $terms->licensed_product_id !== $licensedProductId)
+            || $product === null
+            || $terms->licensed_product_code !== $product->product_code
+            || $terms->catalog_slug !== $slug
+            || $terms->currency !== 'INR'
+            || (int) $terms->amount_minor !== $amountMinor) {
+            throw new DomainException('RAZORPAY_REVIEWED_TERMS_MISMATCH');
+        }
     }
 
     /** @return array{provider_order_id: string, amount_minor: int, currency: string} */
