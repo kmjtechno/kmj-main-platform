@@ -26,3 +26,14 @@ Decrypting the vault `.tar.age` with the owner key, restoring `platform-storage/
 
 Never restore into the production database name. Always create an empty scratch database first and verify there.
 Do not make `platform.dump` world-readable; feed it to `postgres` through stdin as root.
+
+## Owner-key vault (added 2026-11-24)
+
+The V3 vault (`/var/backups/kmj-elite-offsite-encrypted`) is encrypted to one pinned X25519 key (`age1952vsyz...`, "pinned Google X25519" in the installed V3 encryptor). The owner does not hold its private key (searched the owner PC drives C: and D:; the P520 recipient in `/etc/kmj-p520-restore-trust` is a different key). So that vault is NOT owner-decryptable.
+
+`scripts/kmj-owner-key-backup-vault.sh` (PR #1147) seals the newest checksum-verified daily snapshot to the owner's own age public key into `/var/backups/kmj-owner-vault/<stamp>.tar.age` (+ `.sha256`), no-clobber, deleting nothing.
+
+Proven (2026-11-24, stamp 20261124T145907Z): the ciphertext downloaded to the owner PC matched its sidecar SHA-256, decrypted with the owner's private key, and contained `platform.dump` (705987 bytes, same size the server reported) and `SHA256SUMS`. The `age1chnglg...` private key lives only on the owner PC.
+
+Not proven: a database restore performed from the owner-decrypted copy (the earlier restore drill used the plain local snapshot), any stamp other than the one tested, automatic daily creation (this was a one-time run, no timer), retention, and a restore on a different host. The owner's private key must be kept in at least two separate places.
+
