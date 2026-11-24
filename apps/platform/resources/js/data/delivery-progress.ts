@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-metering-readiness-consolidated-20261124',
+        title: 'CodeBridge hosted usage: scoped receipt and quota foundations',
+        state: 'active',
+        detail: 'SOURCE ONLY: consolidate earlier unmerged receipt and organization read-model work, strict terminal event order, exact-seat recorded remaining calculation, and an Ed25519 receipt verifier contract. The canonical dashboard shows consumed, remaining and reset as unavailable until an authoritative meter exists.',
+        evidence:
+            'No signer enrollment, trusted seat resolution, dispatch reservation or settlement activation is claimed. Exact-head CI, concurrent PostgreSQL stress, native host QA and signed Elite release remain separate gates.',
+    },
+    {
         id: 'codebridge-scoped-progress-expansion-20261124',
         title: 'CodeBridge scoped coding progress and activity evidence',
         state: 'active',

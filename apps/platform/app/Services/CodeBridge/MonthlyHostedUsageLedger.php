@@ -181,6 +181,59 @@ final class MonthlyHostedUsageLedger
         }, 3);
     }
 
+    /**
+     * Internal snapshot for an already resolved trusted account/seat.
+     * Recorded counters are NOT independently attested or customer billable.
+     * Missing period rows are unknown; this method never creates a reservation.
+     *
+     * @return array<string, mixed>
+     */
+    public function snapshotTrusted(string $organizationId, string $subjectKey, string $planCode, ?CarbonImmutable $at = null): array
+    {
+        if (! Str::isUuid($organizationId) || preg_match('/\\A[a-zA-Z0-9:_-]{1,64}\\z/D', $subjectKey) !== 1) {
+            throw new InvalidArgumentException('CODEBRIDGE_MONTHLY_TRUSTED_IDENTITY_INVALID');
+        }
+
+        $limit = self::LIMITS[$planCode] ?? null;
+        $month = ($at ?? CarbonImmutable::now('UTC'))->utc()->startOfMonth();
+        $snapshot = [
+            'status' => 'unverified',
+            'meter_live' => false,
+            'billable' => false,
+            'period' => $month->toDateString(),
+            'recorded_completed' => null,
+            'recorded_reserved' => null,
+            'recorded_remaining' => null,
+            'policy_reset_at' => $month->addMonth()->toIso8601String(),
+        ];
+        if ($limit === null) {
+            return $snapshot;
+        }
+
+        $row = DB::table('codebridge_usage_periods')
+            ->where('organization_id', $organizationId)
+            ->where('subject_key', $subjectKey)
+            ->where('period_start_utc', $month->toDateString())
+            ->first();
+        if ($row === null || $row->plan_code !== $planCode || (int) $row->monthly_limit !== $limit) {
+            return $snapshot;
+        }
+
+        $completed = (int) $row->completed_calls;
+        $reserved = (int) $row->reserved_calls;
+        if ($completed < 0 || $reserved < 0 || $completed > $limit || $reserved > $limit - $completed) {
+            return $snapshot;
+        }
+
+        return [
+            ...$snapshot,
+            'status' => 'recorded_only_not_attested',
+            'recorded_completed' => $completed,
+            'recorded_reserved' => $reserved,
+            'recorded_remaining' => $limit - $completed - $reserved,
+        ];
+    }
+
     /** @return array{period: string, limit: int, completed: int, reserved: int, remaining: int, state: string} */
     private function summary(string $period, int $limit, int $completed, int $reserved, string $state): array
     {
