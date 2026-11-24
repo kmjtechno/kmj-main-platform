@@ -25,7 +25,7 @@ const shellItems = new Map(
 // On /super-admin the revenue panel is an in-page anchor.
 const normalise = (href) => href.replace('/super-admin#', '#');
 
-test('labels present in both navs point to the same destination', () => {
+void test('labels present in both navs point to the same destination', () => {
     const shared = [...dashboardItems.keys()].filter((l) => shellItems.has(l));
     assert.ok(shared.length >= 15, 'expected the shared owner nav labels');
     for (const label of shared) {
@@ -37,12 +37,12 @@ test('labels present in both navs point to the same destination', () => {
     }
 });
 
-test('Communication opens the native mail page in both navs', () => {
+void test('Communication opens the native mail page in both navs', () => {
     assert.equal(dashboardItems.get('Communication (Mail)'), '/operator/mail');
     assert.equal(shellItems.get('Communication (Mail)'), '/operator/mail');
 });
 
-test('revenue anchor targets a page that owns it', () => {
+void test('revenue anchor targets a page that owns it', () => {
     assert.match(dashboard, /id="owner-revenue"/);
     assert.equal(
         shellItems.get('Revenue & Analytics'),
