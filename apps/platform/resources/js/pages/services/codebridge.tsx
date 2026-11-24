@@ -393,6 +393,32 @@ export default function CodeBridgeService({
                                     </div>
                                 </div>
 
+                                <div className="mt-5 rounded-xl border p-4">
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div>
+                                            <div className="flex items-center gap-2 text-xs font-black">
+                                                <Laptop2 className="h-3.5 w-3.5" />
+                                                Connect a Windows device
+                                            </div>
+                                            <p className="text-muted-foreground mt-2 text-xs leading-5">
+                                                Run on the target PC. Choose
+                                                an existing private enrollment
+                                                or select a local project and
+                                                approve a new pairing on KMJ.
+                                                Git and Node.js 24 are required.
+                                            </p>
+                                        </div>
+                                        <a
+                                            href="/install-codebridge-windows-generic.cmd"
+                                            download="KMJ-CodeBridge-Connect-Any-Windows.cmd"
+                                            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border px-4 text-xs font-black"
+                                        >
+                                            <Laptop2 className="h-3.5 w-3.5" />
+                                            Download Windows connector
+                                        </a>
+                                    </div>
+                                </div>
+
                                 <div className="mt-5 rounded-xl border border-red-500/20 bg-red-500/[0.03] p-4">
                                     <div className="flex flex-wrap items-center justify-between gap-3">
                                         <div>
