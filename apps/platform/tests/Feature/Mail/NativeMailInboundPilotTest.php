@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 final class NativeMailInboundPilotTest extends TestCase
@@ -93,7 +94,15 @@ final class NativeMailInboundPilotTest extends TestCase
         $selected = $mail->inbox((int) $owner->id, '', $mailbox['items'][0]['id']);
         $this->assertSame(0, $selected['unread']);
         $this->assertSame('Private message body.', $selected['selected']['body']);
-        $this->actingAs($other)->get('/operator/mail?incoming='.$mailbox['items'][0]['id'])->assertForbidden();
+        $this->withoutVite();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/mail?incoming='.$mailbox['items'][0]['id'])
+            ->assertOk()->assertInertia(fn (Assert $page) => $page
+                ->where('externalInbox.total', 1)
+                ->where('externalInbox.selected.sender', self::SENDER)
+                ->where('externalInbox.selected.body', 'Private message body.'));
+        $this->actingAs($other)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/mail?incoming='.$mailbox['items'][0]['id'])->assertForbidden();
     }
 
     public function test_unsupported_mime_and_spoofed_header_remain_quarantined(): void
