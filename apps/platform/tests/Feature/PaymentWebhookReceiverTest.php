@@ -75,6 +75,43 @@ final class PaymentWebhookReceiverTest extends TestCase
         $this->assertStringNotContainsString('customer@example.test', json_encode($row, JSON_THROW_ON_ERROR));
     }
 
+    public function test_signed_reversal_only_receipts_preserve_payment_reference_without_order_or_settlement(): void
+    {
+        $this->storeSecret('razorpay');
+
+        foreach ([
+            ['refund.processed', 'refund', 'rfnd_123'],
+            ['payment.dispute.created', 'dispute', 'disp_123'],
+        ] as [$type, $entity, $id]) {
+            $body = json_encode([
+                'event' => $type,
+                'payload' => [$entity => ['entity' => [
+                    'id' => $id,
+                    'payment_id' => 'pay_REVERSAL123',
+                    'notes' => ['private' => 'customer@example.test'],
+                ]]],
+            ], JSON_THROW_ON_ERROR);
+            $server = $this->razorpayServer($body, null, 'evt_'.$id);
+
+            $this->call('POST', '/webhooks/payments/razorpay', [], [], [], $server, $body)
+                ->assertOk();
+            $this->call('POST', '/webhooks/payments/razorpay', [], [], [], $server, $body)
+                ->assertOk();
+
+            $this->assertDatabaseHas('payment_webhook_events', [
+                'event_id' => 'evt_'.$id,
+                'event_type' => $type,
+                'provider_order_id' => null,
+                'provider_payment_id' => 'pay_REVERSAL123',
+                'processing_status' => 'received',
+            ]);
+        }
+
+        $this->assertDatabaseCount('payment_webhook_events', 2);
+        $this->assertDatabaseCount('commerce_orders', 0);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+    }
+
     public function test_replayed_event_is_acknowledged_but_stored_once(): void
     {
         $this->storeSecret('razorpay');
