@@ -12,12 +12,12 @@ Route::get('install-codebridge-windows.ps1', function () {
     return response($script, 200, [
         'Content-Type' => 'text/plain; charset=UTF-8',
         'Content-Disposition' => 'attachment; filename="KMJ-CodeBridge-Windows-Connector.ps1"',
-        'Cache-Control' => 'public, max-age=300',
+        'Cache-Control' => 'no-store',
         'X-Content-Type-Options' => 'nosniff',
     ]);
 })->name('codebridge.windows.installer.script');
 
-Route::get('install-codebridge-windows.cmd', function () {
+$windowsLauncher = static function (string $mode, string $filename) {
     $script = file_get_contents(resource_path('codebridge/install-windows-device.ps1'));
     abort_unless(is_string($script) && $script !== '', 503);
     $expectedSha256 = strtoupper(hash('sha256', $script));
@@ -32,7 +32,7 @@ echo No password or private token is embedded in this file.
 echo.
 where powershell.exe >nul 2>&1
 if errorlevel 1 goto :blocked
-powershell.exe -NoProfile -STA -ExecutionPolicy RemoteSigned -Command "$ErrorActionPreference='Stop'; $p=Join-Path $env:TEMP ('kmj-connect-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { Invoke-WebRequest -UseBasicParsing -Uri 'https://kmjtechno.com/install-codebridge-windows.ps1' -OutFile $p; if ((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash -cne '%%EXPECTED_SHA256%%') { throw 'KMJ_INSTALLER_HASH_MISMATCH' }; Unblock-File -LiteralPath $p; & $p; if (!$?) { exit 2 } } finally { Remove-Item -LiteralPath $p -ErrorAction SilentlyContinue }"
+powershell.exe -NoProfile -STA -ExecutionPolicy RemoteSigned -Command "$ErrorActionPreference='Stop'; $p=Join-Path $env:TEMP ('kmj-connect-'+[guid]::NewGuid().ToString('N')+'.ps1'); try { Invoke-WebRequest -UseBasicParsing -Uri 'https://kmjtechno.com/install-codebridge-windows.ps1' -MaximumRedirection 0 -OutFile $p; if ((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash -cne '%%EXPECTED_SHA256%%') { throw 'KMJ_INSTALLER_HASH_MISMATCH' }; Unblock-File -LiteralPath $p; & $p -Mode '%%CONNECTOR_MODE%%'; if (!$?) { exit 2 } } finally { Remove-Item -LiteralPath $p -ErrorAction SilentlyContinue }"
 set "RC=%ERRORLEVEL%"
 echo.
 echo KMJ Setup exit code: %RC%
@@ -45,12 +45,21 @@ pause
 exit /b 2
 CMD;
 
-    $launcher = str_replace('%%EXPECTED_SHA256%%', $expectedSha256, $launcher);
+    $launcher = str_replace(
+        ['%%EXPECTED_SHA256%%', '%%CONNECTOR_MODE%%'],
+        [$expectedSha256, $mode],
+        $launcher,
+    );
 
     return response($launcher."\r\n", 200, [
         'Content-Type' => 'application/octet-stream',
-        'Content-Disposition' => 'attachment; filename="KMJ-CodeBridge-Connect-Windows.cmd"',
+        'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         'Cache-Control' => 'no-store',
         'X-Content-Type-Options' => 'nosniff',
     ]);
-})->name('codebridge.windows.installer');
+};
+
+Route::get('install-codebridge-windows.cmd', fn () => $windowsLauncher('Calibration', 'KMJ-CodeBridge-Connect-Windows.cmd'))
+    ->name('codebridge.windows.installer');
+Route::get('install-codebridge-windows-generic.cmd', fn () => $windowsLauncher('Generic', 'KMJ-CodeBridge-Connect-Any-Windows.cmd'))
+    ->name('codebridge.windows.installer.generic');

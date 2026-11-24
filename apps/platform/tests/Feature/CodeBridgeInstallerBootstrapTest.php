@@ -46,6 +46,8 @@ final class CodeBridgeInstallerBootstrapTest extends TestCase
         self::assertStringContainsString('checkout --detach $pin', $script);
         self::assertStringContainsString('npm ci --omit=dev --ignore-scripts', $script);
         self::assertStringContainsString('ONE-CLICK-ANY-DEVICE.ps1', $script);
+        self::assertStringContainsString("ValidateSet('Legacy','Generic','Calibration')", $script);
+        self::assertStringContainsString('KMJ_CALIBRATION_HOST_MISMATCH', $script);
         // P520 reconnect must not ask the owner to choose a second device ID.
         self::assertStringContainsString('DESKTOP-5FVJMET', $script);
         self::assertStringContainsString('ONE-CLICK-AGENT-AUTOCONNECT.ps1', $script);
@@ -78,6 +80,17 @@ final class CodeBridgeInstallerBootstrapTest extends TestCase
         self::assertStringContainsString(strtoupper(hash('sha256', $script)), $launcher);
         self::assertStringContainsString('Get-FileHash -LiteralPath $p -Algorithm SHA256', $launcher);
         self::assertStringNotContainsString('%%EXPECTED_SHA256%%', $launcher);
+        self::assertStringContainsString("-Mode 'Calibration'", $launcher);
+        self::assertStringContainsString('-MaximumRedirection 0', $launcher);
+        $generic = $this->get('/install-codebridge-windows-generic.cmd?mode=Calibration')
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertHeader('Content-Disposition', 'attachment; filename="KMJ-CodeBridge-Connect-Any-Windows.cmd"')
+            ->getContent();
+        self::assertIsString($generic);
+        self::assertStringContainsString("-Mode 'Generic'", $generic);
+        self::assertStringNotContainsString("-Mode 'Calibration'", $generic);
+        self::assertStringContainsString(strtoupper(hash('sha256', $script)), $generic);
         self::assertStringNotContainsString('ExecutionPolicy Bypass', $launcher);
         self::assertStringNotContainsString('Authorization: Bearer', $launcher);
     }

@@ -2,7 +2,10 @@
 # First-party, credential-free Windows CodeBridge bootstrap.
 # Delivered by kmjtechno.com; source is pinned and locally verified.
 [CmdletBinding()]
-param()
+param(
+    [ValidateSet('Legacy','Generic','Calibration')]
+    [string]$Mode = 'Legacy'
+)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $pin = 'a06670195a086959523b74b80955198c07d3b9ea'
@@ -24,6 +27,9 @@ function SafeDirectory([string]$Path) {
 try {
     if ($env:OS -cne 'Windows_NT') { throw 'KMJ_WINDOWS_REQUIRED' }
     if ([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) { throw 'KMJ_USER_PROFILE_REQUIRED' }
+    $isP520 = [string]$env:COMPUTERNAME -ieq 'DESKTOP-5FVJMET'
+    if ($Mode -eq 'Calibration' -and !$isP520) { throw 'KMJ_CALIBRATION_HOST_MISMATCH' }
+    $homeOffice = $Mode -eq 'Calibration' -or ($Mode -eq 'Legacy' -and $isP520)
     $git = (Get-Command git.exe -ErrorAction Stop).Source
     # Reuse an installed Node.js 24+ WITH its own npm; never change a global
     # Windows PATH or ask an owner to reinstall the already present portable LTS.
@@ -101,10 +107,8 @@ try {
     if ($actualOrigin -cne $origin -or $actualHead -cne $pin -or $changes.Count -ne 0 -or $LASTEXITCODE -ne 0) {
         throw 'KMJ_RUNTIME_UNTRUSTED_OR_MODIFIED'
     }
-    # The P520 has an explicit, already approved Calibration Pro device ID,
-    # so never steer it through the generic wizard (which could create a
-    # different identity or select another project).
-    $homeOffice = [string]$env:COMPUTERNAME -ieq 'DESKTOP-5FVJMET'
+    # Explicit dashboard modes prevent host name from selecting the wrong project.
+    # Legacy direct script calls retain the earlier automatic P520 behavior.
     $connectorRelative = if ($homeOffice) {
         'scripts\windows\ONE-CLICK-AGENT-AUTOCONNECT.ps1'
     } else { 'scripts\windows\ONE-CLICK-ANY-DEVICE.ps1' }
@@ -131,6 +135,7 @@ try {
         & $connector -Device HomeOffice
     } else {
         Write-Host 'Existing device: choose YES. New device: choose NO, then approve in your KMJ browser.'
+        Write-Host 'KMJ_DEVICE_SCOPE=EXPLICIT_GENERIC_PROJECT_SELECTION'
         & $connector
     }
     if (!$?) { throw 'KMJ_DEVICE_CONNECTION_NOT_VERIFIED' }
