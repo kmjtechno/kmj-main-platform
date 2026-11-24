@@ -251,12 +251,12 @@ export default function DeviceControlCenter({
                     </details>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    <Link
+                    <a
                         href="/codebridge-connect.html"
                         className="inline-flex h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white hover:bg-red-500"
                     >
-                        <Laptop2 className="h-4 w-4" /> Windows setup guide
-                    </Link>
+                        <Laptop2 className="h-4 w-4" /> P520 Calibration setup
+                    </a>
                     <button
                         type="button"
                         onClick={() => router.reload({ only: ['service'] })}
@@ -479,9 +479,13 @@ export default function DeviceControlCenter({
                                 device.platform,
                                 {
                                     deviceId: device.id,
-                                    pendingProjectIds: (
-                                        device.pending_projects ?? []
-                                    ).map((project) => project.id),
+                                    activeProjectIds: device.projects.map(
+                                        (project) => project.id,
+                                    ),
+                                    pendingProjectIds:
+                                        device.pending_projects?.map(
+                                            (project) => project.id,
+                                        ),
                                 },
                             );
                             return (
