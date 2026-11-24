@@ -22,8 +22,9 @@ export function deviceProjectConnectPlan(device, projectId) {
 
     const action = deviceRecoveryAction(device.platform, {
         deviceId: device.id,
+        activeProjectIds: device.projects.map((item) => item?.id),
         pendingProjectIds: Array.isArray(device.pending_projects)
-            ? device.pending_projects.map((item) => item.id)
+            ? device.pending_projects.map((item) => item?.id)
             : [],
     });
     if (
