@@ -185,3 +185,46 @@ void test('proposal preview stays behind owner auth, never a checkout API', () =
     assert.match(service, /approved_for_commercial_orders/);
     assert.doesNotMatch(service, /DB::|->save\(|->insert\(/);
 });
+
+void test('Calibration Studio plans stay separate and fail closed for commerce', () => {
+    const book = JSON.parse(
+        readFileSync(
+            new URL(
+                '../resources/private/kmj-commercial-pricebook-20261123.json',
+                import.meta.url,
+            ),
+            'utf8',
+        ),
+    );
+    const proposal = book.calibration_studio_proposal;
+    assert.equal(proposal.product_slug_candidate, 'kmj-calibration-studio');
+    assert.equal(proposal.catalog_reference, 'kmj-calibration-pro');
+    assert.equal(proposal.identity_status, 'unresolved_do_not_alias_or_register');
+    assert.equal(proposal.ready_to_sell, false);
+    assert.equal(proposal.customer_visible, false);
+    assert.equal(proposal.checkout_enabled, false);
+    assert.equal(proposal.live_payment_enabled, false);
+    assert.equal(proposal.automatic_license_issuance_enabled, false);
+    assert.equal(proposal.trial_requires_card, false);
+    assert.equal(proposal.trial_auto_converts, false);
+    assert.equal(proposal.trial_watermark, true);
+    assert.equal(proposal.workstations_per_license, 1);
+    assert.equal(book.products.length, 15);
+    assert.ok(!book.products.some((p) => p.slug === proposal.product_slug_candidate));
+    const plans = Object.fromEntries(proposal.plans.map((p) => [p.code, p]));
+    assert.equal(plans.trial.days, 14);
+    assert.equal(plans.trial.projectors, 2);
+    assert.equal(plans.trial.one_time_inr_minor, 0);
+    assert.equal(plans.event.hours, 72);
+    assert.equal(plans.event.one_time_inr_minor, 39900);
+    assert.equal(plans.starter.monthly_inr_minor, 69900);
+    assert.equal(plans.starter.annual_inr_minor, 599900);
+    assert.equal(plans.professional.projectors, 4);
+    assert.equal(plans.business.projectors, 8);
+    assert.equal(plans.enterprise.projectors, null);
+    for (const code of ['starter', 'professional', 'business']) {
+        assert.ok(plans[code].annual_inr_minor < plans[code].monthly_inr_minor * 12);
+        assert.ok(plans[code].annual_usd_minor < plans[code].monthly_usd_minor * 12);
+        assert.ok(plans[code].one_time_inr_minor > plans[code].annual_inr_minor);
+    }
+});
