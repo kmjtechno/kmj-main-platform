@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import type { PresenceSnapshot } from './device-control-center';
 import { codeBridgeDeviceQuotaDisplay } from './device-policy-display';
 import type { ReactNode } from 'react';
 import {
@@ -33,6 +34,7 @@ type Props = {
     pendingPairings: number;
     authorizedClientGrants: number;
     oauthReady: boolean;
+    presenceSnapshot?: PresenceSnapshot | null;
     canManageOwnerPlan: boolean;
     activeSection: CodeBridgeSection;
     onSectionChange: (section: CodeBridgeSection) => void;
@@ -89,11 +91,17 @@ export default function CodeBridgeControlCenterHub({
     pendingPairings,
     authorizedClientGrants,
     oauthReady,
+    presenceSnapshot,
     canManageOwnerPlan,
     activeSection,
     onSectionChange,
     children,
 }: Props) {
+    const entries = presenceSnapshot?.entries;
+    const checkedGrants = entries?.length ?? null;
+    const ready = entries?.filter((entry) => entry.status === 'READY');
+    const readyGrants = ready?.length ?? null;
+    const checkedAt = presenceSnapshot?.observedAt ?? null;
     return (
         <section
             aria-label="CodeBridge workspace management"
@@ -134,7 +142,7 @@ export default function CodeBridgeControlCenterHub({
                 </nav>
                 <button
                     type="button"
-                    onClick={() => onSectionChange('devices')}
+                    onClick={() => onSectionChange('setup')}
                     className="mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-3 text-xs font-black text-white hover:bg-red-500"
                 >
                     <MonitorSmartphone className="h-4 w-4" />
@@ -178,13 +186,68 @@ export default function CodeBridgeControlCenterHub({
                         <Metric
                             label="Pending pairings"
                             value={pendingPairings}
-                            detail="Codes awaiting approval or expiry"
+                            detail="Approved codes awaiting device redemption"
                         />
                         <Metric
-                            label="Authorized app grants"
+                            label="Authorized apps"
                             value={authorizedClientGrants}
                             detail="Refresh grants, not live app sessions"
                         />
+                        <Metric
+                            label="Device allocation"
+                            value={
+                                codeBridgeDeviceQuotaDisplay(
+                                    plan,
+                                    managedDevices,
+                                    deviceLimit,
+                                ).value
+                            }
+                            detail="Licensed registrations, not runtime capacity"
+                        />
+                        <Metric
+                            label="Verified project grants"
+                            value={
+                                readyGrants === null || checkedGrants === null
+                                    ? 'Not verified'
+                                    : `${readyGrants} / ${checkedGrants}`
+                            }
+                            detail="Ready at the last authenticated check"
+                        />
+                        <Metric
+                            label="Gateway check"
+                            value={validDate(checkedAt)}
+                            detail="Snapshot only; refresh in Devices"
+                        />
+                    </div>
+                    <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                        {[
+                            {
+                                id: 'devices' as const,
+                                label: 'Devices & projects',
+                                icon: MonitorSmartphone,
+                            },
+                            {
+                                id: 'setup' as const,
+                                label: 'Connect AI or device',
+                                icon: Cable,
+                            },
+                            {
+                                id: 'usage' as const,
+                                label: 'Check plan limits',
+                                icon: Activity,
+                            },
+                        ].map(({ id, label, icon: Icon }) => (
+                            <button
+                                key={id}
+                                type="button"
+                                onClick={() => onSectionChange(id)}
+                                className="flex min-h-11 items-center gap-2 rounded-xl border px-3 text-left text-xs font-bold hover:border-red-500/40"
+                            >
+                                <Icon className="h-4 w-4 shrink-0 text-red-500" />
+                                {label}
+                                <ArrowRight className="ml-auto h-4 w-4 shrink-0" />
+                            </button>
+                        ))}
                     </div>
                 </section>
 
