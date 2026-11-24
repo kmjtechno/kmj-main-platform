@@ -158,7 +158,7 @@ const quick = [
     ['Manage Content', '/operator/products', FileText],
     ['Contact Support', '/products/kmj-codebridge/support', Mail],
     ['System Settings', '/operator/ops', Settings],
-    ['Backup Status', '/operator/ops', Database],
+    ['Backup Status', '/operator/ops#owner-backup-freshness', Database],
 ];
 function PanelTitle({
     title,
