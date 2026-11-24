@@ -34,6 +34,7 @@ type Application = {
     name: string;
     status: string;
     created_at: string;
+    pending_reseller_evidence_count?: number | null;
 };
 
 type LicenseKey = {
@@ -1164,6 +1165,22 @@ export function DeveloperAppsWorkspace({
                                         <p className="text-muted-foreground mt-1 font-mono text-xs">
                                             {app.product_code}
                                         </p>
+                                        <div className="mt-3 rounded-lg border p-3">
+                                            <p className="text-xs font-semibold">
+                                                Reseller funding evidence
+                                            </p>
+                                            <p className="mt-1 text-sm font-bold">
+                                                {app.pending_reseller_evidence_count ==
+                                                null
+                                                    ? 'Evidence not available'
+                                                    : `${app.pending_reseller_evidence_count} pending review`}
+                                            </p>
+                                            <p className="text-muted-foreground mt-1 text-xs leading-5">
+                                                Unverified evidence only. No
+                                                spendable credits or paid
+                                                issuance are enabled.
+                                            </p>
+                                        </div>
                                         {(app.status === 'active' ||
                                             (canIssueKeys &&
                                                 app.status === 'paused')) && (
