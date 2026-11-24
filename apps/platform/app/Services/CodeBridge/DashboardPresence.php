@@ -11,7 +11,7 @@ final class DashboardPresence
      * The caller must derive devices from the authenticated tenant directory,
      * not browser input. This read-only snapshot never authorizes operations.
      *
-     * @param array<int, array<string, mixed>> $devices
+     * @param  array<int, array<string, mixed>>  $devices
      * @return array<string, mixed>|null
      */
     public function snapshot(string $tenant, array $devices): ?array
@@ -23,16 +23,16 @@ final class DashboardPresence
         $origin = config('services.codebridge_gateway.url');
         if (! is_string($token) || ! preg_match('/\\A[A-Za-z0-9_-]{43,128}\\z/D', $token)
             || ! is_string($origin) || ! preg_match('/\\Ahttp:\\/\\/127\\.0\\.0\\.1:([1-9][0-9]{0,4})\\/?\\z/D', $origin, $port)
-            || (int) $port[1] > 65535 || ! self::validId($tenant)) {
+            || (int) $port[1] > 65535 || self::validId($tenant) === false) {
             return null;
         }
         $grants = [];
         foreach ($devices as $device) {
-            if (($device['pairing_state'] ?? null) !== 'redeemed' || ! self::validId($device['id'] ?? null)) {
+            if (($device['pairing_state'] ?? null) !== 'redeemed' || self::validId($device['id'] ?? null) === false) {
                 continue;
             }
             foreach ($device['projects'] ?? [] as $project) {
-                if (! self::validId($project['id'] ?? null)) {
+                if (self::validId($project['id'] ?? null) === false) {
                     continue;
                 }
                 $key = $device['id'].'/'.$project['id'];
@@ -68,8 +68,8 @@ final class DashboardPresence
             }
             $entries = [];
             foreach ($data['entries'] as $entry) {
-                if (! is_array($entry) || ! self::validId($entry['device'] ?? null)
-                    || ! self::validId($entry['project'] ?? null)) {
+                if (! is_array($entry) || self::validId($entry['device'] ?? null) === false
+                    || self::validId($entry['project'] ?? null) === false) {
                     return null;
                 }
                 $key = $entry['device'].'/'.$entry['project'];
