@@ -1554,6 +1554,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence:
             'Original reviewed pricebook #1061 code, tests and source-only research were ported onto unchanged matching current-main base; versioned private JSON and service fail closed when any commercial enablement flag is true. Owner margin, tax, actual merchant rate, per-product signing, real customer and native-device validation, exact-head CI/review and protected Elite release remain unverified.',
     },
+    {
+        id: 'kslp-product-evidence-workspace-20261124',
+        title: 'ONE Licensing Hub: product-level reseller evidence in developer workspace',
+        state: 'active',
+        detail: 'SOURCE ONLY: existing authorized issuer application cards show aggregate unverified zero-credit pending evidence by exact organization and licensed product. Missing evidence schema remains unavailable, not a zero balance. Mismatched ledger metadata, foreign tenants and ordinary ungranted members cannot expose counts. No order identifiers, payment details, spendable credits, paid issuance, new route or role expansion.',
+        evidence:
+            'KslpDeveloperWorkspaceQuery, existing developer-apps workspace and HTTP feature tests for exact product counts, tenant isolation, corrupt foreign scope and ordinary-member denial. Explicit delegated reseller review grant remains separate in PR #1109; independent approval, exact-head CI and production release gates required.',
+    },
 ];
 
 export const verifiedDeliveryMilestones = deliveryMilestones.filter(
