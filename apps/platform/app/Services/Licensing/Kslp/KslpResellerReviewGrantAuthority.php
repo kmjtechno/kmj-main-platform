@@ -152,6 +152,77 @@ final class KslpResellerReviewGrantAuthority
             })->exists();
     }
 
+    /**
+     * Read only the member's currently authorized products and aggregate
+     * pending evidence. Match membership, user, issuer and product in the
+     * same SQL statement; never widen this to the issuer's other products.
+     *
+     * @return array{products: list<array{id: string, name: string, product_code: string, expires_at: string, pending_evidence_count: int|null}>, truncated: bool}
+     */
+    public function reviewWorkspace(int $userId): array
+    {
+        if ($userId < 1 || ! Schema::hasTable('kslp_reseller_review_grants')) {
+            return ['products' => [], 'truncated' => false];
+        }
+
+        $now = now();
+        $query = DB::table('kslp_reseller_review_grants as grant')
+            ->join('organization_memberships as membership', function ($join): void {
+                $join->on('membership.id', '=', 'grant.membership_id')
+                    ->on('membership.organization_id', '=', 'grant.issuer_organization_id')
+                    ->on('membership.user_id', '=', 'grant.reseller_user_id');
+            })
+            ->join('users as reviewer', 'reviewer.id', '=', 'grant.reseller_user_id')
+            ->join('kslp_licensed_products as product', function ($join): void {
+                $join->on('product.id', '=', 'grant.licensed_product_id')
+                    ->on('product.organization_id', '=', 'grant.issuer_organization_id');
+            })
+            ->join('kslp_issuer_subscriptions as issuer', 'issuer.organization_id', '=', 'grant.issuer_organization_id')
+            ->where('grant.reseller_user_id', $userId)
+            ->where('membership.role', 'member')
+            ->whereNotNull('reviewer.email_verified_at')
+            ->where('grant.permission', self::PERMISSION)
+            ->whereNull('grant.revoked_at')
+            ->where('grant.expires_at', '>', $now)
+            ->where('product.status', 'active')
+            ->where('issuer.status', 'active')
+            ->where(function ($query) use ($now): void {
+                $query->whereNull('issuer.current_period_end')->orWhere('issuer.current_period_end', '>', $now);
+            })
+            ->select(['product.id', 'product.name', 'product.product_code', 'grant.expires_at']);
+
+        if (Schema::hasTable('kslp_reseller_credit_ledger')) {
+            $query->selectSub(
+                DB::table('kslp_reseller_credit_ledger as evidence')
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('evidence.issuer_organization_id', 'grant.issuer_organization_id')
+                    ->whereColumn('evidence.licensed_product_id', 'grant.licensed_product_id')
+                    ->where('evidence.event_type', 'evidence_pending')
+                    ->where('evidence.evidence_state', 'unverified')
+                    ->where('evidence.credits_delta', 0),
+                'pending_evidence_count'
+            );
+        } else {
+            $query->selectRaw('NULL AS pending_evidence_count');
+        }
+
+        $rows = $query->orderBy('product.name')->orderBy('product.id')->limit(51)->get();
+        $products = $rows->take(50)->map(static function (object $record): array {
+            $row = (array) $record;
+
+            return [
+                'id' => (string) $row['id'],
+                'name' => (string) $row['name'],
+                'product_code' => (string) $row['product_code'],
+                'expires_at' => (string) $row['expires_at'],
+                'pending_evidence_count' => $row['pending_evidence_count'] === null
+                    ? null : (int) $row['pending_evidence_count'],
+            ];
+        })->values()->all();
+
+        return ['products' => $products, 'truncated' => $rows->count() > 50];
+    }
+
     private function requireOwner(int $ownerId): void
     {
         $owner = User::query()->find($ownerId);
