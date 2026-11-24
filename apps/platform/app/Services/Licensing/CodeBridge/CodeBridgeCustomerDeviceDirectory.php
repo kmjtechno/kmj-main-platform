@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\DB;
 final class CodeBridgeCustomerDeviceDirectory
 {
     /**
-     * List only the authenticated organization's registered, unexpired devices.
+     * List only the authenticated organization's registered, unexpired devices
+     * with an active license for the exact tenant and CodeBridge product.
      *
      * The Main Platform stores enrollment and grants, NOT the live gateway
      * heartbeat. Never convert registration into an invented Online status.
@@ -18,7 +19,9 @@ final class CodeBridgeCustomerDeviceDirectory
     {
         $limit = max(1, min(100, $limit));
 
+        $instant = gmdate('Y-m-d H:i:s', $now);
         $rows = DB::table('codebridge_device_credentials as c')
+            ->join('kslp_licenses as l', 'l.id', '=', 'c.license_id')
             ->leftJoin('codebridge_device_pairings as p', function ($join): void {
                 $join->on('p.activation_id', '=', 'c.activation_id')
                     ->on('p.tenant_id', '=', 'c.tenant_id');
@@ -26,6 +29,12 @@ final class CodeBridgeCustomerDeviceDirectory
             ->where('c.tenant_id', $tenantId)
             ->whereNull('c.revoked_at')
             ->where('c.expires_at_epoch', '>', $now)
+            ->where('l.customer_id', $tenantId)
+            ->where('l.product', 'KMJ_CODEBRIDGE')
+            ->where('l.status', 'active')
+            ->whereNull('l.revoked_at')
+            ->where('l.starts_at', '<=', $instant)
+            ->where('l.expires_at', '>', $instant)
             ->orderBy('c.device_id')
             ->limit($limit)
             ->get([
