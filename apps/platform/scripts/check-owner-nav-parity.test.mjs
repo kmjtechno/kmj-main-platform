@@ -44,5 +44,8 @@ test('Communication opens the native mail page in both navs', () => {
 
 test('revenue anchor targets a page that owns it', () => {
     assert.match(dashboard, /id="owner-revenue"/);
-    assert.equal(shellItems.get('Revenue & Analytics'), '/super-admin#owner-revenue');
+    assert.equal(
+        shellItems.get('Revenue & Analytics'),
+        '/super-admin#owner-revenue',
+    );
 });
