@@ -42,6 +42,55 @@ final class NativeInboundTextPilot
         return true;
     }
 
+    /**
+     * @return array{total:int,unread:int,matching:int,items:list<array{id:int,sender:string,subject:string,at:string,unread:bool}>,selected:array{id:int,sender:string,recipient:string,subject:string,body:string,at:string}|null}
+     */
+    public function inbox(int $ownerId, string $search, ?int $selectedId): array
+    {
+        $scope = DB::table('kmj_mail_external_inbox')->where('mailbox_user_id', $ownerId);
+        $selected = null;
+        if ($selectedId !== null) {
+            $row = (clone $scope)->where('id', $selectedId)->first();
+            abort_if($row === null, 404);
+            (clone $scope)->where('id', $selectedId)->whereNull('read_at')
+                ->update(['read_at' => now(), 'updated_at' => now()]);
+            $selected = [
+                'id' => (int) $row->id,
+                'sender' => (string) $row->sender_email,
+                'recipient' => (string) $row->recipient_email,
+                'subject' => (string) $row->subject,
+                'body' => (string) $row->body,
+                'at' => (string) $row->created_at,
+            ];
+        }
+
+        $matching = clone $scope;
+        if ($search !== '') {
+            $escaped = addcslashes($search, '%_\\');
+            $matching->where(function ($query) use ($escaped): void {
+                $query->where('subject', 'like', '%'.$escaped.'%')
+                    ->orWhere('sender_email', 'like', '%'.$escaped.'%')
+                    ->orWhere('body', 'like', '%'.$escaped.'%');
+            });
+        }
+
+        return [
+            'total' => (int) (clone $scope)->count(),
+            'unread' => (int) (clone $scope)->whereNull('read_at')->count(),
+            'matching' => (int) (clone $matching)->count(),
+            'items' => array_values($matching->orderByDesc('id')->limit(40)
+                ->get(['id', 'sender_email', 'subject', 'created_at', 'read_at'])
+                ->map(static fn (object $row): array => [
+                    'id' => (int) $row->id,
+                    'sender' => (string) $row->sender_email,
+                    'subject' => (string) $row->subject,
+                    'at' => (string) $row->created_at,
+                    'unread' => $row->read_at === null,
+                ])->all()),
+            'selected' => $selected,
+        ];
+    }
+
     /** @return array{sender:string,subject:string,body:string}|null */
     public function parse(string $envelopeSender, string $raw): ?array
     {
