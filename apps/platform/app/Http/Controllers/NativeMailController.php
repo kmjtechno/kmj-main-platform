@@ -14,6 +14,7 @@ use App\Services\Mail\WorkforceMailCatalog;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -38,9 +39,10 @@ final class NativeMailController
         $folder = (string) ($values['folder'] ?? 'inbox');
         $search = trim((string) ($values['q'] ?? ''));
         abort_if(isset($values['incoming']) && ($portal !== 'operator' || $folder !== 'inbox' || isset($values['message'])), 404);
-        $externalInbox = $portal === 'operator' && $folder === 'inbox'
+        $externalInbox = $portal === 'operator' && $folder === 'inbox' && Schema::hasTable('kmj_mail_external_inbox')
             ? app(NativeInboundTextPilot::class)->inbox((int) $user->getKey(), $search, isset($values['incoming']) ? (int) $values['incoming'] : null)
             : null;
+        abort_if(isset($values['incoming']) && $externalInbox === null, 404);
         $thread = isset($values['message']) ? $this->mail->thread($user, (int) $values['message']) : null;
         $mailbox = $this->mail->mailbox($user, $folder, $search, (int) ($values['page'] ?? 1));
         // Show a clearly labeled preview of this same user's Sent records when
