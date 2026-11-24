@@ -62,6 +62,10 @@ final class NativeMailController
             'staff' => $portal === 'operator' ? $this->mail->activeStaff() : [],
             'myUserId' => (int) $user->getKey(),
             'externalMailEnabled' => $this->external->transportEnabled(),
+            'externalInboundPilotConfigured' => $portal === 'operator'
+                && config('kmj-mail-inbound.enabled') === true
+                && config('kmj-mail-inbound.publish_text') === true
+                && (int) config('kmj-mail-inbound.owner_id') === (int) $user->getKey(),
             'externalOutbound' => $this->external->capability($user),
             'transportCanAttempt' => app(RegistrationMailReadiness::class)->canAttemptDelivery(),
             'testEnabled' => config('services.kmj_workforce_mail.preview_enabled', false) === true,
