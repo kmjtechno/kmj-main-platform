@@ -1563,6 +1563,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Original reviewed pricebook #1061 code, tests and source-only research were ported onto unchanged matching current-main base; versioned private JSON and service fail closed when any commercial enablement flag is true. Owner margin, tax, actual merchant rate, per-product signing, real customer and native-device validation, exact-head CI/review and protected Elite release remain unverified.',
     },
     {
+        id: 'kslp-refund-reference-correlation-20261124',
+        title: 'ONE Licensing Hub: payment-reference reversal correlation',
+        state: 'active',
+        detail: 'SOURCE ONLY: signed Razorpay refund/dispute-only webhook receipts retain sanitized payment references. The existing settlement inspector correlates orderless reversal signals only to matching provider/order reconciled capture evidence, never an explicitly foreign order, payment or provider. Review remains blocked; no settlement proof, funds, automatic refund or paid licensing.',
+        evidence:
+            'PaymentWebhookReceiver, KslpResellerSettlementReadinessInspector and regression coverage for signed deduplicated reversal receipts, cross-provider/order/payment isolation and absence of reconciled capture evidence. Fresh CI and owner review required; no production activation.',
+    },
+    {
         id: 'kslp-product-evidence-workspace-20261124',
         title: 'ONE Licensing Hub: issuer and delegated reseller evidence workspace',
         state: 'active',
@@ -1577,6 +1585,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         detail: 'SOURCE ONLY: existing owner hub adds bounded eligible verified member/product selection, recorded review-grant directory, reason-bound grant and revoke actions using the single KSLP authority. Owner identity, passkey and password confirmation remain mandatory. Creation is default-disabled by a separate rollout gate; authorized emergency revocation remains available. No wallet, credits, checkout, paid licenses, role expansion or customer-key access.',
         evidence:
             'KslpOwnerResellerReviewDirectory, protected operator routes, existing owner Licensing Hub component and HTTP regressions covering non-owner denial, step-up, default-off, scoped grant, revoke with creation disabled and no financial side effects. Exact-head CI and independent owner source review required; no deployment or live activation.',
+    },
+    {
+        id: 'kslp-commercial-order-terms-20261124',
+        title: 'ONE Licensing Hub: exact owner-reviewed commercial order terms',
+        state: 'active',
+        detail: 'SOURCE ONLY: one immutable application-contract binding per requested commercial order, explicitly connecting the same tenant, licensed product code, catalog product ID and slug, currency and integer minor-unit amount. Owner authorization and reason-bound audit are mandatory; existing provider links, already-processed orders and duplicate terms deny recording. Read inspection distinguishes missing or changed bindings and mismatched amount/currency. Matching terms are not settlement or authorization to issue paid licenses.',
+        evidence:
+            'KslpCommercialOrderTerms, additive migration and feature regressions for mismatched catalog/product/tenant, immutable terms, retroactive recording denial and amount/currency/slug drift. Internal-only; no new HTTP route or live migration. Sandbox checkout now requires exact reviewed binding in its explicit KSLP entry point and rechecks it under the order lock before reservation and response linking; legacy unbound sandbox remains test-only. Retroactive terms are refused even with only an unresolved provider intent. Merchant settlement, refunds and paid issuance remain independently gated.',
     },
 ];
 
