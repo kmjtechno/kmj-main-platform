@@ -132,4 +132,5 @@ final class CodeBridgeAgentCompatibilityProxyTest extends TestCase
             ->assertUnauthorized()
             ->assertHeader('WWW-Authenticate', 'Bearer error="invalid_token"')
             ->assertJson(['error' => 'UNAUTHORIZED']);
-    }}
+    }
+}
