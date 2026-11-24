@@ -129,17 +129,40 @@ final class KslpResellerSettlementReadinessInspector
             // A webhook inbox records only signed notifications and processor
             // status, not durable independent net settlement or reversal
             // reconciliation. Even a 'reconciled' receipt never funds credits.
+            // A refund/dispute notification can omit the order reference.
+            // Only correlate payment IDs already observed on this exact
+            // provider order in reconciled capture/paid receipts. Never
+            // attach an explicitly foreign-order notification to this order.
             $events = DB::table('payment_webhook_events')
                 ->where('provider', $providerName)
-                ->where('provider_order_id', $providerOrderId)
+                ->where(function ($query) use ($providerName, $providerOrderId): void {
+                    $query->where('provider_order_id', $providerOrderId)
+                        ->orWhere(function ($indirect) use ($providerName, $providerOrderId): void {
+                            $indirect->whereNull('provider_order_id')
+                                ->whereIn('provider_payment_id', DB::table('payment_webhook_events')
+                                    ->select('provider_payment_id')
+                                    ->where('provider', $providerName)
+                                    ->where('provider_order_id', $providerOrderId)
+                                    ->where('processing_status', 'reconciled')
+                                    ->whereIn('event_type', ['payment.captured', 'order.paid'])
+                                    ->whereNotNull('provider_payment_id'))
+                                ->where(function ($reversal): void {
+                                    $reversal->whereRaw('LOWER(event_type) LIKE ?', ['%refund%'])
+                                        ->orWhereRaw('LOWER(event_type) LIKE ?', ['%dispute%'])
+                                        ->orWhereRaw('LOWER(event_type) LIKE ?', ['%chargeback%']);
+                                });
+                        });
+                })
+                ->orderByDesc('id')
                 ->limit(101)
-                ->get(['processing_status', 'event_type']);
+                ->get(['processing_status', 'event_type', 'provider_order_id']);
             if ($events->count() > 100) {
                 $reasons[] = 'WEBHOOK_PREVIEW_TRUNCATED';
             }
             foreach ($events as $event) {
                 $receipt = (array) $event;
-                if (($receipt['processing_status'] ?? null) === 'reconciled') {
+                if (($receipt['processing_status'] ?? null) === 'reconciled'
+                    && ($receipt['provider_order_id'] ?? null) === $providerOrderId) {
                     $reconciled++;
                 }
                 $type = strtolower((string) ($receipt['event_type'] ?? ''));
