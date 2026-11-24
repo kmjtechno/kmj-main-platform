@@ -101,7 +101,8 @@ final class NativeMailService
                 $escaped = addcslashes($search, '%_\\');
                 $builder->where('subject', 'like', '%'.$escaped.'%')
                     ->orWhere('body', 'like', '%'.$escaped.'%')
-                    ->orWhere('recipient_email', 'like', '%'.$escaped.'%');
+                    ->orWhere('recipient_email', 'like', '%'.$escaped.'%')
+                    ->orWhere('sender_email', 'like', '%'.$escaped.'%');
             });
         }
 
@@ -119,7 +120,7 @@ final class NativeMailService
             'folder' => (string) $row->folder,
             'subject' => (string) $row->subject,
             'snippet' => mb_strimwidth((string) $row->body, 0, 160, '…'),
-            'sender_user_id' => (int) $row->sender_user_id,
+            'sender_user_id' => $row->sender_user_id === null ? null : (int) $row->sender_user_id,
             'recipient_user_id' => $row->recipient_user_id === null ? null : (int) $row->recipient_user_id,
             'recipient_email' => $row->recipient_email,
             'sender_email' => $row->sender_email,
@@ -163,7 +164,7 @@ final class NativeMailService
             'thread_id' => (string) $anchor->thread_id,
             'items' => array_values($rows->map(static fn (object $row): array => [
                 'id' => (int) $row->id,
-                'from_id' => (int) $row->sender_user_id,
+                'from_id' => $row->sender_user_id === null ? null : (int) $row->sender_user_id,
                 'to_id' => $row->recipient_user_id === null ? null : (int) $row->recipient_user_id,
                 'recipient_email' => $row->recipient_email,
                 'sender_email' => $row->sender_email,
@@ -238,6 +239,7 @@ final class NativeMailService
                 $anchor = DB::table('kmj_mail_messages')
                     ->where('mailbox_user_id', $senderId)->where('id', $replyToId)->first();
                 abort_if($anchor === null, 404);
+                abort_unless($anchor->sender_user_id !== null, 403);
                 abort_unless(
                     (int) $anchor->sender_user_id === $recipientId
                     || (int) $anchor->recipient_user_id === $recipientId,
