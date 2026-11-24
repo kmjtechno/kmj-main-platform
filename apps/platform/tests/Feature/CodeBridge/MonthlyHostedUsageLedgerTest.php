@@ -174,6 +174,7 @@ final class MonthlyHostedUsageLedgerTest extends TestCase
         $this->assertDatabaseCount('entitlements', 0);
         $this->assertDatabaseCount('kslp_licenses', 0);
     }
+
     public function test_internal_snapshot_is_seat_scoped_and_never_a_live_meter(): void
     {
         $ledger = app(MonthlyHostedUsageLedger::class);
