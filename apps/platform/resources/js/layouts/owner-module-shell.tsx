@@ -102,12 +102,12 @@ const groups: { title: string; items: Workspace[] }[] = [
             },
             {
                 label: 'OmniDesk Remote Access',
-                href: '/operator/products',
+                href: '/operator/products?product=kmj-omnidesk',
                 icon: Globe2,
             },
             {
                 label: 'CineCore & Calibration',
-                href: '/operator/products',
+                href: '/operator/products?product=kmj-cinema-platform',
                 icon: Gauge,
             },
             {

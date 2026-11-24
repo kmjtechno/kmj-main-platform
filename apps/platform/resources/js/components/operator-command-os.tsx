@@ -112,8 +112,16 @@ const groups = [
             ],
             ['ModelFabric & AI', '/operator/modelfabric', Gauge],
             ['CloudOS & Infrastructure', '/operator/ops', Cloud],
-            ['OmniDesk Remote Access', '/operator/products', Globe2],
-            ['CineCore & Calibration', '/operator/products', Gauge],
+            [
+                'OmniDesk Remote Access',
+                '/operator/products?product=kmj-omnidesk',
+                Globe2,
+            ],
+            [
+                'CineCore & Calibration',
+                '/operator/products?product=kmj-cinema-platform',
+                Gauge,
+            ],
             ['Content & Website', '/operator/products', FileText],
             ['Communication (Mail)', '/operator/mail', Mail],
         ],
