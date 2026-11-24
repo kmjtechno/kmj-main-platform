@@ -19,9 +19,10 @@ final class KslpDeveloperWorkspaceQuery
     public function __construct(
         private readonly OrganizationDirectory $directory,
         private readonly OrganizationCapabilityContext $capabilities,
+        private readonly KslpResellerReviewGrantAuthority $resellerGrants,
     ) {}
 
-    /** @return array{organizations: array<int, array<string, mixed>>, applications: array<int, object>, keys: array<int, object>, canIssueKeys: bool} */
+    /** @return array{organizations: array<int, array<string, mixed>>, applications: array<int, object>, keys: array<int, object>, canIssueKeys: bool, resellerReview: array{products: list<array{id: string, name: string, product_code: string, expires_at: string, pending_evidence_count: int|null}>, truncated: bool}} */
     public function forUser(User $actor): array
     {
         $organizations = collect($this->directory->forUser($actor->id))
@@ -155,6 +156,7 @@ final class KslpDeveloperWorkspaceQuery
             'organizations' => $organizations,
             'applications' => $products,
             'keys' => $keys,
+            'resellerReview' => $this->resellerGrants->reviewWorkspace($actor->id),
             'canIssueKeys' => $storageReady
                 && (bool) config('services.kmj_developer_licensing.enabled', false),
         ];
