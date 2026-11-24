@@ -2,6 +2,8 @@
 
 use App\Models\User;
 use App\Services\Licensing\Kslp\KslpDeveloperWorkspaceQuery;
+use App\Services\Licensing\Kslp\KslpOwnerResellerReviewDirectory;
+use App\Services\Licensing\Kslp\KslpResellerReviewGrantAuthority;
 use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
 use App\Services\Licensing\UnverifiedAccountCleanup;
 use App\Services\PlatformOwnerAccess;
@@ -13,7 +15,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
-Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $access, KslpLicenseControlPlane $control, KslpDeveloperWorkspaceQuery $developerWorkspace, UnverifiedAccountCleanup $cleanup) {
+Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $access, KslpLicenseControlPlane $control, KslpDeveloperWorkspaceQuery $developerWorkspace, UnverifiedAccountCleanup $cleanup, KslpOwnerResellerReviewDirectory $resellerDirectory) {
     $user = $request->user();
     abort_unless($user instanceof User, 401);
     $access->require($user);
@@ -172,6 +174,7 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
         ],
         'licenses' => $licenses,
         'issuerWorkspaces' => $issuerWorkspaces,
+        'resellerReviewDirectory' => $resellerDirectory->forOwner($user),
         'developerIssuanceEnabled' => Schema::hasTable('kslp_license_keys') && (bool) config('services.kmj_developer_licensing.enabled', false),
         // Reuse exactly the tenant-restricted developer workspace query. Global
         // KSLP data stays owner-only; a commercial lease never becomes an issuer.
@@ -202,6 +205,76 @@ Route::get('operator/kslp', function (Request $request, PlatformOwnerAccess $acc
         'events' => DB::table('kslp_license_events')->latest('created_at')->limit(50)->get(),
     ]);
 })->name('operator.kslp')->middleware('password.confirm');
+
+Route::post('operator/kslp/reseller-review/grants', function (
+    Request $request,
+    PlatformOwnerAccess $access,
+    KslpResellerReviewGrantAuthority $authority,
+) {
+    $owner = $request->user();
+    abort_unless($owner instanceof User, 401);
+    $access->require($owner);
+    abort_unless((bool) config('services.kmj_reseller_review.grant_enabled', false), 503);
+
+    $data = $request->validate([
+        'organization_id' => ['required', 'uuid'],
+        'product_id' => ['required', 'uuid'],
+        'reseller_user_id' => ['required', 'integer', 'min:1'],
+        'days' => ['required', 'integer', 'min:1', 'max:90'],
+        'reason' => ['required', 'string', 'min:8', 'max:240'],
+    ]);
+
+    try {
+        $authority->grant(
+            $owner->id,
+            $data['organization_id'],
+            $data['product_id'],
+            (int) $data['reseller_user_id'],
+            now()->addDays((int) $data['days']),
+            $data['reason'],
+        );
+    } catch (DomainException $exception) {
+        return back()->withErrors(['reason' => $exception->getMessage()]);
+    }
+
+    return redirect('/operator/kslp#reseller-review-management')
+        ->with('success', 'Product review permission recorded.');
+})->middleware(['password.confirm', 'throttle:5,1'])->name('operator.kslp.reseller-review.grant');
+
+// Revocation remains available when new grants are disabled. No credit,
+// entitlement, payment or license mutation is implied by this permission.
+Route::post('operator/kslp/reseller-review/grants/{grant}/revoke', function (
+    Request $request,
+    string $grant,
+    PlatformOwnerAccess $access,
+    KslpResellerReviewGrantAuthority $authority,
+) {
+    $owner = $request->user();
+    abort_unless($owner instanceof User, 401);
+    $access->require($owner);
+    abort_unless(Str::isUuid($grant), 404);
+    abort_unless(Schema::hasTable('kslp_reseller_review_grants'), 503);
+
+    $data = $request->validate(['reason' => ['required', 'string', 'min:8', 'max:240']]);
+    $record = DB::table('kslp_reseller_review_grants')->where('id', $grant)
+        ->first(['issuer_organization_id', 'licensed_product_id', 'reseller_user_id']);
+    abort_unless($record !== null, 404);
+
+    try {
+        $authority->revoke(
+            $owner->id,
+            (string) $record->issuer_organization_id,
+            (string) $record->licensed_product_id,
+            (int) $record->reseller_user_id,
+            $data['reason'],
+        );
+    } catch (DomainException $exception) {
+        return back()->withErrors(['reason' => $exception->getMessage()]);
+    }
+
+    return redirect('/operator/kslp#reseller-review-management')
+        ->with('success', 'Product review permission revoked.');
+})->middleware(['password.confirm', 'throttle:5,1'])->name('operator.kslp.reseller-review.revoke');
 
 // One-click owner-initiated deletion of ONLY exact-preview, old, standalone
 // email-unverified accounts. Disabled until protected backup/release approval.
