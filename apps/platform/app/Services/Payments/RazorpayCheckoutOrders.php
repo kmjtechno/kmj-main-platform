@@ -194,15 +194,17 @@ final class RazorpayCheckoutOrders
         $product = DB::table('kslp_licensed_products')
             ->where('id', $terms->licensed_product_id)
             ->where('organization_id', $organizationId)
-            ->where('status', 'active')->first(['product_code']);
-        $slug = DB::table('products')->where('id', $catalogId)->value('slug');
+            ->where('status', 'active')->lockForUpdate()->first(['product_code']);
+        $catalog = DB::table('products')->where('id', $catalogId)
+            ->lockForUpdate()->first(['slug']);
 
         if ($terms->issuer_organization_id !== $organizationId
             || $terms->catalog_product_id !== $catalogId
             || ($licensedProductId !== null && $terms->licensed_product_id !== $licensedProductId)
             || $product === null
             || $terms->licensed_product_code !== $product->product_code
-            || $terms->catalog_slug !== $slug
+            || $catalog === null
+            || $terms->catalog_slug !== $catalog->slug
             || $terms->currency !== 'INR'
             || (int) $terms->amount_minor !== $amountMinor) {
             throw new DomainException('RAZORPAY_REVIEWED_TERMS_MISMATCH');
