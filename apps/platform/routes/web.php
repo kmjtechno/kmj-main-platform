@@ -612,7 +612,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ? app(DashboardPresence::class)->snapshot((string) $organization['id'], $devices)
             : null;
 
-        return Inertia::render('services/codebridge', [
+        $response = Inertia::render('services/codebridge', [
             'organization' => $organization,
             'entitlement' => $entitlement,
             'canManageOwnerPlan' => $canManageOwnerPlan,
@@ -643,7 +643,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'connected_clients' => $connectedClients,
                 'access_token_ttl_seconds' => (int) config('codebridge_oauth.access_token_ttl', 900),
             ],
-        ])->toResponse($request)->header('Cache-Control', 'no-store, private');
+        ])->toResponse($request);
+        $response->headers->set('Cache-Control', 'no-store, private');
+
+        return $response;
     })->name('services.codebridge');
 
     Route::post('services/kmj-codebridge/oauth-clients/{clientId}/revoke', function (
