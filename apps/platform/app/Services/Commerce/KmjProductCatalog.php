@@ -16,10 +16,6 @@ final class KmjProductCatalog
 
     public const CALIBRATION_NAME = 'KMJ Calibration Pro';
 
-    public const DESKTOP_COMMANDER_SLUG = 'kmj-desktop-commander';
-
-    public const DESKTOP_COMMANDER_NAME = 'KMJ Desktop Commander';
-
     public const FORGE_SLUG = 'kmj-forge';
 
     public const FORGE_NAME = 'KMJ Forge';
@@ -113,7 +109,6 @@ final class KmjProductCatalog
 
             $sandboxProducts = [
                 self::CALIBRATION_SLUG => self::CALIBRATION_NAME,
-                self::DESKTOP_COMMANDER_SLUG => self::DESKTOP_COMMANDER_NAME,
                 self::FORGE_SLUG => self::FORGE_NAME,
                 self::OMNIDESK_SLUG => self::OMNIDESK_NAME,
                 self::CODEBRIDGE_SLUG => self::CODEBRIDGE_NAME,
@@ -186,7 +181,6 @@ final class KmjProductCatalog
             self::FORGE_SLUG => ['research', 80, '/assets/products/kmj-forge.webp', false, false],
             self::OMNIDESK_SLUG => ['research', 85, null, false, true],
             self::CODEBRIDGE_SLUG => ['research', 87, null, false, true],
-            self::DESKTOP_COMMANDER_SLUG => ['public-beta', 89, null, false, true],
             self::CONNECT_SLUG => ['planned', 90, '/assets/products/kmj-connect.webp', false, false],
             self::CLOUD_NEXUS_SLUG => ['research', 100, '/assets/products/kmj-cloud-nexus.webp', false, false],
             self::AGENT_SLUG => ['research', 110, '/assets/products/kmj-agent.webp', false, false],
@@ -208,7 +202,7 @@ final class KmjProductCatalog
             self::CINEMA_PLAYER_SLUG, self::IMMERSIVE_CINEMA_SUITE_SLUG => 'cinema',
             self::CALIBRATION_SLUG => 'industrial',
             self::CODEBRIDGE_SLUG, self::FORGE_SLUG,
-            self::AGENT_SLUG, self::DESKTOP_COMMANDER_SLUG => 'developer',
+            self::AGENT_SLUG => 'developer',
             self::OMNIDESK_SLUG, self::CONNECT_SLUG,
             self::LICENSING_HUB_SLUG, self::CREATIVE_STUDIO_SLUG => 'business',
             default => 'other',

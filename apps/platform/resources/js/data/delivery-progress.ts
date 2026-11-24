@@ -26,6 +26,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'PR #1138 adds CodeBridgeProjectAssignmentHttpTest coverage for suspension, revocation, expiry, future start, mismatched customer and restored license validity. Initial application CI and PostgreSQL gates passed; fresh exact-head CI and owner review are required after this progress sync. Live telemetry and production deployment remain pending.',
     },
     {
+        id: 'desktop-commander-code-removal-20261124',
+        title: 'Remove KMJ Desktop Commander from the Main Platform code',
+        state: 'active',
+        detail: 'Owner decision: Desktop Commander is retired and no customer or app depends on it. The catalog entry, license profile, commercial policy, public bootstrap API, pricebook row, CI workflow and tests are removed. The existing database row stays Retired and hidden; no data migration or deletion is performed.',
+        evidence:
+            'Needs exact-head CI. Not deployed. Removing the row from production is a separate owner-guarded action through the Product Manager.',
+    },
+    {
         id: 'owner-product-removal-thumbnails-passkey-20261124',
         title: 'Owner Product Manager: guarded removal, list thumbnails and single passkey prompt',
         state: 'active',

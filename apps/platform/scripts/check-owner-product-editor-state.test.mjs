@@ -96,8 +96,8 @@ void test('pricing book covers the canonical product registry without enabling c
     assert.equal(book.customer_visible, false);
     assert.equal(book.approved_for_commercial_orders, false);
     assert.equal(book.automatic_license_issuance_enabled, false);
-    assert.equal(book.products.length, 15);
-    assert.equal(new Set(book.products.map((p) => p.slug)).size, 15);
+    assert.equal(book.products.length, 14);
+    assert.equal(new Set(book.products.map((p) => p.slug)).size, 14);
 
     const registry = readFileSync(
         new URL(

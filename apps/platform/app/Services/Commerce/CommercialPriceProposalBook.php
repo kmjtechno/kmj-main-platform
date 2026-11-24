@@ -84,7 +84,7 @@ final class CommercialPriceProposalBook
             ];
         }
 
-        if (count($products) !== 15) {
+        if (count($products) !== 14) {
             return $unavailable;
         }
 
