@@ -111,6 +111,28 @@ final class CodeBridgeAgentCompatibilityProxyTest extends TestCase
             && $request->hasHeader('Accept', 'application/json, text/event-stream'));
     }
 
+    public function test_scoped_context_progress_relays_sse(): void
+    {
+        $frames = "data: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[]}}\n\n";
+        Http::fake([
+            'https://gateway.example/mcp' => Http::response($frames, 200, ['Content-Type' => 'text/event-stream']),
+        ]);
+
+        $response = $this->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'fast_context',
+                'arguments' => ['device' => 'd1', 'project' => 'p1'],
+                '_meta' => ['progressToken' => 0],
+            ],
+        ], ['Authorization' => 'Bearer test-token', 'Accept' => 'application/json, text/event-stream']);
+
+        $response->assertOk()->assertHeader('X-Accel-Buffering', 'no');
+        self::assertSame($frames, $response->streamedContent());
+    }
+
     public function test_status_progress_keeps_upstream_json_denials_intact(): void
     {
         Http::fake([

@@ -84,12 +84,22 @@ Route::post('mcp', function (Request $request, OAuthServer $server) {
         }
     }
 
-    // Only the negotiated read-only progress pilot uses an unbuffered body.
+    // Only explicitly allowlisted read-only progress calls use an unbuffered body.
     // The gateway remains the authority for authentication and project scope.
     $progressToken = $request->json('params._meta.progressToken');
     $acceptTypes = array_map(fn (string $type): string => strtolower(trim($type)), explode(',', $headers['Accept']));
     $streamProgress = $request->json('method') === 'tools/call'
-        && $request->json('params.name') === 'render_codebridge_status'
+        && in_array($request->json('params.name'), [
+            'render_codebridge_status',
+            'compact_work_brief',
+            'fast_context',
+            'fast_read_batch',
+            'context_resume',
+            'chat_workspace_open',
+            'git_diff',
+            'read_file_range',
+            'list_project_jobs',
+        ], true)
         && isset($headers['Authorization'])
         && in_array('application/json', $acceptTypes, true)
         && in_array('text/event-stream', $acceptTypes, true)
