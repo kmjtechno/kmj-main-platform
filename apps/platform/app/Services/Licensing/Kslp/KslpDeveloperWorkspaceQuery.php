@@ -19,9 +19,10 @@ final class KslpDeveloperWorkspaceQuery
     public function __construct(
         private readonly OrganizationDirectory $directory,
         private readonly OrganizationCapabilityContext $capabilities,
+        private readonly KslpResellerReviewGrantAuthority $resellerGrants,
     ) {}
 
-    /** @return array{organizations: array<int, array<string, mixed>>, applications: array<int, object>, keys: array<int, object>, canIssueKeys: bool} */
+    /** @return array{organizations: array<int, array<string, mixed>>, applications: array<int, object>, keys: array<int, object>, canIssueKeys: bool, resellerReview: array{products: list<array{id: string, name: string, product_code: string, expires_at: string, pending_evidence_count: int|null}>, truncated: bool}} */
     public function forUser(User $actor): array
     {
         $organizations = collect($this->directory->forUser($actor->id))
@@ -91,6 +92,38 @@ final class KslpDeveloperWorkspaceQuery
             ->get(['id', 'organization_id', 'product_code', 'name', 'status', 'created_at'])
             ->all();
 
+        // Product-bound reseller evidence preview. Revalidate the exact
+        // product/issuer pair in SQL; a mismatched historical ledger row
+        // must not count toward another tenant's product. Missing migration
+        // is unknown evidence, not a real zero balance.
+        $evidenceReady = Schema::hasTable('kslp_reseller_credit_ledger');
+        $productIds = array_map(static fn (object $product): string => (string) ((array) $product)['id'], $products);
+        $pendingEvidence = ($evidenceReady && $productIds !== [])
+            ? DB::table('kslp_reseller_credit_ledger as evidence')
+                ->join('kslp_licensed_products as product', function ($join): void {
+                    $join->on('product.id', '=', 'evidence.licensed_product_id')
+                        ->on('product.organization_id', '=', 'evidence.issuer_organization_id');
+                })
+                ->whereIn('product.organization_id', $tenantIds)
+                ->whereIn('product.id', $productIds)
+                ->where('evidence.event_type', 'evidence_pending')
+                ->where('evidence.evidence_state', 'unverified')
+                ->where('evidence.credits_delta', 0)
+                ->select('product.id')
+                ->selectRaw('COUNT(*) AS total')
+                ->groupBy('product.id')
+                ->pluck('total', 'product.id')
+            : collect();
+
+        $products = array_map(static function (object $product) use ($evidenceReady, $pendingEvidence): object {
+            $row = (array) $product;
+            $row['pending_reseller_evidence_count'] = $evidenceReady
+                ? (int) ($pendingEvidence[$row['id']] ?? 0)
+                : null;
+
+            return (object) $row;
+        }, $products);
+
         // Read-only, aggregate-only device evidence. Never expose device
         // public keys, hardware hashes or idempotency tokens through Inertia.
         // A non-deactivated binding is NOT a live connection, entitlement or
@@ -123,6 +156,7 @@ final class KslpDeveloperWorkspaceQuery
             'organizations' => $organizations,
             'applications' => $products,
             'keys' => $keys,
+            'resellerReview' => $this->resellerGrants->reviewWorkspace($actor->id),
             'canIssueKeys' => $storageReady
                 && (bool) config('services.kmj_developer_licensing.enabled', false),
         ];

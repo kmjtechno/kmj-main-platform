@@ -104,14 +104,18 @@ final class KslpResellerReviewGrantAuthorityTest extends TestCase
         $grants = app(KslpResellerReviewGrantAuthority::class);
         $grants->grant($owner->id, $org, $first, $member->id, now()->addDays(5), 'Review first application');
         $grants->grant($owner->id, $org, $second, $member->id, now()->addDays(5), 'Review second application');
+        self::assertCount(2, $grants->reviewWorkspace($member->id)['products']);
 
         DB::table('kslp_reseller_review_grants')->where('licensed_product_id', $first)
             ->update(['expires_at' => now()->subMinute()]);
         self::assertFalse($grants->allowsReview($member->id, $org, $first));
+        self::assertSame([$second], array_column($grants->reviewWorkspace($member->id)['products'], 'id'));
         DB::table('kslp_licensed_products')->where('id', $second)->update(['status' => 'paused']);
         self::assertFalse($grants->allowsReview($member->id, $org, $second));
+        self::assertSame([], $grants->reviewWorkspace($member->id)['products']);
         DB::table('kslp_licensed_products')->where('id', $second)->update(['status' => 'active']);
         self::assertTrue($grants->allowsReview($member->id, $org, $second));
+        self::assertSame([$second], array_column($grants->reviewWorkspace($member->id)['products'], 'id'));
 
         OrganizationMembership::query()->where('organization_id', $org)->where('user_id', $member->id)->delete();
         OrganizationMembership::query()->create([
@@ -120,6 +124,7 @@ final class KslpResellerReviewGrantAuthorityTest extends TestCase
             'role' => 'member',
         ]);
         self::assertFalse($grants->allowsReview($member->id, $org, $second));
+        self::assertSame([], $grants->reviewWorkspace($member->id)['products']);
     }
 
     public function test_foreign_product_cannot_be_granted_to_local_member(): void

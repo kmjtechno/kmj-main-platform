@@ -34,6 +34,7 @@ type Application = {
     name: string;
     status: string;
     created_at: string;
+    pending_reseller_evidence_count?: number | null;
 };
 
 type LicenseKey = {
@@ -62,11 +63,23 @@ type IssuedBatchKey = IssuedKey & {
     customer_id: string;
 };
 
+type ResellerReviewProduct = {
+    id: string;
+    name: string;
+    product_code: string;
+    expires_at: string;
+    pending_evidence_count: number | null;
+};
+
 export type DeveloperWorkspaceProps = {
     organizations: Organization[];
     applications: Application[];
     keys: LicenseKey[];
     canIssueKeys: boolean;
+    resellerReview?: {
+        products: ResellerReviewProduct[];
+        truncated: boolean;
+    };
     canAccessOwnerHub: boolean;
     newKey: IssuedKey | null;
     newKeys: IssuedBatchKey[] | null;
@@ -193,6 +206,7 @@ export function DeveloperAppsWorkspace({
     applications,
     keys,
     canIssueKeys,
+    resellerReview,
     canAccessOwnerHub,
     newKey,
     newKeys,
@@ -448,6 +462,55 @@ export function DeveloperAppsWorkspace({
                         </p>
                     )}
                 </section>
+
+                {resellerReview && resellerReview.products.length > 0 && (
+                    <section
+                        aria-labelledby="reseller-review-heading"
+                        className="bg-card rounded-2xl border p-5 sm:p-6"
+                    >
+                        <h2
+                            id="reseller-review-heading"
+                            className="text-base font-bold"
+                        >
+                            Reseller workspace · Evidence review
+                        </h2>
+                        <p className="text-muted-foreground mt-2 text-sm">
+                            Only products explicitly delegated to your current
+                            verified membership are shown. Review access does
+                            not authorize license management, payments, credits
+                            or paid issuance.
+                        </p>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                            {resellerReview.products.map((product) => (
+                                <article
+                                    key={product.id}
+                                    className="rounded-xl border p-4"
+                                >
+                                    <h3 className="font-semibold">
+                                        {product.name}
+                                    </h3>
+                                    <p className="text-muted-foreground mt-1 font-mono text-xs">
+                                        {product.product_code}
+                                    </p>
+                                    <p className="mt-3 text-sm font-bold">
+                                        {product.pending_evidence_count === null
+                                            ? 'Evidence not available'
+                                            : `${product.pending_evidence_count} pending review`}
+                                    </p>
+                                    <p className="text-muted-foreground mt-2 text-xs">
+                                        Review permission expires:{' '}
+                                        {product.expires_at}
+                                    </p>
+                                </article>
+                            ))}
+                        </div>
+                        {resellerReview.truncated && (
+                            <p className="text-muted-foreground mt-3 text-xs">
+                                Showing the first 50 authorized products.
+                            </p>
+                        )}
+                    </section>
+                )}
 
                 <section
                     id="issuer-quota-snapshot"
@@ -1164,6 +1227,22 @@ export function DeveloperAppsWorkspace({
                                         <p className="text-muted-foreground mt-1 font-mono text-xs">
                                             {app.product_code}
                                         </p>
+                                        <div className="mt-3 rounded-lg border p-3">
+                                            <p className="text-xs font-semibold">
+                                                Reseller funding evidence
+                                            </p>
+                                            <p className="mt-1 text-sm font-bold">
+                                                {app.pending_reseller_evidence_count ==
+                                                null
+                                                    ? 'Evidence not available'
+                                                    : `${app.pending_reseller_evidence_count} pending review`}
+                                            </p>
+                                            <p className="text-muted-foreground mt-1 text-xs leading-5">
+                                                Unverified evidence only. No
+                                                spendable credits or paid
+                                                issuance are enabled.
+                                            </p>
+                                        </div>
                                         {(app.status === 'active' ||
                                             (canIssueKeys &&
                                                 app.status === 'paused')) && (
