@@ -729,11 +729,23 @@
     background: #1b2639;
 }
 .kmj-mail-approved-shell .kmj-mail-thread-messages > article {
-    border-radius: 0 0 12px 12px;
-    border-top: 0;
+    border: 1px solid #2b3648;
+    border-radius: 12px;
     background: linear-gradient(155deg, #101b29, #0a111c);
-    border-color: #2b3648;
     box-shadow: none;
+}
+.kmj-mail-approved-shell .kmj-mail-thread-card .kmj-mail-message-meta {
+    background: #09121e;
+}
+.kmj-mail-approved-shell .kmj-mail-thread-card .kmj-mail-message-brand {
+    border-right: 0;
+    border-left: 0;
+}
+.kmj-mail-approved-shell .kmj-mail-thread-card .kmj-mail-message-body {
+    min-height: 100px;
+    padding: 18px;
+    color: #eaf0f8;
+    overflow-wrap: anywhere;
 }
 .kmj-mail-approved-shell .kmj-mail-message-list button {
     width: 100%;
