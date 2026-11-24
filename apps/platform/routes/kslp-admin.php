@@ -2,9 +2,9 @@
 
 use App\Models\User;
 use App\Services\Licensing\Kslp\KslpDeveloperWorkspaceQuery;
+use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
 use App\Services\Licensing\Kslp\KslpOwnerResellerReviewDirectory;
 use App\Services\Licensing\Kslp\KslpResellerReviewGrantAuthority;
-use App\Services\Licensing\Kslp\KslpLicenseControlPlane;
 use App\Services\Licensing\UnverifiedAccountCleanup;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
