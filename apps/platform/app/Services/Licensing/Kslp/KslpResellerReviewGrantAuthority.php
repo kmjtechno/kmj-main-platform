@@ -220,7 +220,7 @@ final class KslpResellerReviewGrantAuthority
             ];
         })->values()->all();
 
-        return ['products' => $products, 'truncated' => $rows->count() > 50];
+        return ['products' => array_values($products), 'truncated' => $rows->count() > 50];
     }
 
     private function requireOwner(int $ownerId): void
