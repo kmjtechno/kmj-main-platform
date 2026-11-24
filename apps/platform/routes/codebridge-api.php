@@ -254,3 +254,5 @@ Route::post('codebridge/v1/jobs/claim', [CodeBridgeDeviceJobController::class, '
     ->middleware('throttle:60,1');
 Route::post('codebridge/v1/jobs/{job}/events', [CodeBridgeDeviceJobController::class, 'report'])
     ->whereUlid('job')->middleware('throttle:120,1');
+
+require __DIR__.'/codebridge-metering-pilot.php';

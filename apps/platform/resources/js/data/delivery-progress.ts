@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-hosted-metering-pilot-transport-20261124',
+        title: 'CodeBridge signed metering pilot transport',
+        state: 'active',
+        detail: 'SOURCE ONLY: default-off dedicated gateway-authenticated single-tenant git_status reservation and signed success settlement transport. No Team seat assignment or commercial activation.',
+        evidence:
+            'Separate pilot token hash and exact tenant binding required. Device key enrollment, native QA, full metering and production activation are not proven.',
+    },
+    {
         id: 'codebridge-signed-settlement-adapter-20261124',
         title: 'CodeBridge signed settlement adapter',
         state: 'active',
