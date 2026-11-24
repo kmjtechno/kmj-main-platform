@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kslp-reseller-review-grants-20261124',
+        title: 'ONE Licensing Hub: explicit product-scoped reseller review delegation',
+        state: 'active',
+        detail: 'SOURCE ONLY: owner-checked grant and revoke authority for one active issuer product and one verified member, with membership identity pinning, maximum 90-day expiry, reason-bound audit and no silent replacement. The sole permission is funding evidence review; ordinary organization roles and existing license.manage rights are unchanged. Revoked, expired, foreign, inactive and rejoined membership scopes deny review. No HTTP caller, spendable credit, paid issuance, settlement claim or deployment.',
+        evidence:
+            'Migration 2026_11_24_000100, KslpResellerReviewGrantAuthority, feature regressions covering platform-owner authorization, exact product scope, expiry, product pause, member replacement and audited idempotent revoke. Exact-head CI and independent approval required before source-only merge. Merchant settlement, actual reseller operations and release remain gated.',
+    },
+    {
         id: 'kslp-reseller-settlement-readiness-20261123',
         title: 'ONE Licensing Hub: read-only reseller settlement blocker inspection',
         state: 'active',
