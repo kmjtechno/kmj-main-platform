@@ -758,8 +758,9 @@ export default function MailCenter({
                             </p>
                             <p className="mt-2">
                                 Only authorized KMJ staff can open private team
-                                mail. External incoming mail, attachments and
-                                CC/BCC require separate verified services.
+                                mail. External Inbox uses a limited plain-text
+                                pilot; attachments and CC/BCC require separate
+                                verified services.
                             </p>
                         </div>
                     </aside>
@@ -1236,8 +1237,8 @@ export default function MailCenter({
                                             </p>
                                             <p className="text-muted-foreground mt-1 text-xs">
                                                 {activeSearch
-                                                    ? 'Clear the search above to see all messages in this folder. Search covers subject, body and recipient, not saved labels.'
-                                                    : 'Private internal messages appear in this folder. External inbound is not active.'}
+                                                    ? 'Clear the search above to see all messages in this folder. Search covers subject, body and recipient; external Inbox also searches sender.'
+                                                    : 'Internal mail appears here. See the separately scoped External Inbox above for incoming pilot records.'}
                                             </p>
                                         </div>
                                     )}
