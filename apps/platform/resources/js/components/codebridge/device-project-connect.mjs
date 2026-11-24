@@ -25,7 +25,7 @@ export function deviceProjectConnectPlan(device, projectId) {
         activeProjectIds: device.projects.map((item) => item?.id),
         pendingProjectIds: Array.isArray(device.pending_projects)
             ? device.pending_projects.map((item) => item?.id)
-            : [],
+            : undefined,
     });
     if (
         !action ||
@@ -48,6 +48,14 @@ export function deviceProjectConnectPlan(device, projectId) {
             : action.guidance,
         deviceId: device.id,
         projectId: project.id,
+        workspaceHref:
+            device.pairing_state === 'redeemed'
+                ? '/services/kmj-codebridge/workspace?' +
+                  new URLSearchParams({
+                      device: device.id,
+                      project: project.id,
+                  }).toString()
+                : null,
         proof: 'No verified gateway heartbeat is available in this dashboard.',
     };
 }
