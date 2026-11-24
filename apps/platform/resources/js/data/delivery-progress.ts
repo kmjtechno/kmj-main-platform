@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-domain-sse-progress-pilot-20261124',
+        title: 'CodeBridge public domain progress stream',
+        state: 'active',
+        detail: 'SOURCE ONLY: authenticated status progress requests can relay negotiated upstream SSE frames with bounded bytes and duration, no buffering header, and disconnect cleanup. Ordinary JSON calls and OAuth challenge handling remain unchanged.',
+        evidence:
+            'Gateway progress pilot #1200 merged. Platform proxy regression tests, exact-head CI, Elite configuration and real client streaming acceptance remain pending.',
+    },
+    {
         id: 'codebridge-explicit-windows-connector-mode-20261124',
         title: 'CodeBridge Windows setup: generic and Calibration recovery separated',
         state: 'active',
