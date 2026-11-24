@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'calibration-studio-commercial-review-20261124',
+        title: 'Calibration Studio: competitive pricing and single-hub integration proposal',
+        state: 'active',
+        detail: 'SOURCE ONLY: researched commercial-use tiers, 14-day no-card watermarked trial, 72-hour event pass, India/USD subscription candidates and purchased-version perpetual options. Owner-only private pricebook preview preserves all 15 registered profiles; Studio identity versus Calibration Pro remains unresolved. No approved catalog SKU, live trial, payment or native signed license.',
+        evidence:
+            'KMJ_CALIBRATION_STUDIO_COMMERCIAL_PLAN_20261124.md, validated private pricebook, owner product review UI and price contract tests. Native Qt verification, product identity, hardware qualification and merchant-approved terms remain required; release HOLD.',
+    },
+    {
         id: 'kslp-reseller-review-grants-20261124',
         title: 'ONE Licensing Hub: explicit product-scoped reseller review delegation',
         state: 'active',
