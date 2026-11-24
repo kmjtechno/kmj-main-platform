@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-dashboard-active-license-scope-20261124',
+        title: 'CodeBridge dashboard and workspace: active license scope',
+        state: 'active',
+        detail: 'SOURCE ONLY: the shared device directory requires an unexpired, non-revoked credential and its exact tenant-bound, active, non-revoked CodeBridge license within the validity period. Suspended or expired licenses no longer expose selectable device/project grants through this directory. No existing credential is changed, and registration remains distinct from live gateway presence.',
+        evidence:
+            'PR #1138 adds CodeBridgeProjectAssignmentHttpTest coverage for suspension, revocation, expiry, future start, mismatched customer and restored license validity. Initial application CI and PostgreSQL gates passed; fresh exact-head CI and owner review are required after this progress sync. Live telemetry and production deployment remain pending.',
+    },
+    {
         id: 'owner-product-removal-thumbnails-passkey-20261124',
         title: 'Owner Product Manager: guarded removal, list thumbnails and single passkey prompt',
         state: 'active',
