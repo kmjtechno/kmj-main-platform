@@ -65,6 +65,10 @@ return [
         'preview_enabled' => (bool) env('KMJ_WORKFORCE_MAIL_PREVIEW_ENABLED', false),
     ],
 
+    'kmj_reseller_review' => [
+        'grant_enabled' => (bool) env('KMJ_RESELLER_REVIEW_GRANT_ENABLED', false),
+    ],
+
     'kmj_developer_licensing' => [
         'enabled' => (bool) env('KMJ_DEVELOPER_LICENSING_ENABLED', false),
     ],

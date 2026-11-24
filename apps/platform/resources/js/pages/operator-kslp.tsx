@@ -1,4 +1,7 @@
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
+import KslpResellerReviewManagement, {
+    type ResellerReviewDirectory,
+} from '@/components/kslp-reseller-review-management';
 import {
     DeveloperAppsWorkspace,
     type DeveloperWorkspaceProps,
@@ -74,6 +77,7 @@ type Props = {
     customerOptions: { id: string; name: string; email: string }[];
     productEntitlements: ProductEntitlement[];
     issuerWorkspaces: IssuerWorkspace[];
+    resellerReviewDirectory?: ResellerReviewDirectory;
     developerIssuanceEnabled: boolean;
     developerWorkspace: DeveloperWorkspaceProps;
     unverifiedEmailCleanup: {
@@ -116,7 +120,13 @@ function workspaceForHash(hash: string): HubWorkspace {
     ) {
         return 'licenses';
     }
-    if (['#issuer-workspaces', '#developer-workspace'].includes(hash)) {
+    if (
+        [
+            '#issuer-workspaces',
+            '#developer-workspace',
+            '#reseller-review-management',
+        ].includes(hash)
+    ) {
         return 'developers';
     }
     if (['#unverified-accounts', '#license-audit'].includes(hash)) {
@@ -187,6 +197,7 @@ export default function OperatorKslp({
     customerOptions,
     productEntitlements,
     issuerWorkspaces,
+    resellerReviewDirectory,
     developerIssuanceEnabled,
     developerWorkspace,
     unverifiedEmailCleanup,
@@ -563,6 +574,18 @@ export default function OperatorKslp({
                         the release gate.
                     </p>
                 </section>
+                {resellerReviewDirectory && (
+                    <section
+                        id="reseller-review-management"
+                        hidden={activeWorkspace !== 'developers'}
+                        aria-label="Reseller review permissions"
+                        className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
+                    >
+                        <KslpResellerReviewManagement
+                            directory={resellerReviewDirectory}
+                        />
+                    </section>
+                )}
                 <section
                     id="developer-workspace"
                     hidden={activeWorkspace !== 'developers'}

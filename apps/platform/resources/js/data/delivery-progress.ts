@@ -1570,6 +1570,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence:
             'KslpDeveloperWorkspaceQuery, KslpResellerReviewGrantAuthority, existing developer-apps UI and HTTP regressions for issuer counts, corrupted foreign scope, ungranted member denial, exact delegated product and revoked grant. No new route or mutation authority. Full exact-head CI, independent owner review and protected release gates still required.',
     },
+    {
+        id: 'kslp-owner-reseller-review-management-20261124',
+        title: 'ONE Licensing Hub: protected owner reseller review permission management',
+        state: 'active',
+        detail: 'SOURCE ONLY: existing owner hub adds bounded eligible verified member/product selection, recorded review-grant directory, reason-bound grant and revoke actions using the single KSLP authority. Owner identity, passkey and password confirmation remain mandatory. Creation is default-disabled by a separate rollout gate; authorized emergency revocation remains available. No wallet, credits, checkout, paid licenses, role expansion or customer-key access.',
+        evidence:
+            'KslpOwnerResellerReviewDirectory, protected operator routes, existing owner Licensing Hub component and HTTP regressions covering non-owner denial, step-up, default-off, scoped grant, revoke with creation disabled and no financial side effects. Exact-head CI and independent owner source review required; no deployment or live activation.',
+    },
 ];
 
 export const verifiedDeliveryMilestones = deliveryMilestones.filter(
