@@ -97,10 +97,11 @@ export default function CodeBridgeControlCenterHub({
     onSectionChange,
     children,
 }: Props) {
-    const checkedGrants = presenceSnapshot?.entries.length ?? null;
-    const readyGrants =
-        presenceSnapshot?.entries.filter((entry) => entry.status === 'READY')
-            .length ?? null;
+    const entries = presenceSnapshot?.entries;
+    const checkedGrants = entries?.length ?? null;
+    const ready = entries?.filter((entry) => entry.status === 'READY');
+    const readyGrants = ready?.length ?? null;
+    const checkedAt = presenceSnapshot?.observedAt ?? null;
     return (
         <section
             aria-label="CodeBridge workspace management"
@@ -214,9 +215,7 @@ export default function CodeBridgeControlCenterHub({
                         />
                         <Metric
                             label="Gateway check"
-                            value={
-                                validDate(presenceSnapshot?.observedAt ?? null)
-                            }
+                            value={validDate(checkedAt)}
                             detail="Snapshot only; refresh in Devices"
                         />
                     </div>
