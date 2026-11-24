@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Services\Mail;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 /**
  * Deliberately narrow plain-text pilot, not a general MIME parser or spam filter.
@@ -28,18 +27,13 @@ final class NativeInboundTextPilot
         // Caller holds the configured owner row lock and the quarantine insert
         // in the same transaction. A duplicate event is never promoted twice.
         $now = now();
-        DB::table('kmj_mail_messages')->insert([
+        DB::table('kmj_mail_external_inbox')->insert([
             'mailbox_user_id' => $ownerId,
-            'sender_user_id' => null,
-            'recipient_user_id' => $ownerId,
             'sender_email' => $parsed['sender'],
             'recipient_email' => $recipient,
-            'thread_id' => (string) Str::uuid(),
-            'folder' => 'inbox',
             'subject' => $parsed['subject'],
             'body' => $parsed['body'],
-            'client_key' => $event,
-            'delivery_state' => 'inbound_unverified',
+            'event_id' => $event,
             'read_at' => null,
             'created_at' => $now,
             'updated_at' => $now,
