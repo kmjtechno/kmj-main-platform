@@ -38,7 +38,19 @@ DAILY=Path("/var/backups/kmj-elite-daily")
 VAULT=Path("/var/backups/kmj-elite-offsite-encrypted")
 STAGE=Path("/var/backups/kmj-v3-private-stage")
 HEALTH=Path("/usr/local/sbin/kmj-elite-health-check")
-HEALTH_SHA="2a8cb007acaea2ef8d240ee82a95b13314799dcea36c0cac594e7e5d32acca20"
+# Re-pinned 2026-11-24. The owner edited this file on 2026-11-21 17:50 IST
+# (original kept as kmj-elite-health-check.bak.20261121T122011Z, sha256
+# 2a8cb007...cca20, 1840 bytes, 29 lines). The only change is the offsite timer
+# check: line 26 became an 8-line if/elif that also passes while the timer is
+# disabled by the owner. Everything else is identical. The whole file is still
+# pinned by SHA-256; the line checks below are a second layer.
+HEALTH_SHA="451c7dfb8563dc405e823f8864fe6372878038007dbf97e57e0034397897f3e3"
+HEALTH_LINES=36
+HEALTH_BYTES=2219
+HEALTH_MAX_BYTES=4096
+HEALTH_DAILY_LINE=24      # find .../kmj-elite-daily ... platform.dump
+HEALTH_METADATA_LINE=33   # test -s /root/kmj-bootstrap/offsite-age-recipients.txt
+HEALTH_VAULT_LINE=34      # find .../kmj-elite-offsite-encrypted ... *.tar.age
 UNIT="kmj-elite-health-check.service"
 PINS={
  "KMJ_OFFSITE_V3_DUAL_ARTIFACT_POLICY_REVIEW_20261115.py":
@@ -172,12 +184,12 @@ def parse_exact_find(line):
     return (tok[1],opts["-mindepth"],opts["-maxdepth"],opts["-name"])
 
 def health_contract():
-    body=private_bytes(HEALTH,HEALTH_SHA,uid=0,maximum=2048)
+    body=private_bytes(HEALTH,HEALTH_SHA,uid=0,maximum=HEALTH_MAX_BYTES)
     lines=body.decode("utf-8").splitlines()
-    if len(lines)!=29 or len(body)!=1840:
+    if len(lines)!=HEALTH_LINES or len(body)!=HEALTH_BYTES:
         raise Deny("HEALTH_PINNED_SOURCE_CHANGED")
-    a=parse_exact_find(lines[24])
-    b=parse_exact_find(lines[27])
+    a=parse_exact_find(lines[HEALTH_DAILY_LINE])
+    b=parse_exact_find(lines[HEALTH_VAULT_LINE])
     if (a[:3]!=(str(DAILY),"2","2")
         or b[:3]!=(str(VAULT),"1","1")):
         raise Deny("HEALTH_ARCHIVE_PATH_OR_DEPTH_CHANGED")
@@ -185,7 +197,7 @@ def health_contract():
         raise Deny("HEALTH_DAILY_GLOB_NOT_SATISFIED_BY_REAL_SNAPSHOT")
     if not fnmatch.fnmatchcase("20261115T120000Z.tar.age",b[3]):
         raise Deny("HEALTH_VAULT_GLOB_NOT_SATISFIED")
-    t=shlex.split(lines[26])
+    t=shlex.split(lines[HEALTH_METADATA_LINE])
     if len(t)!=3 or t[:2]!=["test","-s"] or not t[2].startswith("/"):
         raise Deny("HEALTH_METADATA_SOURCE_CHANGED")
     file=os.lstat(t[2])
