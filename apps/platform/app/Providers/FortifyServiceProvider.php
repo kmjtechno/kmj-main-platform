@@ -90,6 +90,11 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challenge'));
         /* @end-chisel-2fa */
 
+        $this->app->singleton(
+            \Laravel\Passkeys\Contracts\PasskeyLoginResponse::class,
+            \App\Http\Responses\ConfirmedPasskeyLoginResponse::class,
+        );
+
         /* @chisel-password-confirmation */
         Fortify::confirmPasswordView(fn () => Inertia::render('auth/confirm-password'));
         /* @end-chisel-password-confirmation */
