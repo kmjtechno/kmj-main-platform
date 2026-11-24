@@ -24,6 +24,14 @@ export type CodeBridgeSection =
     | 'clients'
     | 'settings';
 
+export type HostedUsagePreview = {
+    status: 'proposal_only';
+    meter_live: false;
+    used_calls: null;
+    remaining_calls: null;
+    next_reset_at: null;
+};
+
 type Props = {
     organizationName: string;
     plan: string | null;
@@ -35,6 +43,7 @@ type Props = {
     authorizedClientGrants: number;
     oauthReady: boolean;
     presenceSnapshot?: PresenceSnapshot | null;
+    hostedUsagePreview?: HostedUsagePreview | null;
     canManageOwnerPlan: boolean;
     activeSection: CodeBridgeSection;
     onSectionChange: (section: CodeBridgeSection) => void;
@@ -92,6 +101,7 @@ export default function CodeBridgeControlCenterHub({
     authorizedClientGrants,
     oauthReady,
     presenceSnapshot,
+    hostedUsagePreview,
     canManageOwnerPlan,
     activeSection,
     onSectionChange,
@@ -292,7 +302,21 @@ export default function CodeBridgeControlCenterHub({
                         <Metric
                             label="Monthly execution usage"
                             value="Not reported"
-                            detail="No verified monthly meter or reset date"
+                            detail={
+                                hostedUsagePreview?.status === 'proposal_only'
+                                    ? 'Meter not activated'
+                                    : 'No verified meter response'
+                            }
+                        />
+                        <Metric
+                            label="Monthly remaining calls"
+                            value="Not reported"
+                            detail="Verified receipt settlement required"
+                        />
+                        <Metric
+                            label="Next monthly reset"
+                            value="Not reported"
+                            detail="UTC monthly policy; not activated"
                         />
                     </div>
                     <p className="text-muted-foreground mt-3 text-xs">

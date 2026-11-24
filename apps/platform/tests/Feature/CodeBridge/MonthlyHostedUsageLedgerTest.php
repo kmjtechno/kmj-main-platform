@@ -174,4 +174,22 @@ final class MonthlyHostedUsageLedgerTest extends TestCase
         $this->assertDatabaseCount('entitlements', 0);
         $this->assertDatabaseCount('kslp_licenses', 0);
     }
+    public function test_internal_snapshot_is_seat_scoped_and_never_a_live_meter(): void
+    {
+        $ledger = app(MonthlyHostedUsageLedger::class);
+        $organization = (string) Str::uuid();
+        $ledger->reserveTrusted($organization, 'seat:alice', (string) Str::uuid(), 'team', $this->month());
+        $ledger->reserveTrusted($organization, 'seat:bob', (string) Str::uuid(), 'team', $this->month());
+
+        $result = $ledger->snapshotTrusted($organization, 'seat:alice', 'team', $this->month());
+        $this->assertSame(299999, $result['recorded_remaining']);
+        $this->assertSame(1, $result['recorded_reserved']);
+        $this->assertSame('2026-12-01T00:00:00+00:00', $result['policy_reset_at']);
+        $this->assertFalse($result['meter_live']);
+        $this->assertFalse($result['billable']);
+        $this->assertNull($ledger->snapshotTrusted($organization, 'seat:unknown', 'team', $this->month())['recorded_remaining']);
+        $this->assertNull($ledger->snapshotTrusted($organization, 'seat:alice', 'pro', $this->month())['recorded_remaining']);
+        $this->assertNull($ledger->snapshotTrusted($organization, 'seat:alice', 'team', $this->month('2026-12-01T00:00:00Z'))['recorded_remaining']);
+        $this->assertDatabaseCount('codebridge_usage_periods', 2);
+    }
 }

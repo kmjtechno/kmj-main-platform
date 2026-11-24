@@ -3,6 +3,7 @@ import '../../../css/codebridge-premium.css';
 import { useEffect, useRef, useState } from 'react';
 import CodeBridgeControlCenterHub, {
     type CodeBridgeSection,
+    type HostedUsagePreview,
 } from '@/components/codebridge/control-center-hub';
 import DeviceControlCenter, {
     type CodeBridgeDevice,
@@ -63,6 +64,7 @@ type Service = {
     managed_devices: number;
     devices: RegisteredDevice[];
     presence_snapshot?: PresenceSnapshot | null;
+    hosted_usage_preview?: HostedUsagePreview | null;
     pending_pairings: number;
     connected_clients: ConnectedClient[];
     access_token_ttl_seconds: number;
@@ -326,6 +328,7 @@ export default function CodeBridgeService({
                     authorizedClientGrants={service.connected_clients.length}
                     oauthReady={service.oauth_ready}
                     presenceSnapshot={service.presence_snapshot}
+                    hostedUsagePreview={service.hosted_usage_preview}
                     canManageOwnerPlan={canManageOwnerPlan}
                     activeSection={activeSection}
                     onSectionChange={setActiveSection}
