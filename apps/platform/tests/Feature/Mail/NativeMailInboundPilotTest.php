@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Mail;
 
 use App\Models\User;
+use App\Services\Mail\NativeMailService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -63,6 +64,64 @@ final class NativeMailInboundPilotTest extends TestCase
         $owner->forceFill(['is_platform_owner' => false])->save();
         $this->receive(self::MIME)->assertForbidden();
         $this->assertDatabaseCount('kmj_mail_inbound_quarantine', 0);
+    }
+
+    public function test_text_publication_is_separate_and_preserves_real_external_sender(): void
+    {
+        $owner = $this->enablePilot();
+        config(['kmj-mail-inbound.publish_text' => true]);
+        $event = (string) Str::uuid();
+        $this->receive(self::MIME, event: $event)->assertCreated();
+        $this->receive(self::MIME, event: $event)->assertOk();
+        $this->assertDatabaseCount('kmj_mail_inbound_quarantine', 1);
+        $this->assertDatabaseCount('kmj_mail_messages', 1);
+        $this->assertDatabaseHas('kmj_mail_messages', [
+            'mailbox_user_id' => $owner->id,
+            'sender_user_id' => null,
+            'sender_email' => self::SENDER,
+            'recipient_email' => self::RECIPIENT,
+            'folder' => 'inbox',
+            'delivery_state' => 'inbound_unverified',
+            'read_at' => null,
+            'body' => 'Private message body.',
+        ]);
+        $mail = app(NativeMailService::class);
+        $mailbox = $mail->mailbox($owner, 'inbox', self::SENDER);
+        $this->assertSame(1, $mailbox['total']);
+        $this->assertSame(1, $mailbox['unread']);
+        $this->assertNull($mailbox['items'][0]['sender_user_id']);
+        $thread = $mail->thread($owner, (int) $mailbox['items'][0]['id']);
+        $this->assertNull($thread['items'][0]['from_id']);
+        $this->assertSame(self::SENDER, $thread['items'][0]['sender_email']);
+    }
+
+    public function test_unsupported_mime_and_spoofed_header_remain_quarantined(): void
+    {
+        $this->enablePilot();
+        config(['kmj-mail-inbound.publish_text' => true]);
+        $html = str_replace("Subject: Pilot message\r\n", "Subject: HTML\r\nContent-Type: text/html\r\n", self::MIME);
+        $spoof = str_replace('From: sender@example.net', 'From: different@example.net', self::MIME);
+        $multipart = str_replace("Subject: Pilot message\r\n", "Subject: Multipart\r\nContent-Type: multipart/mixed; boundary=abc\r\n", self::MIME);
+        $attachment = str_replace("Subject: Pilot message\r\n", "Subject: Attachment\r\nContent-Disposition: attachment; filename=unsafe.txt\r\n", self::MIME);
+        foreach ([$html, $spoof, $multipart, $attachment] as $raw) {
+            $this->receive($raw)->assertCreated();
+        }
+        $this->assertDatabaseCount('kmj_mail_inbound_quarantine', 4);
+        $this->assertDatabaseCount('kmj_mail_messages', 0);
+    }
+
+    public function test_plain_text_pilot_decodes_bounded_transfer_encoding(): void
+    {
+        $this->enablePilot();
+        config(['kmj-mail-inbound.publish_text' => true]);
+        $raw = "From: Sender <sender@example.net>\r\nSubject: Encoded text\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n".base64_encode('Hello from outside.');
+        $this->receive($raw)->assertCreated();
+        $this->assertDatabaseHas('kmj_mail_messages', [
+            'sender_user_id' => null,
+            'subject' => 'Encoded text',
+            'body' => 'Hello from outside.',
+            'folder' => 'inbox',
+        ]);
     }
 
     private function enablePilot(): User
