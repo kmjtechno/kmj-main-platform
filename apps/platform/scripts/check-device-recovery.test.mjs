@@ -6,6 +6,7 @@ void test('only exact Calibration Pro Windows enrollment gets the scoped install
     for (const platform of ['win32', 'Windows', ' WIN32 ']) {
         const action = deviceRecoveryAction(platform, {
             deviceId: 'kmj-homeoffice-desktop-5fvjmet',
+            activeProjectIds: ['kmj-calibration-pro'],
             pendingProjectIds: [],
         });
         assert.equal(action.href, '/install-codebridge-windows.cmd');
@@ -17,6 +18,7 @@ void test('only exact Calibration Pro Windows enrollment gets the scoped install
 void test('VIOSO pending on Calibration Pro registration cannot download the Calibration Pro installer', () => {
     const action = deviceRecoveryAction('win32', {
         deviceId: 'kmj-homeoffice-desktop-5fvjmet',
+        activeProjectIds: ['kmj-calibration-pro'],
         pendingProjectIds: ['vioso-clone'],
     });
     assert.equal(action.href, '/codebridge/pair');
@@ -63,8 +65,25 @@ void test('unknown platforms require an explicit setup choice', () => {
         'not-windows',
     ]) {
         const action = deviceRecoveryAction(platform);
-        assert.equal(action.href, '/codebridge-connect.html');
+        assert.equal(action.href, '/codebridge/pair');
         assert.equal(action.download, undefined);
         assert.equal(action.label, 'Choose device setup');
+    }
+});
+
+void test('the same workstation ID cannot authorize an unrelated or multi-project installer', () => {
+    for (const activeProjectIds of [
+        undefined,
+        [],
+        ['kmj-codebridge'],
+        ['kmj-calibration-pro', 'kmj-codebridge'],
+    ]) {
+        const action = deviceRecoveryAction('win32', {
+            deviceId: 'kmj-homeoffice-desktop-5fvjmet',
+            activeProjectIds,
+            pendingProjectIds: [],
+        });
+        assert.equal(action.href, '/codebridge/pair');
+        assert.equal(action.download, undefined);
     }
 });
