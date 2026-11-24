@@ -1,6 +1,10 @@
 <?php
 
 return [
+    // Single-tenant, read-only signed receipt pilot. No commercial activation.
+    'hosted_metering_pilot_enabled' => (bool) env('CODEBRIDGE_HOSTED_METERING_PILOT_ENABLED', false),
+    'hosted_metering_pilot_tenant' => env('CODEBRIDGE_HOSTED_METERING_PILOT_TENANT', ''),
+    'hosted_metering_pilot_token_hash' => env('CODEBRIDGE_HOSTED_METERING_PILOT_TOKEN_HASH', ''),
     'enabled' => (bool) env('CODEBRIDGE_LICENSE_API_ENABLED', false),
     // Private Elite loopback reader only. Never pass this token to the browser.
     'dashboard_presence_enabled' => (bool) env('CODEBRIDGE_DASHBOARD_PRESENCE_ENABLED', false),
