@@ -1,10 +1,11 @@
 name: Server Infrastructure CI
 
 on:
+  # Runs on EVERY push: the one-click release gate (kmj-fast-release prepare/release)
+  # requires this workflow on the exact main head, and a path-filtered push run is
+  # ABSENT for any commit that does not touch infra/server. Pull requests stay
+  # path-filtered to save CI minutes.
   push:
-    paths:
-      - 'infra/server/**'
-      - '.github/workflows/server-infra-ci.yml'
   pull_request:
     paths:
       - 'infra/server/**'
