@@ -1564,11 +1564,11 @@ export const deliveryMilestones: DeliveryMilestone[] = [
     },
     {
         id: 'kslp-product-evidence-workspace-20261124',
-        title: 'ONE Licensing Hub: product-level reseller evidence in developer workspace',
+        title: 'ONE Licensing Hub: issuer and delegated reseller evidence workspace',
         state: 'active',
-        detail: 'SOURCE ONLY: existing authorized issuer application cards show aggregate unverified zero-credit pending evidence by exact organization and licensed product. Missing evidence schema remains unavailable, not a zero balance. Mismatched ledger metadata, foreign tenants and ordinary ungranted members cannot expose counts. No order identifiers, payment details, spendable credits, paid issuance, new route or role expansion.',
+        detail: 'SOURCE ONLY: authorized issuer cards show exact tenant/product pending unverified zero-credit evidence. Delegated verified members get a distinct review-only section in the same workspace via the merged product grant authority. A single scoped SQL query matches user, current membership identity, permission, active issuer/product, expiry and revocation; no foreign products, customer keys, payment identifiers, wallet balance or issuance privileges. Missing evidence schema is unavailable and bounded result truncation is explicit.',
         evidence:
-            'KslpDeveloperWorkspaceQuery, existing developer-apps workspace and HTTP feature tests for exact product counts, tenant isolation, corrupt foreign scope and ordinary-member denial. Explicit delegated reseller review grant remains separate in PR #1109; independent approval, exact-head CI and production release gates required.',
+            'KslpDeveloperWorkspaceQuery, KslpResellerReviewGrantAuthority, existing developer-apps UI and HTTP regressions for issuer counts, corrupted foreign scope, ungranted member denial, exact delegated product and revoked grant. No new route or mutation authority. Full exact-head CI, independent owner review and protected release gates still required.',
     },
 ];
 
