@@ -5,12 +5,16 @@ on:
     paths:
       - 'scripts/verify_backup_bundle.sh'
       - 'scripts/test_restore_verification_contract.py'
+      - 'scripts/kmj-owner-key-backup-vault.sh'
+      - 'scripts/test_kmj_owner_key_backup_vault.py'
       - '.github/workflows/backup-archive-contract.yml'
   push:
     branches: [main]
     paths:
       - 'scripts/verify_backup_bundle.sh'
       - 'scripts/test_restore_verification_contract.py'
+      - 'scripts/kmj-owner-key-backup-vault.sh'
+      - 'scripts/test_kmj_owner_key_backup_vault.py'
       - '.github/workflows/backup-archive-contract.yml'
   workflow_dispatch:
 
@@ -45,3 +49,13 @@ jobs:
           echo 'ARCHIVE_CONTRACT=PASS'
           echo 'REAL_OFFSITE_DOWNLOAD=NOT_VERIFIED'
           echo 'PRODUCTION_DATABASE_RESTORE=NOT_VERIFIED'
+
+      - name: Prove the owner-key backup vault with fixtures
+        run: |
+          set -Eeuo pipefail
+          sudo apt-get -qq update
+          sudo apt-get -qq -y install age
+          bash -n scripts/kmj-owner-key-backup-vault.sh
+          python3 -B scripts/test_kmj_owner_key_backup_vault.py -v
+          echo 'OWNER_KEY_VAULT_FIXTURES=PASS'
+          echo 'REAL_OWNER_DECRYPT=NOT_VERIFIED'
