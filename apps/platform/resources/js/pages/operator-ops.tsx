@@ -663,6 +663,18 @@ export default function OperatorOps({
                             ? 'Submitting owner request...'
                             : 'Request approved activation'}
                     </button>
+                    {!canRequestActivation && (
+                        <p
+                            className="text-muted-foreground mt-2 text-[11px]"
+                            data-testid="activation-disabled-reason"
+                        >
+                            Disabled: this enables only when the release state
+                            is preflight_ready_only with READY_APPROVED_RELEASE
+                            for the approved SHA. Current state:{' '}
+                            {String(eliteRelease.status)} /{' '}
+                            {String(eliteRelease.reason)}.
+                        </p>
+                    )}
                     <label className="mt-4 flex max-w-xl items-start gap-2 text-xs">
                         <input
                             type="checkbox"
@@ -692,6 +704,17 @@ export default function OperatorOps({
                             ? 'Submitting admission request...'
                             : 'Request release admission'}
                     </button>
+                    {(!canRequestAdmission || !qaAttested) && (
+                        <p
+                            className="text-muted-foreground mt-2 text-[11px]"
+                            data-testid="admission-disabled-reason"
+                        >
+                            Disabled:{' '}
+                            {!canRequestAdmission
+                                ? 'this enables only while the release state is blocked with BLOCKED_ACCEPTANCE_SCHEMA.'
+                                : 'tick the staging QA confirmation above first.'}
+                        </p>
+                    )}
                     <p className="text-muted-foreground mt-2 text-[11px]">
                         Enabled only while the fixed root preflight is waiting
                         for admission evidence. The root broker independently
@@ -762,6 +785,21 @@ export default function OperatorOps({
                             ? 'Submitting prepare request...'
                             : 'Request release prepare'}
                     </button>
+                    {(!canRequestPrepare ||
+                        !backupRollbackAttested ||
+                        !migrateAccepted) && (
+                        <p
+                            className="text-muted-foreground mt-2 text-[11px]"
+                            data-testid="prepare-disabled-reason"
+                        >
+                            Disabled:{' '}
+                            {prepareBusy
+                                ? 'a prepare is already running.'
+                                : !canRequestPrepare
+                                  ? 'the main head is unknown or is already the current release.'
+                                  : 'tick both confirmations above first.'}
+                        </p>
+                    )}
                     <p className="text-muted-foreground mt-2 text-[11px]">
                         This only queues an intent. The root broker re-verifies
                         main head, exact-head CI and the pinned helper, never
