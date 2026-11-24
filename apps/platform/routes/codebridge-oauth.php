@@ -84,16 +84,64 @@ Route::post('mcp', function (Request $request, OAuthServer $server) {
         }
     }
 
+    // Only the negotiated read-only progress pilot uses an unbuffered body.
+    // The gateway remains the authority for authentication and project scope.
+    $progressToken = $request->json('params._meta.progressToken');
+    $acceptTypes = array_map(fn (string $type): string => strtolower(trim($type)), explode(',', $headers['Accept']));
+    $streamProgress = $request->json('method') === 'tools/call'
+        && $request->json('params.name') === 'render_codebridge_status'
+        && isset($headers['Authorization'])
+        && in_array('application/json', $acceptTypes, true)
+        && in_array('text/event-stream', $acceptTypes, true)
+        && (is_int($progressToken) || (is_string($progressToken) && strlen($progressToken) > 0 && strlen($progressToken) <= 128));
+
     try {
-        $upstreamResponse = Http::timeout(25)
+        $pending = Http::timeout(25)
             ->connectTimeout(5)
             ->withoutRedirecting()
             ->withHeaders($headers)
-            ->withBody($request->getContent(), $headers['Content-Type'])
-            ->post($upstream.'/mcp');
+            ->withBody($request->getContent(), $headers['Content-Type']);
+
+        if ($streamProgress) {
+            $pending = $pending->withOptions(['stream' => true, 'read_timeout' => 25]);
+        }
+
+        $upstreamResponse = $pending->post($upstream.'/mcp');
     } catch (Throwable) {
         return response()->json(['error' => 'CODEBRIDGE_GATEWAY_UNAVAILABLE'], 503)
             ->header('Cache-Control', 'no-store');
+    }
+
+    $contentType = strtolower(trim(explode(';', $upstreamResponse->header('Content-Type'))[0]));
+    if ($streamProgress && $upstreamResponse->status() === 200 && $contentType === 'text/event-stream') {
+        $body = $upstreamResponse->toPsrResponse()->getBody();
+
+        return response()->stream(function () use ($body): void {
+            $remaining = 4 * 1024 * 1024;
+            $deadline = microtime(true) + 25;
+            try {
+                while (! $body->eof() && ! connection_aborted() && $remaining > 0 && microtime(true) < $deadline) {
+                    $chunk = $body->read(min(4096, $remaining));
+                    if ($chunk === '') {
+                        break;
+                    }
+                    $remaining -= strlen($chunk);
+                    echo $chunk;
+                    if (ob_get_level() > 0) {
+                        ob_flush();
+                    }
+                    flush();
+                }
+            } catch (Throwable) {
+                // Close an incomplete stream; never manufacture a success result.
+            } finally {
+                $body->close();
+            }
+        }, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-store',
+            'X-Accel-Buffering' => 'no',
+        ]);
     }
 
     // Older gateway versions embed OAuth denials in HTTP 200 MCP tool
