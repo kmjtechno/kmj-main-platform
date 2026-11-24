@@ -108,9 +108,7 @@ final class NativeExternalMailService
                 $anchor = DB::table('kmj_mail_messages')
                     ->where('mailbox_user_id', $id)->where('id', $replyToId)->first();
                 abort_if($anchor === null, 404);
-                $replyAddress = $anchor->sender_user_id === null
-                    ? $anchor->sender_email : $anchor->recipient_email;
-                abort_unless(is_string($replyAddress) && strtolower($replyAddress) === $email, 403);
+                abort_unless((string) $anchor->recipient_email === $email, 403);
                 $thread = (string) $anchor->thread_id;
             }
 
@@ -333,7 +331,6 @@ final class NativeExternalMailService
         $limit = $this->owner->allows($user) ? 20 : 5;
         $used = DB::table('kmj_mail_messages')
             ->where('mailbox_user_id', (int) $user->getKey())
-            ->where('sender_user_id', (int) $user->getKey())
             ->whereNotNull('recipient_email')
             ->whereNotNull('delivery_state')
             ->where('created_at', '>=', now()->startOfDay())
