@@ -1563,6 +1563,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Original reviewed pricebook #1061 code, tests and source-only research were ported onto unchanged matching current-main base; versioned private JSON and service fail closed when any commercial enablement flag is true. Owner margin, tax, actual merchant rate, per-product signing, real customer and native-device validation, exact-head CI/review and protected Elite release remain unverified.',
     },
     {
+        id: 'kslp-refund-reference-correlation-20261124',
+        title: 'ONE Licensing Hub: payment-reference reversal correlation',
+        state: 'active',
+        detail: 'SOURCE ONLY: signed Razorpay refund/dispute-only webhook receipts retain sanitized payment references. The existing settlement inspector correlates orderless reversal signals only to matching provider/order reconciled capture evidence, never an explicitly foreign order, payment or provider. Review remains blocked; no settlement proof, funds, automatic refund or paid licensing.',
+        evidence:
+            'PaymentWebhookReceiver, KslpResellerSettlementReadinessInspector and regression coverage for signed deduplicated reversal receipts, cross-provider/order/payment isolation and absence of reconciled capture evidence. Fresh CI and owner review required; no production activation.',
+    },
+    {
         id: 'kslp-product-evidence-workspace-20261124',
         title: 'ONE Licensing Hub: issuer and delegated reseller evidence workspace',
         state: 'active',
