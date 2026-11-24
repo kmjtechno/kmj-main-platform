@@ -134,7 +134,17 @@ final class KslpCommercialOrderTermsTest extends TestCase
         [$org, $product, $order, $catalog] = $this->scope($actor, 'CHECKOUT');
         $terms = app(KslpCommercialOrderTerms::class);
         $checkout = app(RazorpayCheckoutOrders::class);
-        Http::fake();
+        Http::fake([
+            'api.razorpay.com/v1/orders' => fn (Request $request) => Http::response([
+                'id' => 'order_TERMS1',
+                'receipt' => $request['receipt'],
+                'currency' => 'INR',
+                'amount' => $request['amount'],
+                'status' => 'created',
+                'amount_paid' => 0,
+                'amount_due' => $request['amount'],
+            ]),
+        ]);
 
         try {
             $checkout->openReviewed($order, $product, 25000);
@@ -168,17 +178,6 @@ final class KslpCommercialOrderTermsTest extends TestCase
             'encrypted_client_secret' => Crypt::encryptString('sandbox-secret-value'),
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
-        Http::fake([
-            'api.razorpay.com/v1/orders' => fn (Request $request) => Http::response([
-                'id' => 'order_TERMS1',
-                'receipt' => $request['receipt'],
-                'currency' => 'INR',
-                'amount' => $request['amount'],
-                'status' => 'created',
-                'amount_paid' => 0,
-                'amount_due' => $request['amount'],
-            ]),
         ]);
         $created = $checkout->openReviewed($order, $product, 25000);
         self::assertSame('order_TERMS1', $created['provider_order_id']);
