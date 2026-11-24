@@ -403,3 +403,37 @@ void test('generic Windows action opens scoped device selection, not a Calibrati
     assert.match(ui, /Download Calibration Pro connector/);
     assert.match(deviceCenter, /P520 Calibration setup/);
 });
+
+void test('redeemed project opens exact authorized workspace in one click; pending and stale pairings cannot', () => {
+    const device = {
+        id: 'kmj-elite',
+        platform: 'linux',
+        projects: [{ id: 'kmj-codebridge', name: 'CodeBridge' }],
+        pairing_state: 'redeemed',
+    };
+    assert.equal(
+        deviceProjectConnectPlan(device, 'kmj-codebridge')?.workspaceHref,
+        '/services/kmj-codebridge/workspace?device=kmj-elite&project=kmj-codebridge',
+    );
+    assert.equal(deviceProjectConnectPlan(device, 'other'), null);
+    for (const pairing_state of [
+        'approved_unredeemed',
+        'approval_expired',
+        'unknown',
+        undefined,
+    ]) {
+        assert.equal(
+            deviceProjectConnectPlan(
+                { ...device, pairing_state },
+                'kmj-codebridge',
+            )?.workspaceHref,
+            null,
+        );
+    }
+    assert.match(deviceCenter, /href=\{connectPlan\.workspaceHref\}/);
+    assert.match(deviceCenter, /Open device \+ project/);
+    assert.match(deviceCenter, /Current plan/);
+    assert.match(deviceCenter, /License valid until/);
+    assert.match(deviceCenter, /Account permissions/);
+    assert.match(deviceCenter, /Monthly usage: Not reported/);
+});
