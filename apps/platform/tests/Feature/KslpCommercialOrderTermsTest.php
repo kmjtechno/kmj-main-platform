@@ -8,9 +8,13 @@ use App\Models\User;
 use App\Services\AuthorityBootstrapper;
 use App\Services\Licensing\Kslp\KslpCommercialOrderTerms;
 use App\Services\Licensing\Kslp\KslpIssuerSubscriptionAuthority;
+use App\Services\Payments\RazorpayCheckoutOrders;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use KMJ\MainPlatform\Catalog\Models\Product;
 use KMJ\MainPlatform\Commerce\Services\CommercialOrderService;
@@ -121,6 +125,97 @@ final class KslpCommercialOrderTermsTest extends TestCase
         $this->expectException(DomainException::class);
         $this->expectExceptionMessage('KSLP_ORDER_TERMS_ACCESS_DENIED');
         $terms->inspect($other->id, $org, $product, $order);
+    }
+
+    public function test_reviewed_checkout_requires_exact_binding_before_any_provider_call(): void
+    {
+        $owner = $this->owner();
+        $actor = User::factory()->create(['email_verified_at' => now()]);
+        [$org, $product, $order, $catalog] = $this->scope($actor, 'CHECKOUT');
+        $terms = app(KslpCommercialOrderTerms::class);
+        $checkout = app(RazorpayCheckoutOrders::class);
+        Http::fake();
+
+        try {
+            $checkout->openReviewed($order, $product, 25000);
+            self::fail('Missing reviewed terms must deny checkout.');
+        } catch (DomainException $exception) {
+            self::assertSame('RAZORPAY_REVIEWED_TERMS_REQUIRED', $exception->getMessage());
+        }
+
+        $terms->record($owner, $org, $product, $order, $catalog, 'INR', 25000, 'Review sandbox checkout terms');
+        foreach ([
+            fn () => $checkout->openReviewed($order, 'wrong-product', 25000),
+            fn () => $checkout->openReviewed($order, $product, 24999),
+            fn () => $checkout->open($order, 24999),
+        ] as $attempt) {
+            try {
+                $attempt();
+                self::fail('Mismatched terms must fail before provider access.');
+            } catch (DomainException $exception) {
+                self::assertSame('RAZORPAY_REVIEWED_TERMS_MISMATCH', $exception->getMessage());
+            }
+        }
+        Http::assertNothingSent();
+        $this->assertDatabaseCount('commerce_provider_order_intents', 0);
+
+        DB::table('payment_gateway_settings')->insert([
+            'provider' => 'razorpay',
+            'environment' => 'sandbox',
+            'merchant_status' => 'not_verified',
+            'international_requested' => false,
+            'encrypted_client_id' => Crypt::encryptString('rzp_test_ABC123'),
+            'encrypted_client_secret' => Crypt::encryptString('sandbox-secret-value'),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        Http::fake([
+            'api.razorpay.com/v1/orders' => fn (Request $request) => Http::response([
+                'id' => 'order_TERMS1',
+                'receipt' => $request['receipt'],
+                'currency' => 'INR',
+                'amount' => $request['amount'],
+                'status' => 'created',
+                'amount_paid' => 0,
+                'amount_due' => $request['amount'],
+            ]),
+        ]);
+        $created = $checkout->openReviewed($order, $product, 25000);
+        self::assertSame('order_TERMS1', $created['provider_order_id']);
+        self::assertSame($created, $checkout->openReviewed($order, $product, 25000));
+        Http::assertSentCount(1);
+        $this->assertDatabaseHas('commerce_orders', ['id' => $order, 'status' => 'requested']);
+        $this->assertDatabaseHas('commerce_provider_orders', [
+            'commercial_order_id' => $order, 'environment' => 'sandbox',
+        ]);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+        $this->assertDatabaseCount('kslp_reseller_credit_ledger', 0);
+    }
+
+    public function test_existing_unresolved_provider_intent_prevents_retroactive_terms(): void
+    {
+        $owner = $this->owner();
+        $actor = User::factory()->create(['email_verified_at' => now()]);
+        [$org, $product, $order, $catalog] = $this->scope($actor, 'INTENT');
+        DB::table('commerce_provider_order_intents')->insert([
+            'commercial_order_id' => $order,
+            'provider' => 'razorpay',
+            'amount_minor' => 25000,
+            'currency' => 'INR',
+            'creation_status' => 'creating',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        try {
+            app(KslpCommercialOrderTerms::class)->record(
+                $owner, $org, $product, $order, $catalog, 'INR', 25000, 'Attempt retroactive order terms'
+            );
+            self::fail('Uncertain provider creation must prevent retroactive terms.');
+        } catch (DomainException $exception) {
+            self::assertSame('KSLP_ORDER_TERMS_ORDER_ALREADY_PROCESSED', $exception->getMessage());
+        }
+        $this->assertDatabaseCount('kslp_commercial_order_terms', 0);
+        $this->assertDatabaseCount('commerce_provider_orders', 0);
     }
 
     public function test_terms_cannot_be_overwritten_or_retrofitted_after_confirmation(): void
