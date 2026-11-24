@@ -86,6 +86,7 @@ final class CodeBridgeAgentCompatibilityProxyTest extends TestCase
 
         Http::assertNothingSent();
     }
+
     public function test_negotiated_status_progress_preserves_upstream_sse_frames(): void
     {
         $frames = "event: message\ndata: {\"jsonrpc\":\"2.0\",\"method\":\"notifications/progress\",\"params\":{\"progressToken\":0,\"progress\":1}}\n\nevent: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[]}}\n\n";
@@ -104,7 +105,7 @@ final class CodeBridgeAgentCompatibilityProxyTest extends TestCase
             ],
         ], ['Authorization' => 'Bearer test-token', 'Accept' => 'application/json, text/event-stream']);
 
-        $response->assertOk()->assertHeader('Content-Type', 'text/event-stream')->assertHeader('X-Accel-Buffering', 'no');
+        $response->assertOk()->assertHeader('Content-Type', 'text/event-stream; charset=utf-8')->assertHeader('X-Accel-Buffering', 'no');
         self::assertSame($frames, $response->streamedContent());
         Http::assertSent(fn (Request $request): bool => $request->hasHeader('Authorization', 'Bearer test-token')
             && $request->hasHeader('Accept', 'application/json, text/event-stream'));
@@ -131,6 +132,4 @@ final class CodeBridgeAgentCompatibilityProxyTest extends TestCase
             ->assertUnauthorized()
             ->assertHeader('WWW-Authenticate', 'Bearer error="invalid_token"')
             ->assertJson(['error' => 'UNAUTHORIZED']);
-    }
-
-}
+    }}
