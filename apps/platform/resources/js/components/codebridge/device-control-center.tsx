@@ -373,9 +373,8 @@ export default function DeviceControlCenter({
                             {connectPlan.label}
                         </a>
                         <p className="text-muted-foreground max-w-xl text-xs leading-5">
-                            {connectPlan.guidance} {connectPlan.proof}{' '}
-                            Opening a project does not start or reconnect its
-                            local agent.
+                            {connectPlan.guidance} {connectPlan.proof} Opening a
+                            project does not start or reconnect its local agent.
                         </p>
                     </div>
                 ) : (
