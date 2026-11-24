@@ -324,6 +324,10 @@ export function ManagedProductEditor({
                 product.id,
     );
     const [studioBusy, setStudioBusy] = useState(false);
+    const [removing, setRemoving] = useState(false);
+    const [confirmSlug, setConfirmSlug] = useState('');
+    const [removeError, setRemoveError] = useState<string | null>(null);
+    const [removeBusy, setRemoveBusy] = useState(false);
     const form = useForm({
         name: product.name,
         lifecycle: product.lifecycle,
@@ -401,6 +405,22 @@ export function ManagedProductEditor({
                 <span className="text-muted-foreground text-[10px] font-bold">
                     Order {product.sort_order}
                 </span>
+                {product.image_path ? (
+                    <img
+                        src={product.image_path}
+                        alt=""
+                        loading="lazy"
+                        data-testid="product-thumbnail"
+                        className="h-12 w-20 shrink-0 rounded-lg border border-white/10 bg-black/40 object-cover"
+                    />
+                ) : (
+                    <span
+                        data-testid="product-thumbnail-missing"
+                        className="text-muted-foreground flex h-12 w-20 shrink-0 items-center justify-center rounded-lg border border-dashed text-[9px] font-bold uppercase"
+                    >
+                        No artwork
+                    </span>
+                )}
                 <div className="min-w-0">
                     <div className="truncate text-sm font-bold">
                         {product.name}
@@ -432,7 +452,74 @@ export function ManagedProductEditor({
                 >
                     {editing ? 'Close' : 'Edit'}
                 </button>
+                <button
+                    type="button"
+                    aria-expanded={removing}
+                    onClick={() => {
+                        setRemoving((value) => !value);
+                        setRemoveError(null);
+                        setConfirmSlug('');
+                    }}
+                    className="rounded-lg border border-white/15 px-3 py-2 text-xs font-bold text-red-400 hover:bg-red-500/10"
+                >
+                    Remove
+                </button>
             </div>
+            {removing && (
+                <div
+                    role="group"
+                    aria-label={`Remove ${product.name}`}
+                    className="grid gap-2 rounded-xl border border-red-500/30 bg-red-500/5 p-3 xl:col-span-4"
+                >
+                    <p className="text-xs">
+                        Permanent. Only a hidden product with purchase and
+                        licensing off, and no plans, orders, entitlements or
+                        releases, can be removed. Otherwise set it to Retired.
+                        Type <strong>{product.slug}</strong> to confirm.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                        <input
+                            value={confirmSlug}
+                            onChange={(event) =>
+                                setConfirmSlug(event.target.value)
+                            }
+                            aria-label={`Type ${product.slug} to confirm removal`}
+                            className="border-input bg-background min-w-0 flex-1 rounded-lg border px-3 py-2 text-xs"
+                        />
+                        <button
+                            type="button"
+                            disabled={
+                                removeBusy || confirmSlug !== product.slug
+                            }
+                            onClick={() => {
+                                setRemoveBusy(true);
+                                setRemoveError(null);
+                                router.delete(
+                                    `/operator/products/${product.id}`,
+                                    {
+                                        data: { confirm_slug: confirmSlug },
+                                        preserveScroll: true,
+                                        onError: (errors) =>
+                                            setRemoveError(
+                                                Object.values(errors)[0] ??
+                                                    'Product could not be removed.',
+                                            ),
+                                        onFinish: () => setRemoveBusy(false),
+                                    },
+                                );
+                            }}
+                            className="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+                        >
+                            Remove permanently
+                        </button>
+                    </div>
+                    {removeError && (
+                        <p className="text-xs text-red-500" role="alert">
+                            {removeError}
+                        </p>
+                    )}
+                </div>
+            )}
             {editing && (
                 <div
                     id={`editor-${product.id}`}

@@ -8,6 +8,7 @@ use App\Services\PlatformOwnerAccess;
 use App\Services\ProductStudio\FreeCloudProductDraftGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use KMJ\MainPlatform\Catalog\Models\Product;
@@ -67,6 +68,21 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
 
             return back()->with('success', 'Product updated.');
         })->name('update');
+
+        Route::delete('{product}', function (Request $request, Product $product, PlatformOwnerAccess $access, AdminProductManager $manager) {
+            $user = $request->user();
+            abort_unless($user instanceof User, 401);
+            $access->require($user);
+            // The owner must type the exact slug so a stray click cannot remove a product.
+            $request->validate(['confirm_slug' => ['required', 'string', Rule::in([(string) $product->getAttribute('slug')])]]);
+            try {
+                $manager->delete($product, (int) $user->getAuthIdentifier());
+            } catch (DomainException $exception) {
+                throw ValidationException::withMessages(['confirm_slug' => $exception->getMessage()]);
+            }
+
+            return back()->with('success', 'Product removed.');
+        })->name('destroy');
 
         Route::post('reorder', function (Request $request, PlatformOwnerAccess $access, AdminProductManager $manager) {
             $user = $request->user();

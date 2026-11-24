@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'owner-product-removal-thumbnails-passkey-20261124',
+        title: 'Owner Product Manager: guarded removal, list thumbnails and single passkey prompt',
+        state: 'active',
+        detail: 'Owner-only DELETE for a product that was never live: requires the exact slug typed, refuses public, purchasable, licensable or plan/order/entitlement/release-linked products (database restrict is a second guard), and writes an audit row. The list now shows each product artwork thumbnail, or an honest "No artwork" marker. A successful passkey sign-in now records the password confirmation so the owner is not asked for the passkey a second time; the confirmation still expires after the configured timeout.',
+        evidence:
+            'OwnerProductRemovalTest and PasskeyLoginConfirmationTest feature regressions need exact-head CI. Real passkey sign-in on production is not yet proven after release; owner must test once.',
+    },
+    {
         id: 'kslp-omnidesk-scoped-key-security-20261122',
         title: 'KSLP: OmniDesk product-scoped verification keys and membership isolation',
         state: 'active',

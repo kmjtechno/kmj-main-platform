@@ -2,7 +2,9 @@
 
 namespace App\Services\Commerce;
 
+use App\Models\OperatorActionAudit;
 use DomainException;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use KMJ\MainPlatform\Catalog\Models\Product;
@@ -89,6 +91,41 @@ final class AdminProductManager
         $product->save();
 
         return $product->refresh();
+    }
+
+    /**
+     * Permanently remove a product that was never live. Fail-closed: a product
+     * that is public, purchasable, licensable or referenced by plans, orders,
+     * entitlements or releases is refused (the database also restricts the
+     * delete). Live products are retired, not deleted.
+     */
+    public function delete(Product $product, ?int $actorId = null): void
+    {
+        if ((bool) $product->getAttribute('is_public')
+            || (bool) $product->getAttribute('purchase_enabled')
+            || (bool) $product->getAttribute('licensing_enabled')) {
+            throw new DomainException('Hide the product and turn off purchase and licensing before removing it.');
+        }
+
+        $snapshot = [
+            'product_id' => (string) $product->getKey(),
+            'slug' => (string) $product->getAttribute('slug'),
+            'lifecycle' => (string) $product->getAttribute('lifecycle'),
+        ];
+
+        try {
+            DB::transaction(function () use ($product, $actorId, $snapshot): void {
+                $product->delete();
+                OperatorActionAudit::query()->create([
+                    'actor_user_id' => $actorId,
+                    'action' => 'product.delete',
+                    'outcome' => 'deleted',
+                    'metadata' => $snapshot,
+                ]);
+            });
+        } catch (QueryException) {
+            throw new DomainException('This product is referenced by plans, orders, entitlements or releases. Set its lifecycle to Retired instead of removing it.');
+        }
     }
 
     /**

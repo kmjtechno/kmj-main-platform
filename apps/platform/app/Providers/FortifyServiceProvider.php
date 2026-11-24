@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Actions\Fortify\CreateNewUser;
 /* @end-chisel-registration */
 use App\Actions\Fortify\ResetUserPassword;
+use App\Http\Responses\ConfirmedPasskeyLoginResponse;
 use App\Services\Mail\RegistrationMailReadiness;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
+use Laravel\Passkeys\Contracts\PasskeyLoginResponse;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -89,6 +91,11 @@ class FortifyServiceProvider extends ServiceProvider
         /* @chisel-2fa */
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challenge'));
         /* @end-chisel-2fa */
+
+        $this->app->singleton(
+            PasskeyLoginResponse::class,
+            ConfirmedPasskeyLoginResponse::class,
+        );
 
         /* @chisel-password-confirmation */
         Fortify::confirmPasswordView(fn () => Inertia::render('auth/confirm-password'));
