@@ -11,20 +11,27 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // An Internet sender is not a KMJ user. Keep the existing foreign key.
-        Schema::table('kmj_mail_messages', function (Blueprint $table): void {
-            $table->foreignId('sender_user_id')->nullable()->change();
+        // Separate external identities; never alter existing mail sender keys.
+        Schema::create('kmj_mail_external_inbox', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('mailbox_user_id')->constrained('users')->restrictOnDelete();
+            $table->uuid('event_id')->unique();
+            $table->string('sender_email', 254);
+            $table->string('recipient_email', 254);
+            $table->string('subject', 180);
+            $table->text('body');
+            $table->timestamp('read_at')->nullable();
+            $table->timestamps();
+            $table->index(['mailbox_user_id', 'id']);
         });
     }
 
     public function down(): void
     {
-        if (DB::table('kmj_mail_messages')->whereNull('sender_user_id')->exists()) {
-            throw new RuntimeException('External inbound mail exists; preserve it before rollback.');
+        if (DB::table('kmj_mail_external_inbox')->exists()) {
+            throw new RuntimeException('External Inbox is not empty; preserve it before rollback.');
         }
 
-        Schema::table('kmj_mail_messages', function (Blueprint $table): void {
-            $table->foreignId('sender_user_id')->nullable(false)->change();
-        });
+        Schema::dropIfExists('kmj_mail_external_inbox');
     }
 };
