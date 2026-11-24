@@ -7,7 +7,6 @@ use App\Models\User;
 use App\Services\AuthorityBootstrapper;
 use App\Services\CodeBridge\DashboardPresence;
 use App\Services\CodeBridge\OAuth\OAuthServer;
-use App\Services\Commerce\DesktopCommanderCommercialPolicy;
 use App\Services\Commerce\KmjProductCatalog;
 use App\Services\Commerce\PublicProductCatalog;
 use App\Services\Licensing\CodeBridge\CodeBridgeCustomerDeviceDirectory;
@@ -35,13 +34,6 @@ use KMJ\MainPlatform\Organizations\Services\OrganizationDirectory;
 use KMJ\MainPlatform\Releases\Models\ReleaseArtifact;
 
 require __DIR__.'/codebridge-windows-installer.php';
-
-Route::get('api/public/commander/bootstrap', function (DesktopCommanderCommercialPolicy $policy) {
-    return response()
-        ->json($policy->publicBootstrap())
-        ->header('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400')
-        ->header('Access-Control-Allow-Origin', '*');
-})->name('commander.bootstrap');
 
 Route::get('install', function () {
     $script = <<<'BASH'

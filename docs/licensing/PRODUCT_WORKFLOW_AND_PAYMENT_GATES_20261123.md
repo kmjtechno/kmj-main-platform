@@ -32,7 +32,6 @@ The Main Platform's KSLP commercial entitlement/licensing record remains the onl
 | KMJ OmniDesk | research | no | yes | Account + subscription, seat/device authorization, 2-PC signed lease, renewal/transfer/revoke, native client proof |
 | KMJ CodeBridge | research | no | yes | Organization/device pairing, scoped machine identity, subscription/usage policy, short-lived revocable entitlements |
 | KMJ Calibration Pro | preview | no | no | Hardware/projector/device policy, compatible offline activation, edition/seat profile, golden test vectors |
-| KMJ Desktop Commander | public-beta | no | yes | Verified beta entitlement, desktop device pairing, signed releases and product-specific lease contract |
 | KMJ Forge, KMJ Agent | research | no | no | Future developer product audience, consumption and capabilities profile before checkout |
 | KMJ Connect | planned | no | no | User/team collaboration scope and identity/seat model before monetization |
 | KMJ Cloud Nexus | research | no | no | Distinct IDE boundary; no shared direct database authorization |

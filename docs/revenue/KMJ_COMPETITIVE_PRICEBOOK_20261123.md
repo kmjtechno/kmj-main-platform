@@ -16,7 +16,6 @@ Figures below are **INR before any applicable tax**. Monthly/annual prices do **
 | KMJ CodeBridge | **₹299/month** | **₹2,499/year** | Existing **13 Nov owner-approved reference**, NOT new pricing; Community free, Team ₹699/user/month minimum 3. Current production sale still disabled |
 | KMJ OmniDesk | ₹149/month | ₹1,490/year | Solo 1-user trial target; free personal tier; Pro ₹299/month, Team ₹399/user/month minimum 3; before selling prove signed seats and relay economics |
 | KMJ CloudOS | ₹499/month | ₹4,990/year | Professional organization control-plane BYO-infrastructure; Business ₹1,499/month; **not** a hosted VPS/VM package |
-| KMJ Desktop Commander | ₹99/month | ₹990/year | Future supported desktop tier; beta remains free until licensed client validation |
 | KMJ Forge | ₹199/month | ₹1,990/year | Research only; no bundled paid model inference |
 | KMJ Connect | ₹99/seat/month | ₹990/seat/year | Planned; minimum 3 team seats |
 | KMJ Cloud Nexus | ₹299/month | ₹2,990/year | Research; user supplies infrastructure and paid AI |

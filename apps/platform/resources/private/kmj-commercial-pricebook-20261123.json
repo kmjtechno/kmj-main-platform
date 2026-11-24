@@ -67,21 +67,6 @@
             "quote_only": true
         },
         {
-            "slug": "kmj-desktop-commander",
-            "name": "KMJ Desktop Commander",
-            "lifecycle": "public-beta",
-            "pricing_status": "review_only",
-            "ready_to_sell": false,
-            "entry_plan": "Future Professional",
-            "entry_amount_minor": 9900,
-            "annual_amount_minor": 99000,
-            "unit": "user/month",
-            "payment_and_tax": "not_approved",
-            "requires_independent_production_verification": true,
-            "notes": "Beta stays free until signed desktop client and support acceptance.",
-            "free_community": true
-        },
-        {
             "slug": "kmj-forge",
             "name": "KMJ Forge",
             "lifecycle": "research",
