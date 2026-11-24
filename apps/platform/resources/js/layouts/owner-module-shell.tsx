@@ -77,7 +77,7 @@ const groups: { title: string; items: Workspace[] }[] = [
             },
             {
                 label: 'Revenue & Analytics',
-                href: '/operator#owner-revenue',
+                href: '/super-admin#owner-revenue',
                 icon: ChartNoAxesCombined,
             },
         ],
