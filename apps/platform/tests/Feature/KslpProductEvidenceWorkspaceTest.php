@@ -7,8 +7,10 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Services\Licensing\Kslp\KslpIssuerSubscriptionAuthority;
 use App\Services\Licensing\Kslp\KslpResellerCreditEvidenceLedger;
+use App\Services\Licensing\Kslp\KslpResellerReviewGrantAuthority;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use KMJ\MainPlatform\Catalog\Models\Product;
 use KMJ\MainPlatform\Commerce\Services\CommercialOrderService;
@@ -107,6 +109,64 @@ final class KslpProductEvidenceWorkspaceTest extends TestCase
                 ->has('applications', 0)
                 ->has('keys', 0));
         $this->assertDatabaseCount('kslp_reseller_credit_ledger', 1);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+    }
+
+    public function test_delegated_member_only_sees_granted_product_and_loses_access_on_revocation(): void
+    {
+        $this->withoutVite();
+        $owner = User::factory()->create([
+            'email_verified_at' => now(),
+            'is_platform_owner' => true,
+            'platform_owner_granted_at' => now(),
+        ]);
+        DB::table('passkeys')->insert([
+            'user_id' => $owner->id,
+            'name' => 'Review workspace owner',
+            'credential_id' => 'review-workspace-'.Str::uuid(),
+            'credential' => '{}',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $member = User::factory()->create(['email_verified_at' => now()]);
+        [$org, $product, $order] = $this->issuer($owner, 'DELEGATED');
+        $otherProduct = app(KslpIssuerSubscriptionAuthority::class)
+            ->registerProduct($org, 'EVIDENCE.UNGRANTED', 'Not delegated');
+        OrganizationMembership::query()->create([
+            'organization_id' => $org,
+            'user_id' => $member->id,
+            'role' => 'member',
+        ]);
+        $ledger = app(KslpResellerCreditEvidenceLedger::class);
+        $ledger->queuePending($owner->id, $org, $product, $order, 'pending:delegated:workspace');
+        $ledger->queuePending($owner->id, $org, (string) $otherProduct['id'], $order, 'pending:ungranted:workspace');
+
+        $grants = app(KslpResellerReviewGrantAuthority::class);
+        $grants->grant($owner->id, $org, $product, $member->id, now()->addDays(3), 'Delegated evidence review only');
+
+        $this->actingAs($member)->get('/developer/apps')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('developer-apps')
+                ->has('organizations', 0)
+                ->has('applications', 0)
+                ->has('keys', 0)
+                ->has('resellerReview.products', 1)
+                ->where('resellerReview.products.0.id', $product)
+                ->where('resellerReview.products.0.pending_evidence_count', 1)
+                ->where('resellerReview.truncated', false)
+                ->missing('resellerReview.products.0.commercial_order_id')
+                ->missing('resellerReview.products.0.event_key_hash')
+                ->missing('resellerReview.products.0.credits_delta'));
+
+        $grants->revoke($owner->id, $org, $product, $member->id, 'Withdraw delegated review permission');
+        $this->get('/developer/apps')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('resellerReview.products', 0)
+                ->has('applications', 0)
+                ->has('keys', 0));
+        $this->assertDatabaseCount('kslp_reseller_credit_ledger', 2);
         $this->assertDatabaseCount('kslp_licenses', 0);
     }
 }
