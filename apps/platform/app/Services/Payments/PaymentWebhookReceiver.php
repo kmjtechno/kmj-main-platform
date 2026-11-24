@@ -124,11 +124,23 @@ final class PaymentWebhookReceiver
     private function references(string $provider, array $payload): array
     {
         if ($provider === 'razorpay') {
+            $type = $this->safe($payload['event'] ?? null, 96);
+            $payment = data_get($payload, 'payload.payment.entity.id');
+            // Refund-only and dispute-only envelopes may carry a payment
+            // reference without an order. Never use these as capture proof.
+            if ($payment === null && is_string($type)) {
+                if (str_starts_with($type, 'refund.')) {
+                    $payment = data_get($payload, 'payload.refund.entity.payment_id');
+                } elseif (str_starts_with($type, 'payment.dispute.')) {
+                    $payment = data_get($payload, 'payload.dispute.entity.payment_id');
+                }
+            }
+
             return [
-                $this->safe($payload['event'] ?? null, 96),
+                $type,
                 $this->safe(data_get($payload, 'payload.payment.entity.order_id')
                     ?? data_get($payload, 'payload.order.entity.id'), 64),
-                $this->safe(data_get($payload, 'payload.payment.entity.id'), 64),
+                $this->safe($payment, 64),
             ];
         }
 
