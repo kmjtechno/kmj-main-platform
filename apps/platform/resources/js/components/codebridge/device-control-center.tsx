@@ -474,7 +474,9 @@ export default function DeviceControlCenter({
                             </h3>
                             <p className="text-muted-foreground mt-1 text-xs">
                                 Checked{' '}
-                                {formatRegisteredAt(presenceSnapshot.observedAt)}
+                                {formatRegisteredAt(
+                                    presenceSnapshot.observedAt,
+                                )}
                                 . READY refers only to that check.
                             </p>
                         </div>
@@ -497,7 +499,8 @@ export default function DeviceControlCenter({
                                     {entry.device} / {entry.project}
                                 </span>
                                 <span>
-                                    {entry.status === 'READY' && entry.lastSeenAt
+                                    {entry.status === 'READY' &&
+                                    entry.lastSeenAt
                                         ? 'Ready at check · ' +
                                           formatRegisteredAt(entry.lastSeenAt)
                                         : 'Not verified'}
