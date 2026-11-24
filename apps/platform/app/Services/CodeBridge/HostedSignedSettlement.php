@@ -36,9 +36,9 @@ final class HostedSignedSettlement
 
         DB::transaction(function () use ($organization, $device, $publicKey): void {
             $credential = $this->activeCredential($organization, $device);
-            $existing = DB::table('codebridge_receipt_signers')->where('activation_id', $credential->activation_id)->lockForUpdate()->first();
+            $existing = DB::table('codebridge_receipt_signers')->where('activation_id', $credential['activation_id'])->lockForUpdate()->first();
             if ($existing !== null) {
-                if ($existing->credential_id !== $credential->id || $existing->public_key !== $publicKey) {
+                if ($existing->credential_id !== $credential['id'] || $existing->public_key !== $publicKey) {
                     throw new DomainException('CODEBRIDGE_SIGNER_ROTATION_REVIEW_REQUIRED');
                 }
 
@@ -46,8 +46,8 @@ final class HostedSignedSettlement
             }
 
             DB::table('codebridge_receipt_signers')->insert([
-                'activation_id' => $credential->activation_id,
-                'credential_id' => $credential->id,
+                'activation_id' => $credential['activation_id'],
+                'credential_id' => $credential['id'],
                 'public_key' => $publicKey,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -66,15 +66,15 @@ final class HostedSignedSettlement
 
         return DB::transaction(function () use ($organization, $device, $project, $execution, $requestHash): array {
             $credential = $this->activeCredential($organization, $device);
-            if (! in_array($credential->plan, ['community', 'pro'], true)) {
+            if (! in_array($credential['plan'], ['community', 'pro'], true)) {
                 throw new DomainException('CODEBRIDGE_MONTHLY_PLAN_UNAVAILABLE');
             }
             if (! in_array('read', $this->grants->grantedPermissions($organization, $device, $project), true)) {
                 throw new DomainException('CODEBRIDGE_RECEIPT_SCOPE_DENIED');
             }
             $signer = DB::table('codebridge_receipt_signers')
-                ->where('activation_id', $credential->activation_id)
-                ->where('credential_id', $credential->id)->first();
+                ->where('activation_id', $credential['activation_id'])
+                ->where('credential_id', $credential['id'])->first();
             if ($signer === null) {
                 throw new DomainException('CODEBRIDGE_SIGNER_NOT_ENROLLED');
             }
@@ -82,9 +82,9 @@ final class HostedSignedSettlement
             $binding = [
                 'organization_id' => $organization,
                 'subject_key' => 'account',
-                'plan_code' => $credential->plan,
-                'activation_id' => $credential->activation_id,
-                'credential_id' => $credential->id,
+                'plan_code' => $credential['plan'],
+                'activation_id' => $credential['activation_id'],
+                'credential_id' => $credential['id'],
                 'device_id' => $device,
                 'project_id' => $project,
                 'request_sha256' => $requestHash,
@@ -106,7 +106,7 @@ final class HostedSignedSettlement
                 ]);
             }
 
-            return $this->ledger->reserveTrusted($organization, 'account', $execution, $credential->plan);
+            return $this->ledger->reserveTrusted($organization, 'account', $execution, $credential['plan']);
         }, 3);
     }
 
@@ -121,8 +121,8 @@ final class HostedSignedSettlement
             }
 
             $credential = $this->activeCredential($organization, $row->device_id);
-            if ($credential->id !== $row->credential_id || $credential->activation_id !== $row->activation_id
-                || $credential->plan !== $row->plan_code
+            if ($credential['id'] !== $row->credential_id || $credential['activation_id'] !== $row->activation_id
+                || $credential['plan'] !== $row->plan_code
                 || ! in_array('read', $this->grants->grantedPermissions($organization, $row->device_id, $row->project_id), true)) {
                 throw new DomainException('CODEBRIDGE_RECEIPT_SCOPE_DENIED');
             }
@@ -156,7 +156,8 @@ final class HostedSignedSettlement
         }
     }
 
-    private function activeCredential(string $organization, string $device): object
+    /** @return array{id: string, activation_id: string, plan: string} */
+    private function activeCredential(string $organization, string $device): array
     {
         $row = DB::table('codebridge_device_credentials as c')
             ->join('kslp_activations as a', 'a.id', '=', 'c.activation_id')
@@ -172,6 +173,10 @@ final class HostedSignedSettlement
             throw new DomainException('CODEBRIDGE_RECEIPT_SCOPE_DENIED');
         }
 
-        return $row;
+        return [
+            'id' => (string) $row->id,
+            'activation_id' => (string) $row->activation_id,
+            'plan' => (string) $row->plan,
+        ];
     }
 }
