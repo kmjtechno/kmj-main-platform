@@ -2023,30 +2023,13 @@ export default function MailCenter({
                                         )}
                                     </div>
                                 </div>
-                                <div className="kmj-mail-message-brand mt-4 flex flex-wrap items-center justify-between gap-4 rounded-t-xl p-4">
-                                    <img
-                                        src="/assets/brand/kmj-logo-horizontal-readable.svg"
-                                        width="210"
-                                        height="55"
-                                        alt="KMJ TECHNO — INNOVATE | BUILD | SCALE"
-                                        className="h-11 w-auto object-contain"
-                                    />
-                                    <div className="text-right">
-                                        <strong className="block text-base">
-                                            KMJ Mail Enterprise
-                                        </strong>
-                                        <small className="text-[11px]">
-                                            Private official correspondence
-                                        </small>
-                                    </div>
-                                </div>
                                 <div className="kmj-mail-thread-messages mt-0 space-y-4">
                                     {selectedThread.items.map((item) => (
                                         <article
                                             key={item.id}
-                                            className="border-border/70 bg-background/50 rounded-2xl border p-5 shadow-sm"
+                                            className="kmj-mail-thread-card border-border/70 bg-background/50 overflow-hidden rounded-xl border"
                                         >
-                                            <div className="flex flex-wrap items-start justify-between gap-2 border-b pb-3">
+                                            <div className="kmj-mail-message-meta flex flex-wrap items-start justify-between gap-2 p-4">
                                                 <div className="text-xs">
                                                     <strong className="block">
                                                         {item.from_id ===
@@ -2082,7 +2065,24 @@ export default function MailCenter({
                                                     {item.at.slice(0, 19)}
                                                 </span>
                                             </div>
-                                            <p className="mt-5 text-[15px] leading-8 break-words whitespace-pre-wrap">
+                                            <div className="kmj-mail-message-brand flex flex-wrap items-center justify-between gap-4 p-4">
+                                                <img
+                                                    src="/assets/brand/kmj-logo-horizontal-readable.svg"
+                                                    width="210"
+                                                    height="55"
+                                                    alt="KMJ TECHNO — INNOVATE | BUILD | SCALE"
+                                                    className="h-11 w-auto object-contain"
+                                                />
+                                                <div className="text-right">
+                                                    <strong className="block text-base">
+                                                        KMJ Mail Enterprise
+                                                    </strong>
+                                                    <small className="text-[11px]">
+                                                        Private mail workspace
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <p className="kmj-mail-message-body text-[15px] leading-7 break-words whitespace-pre-wrap">
                                                 {item.body}
                                             </p>
                                         </article>
