@@ -106,6 +106,20 @@ class LocalOnly(unittest.TestCase):
         self.assertEqual(out, ("u", "rel", "app", "storage"))
         v3.schedule_unit_preflight.assert_called_once()
 
+    def test_receipt_gate_accepts_local_only_receipt(self):
+        r = commit(FakeTx())
+        self.assertTrue(h.receipt_verified(r, True))
+        self.assertFalse(h.receipt_verified(r, False))  # no remote readback => not valid for Google mode
+
+    def test_receipt_gate_google_mode_unchanged(self):
+        google = {"remote_sha_readback_same_invocation": True, "local_cipher_sidecar_verified": True,
+                  "local_daily_snapshot_verified": True, "local_complete": True}
+        self.assertTrue(h.receipt_verified(google, False))
+        self.assertFalse(h.receipt_verified(google, True))  # local-only must never accept a remote claim
+        for k in ("local_cipher_sidecar_verified", "local_daily_snapshot_verified", "local_complete"):
+            bad = dict(google, **{k: False})
+            self.assertFalse(h.receipt_verified(bad, False), k)
+
     def test_new_mode_is_accepted_and_old_modes_kept(self):
         for mode in ("--run-once", "--run-once-local", "--preflight", "--audit-pins", "--selftest"):
             with mock.patch.object(h.sys, "argv", ["x", mode]), \
