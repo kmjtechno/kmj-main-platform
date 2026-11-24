@@ -74,7 +74,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             abort_unless($user instanceof User, 401);
             $access->require($user);
             // The owner must type the exact slug so a stray click cannot remove a product.
-            $request->validate(['confirm_slug' => ['required', 'string', Rule::in([$product->slug])]]);
+            $request->validate(['confirm_slug' => ['required', 'string', Rule::in([(string) $product->getAttribute('slug')])]]);
             try {
                 $manager->delete($product, (int) $user->getAuthIdentifier());
             } catch (DomainException $exception) {
