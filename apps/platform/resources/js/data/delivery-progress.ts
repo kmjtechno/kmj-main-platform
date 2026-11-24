@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-scoped-progress-expansion-20261124',
+        title: 'CodeBridge scoped coding progress and activity evidence',
+        state: 'active',
+        detail: 'SOURCE ONLY: public proxy allowlist matches nine scoped read operations in CodeBridge PR #1201. Existing JSON behavior and gateway authorization remain authoritative. Dashboard distinguishes known device allocation from unmeasured monthly activity.',
+        evidence:
+            'Coordinated gateway and platform source changes, exact-head CI, owner review, signed release and actual host acceptance remain required. No usage or billing counters are inferred.',
+    },
+    {
         id: 'codebridge-domain-sse-progress-pilot-20261124',
         title: 'CodeBridge public domain progress stream',
         state: 'active',

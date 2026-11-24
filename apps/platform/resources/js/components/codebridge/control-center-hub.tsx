@@ -292,13 +292,11 @@ export default function CodeBridgeControlCenterHub({
                         <Metric
                             label="Monthly execution usage"
                             value="Not reported"
-                            detail="No authoritative metering feed connected"
+                            detail="No verified monthly meter or reset date"
                         />
                     </div>
                     <p className="text-muted-foreground mt-3 text-xs">
-                        Model quotas and concurrency depend on the actual
-                        provider, device capacity and signed KMJ entitlement. No
-                        free or unlimited allowance is assumed.
+                        Device allocation is not a monthly execution quota.
                     </p>
                 </section>
 
