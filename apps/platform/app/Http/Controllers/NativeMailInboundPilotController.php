@@ -34,7 +34,7 @@ final class NativeMailInboundPilotController
         abort_unless(
             preg_match('/\A[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/D', $event) === 1
             && preg_match('/\A[0-9]{10}\z/D', $timestamp) === 1
-            && abs(now()->timestamp - (int) $timestamp) <= 300
+            && abs(now()->getTimestamp() - (int) $timestamp) <= 300
             && $to === $recipient
             && strlen($from) <= 254
             && ($from === '' || filter_var($from, FILTER_VALIDATE_EMAIL) !== false)
@@ -43,9 +43,12 @@ final class NativeMailInboundPilotController
             401,
         );
 
+        $key = hex2bin($secret);
+        abort_unless(is_string($key), 503);
+
         $digest = hash('sha256', $raw);
         $signed = implode("\n", ['kmj-inbound-v1', $event, $timestamp, $to, $from, $digest]);
-        abort_unless(hash_equals(hash_hmac('sha256', $signed, hex2bin($secret)), $signature), 401);
+        abort_unless(hash_equals(hash_hmac('sha256', $signed, $key), $signature), 401);
 
         return DB::transaction(function () use ($ownerId, $ownerAccess, $event, $recipient, $from, $raw, $digest): JsonResponse {
             $owner = User::query()->whereKey($ownerId)->lockForUpdate()->first();
