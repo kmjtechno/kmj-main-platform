@@ -1562,6 +1562,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         evidence:
             'Original reviewed pricebook #1061 code, tests and source-only research were ported onto unchanged matching current-main base; versioned private JSON and service fail closed when any commercial enablement flag is true. Owner margin, tax, actual merchant rate, per-product signing, real customer and native-device validation, exact-head CI/review and protected Elite release remain unverified.',
     },
+    {
+        id: 'kslp-owner-reseller-review-management-20261124',
+        title: 'ONE Licensing Hub: protected owner reseller review permission management',
+        state: 'active',
+        detail: 'SOURCE ONLY: existing owner hub adds bounded eligible verified member/product selection, recorded review-grant directory, reason-bound grant and revoke actions using the single KSLP authority. Owner identity, passkey and password confirmation remain mandatory. Creation is default-disabled by a separate rollout gate; authorized emergency revocation remains available. No wallet, credits, checkout, paid licenses, role expansion or customer-key access.',
+        evidence:
+            'KslpOwnerResellerReviewDirectory, protected operator routes, existing owner Licensing Hub component and HTTP regressions covering non-owner denial, step-up, default-off, scoped grant, revoke with creation disabled and no financial side effects. Exact-head CI and independent owner source review required; no deployment or live activation.',
+    },
 ];
 
 export const verifiedDeliveryMilestones = deliveryMilestones.filter(
