@@ -129,6 +129,34 @@ final class CodeBridgeProjectAssignmentHttpTest extends TestCase
         self::assertSame(0, DB::table('codebridge_project_assignments')->count());
     }
 
+    public function test_device_directory_requires_the_exact_active_license(): void
+    {
+        [, $tenant, $device] = $this->fixture('licensed-desktop');
+        [, $otherTenant] = $this->fixture('other-desktop');
+        $directory = app(CodeBridgeCustomerDeviceDirectory::class);
+        $now = time();
+        $license = DB::table('kslp_licenses')->where('customer_id', $tenant);
+        $original = (array) $license->first();
+
+        self::assertSame([$device], array_column($directory->forTenant($tenant, $now), 'id'));
+
+        foreach ([
+            ['status' => 'suspended'],
+            ['revoked_at' => gmdate('Y-m-d H:i:s', $now)],
+            ['expires_at' => gmdate('Y-m-d H:i:s', $now)],
+            ['starts_at' => gmdate('Y-m-d H:i:s', $now + 60)],
+            ['customer_id' => $otherTenant],
+        ] as $invalid) {
+            $licenseById = DB::table('kslp_licenses')->where('id', $original['id']);
+            $licenseById->update($invalid);
+            self::assertSame([], $directory->forTenant($tenant, $now));
+            $licenseById->update(array_intersect_key($original, $invalid));
+            self::assertSame([$device], array_column($directory->forTenant($tenant, $now), 'id'));
+        }
+
+        self::assertSame(2, DB::table('codebridge_device_credentials')->count());
+    }
+
     public function test_previously_paired_vioso_project_cannot_attach_to_calibration_device(): void
     {
         [$owner, $tenant, $calibration] = $this->fixture('calibration-desktop');
