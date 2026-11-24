@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\Mail\NativeInboundTextPilot;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -83,7 +84,11 @@ final class NativeMailInboundPilotController
                 'received_at' => now(),
             ]);
 
-            // This is durable quarantine, NOT a published Inbox message or delivery proof.
+            // The separately gated text-only pilot can publish one safe Inbox copy.
+            // The raw original always remains in encrypted quarantine.
+            app(NativeInboundTextPilot::class)->publish($ownerId, $event, $recipient, $from, $raw);
+
+            // This receipt confirms durable quarantine, not verified sender identity.
             return $this->receipt('quarantined', 201);
         });
     }
