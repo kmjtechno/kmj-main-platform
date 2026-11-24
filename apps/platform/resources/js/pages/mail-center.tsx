@@ -40,7 +40,7 @@ type MailItem = {
     folder: string;
     subject: string;
     snippet: string;
-    sender_user_id: number;
+    sender_user_id: number | null;
     recipient_user_id: number | null;
     recipient_email: string | null;
     sender_email: string | null;
@@ -51,7 +51,7 @@ type MailItem = {
 };
 type ThreadItem = {
     id: number;
-    from_id: number;
+    from_id: number | null;
     to_id: number | null;
     recipient_email: string | null;
     sender_email: string | null;
@@ -104,6 +104,7 @@ type Props = {
     }[];
     myUserId: number;
     externalMailEnabled: boolean;
+    externalInboundPilotConfigured?: boolean;
     externalOutbound: {
         state: 'not_activated' | 'ready_to_queue';
         from: string | null;
@@ -135,6 +136,7 @@ export default function MailCenter({
     staff,
     myUserId,
     externalOutbound,
+    externalInboundPilotConfigured = false,
 }: Props) {
     const page = usePage();
     const flash = page.props.flash;
@@ -229,8 +231,10 @@ export default function MailCenter({
         const other =
             latest.from_id === myUserId ? latest.to_id : latest.from_id;
         const external =
-            latest.recipient_email ??
-            (latest.from_id !== myUserId ? latest.sender_email : null);
+            latest.from_id === null
+                ? latest.sender_email
+                : (latest.recipient_email ??
+                  (latest.from_id !== myUserId ? latest.sender_email : null));
         if (external) {
             setRecipientType('external');
             setRecipientEmail(external);
@@ -438,6 +442,8 @@ export default function MailCenter({
                 return 'Submission status unknown';
             case 'mta_accepted':
                 return 'Accepted by mail server';
+            case 'inbound_unverified':
+                return 'Received · Sender unverified';
             case 'failed':
                 return 'Submission failed';
             case 'blocked':
@@ -735,8 +741,10 @@ export default function MailCenter({
                             </p>
                             <p className="mt-2">
                                 Only authorized KMJ staff can open private team
-                                mail. External incoming mail, attachments and
-                                CC/BCC require separate verified services.
+                                mail.{' '}
+                                {externalInboundPilotConfigured
+                                    ? 'Plain-text inbound pilot configured. Complex MIME and attachments remain in quarantine; routing must be verified.'
+                                    : 'External incoming mail, attachments and CC/BCC require separate verified services.'}
                             </p>
                         </div>
                     </aside>
@@ -1154,8 +1162,10 @@ export default function MailCenter({
                                             </p>
                                             <p className="text-muted-foreground mt-1 text-xs">
                                                 {activeSearch
-                                                    ? 'Clear the search above to see all messages in this folder. Search covers subject, body and recipient, not saved labels.'
-                                                    : 'Private internal messages appear in this folder. External inbound is not active.'}
+                                                    ? 'Clear the search above to see all messages in this folder. Search covers subject, body, sender and recipient, not saved labels.'
+                                                    : externalInboundPilotConfigured
+                                                      ? 'No messages yet. The configured plain-text pilot requires verified routing.'
+                                                      : 'Private internal messages appear in this folder. External inbound is not active.'}
                                             </p>
                                         </div>
                                     )}
