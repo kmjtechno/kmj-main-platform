@@ -24,6 +24,6 @@ jobs:
           set -Eeuo pipefail
           cd apps/platform
           npm ci --no-audit --no-fund --ignore-scripts
-          ./node_modules/.bin/vp fmt resources/js/components/app-sidebar.tsx resources/js/pages/developer-apps.tsx resources/js/pages/operator-kslp.tsx scripts/check-licensing-hub-scopes.test.mjs scripts/check-licensing-integration.test.mjs
-          git diff --no-ext-diff -- resources/js/components/app-sidebar.tsx resources/js/pages/developer-apps.tsx resources/js/pages/operator-kslp.tsx scripts/check-licensing-hub-scopes.test.mjs scripts/check-licensing-integration.test.mjs
+          ./node_modules/.bin/vp fmt resources/js/components/app-sidebar.tsx resources/js/components/kslp-reseller-review-management.tsx resources/js/pages/developer-apps.tsx resources/js/pages/operator-kslp.tsx scripts/check-licensing-hub-scopes.test.mjs scripts/check-licensing-integration.test.mjs
+          git diff --no-ext-diff -- resources/js/components/app-sidebar.tsx resources/js/components/kslp-reseller-review-management.tsx resources/js/pages/developer-apps.tsx resources/js/pages/operator-kslp.tsx scripts/check-licensing-hub-scopes.test.mjs scripts/check-licensing-integration.test.mjs
           echo 'PRODUCTION_MUTATION=NONE'
