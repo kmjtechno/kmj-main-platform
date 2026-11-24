@@ -538,6 +538,18 @@ def commit_local_only(tx,*,probe,expected_release,vault,fresh_cipher,stage_root,
             "independent_remote_decrypt_restore_verified":False}
 
 
+def receipt_verified(receipt,local_only):
+    """Final receipt gate. Google mode requires the same-invocation remote readback;
+    local-only mode requires that NO remote readback is claimed. Both need the local
+    cipher pair, the daily snapshot and local completeness."""
+    remote=receipt.get("remote_sha_readback_same_invocation") is True
+    if remote==local_only:
+        return False
+    return (receipt.get("local_cipher_sidecar_verified") is True
+            and receipt.get("local_daily_snapshot_verified") is True
+            and receipt.get("local_complete") is True)
+
+
 def run_once(local_only=False):
     buf,v3,transport,user,release,app,storage,env_source=runtime_sources(local_only)
     install_bundle(buf)
@@ -578,10 +590,7 @@ def run_once(local_only=False):
                     fresh_cipher=cipher,stage_root=STAGE,daily_root=DAILY,
                     stamp=stamp,expected_uid=0,
                 )
-            if not (receipt["remote_sha_readback_same_invocation"]
-                    and receipt["local_cipher_sidecar_verified"]
-                    and receipt["local_daily_snapshot_verified"]
-                    and receipt["local_complete"]):
+            if not receipt_verified(receipt,local_only):
                 raise Deny("DUAL_LOCAL_COMMIT_NOT_VERIFIED")
     if local_only:
         print("OFFSITE_UPLOAD=NOT_ATTEMPTED_LOCAL_ONLY")
