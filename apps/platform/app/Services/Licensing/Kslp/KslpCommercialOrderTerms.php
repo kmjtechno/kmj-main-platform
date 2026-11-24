@@ -62,11 +62,15 @@ final class KslpCommercialOrderTerms
             if (DB::table('kslp_commercial_order_terms')->where('commercial_order_id', $orderId)->exists()) {
                 throw new DomainException('KSLP_ORDER_TERMS_ALREADY_RECORDED');
             }
-            // Do not retroactively fit terms to a payment or order already
-            // confirmed, cancelled, or linked to a provider checkout.
+            // The checkout reservation commits BEFORE provider HTTP.
+            // Locking the same order and rejecting *any* existing intent
+            // prevents retroactive terms even when the remote outcome is
+            // uncertain and no provider order link exists yet.
             if ($order->status !== 'requested'
                 || ! Schema::hasTable('commerce_provider_orders')
-                || DB::table('commerce_provider_orders')->where('commercial_order_id', $orderId)->exists()) {
+                || ! Schema::hasTable('commerce_provider_order_intents')
+                || DB::table('commerce_provider_orders')->where('commercial_order_id', $orderId)->exists()
+                || DB::table('commerce_provider_order_intents')->where('commercial_order_id', $orderId)->exists()) {
                 throw new DomainException('KSLP_ORDER_TERMS_ORDER_ALREADY_PROCESSED');
             }
 
