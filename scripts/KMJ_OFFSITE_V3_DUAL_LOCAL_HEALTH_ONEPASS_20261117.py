@@ -323,7 +323,7 @@ def validate_certbot_live_matrix(publisher_raw, *, expected_uid=0):
     return count
 
 
-def runtime_sources():
+def runtime_sources(local_only=False):
     root_owner()
     buf=bundle_source()
     health_contract()
@@ -331,7 +331,10 @@ def runtime_sources():
     # Vault mode need not be exactly 0700; V2 and V3 pin root ownership
     # and prohibit group/world writes. Keep its existing mode unchanged.
     v3,transport=admit_exact_installed_v3()
-    user,release,app,storage=v3.inspect(transport,scheduled=True)
+    if local_only:
+        user,release,app,storage=local_inspect(v3,transport)
+    else:
+        user,release,app,storage=v3.inspect(transport,scheduled=True)
     root_storage=trusted_dir(storage.parent,{user.pw_uid})
     for part in ("app","framework","logs"):
         trusted_dir(root_storage/part,{user.pw_uid})
@@ -463,8 +466,80 @@ def verify_health_service_once():
         raise Deny("NATIVE_HEALTH_OWN_INVOCATION_NOT_PASS")
     return True
 
-def run_once():
-    buf,v3,transport,user,release,app,storage,env_source=runtime_sources()
+def local_inspect(v3,transport):
+    """Same local checks as the installed V3 inspect(scheduled=True), WITHOUT any
+    Google/SFTP contact: no DNS lookup, no pinned SFTP config read, no host key.
+    Only local tools, live release, unit identity, vault and disk space."""
+    v3.check_tools()
+    user,release,app,storage=v3.live_app()
+    v3.schedule_unit_preflight(transport)
+    s=transport.VAULT.lstat()
+    if not stat.S_ISDIR(s.st_mode) or s.st_uid!=0 or s.st_mode&0o022:
+        raise Deny("VAULT_UNSAFE")
+    for root,label in ((transport.VAULT,"VAULT_SPACE"),(Path("/tmp"),"DUMP_SCRATCH_SPACE")):
+        v=os.statvfs(root)
+        if v.f_bavail*v.f_frsize<2*1024**3:
+            raise Deny(label+"_BELOW_2GIB")
+    readers=v3.native_pg_restore_candidates()
+    if not readers:
+        raise Deny("PG_RESTORE_NATIVE_MISSING")
+    version=v3.run(["/usr/bin/pg_dump","--version"],timeout=15)
+    match=re.search(rb"PostgreSQL\) ([0-9]{1,2})(?:\.|[ \r\n])",version.stdout) if version.returncode==0 else None
+    if match is None:
+        raise Deny("PG_DUMP_VERSION_UNAVAILABLE")
+    print("LOCAL_ONLY_INSPECT=PASS")
+    print("OFFSITE_NETWORK_CONTACT=NONE")
+    return user,release,app,storage
+
+
+class LocalIncomplete(Deny):
+    def __init__(self,phase,reason):
+        self.phase=phase
+        self.reason=reason
+        super().__init__("INCOMPLETE_"+phase)
+
+
+def commit_local_only(tx,*,probe,expected_release,vault,fresh_cipher,stage_root,daily_root,stamp,expected_uid=0):
+    """Local-only commit: cipher+sha sidecar pair in the vault, then the daily snapshot.
+
+    Uses the pinned reviewed publishers directly. There is NO remote transfer and NO
+    remote readback, so nothing here may claim one. The reviewed function names say
+    'after_verified_remote_readback' because the remote assertion is the caller's job;
+    this caller asserts none and reports remote_sha_readback_same_invocation=False."""
+    if probe()!=expected_release:
+        raise Deny("LIVE_RELEASE_CHANGED_BEFORE_COMMIT")
+    path,sha,nbytes,pg_sha=tx._fresh_source_and_daily_preflight(
+        vault,fresh_cipher,stage_root,daily_root,stamp,expected_uid)
+    phase="LOCAL_NOT_COMMITTED"
+    try:
+        receipt=tx.pair.publish_after_verified_remote_readback(
+            Path(vault),path,stamp,sha,nbytes,expected_uid=expected_uid)
+        if receipt.get("sidecar_pair_verified") is not True:
+            raise Deny("LOCAL_CIPHER_SIDECAR_RECEIPT_INVALID")
+        phase="CIPHER_PAIR_COMMITTED"
+        if probe()!=expected_release:
+            raise Deny("LIVE_RELEASE_CHANGED_BEFORE_DAILY_COMMIT")
+        daily_receipt=tx.daily.publish_after_separately_verified_remote_readback(
+            Path(stage_root),Path(daily_root),stamp,sha,
+            expected_uid=expected_uid,allowed_uids=(expected_uid,))
+        if daily_receipt.get("daily_snapshot_published") is not True:
+            raise Deny("DAILY_COMMIT_RECEIPT_INVALID")
+        if daily_receipt.get("platform_dump_sha256")!=pg_sha:
+            raise Deny("DAILY_POSTCOMMIT_HASH_DRIFT")
+        phase="CIPHER_AND_DAILY_COMMITTED_RELEASE_UNVERIFIED"
+        if probe()!=expected_release:
+            raise Deny("LIVE_RELEASE_CHANGED_AFTER_DAILY_COMMIT")
+    except Exception as exc:
+        raise LocalIncomplete(phase,type(exc).__name__) from None
+    return {"remote_sha_readback_same_invocation":False,
+            "local_cipher_sidecar_verified":True,
+            "local_daily_snapshot_verified":True,
+            "local_complete":True,
+            "independent_remote_decrypt_restore_verified":False}
+
+
+def run_once(local_only=False):
+    buf,v3,transport,user,release,app,storage,env_source=runtime_sources(local_only)
     install_bundle(buf)
     prepare_stage()
     builder=imported("KMJ_OFFSITE_V3_DAILY_SOURCE_BUILDER_REVIEW_20261115.py","kmj_owner_v3_builder")
@@ -489,19 +564,30 @@ def run_once():
                 raise Deny("LIVE_RELEASE_CHANGED_BEFORE_ENCRYPTION")
             cipher=work/"fresh.age"
             v3.encrypt(work,cipher)
-            receipt=tx.commit_after_same_invocation_v2_readback(
-                transport=transport,
-                pinned_live_release_probe=lambda:v3.LIVE.resolve(strict=True),
-                expected_release=release,vault=transport.VAULT,
-                fresh_cipher=cipher,stage_root=STAGE,daily_root=DAILY,
-                stamp=stamp,expected_uid=0,
-            )
+            probe=lambda:v3.LIVE.resolve(strict=True)
+            if local_only:
+                receipt=commit_local_only(
+                    tx,probe=probe,expected_release=release,vault=transport.VAULT,
+                    fresh_cipher=cipher,stage_root=STAGE,daily_root=DAILY,
+                    stamp=stamp,expected_uid=0)
+            else:
+                receipt=tx.commit_after_same_invocation_v2_readback(
+                    transport=transport,
+                    pinned_live_release_probe=probe,
+                    expected_release=release,vault=transport.VAULT,
+                    fresh_cipher=cipher,stage_root=STAGE,daily_root=DAILY,
+                    stamp=stamp,expected_uid=0,
+                )
             if not (receipt["remote_sha_readback_same_invocation"]
                     and receipt["local_cipher_sidecar_verified"]
                     and receipt["local_daily_snapshot_verified"]
                     and receipt["local_complete"]):
                 raise Deny("DUAL_LOCAL_COMMIT_NOT_VERIFIED")
-    print("FRESH_REMOTE_SFTP_SHA_READBACK=PASS")
+    if local_only:
+        print("OFFSITE_UPLOAD=NOT_ATTEMPTED_LOCAL_ONLY")
+        print("REMOTE_SFTP_SHA_READBACK=NOT_APPLICABLE")
+    else:
+        print("FRESH_REMOTE_SFTP_SHA_READBACK=PASS")
     print("FRESH_LOCAL_CIPHER_SIDECAR=PASS")
     print("FRESH_LOCAL_DAILY_PGDMP_STORAGE_CONFIG=PASS")
     print("INDEPENDENT_REMOTE_RESTORE=NOT_VERIFIED")
@@ -509,7 +595,7 @@ def run_once():
     health_contract()
     verify_health_service_once()
     print("HEALTH_UNIT_OWN_INVOCATION=SUCCESS_EXIT0")
-    print("RESULT=FRESH_DUAL_LOCAL_HEALTH_ONEPASS_PASS")
+    print("RESULT="+("FRESH_LOCAL_ONLY_HEALTH_ONEPASS_PASS" if local_only else "FRESH_DUAL_LOCAL_HEALTH_ONEPASS_PASS"))
     return 0
 
 def bound_root_digest(path):
@@ -599,7 +685,7 @@ def selftest():
 
 def main():
     os.umask(0o077)
-    if len(sys.argv)!=2 or sys.argv[1] not in ("--selftest","--audit-pins","--preflight","--run-once"):
+    if len(sys.argv)!=2 or sys.argv[1] not in ("--selftest","--audit-pins","--preflight","--run-once","--run-once-local"):
         print("RESULT=BLOCKED_ARGS")
         return 2
     if sys.argv[1]=="--selftest":
@@ -614,9 +700,14 @@ def main():
             print("SERVICE_MODIFIED=NO")
             print("RESULT=GUARDED_ONEPASS_PREFLIGHT_PASS")
             return 0
+        if sys.argv[1]=="--run-once-local":
+            return run_once(local_only=True)
         return run_once()
     except Exception as e:
         reason=str(e)
+        extra=getattr(e,"reason",None)
+        if isinstance(extra,str) and re.fullmatch(r"[A-Za-z0-9_]{1,40}",extra):
+            reason=reason+"_"+extra.upper()
         if not re.fullmatch(r"[A-Z0-9_]{5,96}",reason):
             reason=type(e).__name__.upper()
         print("BLOCKER="+reason)
