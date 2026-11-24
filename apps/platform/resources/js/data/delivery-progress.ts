@@ -1584,7 +1584,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'active',
         detail: 'SOURCE ONLY: one immutable application-contract binding per requested commercial order, explicitly connecting the same tenant, licensed product code, catalog product ID and slug, currency and integer minor-unit amount. Owner authorization and reason-bound audit are mandatory; existing provider links, already-processed orders and duplicate terms deny recording. Read inspection distinguishes missing or changed bindings and mismatched amount/currency. Matching terms are not settlement or authorization to issue paid licenses.',
         evidence:
-            'KslpCommercialOrderTerms, additive migration and feature regressions for mismatched catalog/product/tenant, immutable terms, retroactive recording denial and amount/currency/slug drift. Internal-only; no checkout caller or live migration. Before future integration, checkout must lock and require the reviewed binding, then verify merchant settlement and refund lifecycle independently.',
+            'KslpCommercialOrderTerms, additive migration and feature regressions for mismatched catalog/product/tenant, immutable terms, retroactive recording denial and amount/currency/slug drift. Internal-only; no new HTTP route or live migration. Sandbox checkout now requires exact reviewed binding in its explicit KSLP entry point and rechecks it under the order lock before reservation and response linking; legacy unbound sandbox remains test-only. Retroactive terms are refused even with only an unresolved provider intent. Merchant settlement, refunds and paid issuance remain independently gated.',
     },
 ];
 
