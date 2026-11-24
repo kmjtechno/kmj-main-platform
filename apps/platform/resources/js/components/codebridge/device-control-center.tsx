@@ -46,6 +46,9 @@ export type CodeBridgeDevice = {
 type Props = {
     tenantId: string;
     plan: string | null;
+    licenseStatus: string;
+    licenseExpiresAt: string | null;
+    permissions: string[];
     devices: CodeBridgeDevice[];
     managedCount: number;
     deviceLimit: number | null;
@@ -64,6 +67,9 @@ const pairingRecoveryGuidance =
 export default function DeviceControlCenter({
     tenantId,
     plan,
+    licenseStatus,
+    licenseExpiresAt,
+    permissions,
     devices,
     managedCount,
     deviceLimit,
@@ -121,10 +127,13 @@ export default function DeviceControlCenter({
     const connectDevice = devices.find(
         (device) => device.id === connectDeviceId,
     );
-    const connectProject =
-        connectDevice?.projects.find(
-            (project) => project.id === connectProjectId,
-        ) ?? connectDevice?.projects[0];
+    const connectProject = connectProjectId
+        ? connectDevice?.projects.find(
+              (project) => project.id === connectProjectId,
+          )
+        : connectDevice?.projects.length === 1
+          ? connectDevice.projects[0]
+          : undefined;
     const connectPlan =
         connectDevice && connectProject
             ? deviceProjectConnectPlan(connectDevice, connectProject.id)
@@ -251,12 +260,12 @@ export default function DeviceControlCenter({
                     </details>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    <Link
+                    <a
                         href="/codebridge-connect.html"
                         className="inline-flex h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white hover:bg-red-500"
                     >
-                        <Laptop2 className="h-4 w-4" /> Windows setup guide
-                    </Link>
+                        <Laptop2 className="h-4 w-4" /> P520 Calibration setup
+                    </a>
                     <button
                         type="button"
                         onClick={() => router.reload({ only: ['service'] })}
@@ -268,7 +277,7 @@ export default function DeviceControlCenter({
                         href="/codebridge/pair"
                         className="inline-flex h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white hover:bg-red-500"
                     >
-                        <Cable className="h-4 w-4" /> Connect device
+                        <Cable className="h-4 w-4" /> Approve new pairing
                     </Link>
                 </div>
             </div>
@@ -330,7 +339,11 @@ export default function DeviceControlCenter({
                             className="bg-background mt-1 h-10 w-full rounded-lg border px-3 text-xs disabled:opacity-50"
                         >
                             {!connectProject && (
-                                <option value="">No existing grant</option>
+                                <option value="">
+                                    {connectDevice?.projects.length
+                                        ? 'Select project'
+                                        : 'No existing grant'}
+                                </option>
                             )}
                             {connectDevice?.projects.map((project) => (
                                 <option value={project.id} key={project.id}>
@@ -342,6 +355,15 @@ export default function DeviceControlCenter({
                 </div>
                 {connectPlan ? (
                     <div className="mt-3 flex flex-wrap items-center gap-3">
+                        {connectPlan.workspaceHref && (
+                            <Link
+                                href={connectPlan.workspaceHref}
+                                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-xs font-black text-white hover:bg-red-500"
+                            >
+                                <ArrowRight className="h-4 w-4" />
+                                Open device + project
+                            </Link>
+                        )}
                         <a
                             href={connectPlan.href}
                             download={connectPlan.download}
@@ -351,7 +373,8 @@ export default function DeviceControlCenter({
                             {connectPlan.label}
                         </a>
                         <p className="text-muted-foreground max-w-xl text-xs leading-5">
-                            {connectPlan.guidance} {connectPlan.proof}
+                            {connectPlan.guidance} {connectPlan.proof} Opening a
+                            project does not start or reconnect its local agent.
                         </p>
                     </div>
                 ) : (
@@ -362,7 +385,21 @@ export default function DeviceControlCenter({
                 )}
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <Stat
+                    label="Current plan"
+                    value={plan ?? 'Not reported'}
+                    hint={`License: ${licenseStatus}`}
+                />
+                <Stat
+                    label="License valid until"
+                    value={
+                        licenseExpiresAt
+                            ? formatRegisteredAt(licenseExpiresAt)
+                            : 'Not reported'
+                    }
+                    hint="From the KMJ licensing authority"
+                />
                 <Stat
                     label="Authorized devices"
                     value={managedCount}
@@ -387,6 +424,20 @@ export default function DeviceControlCenter({
                     value="Not verified"
                     hint="Use gateway connection overview"
                 />
+            </div>
+
+            <div className="mt-3 rounded-xl border p-3">
+                <p className="text-xs font-black">Account permissions</p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                    {permissions.length
+                        ? permissions.join(' · ')
+                        : 'No permissions reported'}
+                    {' · '}Project-specific grants still apply.
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                    Monthly usage: Not reported · Live runtime, Supervisor and
+                    agent version: not verified
+                </p>
             </div>
 
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-black/[0.02] px-4 py-3 dark:bg-white/[0.02]">
@@ -479,9 +530,13 @@ export default function DeviceControlCenter({
                                 device.platform,
                                 {
                                     deviceId: device.id,
-                                    pendingProjectIds: (
-                                        device.pending_projects ?? []
-                                    ).map((project) => project.id),
+                                    activeProjectIds: device.projects.map(
+                                        (project) => project.id,
+                                    ),
+                                    pendingProjectIds:
+                                        device.pending_projects?.map(
+                                            (project) => project.id,
+                                        ),
                                 },
                             );
                             return (
@@ -580,15 +635,34 @@ export default function DeviceControlCenter({
                                             : 's'}
                                     </p>
                                     <div className="mt-2 flex flex-wrap gap-1.5">
-                                        {device.projects.map((project) => (
-                                            <span
-                                                key={project.id}
-                                                title={project.id}
-                                                className="max-w-full truncate rounded-lg border px-2.5 py-1 text-xs"
-                                            >
-                                                {project.name}
-                                            </span>
-                                        ))}
+                                        {device.projects.map((project) => {
+                                            const projectPlan =
+                                                deviceProjectConnectPlan(
+                                                    device,
+                                                    project.id,
+                                                );
+                                            return projectPlan?.workspaceHref ? (
+                                                <Link
+                                                    key={project.id}
+                                                    href={
+                                                        projectPlan.workspaceHref
+                                                    }
+                                                    title={project.id}
+                                                    className="inline-flex max-w-full items-center gap-1 rounded-lg border px-2.5 py-2 text-xs font-bold hover:border-red-500/40"
+                                                >
+                                                    {project.name}
+                                                    <ArrowRight className="h-3 w-3 shrink-0" />
+                                                </Link>
+                                            ) : (
+                                                <span
+                                                    key={project.id}
+                                                    title={project.id}
+                                                    className="max-w-full truncate rounded-lg border px-2.5 py-1 text-xs"
+                                                >
+                                                    {project.name}
+                                                </span>
+                                            );
+                                        })}
                                         {device.projects.length === 0 && (
                                             <span className="text-muted-foreground text-xs">
                                                 No saved project grant

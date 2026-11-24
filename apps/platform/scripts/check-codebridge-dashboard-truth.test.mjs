@@ -307,7 +307,7 @@ void test('one-click routing never sends normal Linux or project-specific Window
             { ...windows, platform: 'darwin' },
             'kmj-codebridge',
         )?.href,
-        '/codebridge-connect.html',
+        '/codebridge/pair',
     );
     const calibration = {
         id: 'kmj-homeoffice-desktop-5fvjmet',
@@ -319,6 +319,16 @@ void test('one-click routing never sends normal Linux or project-specific Window
     assert.equal(
         deviceProjectConnectPlan(calibration, 'kmj-calibration-pro')?.href,
         '/install-codebridge-windows.cmd',
+    );
+    assert.equal(
+        deviceProjectConnectPlan(
+            {
+                ...calibration,
+                projects: [{ id: 'kmj-codebridge', name: 'CodeBridge' }],
+            },
+            'kmj-codebridge',
+        )?.href,
+        '/codebridge/pair',
     );
     assert.equal(
         deviceProjectConnectPlan(
@@ -383,4 +393,47 @@ void test('CodeBridge owner quick actions are grouped responsively without losin
     assert.match(ui, /href=\{vscodeInstallUrl\(service\.endpoint\)\}/);
     assert.match(ui, /download="KMJ-CodeBridge-Connect-Windows\.cmd"/);
     assert.match(ui, /onClick=\{\(\) => setActiveSection\('devices'\)\}/);
+});
+
+void test('generic Windows action opens scoped device selection, not a Calibration installer', () => {
+    assert.match(
+        ui,
+        /<button[^>]*onClick=\{\(\) => setActiveSection\('devices'\)\}[^>]*>[\s\S]*?Connect Windows PC\s*<\/button>/,
+    );
+    assert.match(ui, /Download Calibration Pro connector/);
+    assert.match(deviceCenter, /P520 Calibration setup/);
+});
+
+void test('redeemed project opens exact authorized workspace in one click; pending and stale pairings cannot', () => {
+    const device = {
+        id: 'kmj-elite',
+        platform: 'linux',
+        projects: [{ id: 'kmj-codebridge', name: 'CodeBridge' }],
+        pairing_state: 'redeemed',
+    };
+    assert.equal(
+        deviceProjectConnectPlan(device, 'kmj-codebridge')?.workspaceHref,
+        '/services/kmj-codebridge/workspace?device=kmj-elite&project=kmj-codebridge',
+    );
+    assert.equal(deviceProjectConnectPlan(device, 'other'), null);
+    for (const pairing_state of [
+        'approved_unredeemed',
+        'approval_expired',
+        'unknown',
+        undefined,
+    ]) {
+        assert.equal(
+            deviceProjectConnectPlan(
+                { ...device, pairing_state },
+                'kmj-codebridge',
+            )?.workspaceHref,
+            null,
+        );
+    }
+    assert.match(deviceCenter, /href=\{connectPlan\.workspaceHref\}/);
+    assert.match(deviceCenter, /Open device \+ project/);
+    assert.match(deviceCenter, /Current plan/);
+    assert.match(deviceCenter, /License valid until/);
+    assert.match(deviceCenter, /Account permissions/);
+    assert.match(deviceCenter, /Monthly usage: Not reported/);
 });

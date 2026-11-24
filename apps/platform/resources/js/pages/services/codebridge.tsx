@@ -230,9 +230,9 @@ export default function CodeBridgeService({
                             className="grid min-w-0 gap-3"
                         >
                             <div className="grid gap-2 sm:grid-cols-2">
-                                <a
-                                    href="/install-codebridge-windows.cmd"
-                                    download="KMJ-CodeBridge-Connect-Windows.cmd"
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveSection('devices')}
                                     className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-500 focus-visible:ring-2 focus-visible:outline-none"
                                 >
                                     <Laptop2
@@ -240,7 +240,7 @@ export default function CodeBridgeService({
                                         aria-hidden="true"
                                     />
                                     Connect Windows PC
-                                </a>
+                                </button>
                                 <button
                                     type="button"
                                     onClick={() => setActiveSection('devices')}
@@ -396,11 +396,13 @@ export default function CodeBridgeService({
                                         <div>
                                             <div className="flex items-center gap-2 text-xs font-black">
                                                 <Laptop2 className="h-3.5 w-3.5 text-red-500" />
-                                                Windows PC / workstation
+                                                P520 Calibration Pro workstation
                                             </div>
                                             <p className="text-muted-foreground mt-2 text-xs leading-5">
-                                                Download from this dashboard,
-                                                then double-click on that PC.
+                                                This connector is only for the
+                                                approved P520 Calibration Pro
+                                                enrollment, not other projects.
+                                                Download and run it on that PC.
                                                 Already enrolled? Choose YES to
                                                 reuse its private config. First
                                                 connection? Choose NO and
@@ -417,7 +419,7 @@ export default function CodeBridgeService({
                                             className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-black text-white hover:bg-red-500"
                                         >
                                             <Laptop2 className="h-3.5 w-3.5" />
-                                            Download Windows connector
+                                            Download Calibration Pro connector
                                         </a>
                                     </div>
                                 </div>
@@ -582,6 +584,9 @@ export default function CodeBridgeService({
                         <DeviceControlCenter
                             tenantId={organization.id}
                             plan={service.plan}
+                            licenseStatus={service.license_status}
+                            licenseExpiresAt={service.license_expires_at}
+                            permissions={service.permissions}
                             devices={service.devices}
                             managedCount={service.managed_devices}
                             deviceLimit={service.device_limit}

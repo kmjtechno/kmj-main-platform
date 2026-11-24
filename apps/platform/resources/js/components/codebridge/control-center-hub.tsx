@@ -132,14 +132,14 @@ export default function CodeBridgeControlCenterHub({
                         </button>
                     ))}
                 </nav>
-                <a
-                    href="/install-codebridge-windows.cmd"
-                    download="KMJ-CodeBridge-Connect-Windows.cmd"
+                <button
+                    type="button"
+                    onClick={() => onSectionChange('devices')}
                     className="mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-3 text-xs font-black text-white hover:bg-red-500"
                 >
                     <MonitorSmartphone className="h-4 w-4" />
                     Connect Windows device
-                </a>
+                </button>
             </aside>
 
             <div className="min-w-0 space-y-5">

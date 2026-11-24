@@ -10,8 +10,14 @@ export function deviceRecoveryAction(platform, scope = {}) {
         const pendingProjects = Array.isArray(scope?.pendingProjectIds)
             ? scope.pendingProjectIds
             : null;
+        const activeProjects = Array.isArray(scope?.activeProjectIds)
+            ? scope.activeProjectIds
+            : null;
         const calibrationOnly =
             deviceId === 'kmj-homeoffice-desktop-5fvjmet' &&
+            activeProjects !== null &&
+            activeProjects.length === 1 &&
+            activeProjects[0] === 'kmj-calibration-pro' &&
             pendingProjects !== null &&
             pendingProjects.length === 0;
         if (calibrationOnly) {
@@ -39,9 +45,9 @@ export function deviceRecoveryAction(platform, scope = {}) {
         };
     }
     return {
-        href: '/codebridge-connect.html',
+        href: '/codebridge/pair',
         label: 'Choose device setup',
         guidance:
-            'The registered platform does not identify a supported installer. Choose setup for the actual device; do not run a connector intended for another operating system.',
+            'No compatible installer is verified for this registered platform. Obtain the correct local agent before approving a pairing code. Do not download the P520-specific installer for another device or operating system.',
     };
 }
