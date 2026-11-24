@@ -169,33 +169,38 @@
     position: absolute;
     z-index: -1;
     pointer-events: none;
-    width: 390px;
-    height: 310px;
-    top: -150px;
-    right: 12%;
-    border: 1px solid #f3175b80;
+    width: clamp(300px, 36vw, 490px);
+    aspect-ratio: 1;
+    top: 5px;
+    right: 17%;
+    overflow: hidden;
+    border: 1px solid #ff385f;
     border-radius: 50%;
-    transform: rotate(-11deg);
     background:
-        radial-gradient(
-            ellipse 63% 62% at 48% 53%,
-            transparent 37%,
-            #fa1b5b13 58%,
-            #ee12446a 73%,
-            transparent 79%
-        ),
-        radial-gradient(circle at 30% 25%, #fa25435c 1.1px, transparent 2px) 0 0
-            / 9px 9px,
-        radial-gradient(
-            ellipse at 60% 60%,
-            #a4003f66,
-            #21082055 55%,
-            transparent 73%
-        );
+        radial-gradient(ellipse at 50% 0%, #fff1ed 0%, #ff5578 1%, #c50a3c 9%, transparent 35%),
+        radial-gradient(ellipse at 50% 9%, #e6104c 0%, #780b29 27%, #230c20 53%, #090e19 75%);
     box-shadow:
-        0 0 65px #e0145e50,
-        inset -22px -20px 45px #ff12581a;
-    mask-image: radial-gradient(ellipse, black 47%, #000a 72%, transparent 79%);
+        0 -5px 24px #fb174e75,
+        0 -1px 60px #d4164255,
+        inset 0 3px 20px #ff658780;
+}
+.kmj-mail-approved-shell .kmj-mail-globe::before {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle, #ff2959 1px, transparent 1.7px) 0 0 / 6px 6px,
+        repeating-radial-gradient(ellipse at 50% 0%, transparent 0 21px, #ff174233 22px 23px);
+    mask-image: radial-gradient(ellipse at 50% 6%, black, #000b 48%, transparent 76%);
+    content: '';
+}
+.kmj-mail-approved-shell .kmj-mail-globe::after {
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at 50% 0%, #ffabb55c, transparent 27%);
+    box-shadow: inset 0 2px 6px #ffb4c6a0;
+    content: '';
 }
 .kmj-mail-approved-shell .kmj-mail-hero-top {
     display: flex;
@@ -452,8 +457,31 @@
     background: linear-gradient(145deg, #3c203e, #271d37);
 }
 .kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-message-brand {
-    background: linear-gradient(95deg, #0a111d 40%, #3b132c 100%);
-    border-bottom: 3px solid #e72b56;
+    isolation: isolate;
+    position: relative;
+    min-height: 80px;
+    overflow: hidden;
+    border: 1px solid #83304f;
+    border-top: 3px solid #f43a61;
+    border-bottom-color: #74203a;
+    background:
+        radial-gradient(ellipse at 73% 112%, #e21b49 0%, #710d2b 13%, transparent 39%),
+        linear-gradient(105deg, #070d16 30%, #151022 68%, #460e25 100%);
+    box-shadow: inset 0 1px #ff769526;
+}
+.kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-message-brand::after {
+    position: absolute;
+    z-index: -1;
+    right: -8%;
+    bottom: -65px;
+    width: 85%;
+    height: 85px;
+    transform: rotate(-5deg);
+    border-top: 2px solid #ff3159;
+    border-radius: 50%;
+    background: linear-gradient(0deg, #500a26, #fa1e4920);
+    box-shadow: 0 -3px 22px #ff124e80;
+    content: '';
 }
 .kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-message-brand strong {
     color: #fff;
@@ -703,7 +731,9 @@
 .kmj-mail-approved-shell .kmj-mail-thread-messages > article {
     border-radius: 0 0 12px 12px;
     border-top: 0;
-    background: linear-gradient(155deg, #0e1726, #090f19);
+    background: linear-gradient(155deg, #101b29, #0a111c);
+    border-color: #2b3648;
+    box-shadow: none;
 }
 .kmj-mail-approved-shell .kmj-mail-message-list button {
     width: 100%;
@@ -875,5 +905,22 @@
     }
     .kmj-mail-approved-shell .kmj-mail-recent-sent-reader {
         max-width: 100%;
+    }
+}
+
+/* Keep the illuminated hemisphere behind the hero, not a cropped red disc. */
+@media (max-width: 1120px) {
+    .kmj-mail-approved-shell .kmj-mail-globe {
+        right: 4%;
+        opacity: 0.65;
+    }
+}
+@media (max-width: 700px) {
+    .kmj-mail-approved-shell .kmj-mail-globe {
+        right: -18%;
+        opacity: 0.3;
+    }
+    .kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-message-brand {
+        min-height: 68px;
     }
 }
