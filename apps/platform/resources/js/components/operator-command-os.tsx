@@ -115,7 +115,7 @@ const groups = [
             ['OmniDesk Remote Access', '/operator/products', Globe2],
             ['CineCore & Calibration', '/operator/products', Gauge],
             ['Content & Website', '/operator/products', FileText],
-            ['Communication (Mail/SMS)', '/operator/ops', Mail],
+            ['Communication (Mail)', '/operator/mail', Mail],
         ],
     },
     {
