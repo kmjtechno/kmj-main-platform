@@ -46,7 +46,7 @@ final class KmjProductCatalogTest extends TestCase
         $this->assertDatabaseHas('products', ['slug' => KmjProductCatalog::CODEBRIDGE_SLUG, 'category' => 'developer']);
         $this->assertDatabaseHas('products', ['slug' => KmjProductCatalog::OMNIDESK_SLUG, 'category' => 'business']);
 
-        $this->assertDatabaseCount('products', 15);
+        $this->assertDatabaseCount('products', 14);
         $this->assertDatabaseHas('products', [
             'slug' => CloudOSProductCatalog::SLUG,
             'name' => CloudOSProductCatalog::NAME,

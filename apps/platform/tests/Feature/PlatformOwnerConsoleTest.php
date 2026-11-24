@@ -62,7 +62,7 @@ final class PlatformOwnerConsoleTest extends TestCase
             ->assertJsonPath('cost.automatic_paid_fallback_enabled', false)
             ->assertJsonPath('grants_product_license', false)
             ->assertJsonPath('changes_entitlements', false)
-            ->assertJsonCount(15, 'scope.registered_product_slugs');
+            ->assertJsonCount(14, 'scope.registered_product_slugs');
     }
 
     public function test_confirmed_super_admin_email_does_not_grant_owner_access(): void
@@ -183,7 +183,7 @@ final class PlatformOwnerConsoleTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page
             ->component('operator')
-            ->has('catalogProducts', 15)
+            ->has('catalogProducts', 14)
             ->where('canonicalProductCount', 14)
             ->has('missingCanonicalSlugs', 0)
             ->where('catalogProducts.0.active_policy_count', 1)
