@@ -22,6 +22,21 @@ import {
 type OwnerPricingProposal = {
     version: string;
     status: 'owner_review_only' | 'unavailable';
+    calibration_studio?: {
+        status?: 'review_only';
+        identity_status?: string;
+        plans?: {
+            code: string;
+            name: string;
+            projectors: number | null;
+            monthly_inr_minor: number | null;
+            annual_inr_minor: number | null;
+            one_time_inr_minor: number | null;
+            monthly_usd_minor: number | null;
+            annual_usd_minor: number | null;
+            readiness: string;
+        }[];
+    };
     products: {
         slug: string;
         name: string;
@@ -221,6 +236,73 @@ export default function OperatorProducts({
                                     ))}
                                 </tbody>
                             </table>
+                            {pricingProposal.calibration_studio?.status ===
+                                'review_only' && (
+                                <div className="mt-6 rounded-xl border p-4">
+                                    <h3 className="text-sm font-bold">
+                                        Calibration Studio · proposed tiers
+                                    </h3>
+                                    <p className="text-muted-foreground mt-2 text-xs leading-5">
+                                        Identity mapping to the existing
+                                        Calibration Pro catalog is unresolved.
+                                        No checkout or license is enabled. Free
+                                        trial: 14 days, 2 projectors, no card,
+                                        watermarked noncommercial output.
+                                    </p>
+                                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                        {pricingProposal.calibration_studio.plans?.map(
+                                            (plan) => (
+                                                <article
+                                                    key={plan.code}
+                                                    className="rounded-lg border p-3 text-xs"
+                                                >
+                                                    <h4 className="font-bold">
+                                                        {plan.name}
+                                                    </h4>
+                                                    <p className="text-muted-foreground mt-1">
+                                                        {plan.projectors === null
+                                                            ? 'Custom capacity'
+                                                            : `${plan.projectors} projectors`}
+                                                    </p>
+                                                    <p className="mt-2">
+                                                        Monthly:{' '}
+                                                        {plan.monthly_inr_minor ===
+                                                        null
+                                                            ? '—'
+                                                            : formatProposedInr(
+                                                                  plan.monthly_inr_minor,
+                                                              )}
+                                                    </p>
+                                                    <p>
+                                                        Annual:{' '}
+                                                        {plan.annual_inr_minor ===
+                                                        null
+                                                            ? '—'
+                                                            : formatProposedInr(
+                                                                  plan.annual_inr_minor,
+                                                              )}
+                                                    </p>
+                                                    <p>
+                                                        One-time:{' '}
+                                                        {plan.one_time_inr_minor ===
+                                                        null
+                                                            ? '—'
+                                                            : formatProposedInr(
+                                                                  plan.one_time_inr_minor,
+                                                              )}
+                                                    </p>
+                                                    <p className="text-muted-foreground mt-2 break-words">
+                                                        {plan.readiness.replaceAll(
+                                                            '_',
+                                                            ' ',
+                                                        )}
+                                                    </p>
+                                                </article>
+                                            ),
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <p

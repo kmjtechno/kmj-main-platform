@@ -13,7 +13,7 @@ use JsonException;
 final class CommercialPriceProposalBook
 {
     /**
-     * @return array{version: string, status: string, products: list<array<string, mixed>>}
+     * @return array{version: string, status: string, products: list<array<string, mixed>>, calibration_studio?: array<string, mixed>}
      */
     public function snapshot(): array
     {
@@ -92,6 +92,78 @@ final class CommercialPriceProposalBook
             'version' => (string) ($book['version'] ?? 'unknown'),
             'status' => 'owner_review_only',
             'products' => $products,
+            'calibration_studio' => $this->calibrationStudio($book['calibration_studio_proposal'] ?? null),
         ];
     }
+
+    /**
+     * Separate proposed identity. Never alter the registered catalog or turn
+     * draft plans into order terms, even when the owner can read this data.
+     *
+     * @return array<string, mixed>
+     */
+    private function calibrationStudio(mixed $proposal): array
+    {
+        if (! is_array($proposal)
+            || ($proposal['product_slug_candidate'] ?? null) !== 'kmj-calibration-studio'
+            || ($proposal['catalog_reference'] ?? null) !== 'kmj-calibration-pro'
+            || ($proposal['identity_status'] ?? null) !== 'unresolved_do_not_alias_or_register'
+            || ($proposal['pricing_status'] ?? null) !== 'review_only'
+            || ($proposal['ready_to_sell'] ?? null) !== false
+            || ($proposal['customer_visible'] ?? null) !== false
+            || ($proposal['checkout_enabled'] ?? null) !== false
+            || ($proposal['live_payment_enabled'] ?? null) !== false
+            || ($proposal['automatic_license_issuance_enabled'] ?? null) !== false
+            || ($proposal['trial_requires_card'] ?? null) !== false
+            || ($proposal['trial_auto_converts'] ?? null) !== false
+            || ($proposal['trial_watermark'] ?? null) !== true
+            || ! is_array($proposal['plans'] ?? null)
+            || count($proposal['plans']) !== 6) {
+            return [];
+        }
+
+        $plans = [];
+        $expected = ['trial' => 2, 'event' => 2, 'starter' => 2, 'professional' => 4, 'business' => 8, 'enterprise' => null];
+        foreach ($proposal['plans'] as $plan) {
+            if (! is_array($plan)
+                || ! is_string($plan['code'] ?? null)
+                || ! array_key_exists($plan['code'], $expected)
+                || ! array_key_exists('projectors', $plan)
+                || $plan['projectors'] !== $expected[$plan['code']]
+                || ! is_string($plan['name'] ?? null)
+                || ! is_string($plan['readiness'] ?? null)) {
+                return [];
+            }
+
+            $amounts = [];
+            foreach (['monthly_inr_minor', 'annual_inr_minor', 'one_time_inr_minor', 'monthly_usd_minor', 'annual_usd_minor'] as $field) {
+                $amount = $plan[$field] ?? null;
+                if ($amount !== null && (! is_int($amount) || $amount < 0)) {
+                    return [];
+                }
+                $amounts[$field] = $amount;
+            }
+            if ($plan['code'] === 'trial' && (($plan['days'] ?? null) !== 14 || $amounts['one_time_inr_minor'] !== 0)) {
+                return [];
+            }
+            if ($plan['code'] === 'event' && ($plan['hours'] ?? null) !== 72) {
+                return [];
+            }
+            unset($expected[$plan['code']]);
+            $plans[] = [
+                'code' => $plan['code'],
+                'name' => $plan['name'],
+                'projectors' => $plan['projectors'],
+                'readiness' => $plan['readiness'],
+                ...$amounts,
+            ];
+        }
+
+        return [
+            'status' => 'review_only',
+            'identity_status' => 'unresolved_do_not_alias_or_register',
+            'plans' => $plans,
+        ];
+    }
+
 }
