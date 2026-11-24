@@ -584,6 +584,9 @@ export default function CodeBridgeService({
                         <DeviceControlCenter
                             tenantId={organization.id}
                             plan={service.plan}
+                            licenseStatus={service.license_status}
+                            licenseExpiresAt={service.license_expires_at}
+                            permissions={service.permissions}
                             devices={service.devices}
                             managedCount={service.managed_devices}
                             deviceLimit={service.device_limit}
