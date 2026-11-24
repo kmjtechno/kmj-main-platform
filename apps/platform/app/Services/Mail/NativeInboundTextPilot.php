@@ -91,7 +91,7 @@ final class NativeInboundTextPilot
             return null;
         }
         $type = $headers['content-type'] ?? 'text/plain';
-        if (preg_match('/\Atext\/plain(?:\s*;\s*charset\s*=\s*"? (?:utf-8|us-ascii) "?)?\s*\z/ixD', $type) !== 1
+        if (preg_match('/\Atext\/plain(?:\s*;\s*charset\s*=\s*(?:"(?:utf-8|us-ascii)"|(?:utf-8|us-ascii)))?\s*\z/iD', $type) !== 1
             || (isset($headers['content-disposition']) && strtolower($headers['content-disposition']) !== 'inline')) {
             return null;
         }
