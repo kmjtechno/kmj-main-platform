@@ -6,6 +6,7 @@ import CodeBridgeControlCenterHub, {
 } from '@/components/codebridge/control-center-hub';
 import DeviceControlCenter, {
     type CodeBridgeDevice,
+    type PresenceSnapshot,
 } from '@/components/codebridge/device-control-center';
 import { codeBridgeDeviceQuotaDisplay } from '@/components/codebridge/device-policy-display';
 import {
@@ -61,6 +62,7 @@ type Service = {
     device_limit: number | null;
     managed_devices: number;
     devices: RegisteredDevice[];
+    presence_snapshot?: PresenceSnapshot | null;
     pending_pairings: number;
     connected_clients: ConnectedClient[];
     access_token_ttl_seconds: number;
@@ -588,6 +590,7 @@ export default function CodeBridgeService({
                             licenseExpiresAt={service.license_expires_at}
                             permissions={service.permissions}
                             devices={service.devices}
+                            presenceSnapshot={service.presence_snapshot}
                             managedCount={service.managed_devices}
                             deviceLimit={service.device_limit}
                             canManage={canManageDevices}

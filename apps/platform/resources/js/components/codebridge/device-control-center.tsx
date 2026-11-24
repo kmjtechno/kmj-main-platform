@@ -43,7 +43,18 @@ export type CodeBridgeDevice = {
     registered_at?: string | null;
 };
 
+export type PresenceSnapshot = {
+    observedAt: string;
+    entries: Array<{
+        device: string;
+        project: string;
+        status: 'READY' | 'UNKNOWN';
+        lastSeenAt: string | null;
+    }>;
+};
+
 type Props = {
+    presenceSnapshot?: PresenceSnapshot | null;
     tenantId: string;
     plan: string | null;
     licenseStatus: string;
@@ -65,6 +76,7 @@ const pairingRecoveryGuidance =
     'If enrollment was lost, do not keep approving new codes. Once pairing is healthy and gateway checks confirm recovery is needed, a manager can disconnect only this device (recent password confirmation required), then approve one new code on that device. No files are deleted and no live connection is claimed until a gateway heartbeat is verified.';
 
 export default function DeviceControlCenter({
+    presenceSnapshot,
     tenantId,
     plan,
     licenseStatus,
@@ -243,8 +255,8 @@ export default function DeviceControlCenter({
                     <p className="text-muted-foreground mt-2 max-w-2xl text-xs leading-5">
                         Pair computers and VPSs, review approved projects and
                         disconnect credentials. Registered devices are not
-                        necessarily online: Main Platform does not receive live
-                        gateway heartbeats.
+                        necessarily online. Gateway snapshots are timestamped
+                        observations, not a continuous connection monitor.
                     </p>
                     <details className="mt-3 max-w-2xl rounded-xl border border-white/10 bg-white/[0.02] p-3">
                         <summary className="cursor-pointer text-sm font-semibold text-slate-200">
@@ -421,8 +433,8 @@ export default function DeviceControlCenter({
                 />
                 <Stat
                     label="Live status"
-                    value="Not verified"
-                    hint="Use gateway connection overview"
+                    value={presenceSnapshot ? 'Snapshot' : 'Not verified'}
+                    hint="Refresh the page for a fresh gateway check"
                 />
             </div>
 
@@ -443,13 +455,61 @@ export default function DeviceControlCenter({
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-black/[0.02] px-4 py-3 dark:bg-white/[0.02]">
                 <p className="text-muted-foreground text-xs leading-5">
                     Registration is verified by Main Platform. Live connectivity
-                    requires an authenticated gateway heartbeat and is not
-                    available in this view.
+                    requires an authenticated gateway heartbeat. The snapshot
+                    below is separate from registration.
                 </p>
                 <span className="inline-flex w-fit rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
-                    Online status: Not verified
+                    {presenceSnapshot
+                        ? 'Timestamped evidence below'
+                        : 'Online status: Not verified'}
                 </span>
             </div>
+
+            {presenceSnapshot && (
+                <section className="mt-4 rounded-xl border p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 className="text-sm font-semibold">
+                                Authenticated gateway snapshot
+                            </h3>
+                            <p className="text-muted-foreground mt-1 text-xs">
+                                Checked{' '}
+                                {formatRegisteredAt(
+                                    presenceSnapshot.observedAt,
+                                )}
+                                . READY refers only to that check.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => router.reload()}
+                            className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold"
+                        >
+                            <RefreshCw className="h-4 w-4" />
+                            Refresh status
+                        </button>
+                    </div>
+                    <div className="mt-3 max-h-80 space-y-2 overflow-auto">
+                        {presenceSnapshot.entries.map((entry) => (
+                            <div
+                                key={entry.device + '/' + entry.project}
+                                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-xs"
+                            >
+                                <span className="break-all">
+                                    {entry.device} / {entry.project}
+                                </span>
+                                <span>
+                                    {entry.status === 'READY' &&
+                                    entry.lastSeenAt
+                                        ? 'Ready at check · ' +
+                                          formatRegisteredAt(entry.lastSeenAt)
+                                        : 'Not verified'}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                 <label className="relative flex-1">

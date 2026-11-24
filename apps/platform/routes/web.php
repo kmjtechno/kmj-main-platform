@@ -5,6 +5,7 @@ use App\Http\Controllers\HuggingFaceConnectController;
 use App\Models\LicenseAuditEvent;
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
+use App\Services\CodeBridge\DashboardPresence;
 use App\Services\CodeBridge\OAuth\OAuthServer;
 use App\Services\Commerce\DesktopCommanderCommercialPolicy;
 use App\Services\Commerce\KmjProductCatalog;
@@ -605,7 +606,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->values()
             ->all();
 
-        return Inertia::render('services/codebridge', [
+        $devices = $deviceDirectory->forTenant((string) $organization['id'], time());
+        $presence = $organizations->userCanManage((int) $user->id, $organization['id'])
+            && in_array('read', $permissions, true)
+            ? app(DashboardPresence::class)->snapshot((string) $organization['id'], $devices)
+            : null;
+
+        $response = Inertia::render('services/codebridge', [
             'organization' => $organization,
             'entitlement' => $entitlement,
             'canManageOwnerPlan' => $canManageOwnerPlan,
@@ -624,7 +631,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->whereNull('revoked_at')
                     ->where('expires_at_epoch', '>', time())
                     ->count(),
-                'devices' => $deviceDirectory->forTenant((string) $organization['id'], time()),
+                'devices' => $devices,
+                'presence_snapshot' => $presence,
                 // Before approval a pairing has no tenant; show only this
                 // organization's approved pairings awaiting device redemption.
                 'pending_pairings' => DB::table('codebridge_device_pairings')
@@ -635,7 +643,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'connected_clients' => $connectedClients,
                 'access_token_ttl_seconds' => (int) config('codebridge_oauth.access_token_ttl', 900),
             ],
-        ]);
+        ])->toResponse($request);
+        $response->headers->set('Cache-Control', 'no-store, private');
+
+        return $response;
     })->name('services.codebridge');
 
     Route::post('services/kmj-codebridge/oauth-clients/{clientId}/revoke', function (
