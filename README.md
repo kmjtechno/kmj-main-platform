@@ -2,6 +2,8 @@
 
 KMJ TECHNO Main Platform is the clean-foundation enterprise operating platform for kmjtechno.com and future KMJ products.
 
+> **Releasing to production?** Read [`docs/operations/FAST_RELEASE_ONE_PAGE.md`](docs/operations/FAST_RELEASE_ONE_PAGE.md) first (works for Claude, ChatGPT and the owner). Activation always needs the owner's exact `activate karo <sha>` line.
+
 ## Locked boundaries
 - This repository is **not** KMJ Cloud Nexus. Cloud Nexus remains separate and untouched.
 - Git is the source of truth.
