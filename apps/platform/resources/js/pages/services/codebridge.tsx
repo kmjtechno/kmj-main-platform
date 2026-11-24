@@ -401,9 +401,9 @@ export default function CodeBridgeService({
                                                 Connect a Windows device
                                             </div>
                                             <p className="text-muted-foreground mt-2 text-xs leading-5">
-                                                Run on the target PC. Choose
-                                                an existing private enrollment
-                                                or select a local project and
+                                                Run on the target PC. Choose an
+                                                existing private enrollment or
+                                                select a local project and
                                                 approve a new pairing on KMJ.
                                                 Git and Node.js 24 are required.
                                             </p>
