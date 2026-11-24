@@ -31,7 +31,9 @@ Route::prefix('api/v1/kslp')->group(function (): void {
 });
 
 Route::get(OmniDeskLicenseContract::KEYS_ENDPOINT, function (KslpKeyRegistry $keys) {
-    $published = collect($keys->discovery('license'))
+    // OmniDesk must never trust an unscoped CloudOS/generic issuer key.
+    // A product-bound, finite-validity public key is required for its verifier.
+    $published = collect($keys->discovery('license', OmniDeskLicenseContract::PRODUCT_ID))
         ->filter(fn (array $key): bool => $key['not_after'] !== null)
         ->map(function (array $key): array {
             $raw = base64_decode(strtr((string) $key['public_key'], '-_', '+/').'=', true);
