@@ -191,6 +191,68 @@ final class KslpCommercialOrderTermsTest extends TestCase
         $this->assertDatabaseCount('kslp_reseller_credit_ledger', 0);
     }
 
+    public function test_product_drift_during_provider_http_preserves_intent_and_blocks_link(): void
+    {
+        $owner = $this->owner();
+        $actor = User::factory()->create(['email_verified_at' => now()]);
+        [$org, $product, $order, $catalog] = $this->scope($actor, 'DRIFT');
+        app(KslpCommercialOrderTerms::class)->record(
+            $owner, $org, $product, $order, $catalog, 'INR', 25000, 'Review exact sandbox order terms'
+        );
+
+        DB::table('payment_gateway_settings')->insert([
+            'provider' => 'razorpay',
+            'environment' => 'sandbox',
+            'merchant_status' => 'not_verified',
+            'international_requested' => false,
+            'encrypted_client_id' => Crypt::encryptString('rzp_test_ABC123'),
+            'encrypted_client_secret' => Crypt::encryptString('sandbox-secret-value'),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $transactionDepth = DB::transactionLevel();
+        Http::fake([
+            'api.razorpay.com/v1/orders' => function (Request $request) use ($catalog, $transactionDepth) {
+                self::assertSame($transactionDepth, DB::transactionLevel());
+                DB::table('products')->where('id', $catalog)->update(['slug' => 'changed-during-http']);
+
+                return Http::response([
+                    'id' => 'order_DRIFT1',
+                    'receipt' => $request['receipt'],
+                    'currency' => 'INR',
+                    'amount' => $request['amount'],
+                    'status' => 'created',
+                    'amount_paid' => 0,
+                    'amount_due' => $request['amount'],
+                ]);
+            },
+        ]);
+        $checkout = app(RazorpayCheckoutOrders::class);
+        try {
+            $checkout->openReviewed($order, $product, 25000);
+            self::fail('Changed catalog identity must not be linked to the provider response.');
+        } catch (DomainException $exception) {
+            self::assertSame('RAZORPAY_REVIEWED_TERMS_MISMATCH', $exception->getMessage());
+        }
+
+        $this->assertDatabaseHas('commerce_provider_order_intents', [
+            'commercial_order_id' => $order,
+            'creation_status' => 'creating',
+        ]);
+        $this->assertDatabaseMissing('commerce_provider_orders', ['commercial_order_id' => $order]);
+        DB::table('products')->where('id', $catalog)->update(['slug' => 'terms-drift']);
+
+        try {
+            $checkout->openReviewed($order, $product, 25000);
+            self::fail('Restored terms must not cause duplicate provider creation.');
+        } catch (DomainException $exception) {
+            self::assertSame('RAZORPAY_ORDER_CREATION_PENDING_REVIEW', $exception->getMessage());
+        }
+        Http::assertSentCount(1);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+        $this->assertDatabaseCount('kslp_reseller_credit_ledger', 0);
+    }
+
     public function test_existing_unresolved_provider_intent_prevents_retroactive_terms(): void
     {
         $owner = $this->owner();
