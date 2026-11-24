@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-private-dashboard-presence-consumer-20261124',
+        title: 'CodeBridge: authenticated same-host dashboard presence snapshot',
+        state: 'active',
+        detail: 'SOURCE ONLY: default-off Main Platform gateway consumer submits only redeemed, licensed tenant device/project grants from the authenticated manager session to the fixed private IPv4 loopback presence endpoint. No browser gateway credential, redirects, public forwarding or remote commands. Missing, malformed, mismatched or stale observations remain unverified. Snapshot evidence is not a persistent live connection or supervisor attestation.',
+        evidence:
+            'Gateway source PR #1194 merged at ea9c3ec8f309 after seven green jobs. Platform consumer tests, exact-head CI and owner review remain required. Protected Elite credential provisioning, signed gateway release, platform deployment and real authenticated acceptance are pending.',
+    },
+    {
         id: 'codebridge-dashboard-active-license-scope-20261124',
         title: 'CodeBridge dashboard and workspace: active license scope',
         state: 'active',
