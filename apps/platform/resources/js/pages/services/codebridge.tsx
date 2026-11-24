@@ -325,6 +325,7 @@ export default function CodeBridgeService({
                     pendingPairings={service.pending_pairings}
                     authorizedClientGrants={service.connected_clients.length}
                     oauthReady={service.oauth_ready}
+                    presenceSnapshot={service.presence_snapshot}
                     canManageOwnerPlan={canManageOwnerPlan}
                     activeSection={activeSection}
                     onSectionChange={setActiveSection}
