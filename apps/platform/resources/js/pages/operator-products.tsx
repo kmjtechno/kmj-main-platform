@@ -163,8 +163,9 @@ export default function OperatorProducts({
                     {pricingProposal?.status === 'owner_review_only' ? (
                         <div className="mt-4 overflow-x-auto">
                             <p className="text-muted-foreground mb-3 text-xs">
-                                Private price book {pricingProposal.version} ·
-                                15 registered product profiles
+                                Private price book {pricingProposal.version} ·{' '}
+                                {pricingProposal.products.length} registered
+                                product profiles
                             </p>
                             <table className="w-full min-w-[800px] text-left text-xs">
                                 <thead className="text-muted-foreground">
