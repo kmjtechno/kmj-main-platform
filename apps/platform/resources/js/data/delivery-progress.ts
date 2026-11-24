@@ -141,7 +141,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'kmj-mail-inbound-quarantine-pilot-20261124',
         title: 'KMJ Mail: signed inbound pilot and encrypted quarantine',
         state: 'active',
-        detail: 'PR #1123 implements signed single-recipient intake and encrypted quarantine. Follow-up source adds separately gated plain-text Inbox publication, null KMJ sender identity for external addresses, sender search, reply binding and unverified sender labels. Complex MIME and attachments remain quarantined; no production routing enabled.',
+        detail: 'PR #1123 implements signed single-recipient intake and encrypted quarantine. Follow-up source adds separately gated plain-text publication to an additive owner-scoped External Inbox table, real sender addresses, search, read state, unverified sender labels and explicit compose-to-sender. Existing internal sender foreign keys remain unchanged. Complex MIME and attachments remain quarantined; no production routing enabled.',
         evidence:
             'Exact-head CI and independent security review pending. Existing MX and info@ forwarding remain unchanged. Before activation, require reviewed key and retention controls, staging receipt, MIME and attachment security, mailbox integration and real external receipt.',
     },
