@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-signed-settlement-adapter-20261124',
+        title: 'CodeBridge signed settlement adapter',
+        state: 'active',
+        detail: 'SOURCE ONLY: immutable execution binding and owner-approved device key pinning, current device and project authorization, account-plan reservation and Ed25519-verified transactional settlement. Team seat assignment and runtime transport remain disabled.',
+        evidence:
+            'Not connected to an HTTP route or live gateway. No commercial activation, charges, signer generation or signed Elite deployment claimed.',
+    },
+    {
         id: 'codebridge-metering-readiness-consolidated-20261124',
         title: 'CodeBridge hosted usage: scoped receipt and quota foundations',
         state: 'active',
