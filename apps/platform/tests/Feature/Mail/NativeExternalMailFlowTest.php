@@ -182,6 +182,14 @@ final class NativeExternalMailFlowTest extends TestCase
             self::assertStringContainsString($palette['header'], $html);
             self::assertStringContainsString($palette['accent'], $html);
             self::assertStringContainsString('KMJ TECHNO SOLUTIONS', $html);
+            $artwork = EnterpriseMailTheme::artworkBase($palette);
+            if ($artwork !== null) {
+                self::assertStringContainsString($artwork.'/header.jpg', $html);
+                self::assertStringContainsString($artwork.'/footer.jpg', $html);
+                foreach (['enterprise', 'projection', 'remote', 'cloud', 'ai'] as $icon) {
+                    self::assertStringContainsString($artwork.'/'.$icon.'.png', $html);
+                }
+            }
             self::assertStringContainsString('&lt;script&gt;', $html);
             self::assertStringNotContainsString('<img src=x>', $html);
             self::assertStringNotContainsString('Message delivered', $html);
@@ -207,7 +215,13 @@ final class NativeExternalMailFlowTest extends TestCase
                 self::assertStringContainsString($palette['header'], $rendered);
                 self::assertStringContainsString($palette['footer'], $rendered);
                 self::assertStringContainsString($palette['accent'], $rendered);
-                self::assertStringContainsString('kmj-sender-avatar.png', $rendered);
+                $artwork = EnterpriseMailTheme::artworkBase($palette);
+                if ($artwork !== null) {
+                    self::assertStringContainsString($artwork.'/header.jpg', $rendered);
+                    self::assertStringContainsString($artwork.'/footer.jpg', $rendered);
+                } else {
+                    self::assertStringContainsString('kmj-sender-avatar.png', $rendered);
+                }
                 self::assertStringContainsString('&amp;signature=synthetic', $rendered);
                 self::assertStringContainsString('&lt;script&gt;', $rendered);
                 self::assertStringNotContainsString('<img src=x>', $rendered);
