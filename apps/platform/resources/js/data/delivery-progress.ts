@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-mail-jmap-transport-boundary-20261125',
+        title: 'KMJ Mail: authenticated read-only JMAP transport',
+        state: 'active',
+        detail: 'Source-only transport pins the HTTPS session and mailbox endpoints, rejects redirects, validates the expected authenticated mailbox identity, bounds response bytes and avoids exposing credentials in transport errors.',
+        evidence:
+            'Mock HTTP regressions added. Trusted per-user credential provisioning, isolated live TLS/JMAP acceptance and Inbox UI wiring remain pending. No route, outbound send or production activation.',
+    },
+    {
         id: 'kmj-mail-jmap-response-boundary-20261125',
         title: 'KMJ Mail: account-bound mailbox response validation',
         state: 'active',
