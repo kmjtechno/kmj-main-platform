@@ -63,6 +63,9 @@ final class NativeMailController
             'myUserId' => (int) $user->getKey(),
             'externalMailEnabled' => $this->external->transportEnabled(),
             'externalInbox' => $externalInbox,
+            'jmapOwnerInboxEnabled' => $portal === 'operator'
+                && config('kmj-mail-engine.pilot_enabled') === true
+                && $user->getKey() === config('kmj-mail-engine.pilot_owner_id'),
             'externalInboundPilotConfigured' => $portal === 'operator'
                 && config('kmj-mail-inbound.enabled') === true
                 && config('kmj-mail-inbound.publish_text') === true

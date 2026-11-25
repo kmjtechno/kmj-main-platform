@@ -15,7 +15,9 @@ use App\Services\Licensing\SandboxLicenseLifecycle;
 use App\Services\Licensing\SandboxLicenseValidationEngine;
 use App\Services\Mail\BrandedAuthNotifications;
 use App\Services\Mail\BrandedCustomerEvents;
+use App\Services\Mail\JmapReadOnlyTransport;
 use Carbon\CarbonImmutable;
+use GuzzleHttp\Client;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
@@ -35,6 +37,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(TransactionalOutbox::class);
+        $this->app->bind(JmapReadOnlyTransport::class, fn (): JmapReadOnlyTransport => new JmapReadOnlyTransport(new Client));
         $this->app->bind(ResolvesAiProviderScope::class, DashboardAiProviderScope::class);
         $this->app->bind(OutboxPublisher::class, LaravelEventOutboxPublisher::class);
         $this->app->bind(CommerceDomainEventRecorder::class, fn (Application $app): TransactionalOutbox => $app->make(TransactionalOutbox::class));

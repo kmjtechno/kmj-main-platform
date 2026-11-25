@@ -10,6 +10,42 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-mail-jmap-owner-inbox-ui-20261125',
+        title: 'KMJ Mail: explicit owner Inbox summary panel',
+        state: 'active',
+        detail: 'Explicit read-only Inbox panel behind owner pilot.',
+        evidence: 'Source-only UI; live and browser QA pending.',
+    },
+    {
+        id: 'kmj-mail-jmap-inbox-metadata-20261125',
+        title: 'KMJ Mail: bounded Inbox metadata',
+        state: 'active',
+        detail: 'Account-bound Inbox summaries and exact ID validation.',
+        evidence: 'Synthetic tests only; no live mail or deployment.',
+    },
+    {
+        id: 'kmj-mail-jmap-inbox-summary-20261125',
+        title: 'KMJ Mail: authenticated Inbox summary transport',
+        state: 'active',
+        detail: 'Same-session Inbox discovery, query and metadata retrieval.',
+        evidence: 'Mock HTTP tests; live qualification pending.',
+    },
+    {
+        id: 'kmj-mail-jmap-owner-endpoint-20261125',
+        title: 'KMJ Mail: default-off owner Inbox endpoint',
+        state: 'active',
+        detail: 'Owner-only read endpoint with throttling and no-store.',
+        evidence: 'Synthetic denial tests; no live activation.',
+    },
+    {
+        id: 'kmj-mail-jmap-inbox-transport-20261125',
+        title: 'KMJ Mail: authenticated Inbox transport integration',
+        state: 'active',
+        detail: 'Owner-bound pilot now connects the authenticated session, mailbox discovery and validated Email/query page in one bounded read-only service.',
+        evidence:
+            'Mock HTTP integration and invalid pagination regressions added. No live mail retrieval, message metadata rendering, route or production activation.',
+    },
+    {
         id: 'kmj-mail-jmap-inbox-query-20261125',
         title: 'KMJ Mail: bounded personal Inbox query',
         state: 'active',

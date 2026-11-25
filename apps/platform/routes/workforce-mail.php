@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\JmapOwnerInboxController;
 use App\Http\Controllers\NativeMailAiController;
 use App\Http\Controllers\NativeMailController;
 use App\Http\Controllers\OwnerNativeSmtpController;
@@ -62,6 +63,11 @@ Route::middleware(['auth', 'verified', 'password.confirm'])->group(function (): 
         ->whereIn('portal', ['operator', 'team'])
         ->middleware('throttle:2,1')
         ->name('kmj-mail.preview');
+
+    // Owner-only read operation; POST avoids automatic browser prefetch of private mail.
+    Route::post('operator/mail/jmap/inbox', JmapOwnerInboxController::class)
+        ->middleware('throttle:4,1,kmj-jmap-owner-inbox')
+        ->name('kmj-mail.jmap-inbox');
 
     Route::get('operator/mail/smtp', [OwnerNativeSmtpController::class, 'index'])
         ->name('kmj-mail.smtp-settings');

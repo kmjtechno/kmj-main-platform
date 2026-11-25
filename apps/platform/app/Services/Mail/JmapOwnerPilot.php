@@ -23,6 +23,30 @@ final class JmapOwnerPilot
      */
     public function mailboxes(User $actor): array
     {
+        $grant = $this->grant($actor);
+
+        return $this->transport->mailboxes($grant['username'], $grant['token']);
+    }
+
+    /** @return array{ids: list<string>, position: int, total: int} */
+    public function inboxPage(User $actor, int $position = 0): array
+    {
+        $grant = $this->grant($actor);
+
+        return $this->transport->inboxPage($grant['username'], $grant['token'], $position);
+    }
+
+    /** @return array{messages: list<array<string, mixed>>, missing: list<string>, position: int, total: int} */
+    public function inboxSummary(User $actor, int $position = 0): array
+    {
+        $grant = $this->grant($actor);
+
+        return $this->transport->inboxSummary($grant['username'], $grant['token'], $position);
+    }
+
+    /** @return array{username: string, token: string} */
+    private function grant(User $actor): array
+    {
         $ownerId = config('kmj-mail-engine.pilot_owner_id');
         if (config('kmj-mail-engine.pilot_enabled') !== true
             || ! is_int($ownerId) || $ownerId <= 0 || $actor->getKey() !== $ownerId) {
@@ -43,6 +67,6 @@ final class JmapOwnerPilot
             throw new RuntimeException('KMJ mail pilot unavailable.');
         }
 
-        return $this->transport->mailboxes($username, $token);
+        return ['username' => $username, 'token' => $token];
     }
 }
