@@ -104,6 +104,27 @@ type Props = {
     }[];
     myUserId: number;
     externalMailEnabled: boolean;
+    externalInboundPilotConfigured?: boolean;
+    externalInbox?: {
+        total: number;
+        unread: number;
+        matching: number;
+        items: {
+            id: number;
+            sender: string;
+            subject: string;
+            at: string;
+            unread: boolean;
+        }[];
+        selected: {
+            id: number;
+            sender: string;
+            recipient: string;
+            subject: string;
+            body: string;
+            at: string;
+        } | null;
+    } | null;
     externalOutbound: {
         state: 'not_activated' | 'ready_to_queue';
         from: string | null;
@@ -135,6 +156,8 @@ export default function MailCenter({
     staff,
     myUserId,
     externalOutbound,
+    externalInboundPilotConfigured = false,
+    externalInbox = null,
 }: Props) {
     const page = usePage();
     const flash = page.props.flash;
@@ -735,8 +758,9 @@ export default function MailCenter({
                             </p>
                             <p className="mt-2">
                                 Only authorized KMJ staff can open private team
-                                mail. External incoming mail, attachments and
-                                CC/BCC require separate verified services.
+                                mail. External Inbox uses a limited plain-text
+                                pilot; attachments and CC/BCC require separate
+                                verified services.
                             </p>
                         </div>
                     </aside>
@@ -1017,6 +1041,67 @@ export default function MailCenter({
                                         )}
                                     </div>
                                 )}
+                                {folder === 'inbox' && externalInbox && (
+                                    <section
+                                        aria-label="External incoming email"
+                                        className="mt-3 rounded-xl border border-slate-700 p-3"
+                                    >
+                                        <h3 className="text-sm font-bold">
+                                            External Inbox
+                                        </h3>
+                                        <p className="text-muted-foreground mt-1 text-xs">
+                                            {externalInbox.unread} unread ·{' '}
+                                            {externalInbox.matching} matching ·{' '}
+                                            {externalInbox.total} total
+                                        </p>
+                                        {externalInbox.items.map((item) => (
+                                            <button
+                                                key={item.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setView('mail');
+                                                    setSelectedIds([]);
+                                                    router.get(
+                                                        base,
+                                                        {
+                                                            folder: 'inbox',
+                                                            incoming: item.id,
+                                                            ...(q ? { q } : {}),
+                                                        },
+                                                        {
+                                                            preserveScroll: true,
+                                                        },
+                                                    );
+                                                }}
+                                                className="mt-2 w-full rounded-lg border border-slate-700 p-3 text-left hover:border-red-400"
+                                            >
+                                                <strong className="block truncate text-xs">
+                                                    {item.unread ? '• ' : ''}
+                                                    {item.sender}
+                                                </strong>
+                                                <span className="mt-1 block truncate text-sm">
+                                                    {item.subject}
+                                                </span>
+                                                <small className="text-muted-foreground">
+                                                    {item.at.slice(0, 16)}
+                                                </small>
+                                            </button>
+                                        ))}
+                                        {externalInbox.items.length === 0 && (
+                                            <p className="text-muted-foreground mt-2 text-xs">
+                                                {externalInboundPilotConfigured
+                                                    ? 'No matching incoming messages.'
+                                                    : 'Incoming pilot not activated.'}
+                                            </p>
+                                        )}
+                                        {externalInbox.matching > 40 && (
+                                            <p className="text-muted-foreground mt-2 text-xs">
+                                                Latest 40 matches. Refine search
+                                                to find older email.
+                                            </p>
+                                        )}
+                                    </section>
+                                )}
                                 <div className="kmj-mail-message-list mt-3 space-y-1.5">
                                     {visibleItems.map((item) => (
                                         <div
@@ -1150,12 +1235,12 @@ export default function MailCenter({
                                             <p className="mt-2 text-sm font-semibold">
                                                 {activeSearch
                                                     ? 'No messages match your search'
-                                                    : 'No messages in this folder'}
+                                                    : 'No internal messages in this folder'}
                                             </p>
                                             <p className="text-muted-foreground mt-1 text-xs">
                                                 {activeSearch
-                                                    ? 'Clear the search above to see all messages in this folder. Search covers subject, body and recipient, not saved labels.'
-                                                    : 'Private internal messages appear in this folder. External inbound is not active.'}
+                                                    ? 'Clear the search above to see all messages in this folder. Search covers subject, body and recipient; external Inbox also searches sender.'
+                                                    : 'Internal mail appears here. See the separately scoped External Inbox above for incoming pilot records.'}
                                             </p>
                                         </div>
                                     )}
@@ -1833,6 +1918,65 @@ export default function MailCenter({
                                     </p>
                                 </div>
                             </div>
+                        ) : externalInbox?.selected ? (
+                            <div className="p-5">
+                                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 pb-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate('inbox')}
+                                        className="rounded-lg border px-3 py-2 text-xs"
+                                    >
+                                        Back to Inbox
+                                    </button>
+                                    <span className="text-xs text-amber-300">
+                                        External sender · Unverified
+                                    </span>
+                                </div>
+                                <h2 className="my-4 text-2xl font-bold break-words">
+                                    {externalInbox.selected.subject}
+                                </h2>
+                                <div className="rounded-xl border border-slate-700 p-4">
+                                    <p className="text-sm break-all">
+                                        From: {externalInbox.selected.sender}
+                                    </p>
+                                    <p className="text-muted-foreground mt-1 text-xs break-all">
+                                        To: {externalInbox.selected.recipient}
+                                    </p>
+                                    <p className="text-muted-foreground mt-1 text-xs">
+                                        {externalInbox.selected.at}
+                                    </p>
+                                    <p className="mt-5 border-t border-slate-700 pt-4 text-sm leading-7 break-words whitespace-pre-wrap">
+                                        {externalInbox.selected.body}
+                                    </p>
+                                </div>
+                                <p className="mt-4 text-xs text-amber-300">
+                                    Sender authentication is not verified. Treat
+                                    links and requests as untrusted.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const incoming = externalInbox.selected;
+                                        if (!incoming) return;
+                                        startCompose();
+                                        setRecipientEmail(incoming.sender);
+                                        setSubject(
+                                            incoming.subject
+                                                .toLowerCase()
+                                                .startsWith('re:')
+                                                ? incoming.subject
+                                                : 'Re: ' + incoming.subject,
+                                        );
+                                    }}
+                                    className="mt-4 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white"
+                                >
+                                    Compose to sender
+                                </button>
+                                <p className="text-muted-foreground mt-2 text-xs">
+                                    Opens a new outgoing draft. Internet
+                                    reply-thread headers are not yet supported.
+                                </p>
+                            </div>
                         ) : selectedThread &&
                           selectedThread.items.length > 0 ? (
                             <div className="p-4 sm:p-5">
@@ -2023,30 +2167,13 @@ export default function MailCenter({
                                         )}
                                     </div>
                                 </div>
-                                <div className="kmj-mail-message-brand mt-4 flex flex-wrap items-center justify-between gap-4 rounded-t-xl p-4">
-                                    <img
-                                        src="/assets/brand/kmj-logo-horizontal-readable.svg"
-                                        width="210"
-                                        height="55"
-                                        alt="KMJ TECHNO — INNOVATE | BUILD | SCALE"
-                                        className="h-11 w-auto object-contain"
-                                    />
-                                    <div className="text-right">
-                                        <strong className="block text-base">
-                                            KMJ Mail Enterprise
-                                        </strong>
-                                        <small className="text-[11px]">
-                                            Private official correspondence
-                                        </small>
-                                    </div>
-                                </div>
                                 <div className="kmj-mail-thread-messages mt-0 space-y-4">
                                     {selectedThread.items.map((item) => (
                                         <article
                                             key={item.id}
-                                            className="border-border/70 bg-background/50 rounded-2xl border p-5 shadow-sm"
+                                            className="kmj-mail-thread-card border-border/70 bg-background/50 overflow-hidden rounded-xl border"
                                         >
-                                            <div className="flex flex-wrap items-start justify-between gap-2 border-b pb-3">
+                                            <div className="kmj-mail-message-meta flex flex-wrap items-start justify-between gap-2 p-4">
                                                 <div className="text-xs">
                                                     <strong className="block">
                                                         {item.from_id ===
@@ -2082,7 +2209,24 @@ export default function MailCenter({
                                                     {item.at.slice(0, 19)}
                                                 </span>
                                             </div>
-                                            <p className="mt-5 text-[15px] leading-8 break-words whitespace-pre-wrap">
+                                            <div className="kmj-mail-message-brand flex flex-wrap items-center justify-between gap-4 p-4">
+                                                <img
+                                                    src="/assets/brand/kmj-logo-horizontal-readable.svg"
+                                                    width="210"
+                                                    height="55"
+                                                    alt="KMJ TECHNO — INNOVATE | BUILD | SCALE"
+                                                    className="h-11 w-auto object-contain"
+                                                />
+                                                <div className="text-right">
+                                                    <strong className="block text-base">
+                                                        KMJ Mail Enterprise
+                                                    </strong>
+                                                    <small className="text-[11px]">
+                                                        Private mail workspace
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <p className="kmj-mail-message-body text-[15px] leading-7 break-words whitespace-pre-wrap">
                                                 {item.body}
                                             </p>
                                         </article>
