@@ -1,3 +1,4 @@
+@php($theme = \App\Services\Mail\EnterpriseMailTheme::palette())
 <!doctype html>
 <html lang="en">
 <head>
@@ -26,49 +27,14 @@
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#edf1f5" style="border-collapse:collapse;width:100%;background-color:#edf1f5;">
         <tr>
             <td align="center" style="padding:38px 12px 42px;">
-                <table class="kmj-container" role="presentation" cellpadding="0" cellspacing="0" border="0" width="660" style="border-collapse:separate;border-spacing:0;width:660px;max-width:660px;">
-                    <tr>
-                        <td bgcolor="#b81331" height="5" style="height:5px;line-height:5px;font-size:0;background-color:#b81331;border-radius:16px 16px 0 0;">&nbsp;</td>
-                    </tr>
-                    <tr>
-                        <td class="kmj-header kmj-gutter" bgcolor="#0c111b" style="padding:33px 46px 37px;background-color:#0c111b;">
-                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
-                                <tr>
-                                    <td align="left" valign="middle">
-                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-<tr>
-<td width="70" valign="middle" style="width:70px;padding:0;">
-<a href="https://kmjtechno.com" style="text-decoration:none;"><img class="kmj-brand-mark" src="https://kmjtechno.com/assets/brand/kmj-sender-avatar.png" width="64" height="64" alt="KMJ TECHNO" style="display:block;width:64px;height:64px;border:0;outline:0;"></a>
-</td>
-<td valign="middle" style="padding:0 0 0 10px;white-space:nowrap;">
-<a href="https://kmjtechno.com" style="display:block;color:#fff;text-decoration:none;">
-<span class="kmj-brand-name" style="display:block;white-space:nowrap;font-size:27px;line-height:32px;font-weight:800;letter-spacing:-0.5px;"><span style="color:#ff263f;">KMJ</span> <span style="color:#ffffff;">TECHNO</span></span>
-<span class="kmj-tagline" style="display:block;white-space:nowrap;color:#ffffff;font-size:15px;line-height:21px;font-weight:700;letter-spacing:0.1px;">INNOVATE <span style="color:#ff314a;">|</span> BUILD <span style="color:#ff314a;">|</span> SCALE</span>
-</a>
-</td>
-</tr>
-</table>
-                                    </td>
-                                </tr>
-                                <tr><td style="padding-top:24px;">
-                                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;"><tr>
-                                        <td style="border-top:1px solid #313945;font-size:0;line-height:0;">&nbsp;</td>
-                                    </tr></table>
-                                </td></tr>
-                                <tr>
-                                    <td style="padding-top:19px;color:#aeb8c8;font-size:11px;line-height:18px;font-weight:bold;letter-spacing:1.8px;">
-                                        PRIVATE ACCOUNT COMMUNICATION
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
+                <table class="kmj-container" role="presentation" cellpadding="0" cellspacing="0" border="0" width="660" style="border-collapse:separate;border-spacing:0;width:100%;max-width:660px;">
+@include('emails.partials.kmj-enterprise-header')
                     <tr>
                         <td class="kmj-body kmj-gutter" bgcolor="#ffffff" style="padding:43px 46px 43px;background-color:#ffffff;border-left:1px solid #e2e7ed;border-right:1px solid #e2e7ed;">
                             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
                                 <tr>
                                     <td>
-                                        <p style="margin:0 0 15px;color:#b81331;font-size:12px;line-height:20px;font-weight:bold;letter-spacing:1.7px;text-transform:uppercase;">{{ $eyebrow }}</p>
+                                        <p style="margin:0 0 15px;color:{{ $theme['accent'] }};font-size:12px;line-height:20px;font-weight:bold;letter-spacing:1.7px;text-transform:uppercase;">{{ $eyebrow }}</p>
                                         <h1 class="kmj-title" style="margin:0 0 21px;color:#0c1628;font-size:37px;line-height:45px;font-weight:800;letter-spacing:-0.7px;">{{ $heading }}</h1>
                                         <p style="margin:0 0 27px;color:#44536a;font-size:16px;line-height:27px;">{{ $intro }}</p>
                                     </td>
@@ -80,7 +46,7 @@
                                                 <td style="padding:25px 25px 27px;">
                                                     <p style="margin:0 0 16px;color:#59677a;font-size:11px;font-weight:bold;letter-spacing:1.5px;line-height:18px;">SECURE ACTION</p>
                                                     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border-spacing:0;">
-                                                        <tr><td bgcolor="#ce193d" style="background-color:#ce193d;border:1px solid #ce193d;border-radius:8px;">
+                                                        <tr><td bgcolor="{{ $theme['accent'] }}" style="background-color:{{ $theme['accent'] }};border:1px solid {{ $theme['accent'] }};border-radius:8px;">
                                                             <a class="kmj-cta" href="{{ $actionUrl }}" target="_blank" style="display:inline-block;padding:16px 27px;color:#ffffff;text-decoration:none;font-size:16px;line-height:23px;font-weight:bold;">{{ $actionText }} &rarr;</a>
                                                         </td></tr>
                                                     </table>
@@ -94,9 +60,9 @@
                                     <td style="padding:0 0 26px;">
                                         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
                                             <tr>
-                                                <td width="4" bgcolor="#b81331" style="width:4px;background-color:#b81331;font-size:0;line-height:0;">&nbsp;</td>
-                                                <td style="padding:15px 18px;background-color:#fff8fa;">
-                                                    <p style="margin:0 0 5px;color:#99223d;font-size:11px;line-height:18px;font-weight:bold;letter-spacing:1.2px;">SECURITY NOTICE</p>
+                                                <td width="4" bgcolor="{{ $theme['accent'] }}" style="width:4px;background-color:{{ $theme['accent'] }};font-size:0;line-height:0;">&nbsp;</td>
+                                                <td style="padding:15px 18px;background-color:{{ $theme['tint'] }};">
+                                                    <p style="margin:0 0 5px;color:{{ $theme['accent'] }};font-size:11px;line-height:18px;font-weight:bold;letter-spacing:1.2px;">SECURITY NOTICE</p>
                                                     <p style="margin:0;color:#465369;font-size:14px;line-height:23px;">{{ $expiryText }}</p>
                                                 </td>
                                             </tr>
@@ -114,18 +80,7 @@
                             </table>
                         </td>
                     </tr>
-                    <tr>
-                        <td class="kmj-gutter kmj-footer" bgcolor="#f9fafc" style="padding:29px 46px;border:1px solid #e2e7ed;border-top:0;border-radius:0 0 16px 16px;background-color:#f9fafc;text-align:left;">
-                            <p style="margin:0 0 7px;color:#172238;font-size:16px;line-height:23px;font-weight:bold;letter-spacing:0.2px;">KMJ TECHNO</p>
-                            <p style="margin:0 0 17px;color:#7a879b;font-size:13px;line-height:20px;font-weight:bold;letter-spacing:1px;">INNOVATE | BUILD | SCALE</p>
-                            <p style="margin:0 0 12px;color:#66758b;font-size:13px;line-height:21px;">Official account-security communication from KMJ TECHNO. Please verify the sender domain before following security links.</p>
-                            <p style="margin:0;color:#65738a;font-size:12px;line-height:20px;">
-                                <a href="https://kmjtechno.com" style="color:#9d2540;text-decoration:none;">kmjtechno.com</a>
-                                &nbsp;&nbsp;|&nbsp;&nbsp;
-                                <a href="mailto:info@kmjtechno.com" style="color:#9d2540;text-decoration:none;">info@kmjtechno.com</a>
-                            </p>
-                        </td>
-                    </tr>
+@include('emails.partials.kmj-enterprise-footer', ['footerNotice' => 'Official account-security communication from KMJ TECHNO. Verify the sender domain before following security links.'])
                     <tr>
                         <td align="center" style="padding:22px 13px;color:#7b8798;font-size:11px;line-height:18px;">&copy; {{ date('Y') }} KMJ TECHNO. Automated service notification.</td>
                     </tr>
