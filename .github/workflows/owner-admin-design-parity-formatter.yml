@@ -32,26 +32,26 @@ jobs:
           ./node_modules/.bin/vp fmt \
             resources/css/owner-module-shell.css \
             resources/js/layouts/owner-module-shell.tsx \
+            resources/js/pages/operator-modelfabric.tsx \
+            scripts/check-modelfabric.test.mjs \
             resources/js/pages/services/ai-providers.tsx \
             resources/js/pages/services/codebridge.tsx \
             scripts/check-owner-design-parity.test.mjs \
             resources/js/pages/operator-products.tsx \
             resources/js/pages/operator-mail-smtp.tsx \
-            resources/js/pages/operator-modelfabric.tsx \
-            scripts/check-modelfabric.test.mjs \
             scripts/check-mail-inbound-worker.test.mjs \
             scripts/check-owner-product-editor-state.test.mjs \
             resources/private/kmj-commercial-pricebook-20261123.json
           git diff --no-ext-diff -- \
             resources/css/owner-module-shell.css \
             resources/js/layouts/owner-module-shell.tsx \
+            resources/js/pages/operator-modelfabric.tsx \
+            scripts/check-modelfabric.test.mjs \
             resources/js/pages/services/ai-providers.tsx \
             resources/js/pages/services/codebridge.tsx \
             scripts/check-owner-design-parity.test.mjs \
             resources/js/pages/operator-products.tsx \
             resources/js/pages/operator-mail-smtp.tsx \
-            resources/js/pages/operator-modelfabric.tsx \
-            scripts/check-modelfabric.test.mjs \
             scripts/check-mail-inbound-worker.test.mjs \
             scripts/check-owner-product-editor-state.test.mjs \
             resources/private/kmj-commercial-pricebook-20261123.json
