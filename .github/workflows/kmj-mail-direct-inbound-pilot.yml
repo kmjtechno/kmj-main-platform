@@ -1,0 +1,25 @@
+name: KMJ direct inbound pilot contract
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/kmj_postfix_inbound_pilot.py'
+      - 'scripts/operations/test_kmj_postfix_inbound_pilot.py'
+      - '.github/workflows/kmj-mail-direct-inbound-pilot.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/kmj_postfix_inbound_pilot.py'
+      - 'scripts/operations/test_kmj_postfix_inbound_pilot.py'
+      - '.github/workflows/kmj-mail-direct-inbound-pilot.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  adapter-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Offline direct inbound contract
+        run: python3 -B -m unittest discover -s scripts/operations -p test_kmj_postfix_inbound_pilot.py -v

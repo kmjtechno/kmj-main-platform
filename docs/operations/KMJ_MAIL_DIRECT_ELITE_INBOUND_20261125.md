@@ -1,0 +1,34 @@
+# KMJ Mail direct Elite inbound — pilot, not deployed
+
+Owner order 25 Nov: Cloudflare Email Routing removed; do not re-enable or depend on Gmail. Cloudflare remains authoritative DNS only. No new MX at the time of this design. Under RFC 5321, a missing MX can fall back to the domain A record, so absence of MX is not a firewall or a guarantee that inbound SMTP is blocked.
+
+## Decision and research
+
+- Keep existing Elite Postfix, OpenDKIM, Laravel and PostgreSQL. Postfix is already used for outgoing mail. Reuse its durable queue and explicit single-recipient transport with the existing signed intake contract.
+- Add Rspamd Milter for inbound spam/DMARC/DKIM/SPF evidence, then ClamAV or a reviewed scanner for attachments. Never replace working outbound milters or open a relay.
+- Stalwart offers SMTP/IMAP/JMAP in one Rust service; evaluate later for a full protocol platform, including AGPL/enterprise license implications. Do not install beside live Postfix on the same SMTP ports.
+- mailcow is a mature integrated Postfix/Dovecot/Rspamd suite, but its complete container stack risks port, resource and operational conflicts with Elite's existing production. Not selected for this pilot.
+- Dovecot LMTP/IMAP may be appropriate later for standards-based mailbox clients. KMJ's own Inbox is the first target.
+- MIME parser candidates: zbateson/mail-mime-parser (pure PHP) and php-mime-mail-parser (requires mailparse). Audit pinned version, advisories and resource limits before introducing either. Known zbateson filename CRLF advisory GHSA-36h5-qg4p-q2qf requires checking patched version. Do not implement generic MIME parsing with ad hoc regex.
+
+References: https://www.postfix.org/VIRTUAL_README.html ; https://www.postfix.org/pipe.8.html ; https://www.postfix.org/postconf.5.html ; https://docs.rspamd.com/tutorials/integration/ ; https://github.com/rspamd/rspamd ; https://github.com/stalwartlabs/stalwart ; https://github.com/mailcow/mailcow-dockerized ; https://github.com/zbateson/mail-mime-parser ; https://github.com/php-mime-mail-parser/php-mime-mail-parser ; https://github.com/advisories/GHSA-36h5-qg4p-q2qf ; https://www.rfc-editor.org/rfc/rfc5321.html .
+
+## Implemented source boundary
+
+Postfix pipe adapter reads at most 256 KiB + 1, accepts only the existing mail-pilot@kmjtechno.com recipient, signs the existing HMAC contract using root-owned 0640 key file, verifies TLS and accepts only exact durable quarantine or duplicate receipt. Queue retry uses EX_TEMPFAIL when service/credentials/network/receipt are unavailable. Oversize or malformed envelope is explicit permanent failure, not silent success; reject unsupported size at SMTP before queue where possible. No network or production mutation in tests. No Cloudflare Worker needed.
+
+This is a pilot: strict plain/approved alternative projection only. Raw MIME encrypted in quarantine, unsupported messages not published. It does not prove sender authentication, general attachment support or a real Inbox delivery. Existing receiver permits only pilot address, has 100/day and 1000 retained ceiling. Do not route info@ to the pilot by rewriting its identity.
+
+## Root activation runbook — review first, do not blindly execute
+
+1. Read-only inventory: postconf -n (sanitize credentials and non-public data before reporting), postconf -M, listening sockets, service status, queue counts, actual address class for kmjtechno.com, existing virtual/relay/transport maps and milters; verify provider inbound TCP25 from independent external host; PTR/HELO, TLS cert and existing outbound SPF/DKIM/DMARC. No raw private queue output. Record hashes and root-only backups of configuration and maps. Confirm disk and PostgreSQL recovery.
+2. Install root-owned adapter after exact-source review; create dedicated non-login service account with no privileged groups. Root-owned key file with dedicated group and 0640, protected directory. Provision the same random 32-byte secret in protected Laravel env, never in GitHub/chat/argv. Set configured verified owner ID only after explicit mailbox authorization. Keep publish flags off until quarantine test.
+3. Independently review a Postfix configuration diff for the actual existing address class. Do not overwrite main.cf/master.cf or generic maps. Explicit accepted recipient map only, no catch-all, no arbitrary relay. Preserve reject_unauth_destination, existing outbound delivery and OpenDKIM. Single-recipient pipe transport, dedicated unprivileged uid, fixed absolute adapter path, no shell; set transport-specific destination_recipient_limit=1 and configure null_sender= (empty). Match exact envelope recipient, do not trust From/To headers. Confirm CRLF behavior and duplicate raw digest on retry. Review limits so no global outbound regression. Run postfix check and isolated queue/pipe tests before guarded reload.
+4. Rspamd local-only milter: verify bounded resource use, inbound-only integration, fail-closed temporary errors for scanning unavailable on pilot; preserve outbound DKIM signing. Do not trust sender-supplied Authentication-Results. Record sender auth separately from envelope/header consistency. Test spoofing, spam, malicious MIME, unknown recipients, external-to-external relay denial and queue failure/retry. Ensure TLS hostname, no unintended public admin ports.
+5. Exact staged/live receiver, local signed test with quarantined receipt and encrypted database witness; then owner-approved publish_text and separate publish_alternative only after tests. Observe actual authenticated Inbox using synthetic mail. Verify duplicate produces one item; disabled receiver must defer, not silently drop.
+6. Only after above, owner approves public inbound cutover. Set DNS-only A mail.kmjtechno.com to Elite (already exists; verify), MX @ priority 10 mail.kmjtechno.com, maintain SPF/DKIM/DMARC. Review obsolete Cloudflare SPF include separately, never remove legitimate provider authorization. Test real externally sourced plain and multipart mail and outbound reply. Explicitly implement and authorize info@ as its actual envelope address in app before enabling it. Unknown users rejected at RCPT. No DNS change by this source PR.
+7. Rollback: restore exact root backup and reload validated prior Postfix config, stop pilot acceptance, keep queue and quarantine, remove new MX only with owner approval; do not silently discard queued mail. If immediate public receiving is not ready, report outage accurately. Existing Cloudflare forwarding was disabled by owner; do not restore without permission.
+
+## Acceptance evidence
+
+Require real external TCP25 and SMTP, no open relay, exact known-recipient rejection, durable queue/quarantine, private Inbox, spam verdict, delivery retry/deduplication, recovery rehearsal, outbound regression and actual recipient receipt. No claims of complete two-way email before these gates. Source CI is not proof of host activation.
