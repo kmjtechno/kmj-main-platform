@@ -1,6 +1,6 @@
 # FAST RELEASE: one page (Claude, ChatGPT and owner)
 
-> **Start here.** This is the current, shortest release path for KMJ Main Platform on the Elite host.
+> **Start here.** This is the shortest reviewed release path on the Elite host: Main Platform deployment below, followed by the CodeBridge signed-release path.
 > It was run end to end on 2026-11-24 for `platform-ad5e762b851c` and `platform-0f171fda626c`.
 > Longer background and the older helper-script path: [`FAST_RELEASE_GUIDE_ELITE.md`](FAST_RELEASE_GUIDE_ELITE.md).
 > This page is a procedure, not proof that a commit is release ready: that needs `RELEASE_GATE.md` evidence.
@@ -58,6 +58,31 @@ verdict and what was **not** verified. Post the result to the CodeBridge coordin
 | status still shows an older `approvedSha` | prepare did not register | ask the owner for the last lines of the prepare output; do not activate |
 | `readyToActivate: false` | blocker present | read `activationBlockers`; stop |
 | activation tool refuses | protected precondition failed | stop and ask the owner; do not retry with other values |
+
+## CodeBridge — same Elite CLI, signed release
+
+Use the existing `codebridge` adapter, not the Main Platform activation tool.
+See [the CodeBridge adapter contract](https://github.com/kmjtechno/kmj-codebridge/blob/main/docs/ELITE-UNIVERSAL-FAST-RELEASE.md).
+
+1. **Agent:** freeze the reviewed CodeBridge main SHA and confirm exact-head CodeBridge CI and VPS Deployment Smoke succeed. Identify the currently deployed signed version/sequence.
+2. **Owner only, Elite root:** inspect the existing adapter and then sign the reviewed SHA:
+
+   ```bash
+   sudo kmj-fast-release --project codebridge --action inspect
+   sudo kmj-fast-release --project codebridge --action sign --sha <FULL_40_HEX_CODEBRIDGE_SHA> --confirm OWNER_APPROVES_PINNED_FAST_RELEASE
+   ```
+
+   Sign only when inspect reports `ELITE_ONEHOST_SIGNER=READY_FOR_OWNER_SIGN` and `SIGNED_DEPLOY_TIMER=ACTIVE`. Any blocker stops the flow.
+3. **Agent and independent reviewer:** verify the signed release PR's exact source SHA, signed manifest, sequence and required checks. The adapter prechecks main, then invokes the pinned signer which selects its own source; do not assume that source is the requested SHA. A mismatch requires investigation, not approval. Only approve/merge through protected GitHub rules. The signer receipt `FAST_RELEASE=SIGNED_PR_REVIEW_REQUIRED_NOT_LIVE` is not deployment.
+4. **Agent:** the existing signed deploy timer manages rollout; check the signed gateway/feed sequence and runtime identity separately from the agent updater. Confirm connection readiness, smoke checks and rollback evidence. The owner can read:
+
+   ```bash
+   sudo kmj-fast-release --project codebridge --action status
+   ```
+
+   Updater history alone is not gateway or fleet deployment proof. Report exact source SHA, signed sequence, gateway/agent readbacks, and unverified items.
+
+No second VPS, alternate keys, unsigned deployment or Main Platform activation command for CodeBridge. If the root-owned signer is missing or blocked, stop and use the reviewed installation procedure; do not change live scripts from the chat.
 
 ## Never
 
