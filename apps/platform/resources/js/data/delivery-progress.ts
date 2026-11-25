@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-paid-seat-assignment-registry-20261125',
+        title: 'CodeBridge explicit paid-seat assignment registry',
+        state: 'active',
+        detail: 'SOURCE ONLY: empty KSLP-linked assignment registry and member-scoped read model reject missing, expired, revoked, mismatched tenant, non-Team license or another member assignment.',
+        evidence:
+            'Feature regression and reversible migration; no assignment writer, commercial proof, seat allocation, signer issuance, dispatch or billing activation. Commercial reference retention requires explicit lifecycle review.',
+    },
+    {
         id: 'codebridge-signed-paid-seat-proof-contract-20261125',
         title: 'CodeBridge KSLP signed paid-seat proof contract',
         state: 'active',
