@@ -33,9 +33,11 @@ type Smtp = {
 export default function OperatorMailSmtp({
     smtp,
     themePreviews,
+    themeArtworkReady,
 }: {
     smtp: Smtp;
     themePreviews: Record<string, string>;
+    themeArtworkReady: Record<string, boolean>;
 }) {
     const page = usePage();
     const [profile, setProfile] = useState<Profile>(
@@ -44,6 +46,11 @@ export default function OperatorMailSmtp({
     const [busy, setBusy] = useState(false);
     const [theme, setTheme] = useState(smtp.theme);
     const preview = smtp.themes[theme];
+    const previewHtml = (id: string) =>
+        themePreviews[id]?.replaceAll(
+            'https://kmjtechno.com/assets/brand/mail/',
+            '/assets/brand/mail/',
+        );
     const [login, setLogin] = useState('');
     const [password, setPassword] = useState('');
     const ready =
@@ -344,7 +351,7 @@ export default function OperatorMailSmtp({
                                 <div className="relative mx-auto h-[310px] w-[186px] overflow-hidden bg-[#edf1f5]">
                                     <iframe
                                         title={palette.label + ' thumbnail'}
-                                        srcDoc={themePreviews[id]}
+                                        srcDoc={previewHtml(id)}
                                         sandbox=""
                                         referrerPolicy="no-referrer"
                                         tabIndex={-1}
@@ -356,6 +363,11 @@ export default function OperatorMailSmtp({
                                 <div className="border-t p-3 text-sm font-semibold">
                                     {palette.label}
                                     {smtp.theme === id ? ' · Active' : ''}
+                                    {!themeArtworkReady[id] && (
+                                        <p className="mt-1 text-xs font-normal text-amber-500">
+                                            Artwork missing · fallback only
+                                        </p>
+                                    )}
                                 </div>
                             </button>
                         ))}
@@ -368,7 +380,7 @@ export default function OperatorMailSmtp({
                             <iframe
                                 key={theme}
                                 title={preview.label + ' full email preview'}
-                                srcDoc={themePreviews[theme]}
+                                srcDoc={previewHtml(theme)}
                                 sandbox=""
                                 referrerPolicy="no-referrer"
                                 className="h-[1080px] w-full rounded-lg border-0 bg-[#edf1f5]"
