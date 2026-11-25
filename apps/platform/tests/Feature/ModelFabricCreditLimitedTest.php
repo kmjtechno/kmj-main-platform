@@ -115,6 +115,50 @@ final class ModelFabricCreditLimitedTest extends TestCase
         Http::assertSentCount(3);
     }
 
+    public function test_inflight_credit_attempt_consumes_the_last_slot_before_inference(): void
+    {
+        $provider = $this->provider('Credit', 'models/credit-a');
+        $this->credit($provider, 'models/credit-a', 1);
+        $nested = null;
+        Http::fake(['generativelanguage.googleapis.com/*' => function () use (&$nested, $provider) {
+            $this->assertSame(1, DB::table('ai_model_requests')->where('ai_provider_id', $provider->id)->where('error_code', 'attempt_reserved')->count());
+            $nested = app(ModelFabricGateway::class)->complete($this->org, [['role' => 'user', 'content' => 'concurrent request']]);
+
+            return Http::response(['choices' => [['message' => ['content' => 'pong']]]], 200);
+        }]);
+
+        $result = app(ModelFabricGateway::class)->complete($this->org, [['role' => 'user', 'content' => 'ping']]);
+
+        $this->assertTrue($result['ok']);
+        $this->assertFalse($nested['ok']);
+        $this->assertSame('credit_cap_reached', $nested['error_code']);
+        Http::assertSentCount(1);
+        $this->assertSame(1, DB::table('ai_model_requests')->where('ai_provider_id', $provider->id)->where('outcome', 'ok')->count());
+    }
+
+    public function test_interrupted_reservation_is_not_refunded_or_replayed(): void
+    {
+        $provider = $this->provider('Credit', 'models/credit-a');
+        $this->credit($provider, 'models/credit-a', 1);
+        DB::table('ai_model_requests')->insert([
+            'id' => (string) Str::uuid(),
+            'organization_id' => $this->org,
+            'ai_provider_id' => $provider->id,
+            'model_id' => 'models/credit-a',
+            'outcome' => 'failed',
+            'error_code' => 'attempt_reserved',
+            'latency_ms' => 0,
+            'created_at' => now(),
+        ]);
+        Http::fake();
+
+        $result = app(ModelFabricGateway::class)->complete($this->org, [['role' => 'user', 'content' => 'ping']]);
+
+        $this->assertFalse($result['ok']);
+        $this->assertSame('credit_cap_reached', $result['error_code']);
+        Http::assertNothingSent();
+    }
+
     public function test_a_credit_route_at_eighty_percent_sinks_behind_a_free_route(): void
     {
         $credit = $this->provider('A Credit', 'models/credit-a');
