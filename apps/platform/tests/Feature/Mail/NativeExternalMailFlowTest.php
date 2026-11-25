@@ -91,6 +91,46 @@ final class NativeExternalMailFlowTest extends TestCase
         Mail::assertNothingOutgoing();
     }
 
+    public function test_owner_smtp_settings_pause_blocks_native_queue_without_changing_transactional_mail(): void
+    {
+        $owner = $this->owner();
+        $this->activateOutbound();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/mail/smtp')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operator-mail-smtp')
+                ->where('smtp.active', 'loopback')
+                ->where('smtp.loopback_ready', true)
+                ->where('smtp.brevo_ready', false));
+        $this->post('/operator/mail/send-external', $this->payload('recipient@example.net'))
+            ->assertRedirect('/operator/mail?folder=sent');
+        $this->assertDatabaseHas('kmj_mail_messages', ['native_smtp_profile' => 'loopback']);
+        $this->post('/operator/mail/smtp/pause')->assertRedirect('/operator/mail/smtp');
+        self::assertFalse(app(NativeExternalMailService::class)->transportEnabled());
+        self::assertSame('sendmail', config('mail.default'));
+        $this->runQueuedJob();
+        $this->assertDatabaseHas('kmj_mail_messages', ['delivery_state' => 'blocked']);
+        Mail::assertNothingOutgoing();
+    }
+
+    public function test_smtp_owner_routes_reject_unverified_profiles_and_unconfirmed_switches(): void
+    {
+        $owner = $this->owner();
+        $this->activateOutbound();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/mail/smtp/activate', ['profile' => 'loopback'])
+            ->assertSessionHasErrors('profile');
+        $this->post('/operator/mail/smtp/test', ['profile' => 'http://127.0.0.1:8080'])
+            ->assertSessionHasErrors('profile');
+        $this->post('/operator/mail/smtp/test', ['profile' => 'brevo'])
+            ->assertSessionHasErrors('profile');
+        $other = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($other)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/mail/smtp')->assertForbidden();
+        $this->post('/operator/mail/smtp/pause')->assertForbidden();
+        Mail::assertNothingOutgoing();
+    }
+
     public function test_native_loopback_smtp_transport_has_automatic_starttls_disabled(): void
     {
         // No network or test email: inspect the real Symfony transport created
