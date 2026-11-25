@@ -10,6 +10,15 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-mail-jmap-owner-inbox-ui-20261125',
+        title: 'KMJ Mail: explicit owner Inbox summary panel',
+        state: 'active',
+        detail:
+            'Read-only Inbox summaries behind the default-off owner pilot.',
+        evidence:
+            'Source-only UI; live mailbox and browser qualification pending.',
+    },
+    {
         id: 'kmj-mail-jmap-inbox-metadata-20261125',
         title: 'KMJ Mail: bounded Inbox metadata',
         state: 'active',
