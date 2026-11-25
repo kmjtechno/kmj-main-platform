@@ -8,6 +8,7 @@ use App\Mail\NativeExternalMailMessage;
 use App\Models\OperatorActionAudit;
 use App\Models\User;
 use App\Services\Mail\NativeExternalMailService;
+use App\Services\Mail\OwnerNativeSmtpSettings;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -56,6 +57,15 @@ final class SubmitNativeExternalMail implements ShouldQueue
             return;
         }
 
+        $settings = app(OwnerNativeSmtpSettings::class);
+        $profile = (string) ($message->native_smtp_profile ?? 'loopback');
+        $mailer = $settings->mailer($profile);
+        if ($mailer === null || $settings->activeProfile() !== $profile) {
+            $this->transition('queued', 'blocked', 'smtp_profile_changed');
+
+            return;
+        }
+
         // One worker claims this message, preventing competing queue jobs from
         // sending twice. A crash after this point needs manual reconciliation.
         $claimed = DB::table('kmj_mail_messages')
@@ -70,10 +80,9 @@ final class SubmitNativeExternalMail implements ShouldQueue
         }
 
         try {
-            // Only the pinned, bounded, owner-activated local Postfix SMTP
-            // transport; never fork sendmail/postdrop in a sandboxed worker.
-            // This is NOT a remote provider or the transactional mailer.
-            Mail::mailer('kmj_native_loopback')->to((string) $message->recipient_email)
+            // Never silently reroute a queued message to another provider.
+            // Only the exact pinned, currently authorized profile is used.
+            Mail::mailer($mailer)->to((string) $message->recipient_email)
                 ->send(new NativeExternalMailMessage(
                     (string) $message->subject,
                     (string) $message->body,
