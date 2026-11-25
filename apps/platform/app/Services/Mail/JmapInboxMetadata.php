@@ -14,7 +14,11 @@ final class JmapInboxMetadata
 {
     private const PROPERTIES = ['id', 'threadId', 'receivedAt', 'subject', 'from', 'keywords', 'hasAttachment'];
 
-    /** @param  list<string>  $ids */
+    /**
+     * @param  array<string, mixed>  $session
+     * @param  list<string>  $ids
+     * @return array<string, mixed>
+     */
     public function request(array $session, array $ids): array
     {
         $this->validateIds($ids);
@@ -33,8 +37,10 @@ final class JmapInboxMetadata
     }
 
     /**
+     * @param  array<string, mixed>  $session
      * @param  list<string>  $ids
-     * @return array{messages: list<array>, missing: list<string>}
+     * @param  array<string, mixed>  $response
+     * @return array{messages: list<array<string, mixed>>, missing: list<string>}
      */
     public function parse(array $session, array $ids, array $response): array
     {
@@ -121,6 +127,7 @@ final class JmapInboxMetadata
         return ['messages' => $ordered, 'missing' => $orderedMissing];
     }
 
+    /** @param  array<mixed>  $ids */
     private function validateIds(array $ids): void
     {
         if (! array_is_list($ids) || count($ids) > JmapInboxQuery::PAGE_SIZE) {
