@@ -123,12 +123,12 @@ final class NativeExternalMailFlowTest extends TestCase
             ->assertSessionHasErrors('profile');
         $this->post('/operator/mail/smtp/test', ['profile' => 'http://127.0.0.1:8080'])
             ->assertSessionHasErrors('profile');
-        // Invalid attempts also consume the route's two-per-minute limit.
-        $this->post('/operator/mail/smtp/test', ['profile' => 'brevo'])
-            ->assertTooManyRequests();
-        $this->travel(61)->seconds();
+        // Activation and test have separate rate limits. Both valid and
+        // invalid test submissions consume the test action's own limit.
         $this->post('/operator/mail/smtp/test', ['profile' => 'brevo'])
             ->assertSessionHasErrors('profile');
+        $this->post('/operator/mail/smtp/test', ['profile' => 'brevo'])
+            ->assertTooManyRequests();
         $other = User::factory()->create(['email_verified_at' => now()]);
         $this->actingAs($other)->withSession(['auth.password_confirmed_at' => time()])
             ->get('/operator/mail/smtp')->assertForbidden();
