@@ -15,7 +15,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 /**
@@ -82,12 +81,11 @@ final class SubmitNativeExternalMail implements ShouldQueue
         try {
             // Never silently reroute a queued message to another provider.
             // Only the exact pinned, currently authorized profile is used.
-            Mail::mailer($mailer)->to((string) $message->recipient_email)
-                ->send(new NativeExternalMailMessage(
-                    (string) $message->subject,
-                    (string) $message->body,
-                    (string) $message->sender_email,
-                ));
+            $settings->send($profile, (string) $message->recipient_email, new NativeExternalMailMessage(
+                (string) $message->subject,
+                (string) $message->body,
+                (string) $message->sender_email,
+            ));
 
             // This means local mail-server acceptance, NOT recipient delivery.
             DB::table('kmj_mail_messages')->where('id', $this->messageId)
