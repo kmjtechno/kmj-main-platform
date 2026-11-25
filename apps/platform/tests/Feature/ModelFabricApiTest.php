@@ -170,6 +170,18 @@ final class ModelFabricApiTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_models_exposes_authenticated_scope_without_inference(): void
+    {
+        $this->evidenced('llama-free');
+        Http::fake();
+
+        $this->getJson('/api/modelfabric/v1/models', ['Authorization' => 'Bearer '.$this->token()])
+            ->assertOk()->assertJsonPath('modelfabric.scope', 'private-source-coding')->assertJsonPath('modelfabric.free_routes', 1);
+        $this->getJson('/api/modelfabric/v1/models', ['Authorization' => 'Bearer '.$this->token(['private_source' => false])])
+            ->assertOk()->assertJsonPath('modelfabric.scope', 'general-chat')->assertJsonPath('modelfabric.free_routes', 1);
+        Http::assertNothingSent();
+    }
+
     public function test_invalid_roles_fail_validation(): void
     {
         $headers = ['Authorization' => 'Bearer '.$this->token()];
