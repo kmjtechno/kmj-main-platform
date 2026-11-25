@@ -20,6 +20,20 @@ final class OwnerNativeSmtpController
         ]);
     }
 
+    public function credentials(Request $request, OwnerNativeSmtpSettings $settings): RedirectResponse
+    {
+        // Never use withInput or automatic credential validation flashes.
+        try {
+            $settings->saveBrevoCredentials($this->actor($request), $request->input('smtp_login'), $request->input('password'));
+        } catch (\InvalidArgumentException) {
+            return redirect()->to('/operator/mail/smtp')->withErrors([
+                'profile' => 'Supply both valid credentials and pause or select local SMTP before rotation.',
+            ]);
+        }
+
+        return redirect()->to('/operator/mail/smtp')->with('status', 'Credentials encrypted and saved. Test the provider before activating.');
+    }
+
     public function test(Request $request, OwnerNativeSmtpSettings $settings): RedirectResponse
     {
         $profile = $request->validate(['profile' => ['required', 'in:loopback,brevo']]);
