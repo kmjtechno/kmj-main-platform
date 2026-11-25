@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-mail-actual-template-preview-20261125',
+        title: 'KMJ Mail actual template preview correction',
+        state: 'active',
+        detail: 'Owner screenshot confirmed delivery to Gmail but rejected the simplified artwork and color swatches. Source correction uses real server-rendered HTML in sandboxed thumbnail and full-size previews.',
+        evidence:
+            'Exact reference artwork import, desktop and mobile visual comparison, Gmail and Outlook rendering, exact-head CI and guarded release remain pending. No sending or SMTP changes from preview.',
+    },
+    {
         id: 'kmj-mail-enterprise-theme-suite-20261125',
         title: 'KMJ Mail shared enterprise branding and default theme selection',
         state: 'active',
