@@ -6,6 +6,9 @@ namespace Tests\Feature\CodeBridge;
 
 use App\Models\User;
 use App\Services\CodeBridge\HostedSeatAssignmentReader;
+use App\Services\CodeBridge\HostedSeatAuthorization;
+use App\Services\Licensing\Kslp\KslpCodec;
+use App\Services\Licensing\Kslp\KslpKeyRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -50,6 +53,37 @@ final class HostedSeatAssignmentReaderTest extends TestCase
         self::assertNull($reader->forMember($owner, $org, $seat));
         self::assertNull($reader->forMember($foreign, $org, $seat));
         self::assertNull($reader->forMember($member, (string) Str::uuid(), $seat));
+
+        $assignment = $reader->forMember($member, $org, $seat);
+        self::assertNotNull($assignment);
+        $pair = sodium_crypto_sign_keypair();
+        $encoded = rtrim(strtr(base64_encode(sodium_crypto_sign_publickey($pair)), '+/', '-_'), '=');
+        $registry = app(KslpKeyRegistry::class);
+        $registry->publish('seat-key', 'license', $encoded, 'active', 'KMJ_CODEBRIDGE', now()->addHour());
+        $registry->publish('other-product', 'license', $encoded, 'active', 'KMJ_OMNIDESK', now()->addHour());
+        $registry->publish('generic-key', 'license', $encoded);
+        $now = now()->getTimestamp();
+        $claims = [
+            ...$assignment,
+            'protocol_version' => 'KSLP-seat-v1',
+            'aud' => 'kmj-codebridge-hosted-seat',
+            'product' => 'KMJ_CODEBRIDGE',
+            'plan' => 'team',
+            'iat' => $now,
+            'nbf' => $now,
+            'exp' => $now + 300,
+        ];
+        $sign = static fn (string $message): string => sodium_crypto_sign_detached($message, sodium_crypto_sign_secretkey($pair));
+        $proof = KslpCodec::encode($claims, 'seat-key', $sign);
+        $authorization = app(HostedSeatAuthorization::class);
+        self::assertSame('seat:'.$seat, $authorization->subjectForMember($member, $org, $seat, $proof, 'seat-key'));
+        self::assertNull($authorization->subjectForMember($owner, $org, $seat, $proof, 'seat-key'));
+        self::assertNull($authorization->subjectForMember($foreign, $org, $seat, $proof, 'seat-key'));
+        self::assertNull($authorization->subjectForMember($member, $org, $seat, KslpCodec::encode($claims, 'other-product', $sign), 'other-product'));
+        self::assertNull($authorization->subjectForMember($member, $org, $seat, KslpCodec::encode($claims, 'generic-key', $sign), 'generic-key'));
+        $registry->revoke('seat-key');
+        self::assertNull($authorization->subjectForMember($member, $org, $seat, $proof, 'seat-key'));
+
 
         DB::table('codebridge_hosted_seat_assignments')->where('id', $seat)->update(['assignment_revision' => 2]);
         self::assertSame(2, $reader->forMember($member, $org, $seat)['assignment_revision']);
