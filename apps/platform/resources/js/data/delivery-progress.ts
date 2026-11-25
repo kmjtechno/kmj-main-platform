@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-native-codebridge-scope-20261125',
+        title: 'ModelFabric: native CodeBridge token scope preflight',
+        state: 'active',
+        detail: 'Authenticated model discovery exposes server-derived coding or chat token scope and the strictly free planned route count. FreeLLMAPI is not a required runtime for the native integration.',
+        evidence:
+            'Controller feature regressions cover scope and route counts. Counts do not prove billing, live quota or inference. Native strict-free generation and live worker acceptance remain pending.',
+    },
+    {
         id: 'kmj-mail-enterprise-v2-focused-compose-20261125',
         title: 'KMJ Mail Enterprise V2 focused composition',
         state: 'active',
