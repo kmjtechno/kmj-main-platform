@@ -10,6 +10,11 @@ type Summary = {
     hasAttachment: boolean;
 };
 
+function senderLabel(message: Summary): string {
+    const names = message.from.map((sender) => sender.name || sender.email);
+    return names.join(', ') || 'Unknown sender';
+}
+
 type InboxPage = {
     messages: Summary[];
     missing: string[];
@@ -86,8 +91,7 @@ export default function JmapOwnerInbox() {
                         Native mail engine · Inbox pilot
                     </h3>
                     <p className="text-muted-foreground mt-1 text-xs">
-                        Read-only summaries. No message bodies or attachments
-                        are downloaded.
+                        Read-only summaries. No message bodies or attachments.
                     </p>
                 </div>
                 <button
@@ -116,12 +120,7 @@ export default function JmapOwnerInbox() {
                                     {message.subject || '(No subject)'}
                                 </p>
                                 <p className="text-muted-foreground text-xs break-all">
-                                    {message.from
-                                        .map(
-                                            (sender) =>
-                                                sender.name || sender.email,
-                                        )
-                                        .join(', ') || 'Unknown sender'}
+                                    {senderLabel(message)}
                                 </p>
                                 <p className="text-muted-foreground mt-1 text-xs">
                                     {message.receivedAt} ·{' '}
@@ -141,8 +140,7 @@ export default function JmapOwnerInbox() {
                     )}
                     {page.missing.length > 0 && (
                         <p className="mt-2 text-xs">
-                            Some messages changed during retrieval. Refresh
-                            for the latest page.
+                            Some messages changed. Refresh to update.
                         </p>
                     )}
                     <div className="mt-3 flex flex-wrap gap-2">
