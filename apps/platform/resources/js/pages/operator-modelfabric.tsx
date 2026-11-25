@@ -598,11 +598,17 @@ export default function OperatorModelFabric({
             ? 'https://kmjtechno.com'
             : window.location.origin;
 
-    const healthy = providers.filter((p) => p.enabled && p.health === 'ok').length;
+    const healthy = providers.filter(
+        (p) => p.enabled && p.health === 'ok',
+    ).length;
     const currentEvidence = evidence.filter((row) => row.current).length;
     const activeTokens = tokens.filter((token) => token.active).length;
-    const chatTokens = tokens.filter((token) => token.active && !token.private_source).length;
-    const codingTokens = tokens.filter((token) => token.active && token.private_source).length;
+    const chatTokens = tokens.filter(
+        (token) => token.active && !token.private_source,
+    ).length;
+    const codingTokens = tokens.filter(
+        (token) => token.active && token.private_source,
+    ).length;
     const requests24h = analytics.reduce((sum, row) => sum + row.requests, 0);
     const okRequests24h = analytics.reduce((sum, row) => sum + row.ok, 0);
     const generalReady = plans.chat.status !== 'NO_FREE_ROUTE_AVAILABLE';
@@ -974,7 +980,11 @@ export default function OperatorModelFabric({
                                 <button
                                     type="button"
                                     className="owner-primary"
-                                    onClick={() => { if (next.tab === 'tokens') setTokenPrivate(false); setTab(next.tab as Tab); }}
+                                    onClick={() => {
+                                        if (next.tab === 'tokens')
+                                            setTokenPrivate(false);
+                                        setTab(next.tab as Tab);
+                                    }}
                                 >
                                     <Zap size={16} />
                                     {next.action}
@@ -1100,27 +1110,99 @@ export default function OperatorModelFabric({
                         >
                             <div className="owner-panel space-y-3">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <h2 className="text-base font-bold">General AI chat</h2>
-                                    <StatusPill tone={generalReady && chatTokens > 0 ? 'ok' : 'warn'}>
-                                        {generalReady && chatTokens > 0 ? 'Ready to test' : 'Setup required'}
+                                    <h2 className="text-base font-bold">
+                                        General AI chat
+                                    </h2>
+                                    <StatusPill
+                                        tone={
+                                            generalReady && chatTokens > 0
+                                                ? 'ok'
+                                                : 'warn'
+                                        }
+                                    >
+                                        {generalReady && chatTokens > 0
+                                            ? 'Ready to test'
+                                            : 'Setup required'}
                                     </StatusPill>
                                 </div>
-                                <p className="text-muted-foreground text-sm">{plans.chat.routes.length} eligible routes · {chatTokens} active chat tokens. Use non-confidential prompts only.</p>
-                                <button type="button" className={primaryButton} onClick={() => { if (generalReady && chatTokens === 0) setTokenPrivate(false); setTab(!generalReady ? 'models' : chatTokens === 0 ? 'tokens' : 'playground'); }}>
-                                    {!generalReady ? 'Review free routes' : chatTokens === 0 ? 'Create chat token' : 'Test chat'} <ArrowRight size={15} />
+                                <p className="text-muted-foreground text-sm">
+                                    {plans.chat.routes.length} eligible routes ·{' '}
+                                    {chatTokens} active chat tokens. Use
+                                    non-confidential prompts only.
+                                </p>
+                                <button
+                                    type="button"
+                                    className={primaryButton}
+                                    onClick={() => {
+                                        if (generalReady && chatTokens === 0)
+                                            setTokenPrivate(false);
+                                        setTab(
+                                            !generalReady
+                                                ? 'models'
+                                                : chatTokens === 0
+                                                  ? 'tokens'
+                                                  : 'playground',
+                                        );
+                                    }}
+                                >
+                                    {!generalReady
+                                        ? 'Review free routes'
+                                        : chatTokens === 0
+                                          ? 'Create chat token'
+                                          : 'Test chat'}{' '}
+                                    <ArrowRight size={15} />
                                 </button>
                             </div>
                             <div className="owner-panel space-y-3">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <h2 className="text-base font-bold">Secure coding</h2>
-                                    <StatusPill tone={privateReady && codingTokens > 0 ? 'ok' : 'warn'}>
-                                        {privateReady && codingTokens > 0 ? 'Route and token ready' : 'Blocked'}
+                                    <h2 className="text-base font-bold">
+                                        Secure coding
+                                    </h2>
+                                    <StatusPill
+                                        tone={
+                                            privateReady && codingTokens > 0
+                                                ? 'ok'
+                                                : 'warn'
+                                        }
+                                    >
+                                        {privateReady && codingTokens > 0
+                                            ? 'Route and token ready'
+                                            : 'Blocked'}
                                     </StatusPill>
                                 </div>
-                                <p className="text-muted-foreground text-sm">{plans.privateSource.routes.length} eligible coding routes · {codingTokens} active coding tokens. Separate source-transfer consent and worker activation are required.</p>
-                                {!privateReady ? <p className="text-sm">Review exact-model pricing, code capability and no-training evidence. A chat token cannot authorize private source.</p> : null}
-                                <button type="button" className={ghostButton} onClick={() => { if (!privateReady) { setTab('models'); } else if (codingTokens === 0) { setTokenPrivate(true); setTab('tokens'); } else { setTab('activity'); } }}>
-                                    {!privateReady ? 'Review coding evidence' : codingTokens === 0 ? 'Create coding token' : 'View activity'} <ArrowRight size={15} />
+                                <p className="text-muted-foreground text-sm">
+                                    {plans.privateSource.routes.length} eligible
+                                    coding routes · {codingTokens} active coding
+                                    tokens. Separate source-transfer consent and
+                                    worker activation are required.
+                                </p>
+                                {!privateReady ? (
+                                    <p className="text-sm">
+                                        Review exact-model pricing, code capability
+                                        and no-training evidence. A chat token
+                                        cannot authorize private source.
+                                    </p>
+                                ) : null}
+                                <button
+                                    type="button"
+                                    className={ghostButton}
+                                    onClick={() => {
+                                        if (!privateReady) {
+                                            setTab('models');
+                                        } else if (codingTokens === 0) {
+                                            setTokenPrivate(true);
+                                            setTab('tokens');
+                                        } else {
+                                            setTab('activity');
+                                        }
+                                    }}
+                                >
+                                    {!privateReady
+                                        ? 'Review coding evidence'
+                                        : codingTokens === 0
+                                          ? 'Create coding token'
+                                          : 'View activity'}{' '}
+                                    <ArrowRight size={15} />
                                 </button>
                             </div>
                         </section>
@@ -1267,10 +1349,22 @@ export default function OperatorModelFabric({
                         </section>
                         <div className="owner-panel flex flex-wrap items-center justify-between gap-3">
                             <div>
-                                <h2 className="text-sm font-bold">Provider management</h2>
-                                <p className="text-muted-foreground text-sm">{healthy} of {providers.length} providers healthy. Review connection errors, quotas and model evidence in Providers.</p>
+                                <h2 className="text-sm font-bold">
+                                    Provider management
+                                </h2>
+                                <p className="text-muted-foreground text-sm">
+                                    {healthy} of {providers.length} providers
+                                    healthy. Review connection errors, quotas
+                                    and model evidence in Providers.
+                                </p>
                             </div>
-                            <button type="button" className={ghostButton} onClick={() => setTab('providers')}>Manage providers <ArrowRight size={15} /></button>
+                            <button
+                                type="button"
+                                className={ghostButton}
+                                onClick={() => setTab('providers')}
+                            >
+                                Manage providers <ArrowRight size={15} />
+                            </button>
                         </div>
                     </>
                 ) : null}
@@ -1304,7 +1398,9 @@ export default function OperatorModelFabric({
                                                           : 'bad'
                                                 }
                                             >
-                                                {provider.enabled ? provider.health : 'disabled'}
+                                                {provider.enabled
+                                                    ? provider.health
+                                                    : 'disabled'}
                                             </StatusPill>
                                         </div>
                                         <p className="text-muted-foreground mt-1 text-xs">
@@ -1337,12 +1433,23 @@ export default function OperatorModelFabric({
                                                 {errorHelp(provider.error_code)}
                                             </p>
                                         ) : null}
-                                        {provider.enabled && provider.health !== 'ok' ? (
-                                            <a className={`${ghostButton} mt-3`} href="/services/kmj-codebridge/ai-providers">Repair connection</a>
+                                        {provider.enabled &&
+                                        provider.health !== 'ok' ? (
+                                            <a
+                                                className={`${ghostButton} mt-3`}
+                                                href="/services/kmj-codebridge/ai-providers"
+                                            >
+                                                Repair connection
+                                            </a>
                                         ) : null}
                                         <details className="mt-3 rounded-lg border p-2">
-                                            <summary className="cursor-pointer text-sm font-medium">Usage and routing limits</summary>
-                                            <ProviderLimits provider={provider} canManage={canManage} />
+                                            <summary className="cursor-pointer text-sm font-medium">
+                                                Usage and routing limits
+                                            </summary>
+                                            <ProviderLimits
+                                                provider={provider}
+                                                canManage={canManage}
+                                            />
                                         </details>
                                         {canManage &&
                                         provider.free_tier === 'allowlist' ? (
@@ -2098,7 +2205,11 @@ export default function OperatorModelFabric({
                                     <button
                                         type="submit"
                                         className={primaryButton}
-                                        disabled={tokenPrivate ? !privateReady : !generalReady}
+                                        disabled={
+                                            tokenPrivate
+                                                ? !privateReady
+                                                : !generalReady
+                                        }
                                     >
                                         Create token
                                     </button>
@@ -2108,10 +2219,13 @@ export default function OperatorModelFabric({
                                         className="text-xs font-bold text-amber-600 md:col-span-4 dark:text-amber-300"
                                         data-testid="modelfabric-private-warning"
                                     >
-                                        No eligible private-source route is available, so a
-                                        private-source token would answer
-                                        NO_FREE_ROUTE_AVAILABLE for every
-                                        request. Untick Private source only for general chat with non-confidential prompts. Never submit private code using a chat token.
+                                        No eligible private-source route is
+                                        available, so a private-source token
+                                        would answer NO_FREE_ROUTE_AVAILABLE
+                                        for every request. Untick Private source
+                                        only for general chat with
+                                        non-confidential prompts. Never submit
+                                        private code using a chat token.
                                     </p>
                                 ) : null}
                             </form>
