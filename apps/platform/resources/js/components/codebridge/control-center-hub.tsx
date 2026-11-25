@@ -120,6 +120,7 @@ export default function CodeBridgeControlCenterHub({
     onSectionChange,
     children,
 }: Props) {
+    const pilotReset = hostedPilotUsage?.reset_at.slice(0, 10);
     const entries = presenceSnapshot?.entries;
     const checkedGrants = entries?.length ?? null;
     const ready = entries?.filter((entry) => entry.status === 'READY');
@@ -359,7 +360,7 @@ export default function CodeBridgeControlCenterHub({
                                 />
                                 <Metric
                                     label="Pilot reset (UTC)"
-                                    value={hostedPilotUsage.reset_at.slice(0, 10)}
+                                    value={pilotReset ?? 'Not reported'}
                                     detail="Calendar month boundary"
                                 />
                             </div>
