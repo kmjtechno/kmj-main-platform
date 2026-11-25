@@ -17,6 +17,10 @@
   .kmj-tagline{font-size:14px!important;line-height:20px!important}
   .kmj-title{font-size:29px!important;line-height:36px!important}
 }
+@media only screen and (max-width:480px) {
+  .kmj-services-row{display:block!important;text-align:center!important;font-size:0!important;white-space:normal!important}
+  .kmj-service-cell{display:inline-block!important;box-sizing:border-box!important;width:50%!important;padding:9px 5px!important;vertical-align:top!important;border-right:0!important;overflow-wrap:normal!important}
+}
 </style>
 </head>
 <body style="margin:0;padding:0;background:#edf1f5;color:#172236;font-family:{{ $theme['layout'] === 'gold' ? 'Georgia,Times New Roman,serif' : 'Arial,Helvetica,sans-serif' }};-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">

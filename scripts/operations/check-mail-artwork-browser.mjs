@@ -36,6 +36,7 @@ try {
                 const state = await page.evaluate(() => ({
                     overflow: document.documentElement.scrollWidth - innerWidth,
                     images: Array.from(document.images).map(img => ({ src: img.getAttribute('src'), ok: img.complete && img.naturalWidth > 0, width: img.getBoundingClientRect().width })),
+                    services: Array.from(document.querySelectorAll('.kmj-service-cell')).map(cell => ({ width: cell.getBoundingClientRect().width, top: cell.getBoundingClientRect().top })),
                     heading: document.querySelector('h1')?.textContent,
                     text: document.body.innerText,
                 }));
@@ -43,6 +44,13 @@ try {
                 assert.equal(state.images.length, 7, theme + ' image count');
                 assert.ok(state.images.every(img => img.ok && img.width > 0), theme + ' broken artwork');
                 assert.ok(state.overflow <= 1, theme + ' horizontal overflow at ' + width);
+                assert.equal(state.services.length, 5, theme + ' service count');
+                if (width <= 480) {
+                    assert.ok(state.services.every(cell => cell.width >= 110), theme + ' narrow service label');
+                    assert.equal(new Set(state.services.map(cell => cell.top)).size, 3, theme + ' mobile service rows');
+                } else {
+                    assert.equal(new Set(state.services.map(cell => cell.top)).size, 1, theme + ' desktop service row');
+                }
                 assert.equal(state.heading, 'Project status update');
                 assert.ok(state.text.includes('synthetic no-send preview'));
                 assert.ok(state.text.includes('info@kmjtechno.com'));
