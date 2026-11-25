@@ -56,7 +56,7 @@ final class HostedSignedSettlement
     }
 
     /** @return array<string, mixed> */
-    public function reserveForOwner(User $actor, string $organization, string $device, string $project, string $execution, string $requestHash): array
+    public function reserveForOwner(User $actor, string $organization, string $device, string $project, string $execution, string $requestHash, bool $pilotOnly = false): array
     {
         $this->assertOwner($actor, $organization);
         if (! Str::isUuid($execution) || preg_match('/\\A[a-f0-9]{64}\\z/D', $requestHash) !== 1
@@ -64,7 +64,7 @@ final class HostedSignedSettlement
             throw new DomainException('CODEBRIDGE_RECEIPT_SCOPE_INVALID');
         }
 
-        return DB::transaction(function () use ($organization, $device, $project, $execution, $requestHash): array {
+        return DB::transaction(function () use ($organization, $device, $project, $execution, $requestHash, $pilotOnly): array {
             $credential = $this->activeCredential($organization, $device);
             if (! in_array($credential['plan'], ['community', 'pro'], true)) {
                 throw new DomainException('CODEBRIDGE_MONTHLY_PLAN_UNAVAILABLE');
@@ -92,6 +92,9 @@ final class HostedSignedSettlement
             ];
             $existing = DB::table('codebridge_receipt_bindings')->where('execution_id', $execution)->lockForUpdate()->first();
             if ($existing !== null) {
+                if ($pilotOnly || (bool) $existing->pilot_only) {
+                    throw new DomainException('CODEBRIDGE_PILOT_DISPATCH_REPLAY');
+                }
                 foreach ($binding as $key => $value) {
                     if ($existing->{$key} !== $value) {
                         throw new DomainException('CODEBRIDGE_RECEIPT_BINDING_CONFLICT');
@@ -101,6 +104,7 @@ final class HostedSignedSettlement
                 DB::table('codebridge_receipt_bindings')->insert([
                     ...$binding,
                     'execution_id' => $execution,
+                    'pilot_only' => $pilotOnly,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -111,12 +115,12 @@ final class HostedSignedSettlement
     }
 
     /** @return array<string, mixed> */
-    public function settleSigned(string $organization, string $execution, string $outcome, string $signature): array
+    public function settleSigned(string $organization, string $execution, string $outcome, string $signature, bool $pilotOnly = false): array
     {
-        return DB::transaction(function () use ($organization, $execution, $outcome, $signature): array {
+        return DB::transaction(function () use ($organization, $execution, $outcome, $signature, $pilotOnly): array {
             $row = DB::table('codebridge_receipt_bindings')->where('execution_id', $execution)
                 ->where('organization_id', $organization)->lockForUpdate()->first();
-            if ($row === null || ($row->outcome !== null && $row->outcome !== $outcome)) {
+            if ($row === null || (bool) $row->pilot_only !== $pilotOnly || ($row->outcome !== null && $row->outcome !== $outcome)) {
                 throw new DomainException('CODEBRIDGE_RECEIPT_BINDING_CONFLICT');
             }
 
@@ -142,7 +146,7 @@ final class HostedSignedSettlement
 
             $result = $this->ledger->completeTrusted($organization, $row->subject_key, $execution, true);
             DB::table('codebridge_receipt_bindings')->where('execution_id', $execution)
-                ->update(['outcome' => $outcome, 'updated_at' => now()]);
+                ->update(['outcome' => $outcome, 'verified_signature' => $signature, 'updated_at' => now()]);
 
             return $result;
         }, 3);

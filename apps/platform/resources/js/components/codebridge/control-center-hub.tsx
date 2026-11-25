@@ -32,6 +32,17 @@ export type HostedUsagePreview = {
     next_reset_at: null;
 };
 
+export type HostedPilotUsage = {
+    status: 'pilot_only';
+    billable: false;
+    tool: 'git_status';
+    limit: number;
+    completed: number;
+    reserved: number;
+    remaining: number;
+    reset_at: string;
+};
+
 type Props = {
     organizationName: string;
     plan: string | null;
@@ -44,6 +55,7 @@ type Props = {
     oauthReady: boolean;
     presenceSnapshot?: PresenceSnapshot | null;
     hostedUsagePreview?: HostedUsagePreview | null;
+    hostedPilotUsage?: HostedPilotUsage | null;
     canManageOwnerPlan: boolean;
     activeSection: CodeBridgeSection;
     onSectionChange: (section: CodeBridgeSection) => void;
@@ -102,11 +114,13 @@ export default function CodeBridgeControlCenterHub({
     oauthReady,
     presenceSnapshot,
     hostedUsagePreview,
+    hostedPilotUsage,
     canManageOwnerPlan,
     activeSection,
     onSectionChange,
     children,
 }: Props) {
+    const pilotReset = hostedPilotUsage?.reset_at.slice(0, 10);
     const entries = presenceSnapshot?.entries;
     const checkedGrants = entries?.length ?? null;
     const ready = entries?.filter((entry) => entry.status === 'READY');
@@ -322,6 +336,38 @@ export default function CodeBridgeControlCenterHub({
                     <p className="text-muted-foreground mt-3 text-xs">
                         Device allocation is not a monthly execution quota.
                     </p>
+                    {hostedPilotUsage?.status === 'pilot_only' && (
+                        <div className="mt-4 rounded-xl border p-4">
+                            <h3 className="font-bold">
+                                Signed read-only pilot
+                            </h3>
+                            <p className="text-muted-foreground mt-1 text-xs">
+                                Non-billable git_status only. Not total usage.
+                            </p>
+                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                <Metric
+                                    label="Pilot completed"
+                                    value={hostedPilotUsage.completed}
+                                    detail="Signed successful receipts"
+                                />
+                                <Metric
+                                    label="Pilot reserved"
+                                    value={hostedPilotUsage.reserved}
+                                    detail="Unsettled calls"
+                                />
+                                <Metric
+                                    label="Pilot remaining"
+                                    value={hostedPilotUsage.remaining}
+                                    detail="After completed and reserved calls"
+                                />
+                                <Metric
+                                    label="Pilot reset (UTC)"
+                                    value={pilotReset ?? 'Not reported'}
+                                    detail="Calendar month boundary"
+                                />
+                            </div>
+                        </div>
+                    )}
                 </section>
 
                 <section

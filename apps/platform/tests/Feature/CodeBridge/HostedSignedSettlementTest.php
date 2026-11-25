@@ -6,6 +6,7 @@ namespace Tests\Feature\CodeBridge;
 
 use App\Models\User;
 use App\Services\CodeBridge\HostedExecutionReceiptVerifier;
+use App\Services\CodeBridge\HostedPilotUsageSnapshot;
 use App\Services\CodeBridge\HostedSignedSettlement;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -54,6 +55,72 @@ final class HostedSignedSettlementTest extends TestCase
         self::assertSame(1, $result['completed']);
         self::assertSame(0, $result['reserved']);
         self::assertSame($result, $service->settleSigned($org, $execution, 'succeeded', $signature));
+    }
+
+    public function test_real_http_pilot_round_trip_and_scoped_dashboard_snapshot(): void
+    {
+        $owner = User::factory()->create(['email_verified_at' => now()]);
+        $stranger = User::factory()->create(['email_verified_at' => now()]);
+        $org = $this->tenant($owner, 'desk-a', 'proj-a');
+        $pair = sodium_crypto_sign_keypair();
+        $execution = (string) Str::uuid();
+        $token = str_repeat('z', 43);
+        config()->set('codebridge.enabled', true);
+        config()->set('codebridge.hosted_metering_pilot_enabled', true);
+        config()->set('codebridge.hosted_metering_pilot_tenant', $org);
+        config()->set('codebridge.hosted_metering_pilot_token_hash', hash('sha256', $token));
+        $snapshot = app(HostedPilotUsageSnapshot::class);
+        self::assertNull($snapshot->forOwner($owner, $org));
+        app(HostedSignedSettlement::class)->pinApprovedSigner($owner, $org, 'desk-a', base64_encode(sodium_crypto_sign_publickey($pair)));
+        $path = '/api/codebridge/v1/hosted-metering-pilot';
+        $reserve = [
+            'action' => 'reserve',
+            'organization_id' => $org,
+            'execution_id' => $execution,
+            'user_subject' => 'kmj-user:'.$owner->getKey(),
+            'device_id' => 'desk-a',
+            'project_id' => 'proj-a',
+            'tool' => 'git_status',
+        ];
+        $hash = hash('sha256', "git_status\ndesk-a\nproj-a\n");
+        $this->withToken($token)->postJson($path, $reserve)->assertOk()
+            ->assertExactJson(['reserved' => true, 'request_sha256' => $hash]);
+        $this->withToken($token)->postJson($path, $reserve)->assertConflict();
+        self::assertSame(1, $snapshot->forOwner($owner, $org)['reserved']);
+        self::assertNull($snapshot->forOwner($stranger, $org));
+        $message = app(HostedExecutionReceiptVerifier::class)->message([
+            'organization_id' => $org,
+            'subject_key' => 'account',
+            'execution_id' => $execution,
+            'device_id' => 'desk-a',
+            'project_id' => 'proj-a',
+            'request_sha256' => $hash,
+            'outcome' => 'succeeded',
+        ]);
+        self::assertIsString($message);
+        $signature = base64_encode(sodium_crypto_sign_detached($message, sodium_crypto_sign_secretkey($pair)));
+        $settle = [
+            'action' => 'settle',
+            'organization_id' => $org,
+            'execution_id' => $execution,
+            'outcome' => 'succeeded',
+            'signature' => $signature,
+        ];
+        $this->withToken($token)->postJson($path, [...$settle, 'signature' => 'wrong'])->assertConflict();
+        $this->withToken($token)->postJson($path, $settle)->assertOk()->assertExactJson(['settled' => true]);
+        $this->withToken($token)->postJson($path, $settle)->assertOk();
+        $this->withToken($token)->postJson($path, $reserve)->assertConflict();
+        $result = $snapshot->forOwner($owner, $org);
+        self::assertSame('pilot_only', $result['status']);
+        self::assertFalse($result['billable']);
+        self::assertSame(1, $result['completed']);
+        self::assertSame(0, $result['reserved']);
+        self::assertSame(9999, $result['remaining']);
+        self::assertArrayNotHasKey('verified_signature', $result);
+        DB::table('codebridge_receipt_bindings')->where('execution_id', $execution)->update(['verified_signature' => null]);
+        self::assertNull($snapshot->forOwner($owner, $org));
+        config()->set('codebridge.hosted_metering_pilot_enabled', false);
+        self::assertNull($snapshot->forOwner($owner, $org));
     }
 
     public function test_foreign_owner_cannot_pin_a_key(): void

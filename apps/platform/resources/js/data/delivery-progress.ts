@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-pilot-receipt-dashboard-20261125',
+        title: 'CodeBridge signed pilot reconciliation and dashboard',
+        state: 'active',
+        detail: 'SOURCE ONLY: persist verified receipt signatures, reconcile exact owner-scoped UTC account counters against execution bindings, and show a separate non-billable pilot panel. Add authenticated HTTP round-trip, replay and fail-closed tests.',
+        evidence:
+            'Pilot remains default off. Full tool coverage, paid seats, automatic device enrollment, native client acceptance and signed Elite activation are not claimed.',
+    },
+    {
         id: 'codebridge-hosted-metering-pilot-transport-20261124',
         title: 'CodeBridge signed metering pilot transport',
         state: 'active',
