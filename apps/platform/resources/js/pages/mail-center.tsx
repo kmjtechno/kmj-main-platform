@@ -1,4 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import JmapOwnerInbox from '@/components/jmap-owner-inbox';
 import MailAiCopilot from '@/components/mail-ai-copilot';
 import '../../css/kmj-mail-approved.css';
 import { useMemo, useState } from 'react';
@@ -103,6 +104,7 @@ type Props = {
     myUserId: number;
     externalMailEnabled: boolean;
     externalInboundPilotConfigured?: boolean;
+    jmapOwnerInboxEnabled?: boolean;
     externalInbox?: {
         total: number;
         unread: number;
@@ -155,6 +157,7 @@ export default function MailCenter({
     externalOutbound,
     externalInboundPilotConfigured = false,
     externalInbox = null,
+    jmapOwnerInboxEnabled = false,
 }: Props) {
     const page = usePage();
     const flash = page.props.flash;
@@ -1071,6 +1074,10 @@ export default function MailCenter({
                                         )}
                                     </div>
                                 )}
+                                {isOwner &&
+                                    jmapOwnerInboxEnabled &&
+                                    folder === 'inbox' &&
+                                    view === 'mail' && <JmapOwnerInbox />}
                                 {folder === 'inbox' && externalInbox && (
                                     <section
                                         id="kmj-external-inbox"
