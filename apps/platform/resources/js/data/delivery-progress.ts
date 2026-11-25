@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-mail-jmap-inbox-query-20261125',
+        title: 'KMJ Mail: bounded personal Inbox query',
+        state: 'active',
+        detail: 'Source-only Email/query contract derives the unique Inbox from validated personal mailbox metadata, bounds pagination and checks response account, call ID and message identifiers.',
+        evidence:
+            'Synthetic unit tests added. No message body, HTTP wiring, live mailbox, sending or deployment is claimed.',
+    },
+    {
         id: 'kmj-mail-jmap-owner-grant-20261125',
         title: 'KMJ Mail: default-off owner mailbox pilot grant',
         state: 'active',
