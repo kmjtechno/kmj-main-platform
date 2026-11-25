@@ -10,6 +10,13 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-mail-jmap-http-contract-20261125',
+        title: 'KMJ Mail: strict owner Inbox HTTP contract',
+        state: 'active',
+        detail: 'Reject null pagination and verify private summary responses.',
+        evidence: 'Endpoint regressions; real mailbox qualification pending.',
+    },
+    {
         id: 'kmj-mail-jmap-owner-inbox-ui-20261125',
         title: 'KMJ Mail: explicit owner Inbox summary panel',
         state: 'active',
