@@ -295,3 +295,16 @@ void test('Playground checks an existing ModelFabric token without creating keys
         /\$this->gateway->complete\(/,
     );
 });
+
+void test('connection samples do not embed the issued bearer or claim unsupported APIs', () => {
+    const guide = page.slice(
+        page.indexOf('function ConnectGuide'),
+        page.indexOf('export default function OperatorModelFabric'),
+    );
+    assert.match(guide, /KMJ_MODELFABRIC_TOKEN/);
+    assert.match(guide, /read-only model check/);
+    assert.match(guide, /native Responses, tool calling/);
+    assert.doesNotMatch(guide, /const key = token|\$\{key\}/);
+    const api = read('app/Http/Controllers/ModelFabricApiController.php');
+    assert.match(api, /\$token->private_source \? 'code' : 'chat'/);
+});
