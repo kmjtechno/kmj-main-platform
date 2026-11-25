@@ -139,6 +139,30 @@ final class NativeExternalMailFlowTest extends TestCase
         Mail::assertNothingOutgoing();
     }
 
+    public function test_owner_gallery_uses_actual_email_html_without_saving_or_sending(): void
+    {
+        $owner = $this->owner();
+        $this->activateOutbound();
+        $before = EnterpriseMailTheme::selected();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/mail/smtp')->assertOk()
+            ->assertInertia(function (Assert $page): void {
+                $page->component('operator-mail-smtp')->has('themePreviews', 6);
+                foreach (EnterpriseMailTheme::catalog() as $id => $palette) {
+                    $page->where('themePreviews.'.$id, fn (string $html): bool => $html === view('emails.kmj-native-outgoing', [
+                        'heading' => 'Your email subject',
+                        'body' => "Hello,\n\nYour message will appear here. This sample uses the same HTML template as outgoing KMJ business email.",
+                        'senderAddress' => 'info@kmjtechno.com',
+                        'previewTheme' => $palette,
+                    ])->render());
+                }
+            });
+        self::assertSame($before, EnterpriseMailTheme::selected());
+        $this->assertDatabaseCount('kmj_mail_messages', 0);
+        Queue::assertNothingPushed();
+        Mail::assertNothingOutgoing();
+    }
+
     public function test_owner_can_select_each_enterprise_theme_without_changing_smtp_route(): void
     {
         $owner = $this->owner();
