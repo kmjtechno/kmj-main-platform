@@ -24,7 +24,7 @@ final class ModelFabricRouter
      *
      * @return array{status: string, routes: list<array<string, mixed>>, reasons: list<array{provider: string, reason: string}>}
      */
-    public function plan(string $organizationId, string $capability = 'chat', bool $privateSource = false): array
+    public function plan(string $organizationId, string $capability = 'chat', bool $privateSource = false, bool $strictFreeCloud = false): array
     {
         $routes = [];
         $reasons = [];
@@ -48,6 +48,12 @@ final class ModelFabricRouter
                     continue;
                 }
                 if ($capability !== 'chat' && ! in_array($capability, $capabilities, true)) {
+                    continue;
+                }
+                // Strict coding admission excludes credit-limited and custom/local endpoints.
+                // This is pricing policy evidence, not an account billing attestation.
+                if ($strictFreeCloud && ($proof === null || $proof->cost_class !== 'free'
+                    || ($this->manager->presets()[$provider->preset]['base_url'] ?? null) !== $provider->base_url)) {
                     continue;
                 }
                 $admitted++;

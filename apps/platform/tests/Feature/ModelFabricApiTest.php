@@ -170,6 +170,53 @@ final class ModelFabricApiTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_models_exposes_authenticated_scope_without_inference(): void
+    {
+        $this->evidenced('llama-free');
+        Http::fake();
+
+        $this->getJson('/api/modelfabric/v1/models', ['Authorization' => 'Bearer '.$this->token()])
+            ->assertOk()->assertJsonPath('modelfabric.scope', 'private-source-coding')->assertJsonPath('modelfabric.free_routes', 1);
+        $this->getJson('/api/modelfabric/v1/models', ['Authorization' => 'Bearer '.$this->token(['private_source' => false])])
+            ->assertOk()->assertJsonPath('modelfabric.scope', 'general-chat')->assertJsonPath('modelfabric.free_routes', 1);
+        Http::assertNothingSent();
+    }
+
+    public function test_strict_free_cloud_rejects_credit_routes_without_outbound_request(): void
+    {
+        $this->evidenced('llama-free');
+        AiModelEvidence::query()->firstOrFail()->update(['cost_class' => 'credit-limited', 'credit_daily_cap' => 20]);
+        Http::fake();
+        $headers = ['Authorization' => 'Bearer '.$this->token(), 'X-ModelFabric-Policy' => 'strict-free-cloud'];
+
+        $this->getJson('/api/modelfabric/v1/models', $headers)->assertOk()
+            ->assertJsonPath('modelfabric.policy', 'strict-free-cloud')
+            ->assertJsonPath('modelfabric.routes', 0);
+        $this->postJson('/api/modelfabric/v1/chat/completions', ['messages' => [['role' => 'user', 'content' => 'ping']]], $headers)
+            ->assertStatus(503)->assertJsonPath('error.code', 'NO_FREE_ROUTE_AVAILABLE');
+        Http::assertNothingSent();
+    }
+
+    public function test_strict_free_cloud_requires_private_token_and_admitted_free_route(): void
+    {
+        $this->evidenced('llama-free');
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'pong']]]], 200)]);
+        $body = ['messages' => [['role' => 'user', 'content' => 'ping']]];
+        $headers = ['Authorization' => 'Bearer '.$this->token(), 'X-ModelFabric-Policy' => 'strict-free-cloud'];
+
+        $this->getJson('/api/modelfabric/v1/models', $headers)->assertOk()
+            ->assertJsonPath('modelfabric.free_routes', 1);
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, [...$headers, 'Authorization' => 'Bearer '.$this->token(['private_source' => false])])
+            ->assertStatus(403);
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, [...$headers, 'X-ModelFabric-Policy' => 'unknown'])
+            ->assertStatus(400);
+        Http::assertNothingSent();
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)->assertOk()
+            ->assertJsonPath('modelfabric.policy', 'strict-free-cloud')
+            ->assertJsonPath('choices.0.message.content', 'pong');
+        Http::assertSentCount(1);
+    }
+
     public function test_invalid_roles_fail_validation(): void
     {
         $headers = ['Authorization' => 'Bearer '.$this->token()];
