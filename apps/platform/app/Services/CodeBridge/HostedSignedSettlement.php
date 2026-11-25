@@ -59,6 +59,7 @@ final class HostedSignedSettlement
             || ($challenge['device_id'] ?? null) !== $device
             || ($challenge['owner_id'] ?? null) !== (string) $actor->getKey()
             || ! is_int($challenge['expires_at'] ?? null) || $challenge['expires_at'] <= time()
+            || $challenge['expires_at'] > time() + 300
             || ! is_string($challenge['nonce'] ?? null) || preg_match('/\\A[a-f0-9]{64}\\z/D', $challenge['nonce']) !== 1
             || ! is_string($bytes) || strlen($bytes) !== 32 || base64_encode($bytes) !== $publicKey
             || ! is_string($proof) || strlen($proof) !== 64 || base64_encode($proof) !== $signature) {
@@ -234,6 +235,14 @@ final class HostedSignedSettlement
             ->where('l.customer_id', $organization)->where('l.product', 'KMJ_CODEBRIDGE')
             ->whereColumn('a.license_id', 'l.id')->whereNull('a.deactivated_at')
             ->whereNull('c.revoked_at')->where('c.expires_at_epoch', '>', time())
+            ->whereExists(static function ($query): void {
+                $query->selectRaw('1')->from('codebridge_device_pairings as p')
+                    ->whereColumn('p.tenant_id', 'c.tenant_id')
+                    ->whereColumn('p.device_id', 'c.device_id')
+                    ->whereColumn('p.license_id', 'c.license_id')
+                    ->whereColumn('p.activation_id', 'c.activation_id')
+                    ->where('p.status', 'consumed')->whereNotNull('p.consumed_at');
+            })
             ->where('l.status', 'active')->whereNull('l.revoked_at')
             ->where('l.starts_at', '<=', now())->where('l.expires_at', '>', now())
             ->lockForUpdate()->first(['c.id', 'c.activation_id', 'l.plan']);
