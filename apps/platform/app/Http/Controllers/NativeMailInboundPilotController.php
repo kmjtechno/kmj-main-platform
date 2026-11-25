@@ -59,13 +59,19 @@ final class NativeMailInboundPilotController
             $prior = (clone $query)->where('event_id', $event)->first();
             if ($prior !== null) {
                 abort_unless((int) $prior->mailbox_user_id === $ownerId
-                    && $prior->recipient === $recipient && $prior->raw_sha256 === $digest, 409);
+                    && $prior->recipient === $recipient && $prior->raw_sha256 === $digest
+                    && hash_equals(Crypt::decryptString((string) $prior->encrypted_envelope_sender), $from), 409);
 
                 return $this->receipt('duplicate', 200);
             }
 
             $mailbox = (clone $query)->where('mailbox_user_id', $ownerId);
-            if ((clone $mailbox)->where('recipient', $recipient)->where('raw_sha256', $digest)->exists()) {
+            $sameMime = (clone $mailbox)->where('recipient', $recipient)->where('raw_sha256', $digest)->first();
+            if ($sameMime !== null) {
+                // A duplicate receipt must bind the authenticated envelope as
+                // well as the MIME bytes. Never silently acknowledge a conflict.
+                abort_unless(hash_equals(Crypt::decryptString((string) $sameMime->encrypted_envelope_sender), $from), 409);
+
                 return $this->receipt('duplicate', 200);
             }
 
