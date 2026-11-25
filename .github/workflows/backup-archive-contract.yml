@@ -7,6 +7,8 @@ on:
       - 'scripts/test_restore_verification_contract.py'
       - 'scripts/kmj-owner-key-backup-vault.sh'
       - 'scripts/test_kmj_owner_key_backup_vault.py'
+      - 'infra/server/KMJ_OWNER_VAULT_TIMER_INSTALL.sh'
+      - 'scripts/test_kmj_owner_vault_timer_install.py'
       - '.github/workflows/backup-archive-contract.yml'
   push:
     branches: [main]
@@ -15,6 +17,8 @@ on:
       - 'scripts/test_restore_verification_contract.py'
       - 'scripts/kmj-owner-key-backup-vault.sh'
       - 'scripts/test_kmj_owner_key_backup_vault.py'
+      - 'infra/server/KMJ_OWNER_VAULT_TIMER_INSTALL.sh'
+      - 'scripts/test_kmj_owner_vault_timer_install.py'
       - '.github/workflows/backup-archive-contract.yml'
   workflow_dispatch:
 
@@ -57,5 +61,6 @@ jobs:
           sudo apt-get -qq -y install age
           bash -n scripts/kmj-owner-key-backup-vault.sh
           python3 -B scripts/test_kmj_owner_key_backup_vault.py -v
+          python3 -B scripts/test_kmj_owner_vault_timer_install.py -v
           echo 'OWNER_KEY_VAULT_FIXTURES=PASS'
           echo 'REAL_OWNER_DECRYPT=NOT_VERIFIED'
