@@ -16,8 +16,20 @@ final class OwnerNativeSmtpController
 {
     public function index(Request $request, OwnerNativeSmtpSettings $settings): Response
     {
+        $snapshot = $settings->snapshot($this->actor($request));
+        $previews = [];
+        foreach (EnterpriseMailTheme::catalog() as $id => $palette) {
+            $previews[$id] = view('emails.kmj-native-outgoing', [
+                'heading' => 'Your email subject',
+                'body' => "Hello,\n\nYour message will appear here. This sample uses the same HTML template as outgoing KMJ business email.",
+                'senderAddress' => 'info@kmjtechno.com',
+                'previewTheme' => $palette,
+            ])->render();
+        }
+
         return Inertia::render('operator-mail-smtp', [
-            'smtp' => $settings->snapshot($this->actor($request)),
+            'smtp' => $snapshot,
+            'themePreviews' => $previews,
         ]);
     }
 
