@@ -46,7 +46,7 @@ final class JmapReadOnlyTransport
         return $this->queryInbox($session, $token, $position);
     }
 
-    /** @return array{messages: list<array>, missing: list<string>, position: int, total: int} */
+    /** @return array{messages: list<array<string, mixed>>, missing: list<string>, position: int, total: int} */
     public function inboxSummary(string $expectedUsername, #[\SensitiveParameter] string $token, int $position = 0): array
     {
         $session = $this->inboxSession($expectedUsername, $token, $position);
