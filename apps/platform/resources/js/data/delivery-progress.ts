@@ -15,7 +15,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'active',
         detail: 'SOURCE ONLY: reject inconsistent monthly quota counters before reservation and completion, and prevent a competing execution uniqueness collision from incrementing a losing seat counter.',
         evidence:
-            'PR #1159 adds counter-invariant regression coverage. Previous head passed application and PostgreSQL workflows; exact-head CI, concurrent PostgreSQL stress, independent review, trusted paid-seat authority and protected production activation remain separate. No customer billing enabled.',
+            'PR #1159 adds counter-invariant regression coverage. Previous head passed application and PostgreSQL workflows; exact-head CI, concurrent PostgreSQL stress, independent review, trusted paid-seat authority and protected production activation remain separate. No customer billing enabled. Follow-up adds invariant validation before idempotent replay, original UTC month late settlement regression, and explicit denial when a Team device license lacks paid human-seat authority.',
     },
     {
         id: 'codebridge-owner-signer-proof-20261125',
