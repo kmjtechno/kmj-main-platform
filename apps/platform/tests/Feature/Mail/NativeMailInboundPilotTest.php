@@ -98,9 +98,9 @@ final class NativeMailInboundPilotTest extends TestCase
         $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
             ->get('/operator/mail?incoming='.$mailbox['items'][0]['id'])
             ->assertOk()->assertInertia(fn (Assert $page) => $page
-                ->where('externalInbox.total', 1)
-                ->where('externalInbox.selected.sender', self::SENDER)
-                ->where('externalInbox.selected.body', 'Private message body.'));
+            ->where('externalInbox.total', 1)
+            ->where('externalInbox.selected.sender', self::SENDER)
+            ->where('externalInbox.selected.body', 'Private message body.'));
         $this->actingAs($other)->withSession(['auth.password_confirmed_at' => time()])
             ->get('/operator/mail?incoming='.$mailbox['items'][0]['id'])->assertForbidden();
     }
