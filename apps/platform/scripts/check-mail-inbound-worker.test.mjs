@@ -24,7 +24,7 @@ function message(overrides = {}) {
     };
 }
 
-test('worker HMAC binds exact raw MIME and accepts only durable receipts', async (t) => {
+await test('worker HMAC binds exact raw MIME and accepts only durable receipts', async (t) => {
     const calls = [];
     t.mock.method(globalThis, 'fetch', async (url, options) => {
         calls.push(url);
@@ -61,7 +61,7 @@ test('worker HMAC binds exact raw MIME and accepts only durable receipts', async
     assert.equal(calls.length, 2);
 });
 
-test('worker rejects malformed metadata, size mismatch and broken stream before forwarding', async (t) => {
+await test('worker rejects malformed metadata, size mismatch and broken stream before forwarding', async (t) => {
     const fetchMock = t.mock.method(globalThis, 'fetch', async () => {
         throw new Error('unexpected network');
     });
@@ -89,7 +89,7 @@ test('worker rejects malformed metadata, size mismatch and broken stream before 
     assert.equal(fetchMock.mock.callCount(), 0);
 });
 
-test('worker rejects HTTP failures, invalid receipts and network errors', async (t) => {
+await test('worker rejects HTTP failures, invalid receipts and network errors', async (t) => {
     let attempt = 0;
     t.mock.method(globalThis, 'fetch', async () => {
         attempt++;
