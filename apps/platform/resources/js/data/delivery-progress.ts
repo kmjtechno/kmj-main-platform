@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-quota-reservation-20261125',
+        title: 'ModelFabric: reserve quota before external inference',
+        state: 'active',
+        detail: 'Source-only: serialize provider attempt reservations, recheck admitted route and daily caps under a database lock, count interrupted attempts conservatively and finalize the same metadata record after inference.',
+        evidence:
+            'Regression tests for in-flight and interrupted reservations; exact-head CI and independent PostgreSQL multi-process concurrency acceptance remain pending. No production activation or billing claim.',
+    },
+    {
         id: 'kmj-mail-enterprise-theme-suite-20261125',
         title: 'KMJ Mail shared enterprise branding and default theme selection',
         state: 'active',
