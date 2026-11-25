@@ -17,7 +17,6 @@ final class NativeExternalMailService
     public function __construct(
         private readonly NativeMailService $internal,
         private readonly PlatformOwnerAccess $owner,
-        private readonly RegistrationMailReadiness $readiness,
     ) {}
 
     /**
@@ -49,22 +48,9 @@ final class NativeExternalMailService
 
     public function transportEnabled(): bool
     {
-        // Native outbound is independent of transactional sendmail.
-        // Previous production flag alone MUST NOT activate a new transport.
-        // SMTP peer, port, timeout and unauthenticated transport are pinned,
-        // so an env override cannot redirect owner/staff mail elsewhere.
-        return config('services.kmj_native_external_mail.enabled', false) === true
-            && config('services.kmj_native_external_mail.transport') === 'loopback_smtp'
-            && config('mail.mailers.kmj_native_loopback.transport') === 'smtp'
-            && config('mail.mailers.kmj_native_loopback.host') === '127.0.0.1'
-            && config('mail.mailers.kmj_native_loopback.port') === 25
-            && config('mail.mailers.kmj_native_loopback.scheme') === null
-            && config('mail.mailers.kmj_native_loopback.auto_tls') === false
-            && config('mail.mailers.kmj_native_loopback.username') === null
-            && config('mail.mailers.kmj_native_loopback.password') === null
-            && config('mail.mailers.kmj_native_loopback.timeout') === 8
-            && config('mail.mailers.kmj_native_loopback.local_domain') === 'kmjtechno.com'
-            && $this->readiness->canAttemptDelivery();
+        $settings = app(OwnerNativeSmtpSettings::class);
+
+        return $settings->ready($settings->activeProfile());
     }
 
     public function queue(
@@ -127,6 +113,7 @@ final class NativeExternalMailService
                 'read_at' => $now,
                 // queued for a delivery *attempt*; not yet an SMTP receipt.
                 'delivery_state' => 'queued',
+                ...app(OwnerNativeSmtpSettings::class)->queueAttributes(),
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
@@ -228,6 +215,7 @@ final class NativeExternalMailService
                     'folder' => 'sent',
                     'sender_email' => $from,
                     'delivery_state' => 'queued',
+                    ...app(OwnerNativeSmtpSettings::class)->queueAttributes(),
                     'read_at' => $now,
                     'updated_at' => $now,
                 ]);

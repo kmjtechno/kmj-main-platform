@@ -107,7 +107,7 @@ final class NativeMailController
         );
 
         return redirect()->to('/'.$portal.'/mail?folder=sent')
-            ->with('status', 'Queued for KMJ Postfix submission. Mail-server acceptance and recipient inbox delivery are separate statuses.');
+            ->with('status', 'Queued for KMJ SMTP submission. Mail-server acceptance and recipient inbox delivery are separate statuses.');
     }
 
     public function draft(Request $request, string $portal): RedirectResponse

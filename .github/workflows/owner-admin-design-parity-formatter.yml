@@ -35,6 +35,7 @@ jobs:
             resources/js/pages/services/codebridge.tsx \
             scripts/check-owner-design-parity.test.mjs \
             resources/js/pages/operator-products.tsx \
+            resources/js/pages/operator-mail-smtp.tsx \
             scripts/check-owner-product-editor-state.test.mjs \
             resources/private/kmj-commercial-pricebook-20261123.json
           git diff --no-ext-diff -- \
@@ -44,6 +45,7 @@ jobs:
             resources/js/pages/services/codebridge.tsx \
             scripts/check-owner-design-parity.test.mjs \
             resources/js/pages/operator-products.tsx \
+            resources/js/pages/operator-mail-smtp.tsx \
             scripts/check-owner-product-editor-state.test.mjs \
             resources/private/kmj-commercial-pricebook-20261123.json
           echo 'LIVE_HOST_MUTATION=NONE'
