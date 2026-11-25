@@ -234,6 +234,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             '2026-11-22 P0 #1029: production worker restarted successfully, no blocked postdrop children; ID1 submitting UNKNOWN (do not resend); ID2 failed/transport_error without MTA acceptance; 0 pending native jobs; Postfix queue contains only older Nov 21 deferred message. Owner local no-send handshake reported FAIL/TLS; Postfix smtpd 4 localhost connections, 0 rejects. Source change requires exact-head CI, owner-signed Elite deploy, no-send handshake PASS after release, a NEW consented test and independent recipient inbox authentication evidence. Real outbound delivery remains unverified.',
     },
     {
+        id: 'kmj-mail-inbound-quarantine-pilot-20261124',
+        title: 'KMJ Mail: signed inbound pilot and encrypted quarantine',
+        state: 'active',
+        detail: 'Draft PR #1123 implements a default-off signed single-recipient ingress, strict timestamp and size limits, owner authorization, deduplication and encrypted durable raw MIME quarantine. It does not publish incoming mail to Inbox, parse MIME or enable production routing.',
+        evidence:
+            'Exact-head CI and independent security review pending. Existing MX and info@ forwarding remain unchanged. Before activation, require reviewed key and retention controls, staging receipt, MIME and attachment security, mailbox integration and real external receipt.',
+    },
+    {
         id: 'kmj-owner-team-mail-center-20261122',
         title: 'KMJ Native Mail: independent owner/staff inbox, threads and drafting',
         state: 'active',

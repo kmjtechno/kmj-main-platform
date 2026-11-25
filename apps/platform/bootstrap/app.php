@@ -31,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function (): void {
             Route::middleware('api')->prefix('api')->group(__DIR__.'/../routes/model-fabric-api.php');
+            Route::middleware('api')->prefix('api')->group(__DIR__.'/../routes/kmj-mail-inbound-api.php');
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
