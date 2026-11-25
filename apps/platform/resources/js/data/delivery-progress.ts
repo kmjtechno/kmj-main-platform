@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-native-openrouter-account-admission-20261125',
+        title: 'ModelFabric: authenticated native account and quota gate',
+        state: 'active',
+        detail: 'Strict coding generation checks the exact OpenRouter free-tier account, current free-model catalog and remaining daily quota before upstream source transfer. The native dispatch sets zero price caps and privacy routing restrictions; other providers require their own account verifier.',
+        evidence:
+            'Synthetic HTTP tests cover successful admission, missing provider proof and exhausted quota. Live account, real inference, worker activation and billing readback remain unverified.',
+    },
+    {
         id: 'modelfabric-native-coding-output-integrity-20261125',
         title: 'ModelFabric: bounded complete coding output',
         state: 'active',
