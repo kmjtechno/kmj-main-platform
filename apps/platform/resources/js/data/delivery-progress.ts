@@ -14,7 +14,8 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         title: 'KMJ Mail: exact native info mailbox identity',
         state: 'active',
         detail: 'Preserve the selected SMTP recipient through signed intake and Inbox.',
-        evidence: 'Source contract and synthetic regressions; external delivery pending.',
+        evidence:
+            'Source contract and synthetic regressions; external delivery pending.',
     },
     {
         id: 'kmj-mail-jmap-owner-inbox-ui-20261125',
