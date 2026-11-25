@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\Mail\NativeExternalMailService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Mail\MailManager;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
@@ -128,6 +129,35 @@ final class NativeExternalMailFlowTest extends TestCase
         $this->actingAs($other)->withSession(['auth.password_confirmed_at' => time()])
             ->get('/operator/mail/smtp')->assertForbidden();
         $this->post('/operator/mail/smtp/pause')->assertForbidden();
+        Mail::assertNothingOutgoing();
+    }
+
+    public function test_owner_smtp_credentials_are_encrypted_and_not_returned_to_the_browser(): void
+    {
+        $owner = $this->owner();
+        $this->activateOutbound();
+        $login = 'test-smtp-login@example.net';
+        $password = 'synthetic-test-key-not-real';
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/mail/smtp/credentials', ['smtp_login' => $login, 'password' => $password])
+            ->assertRedirect('/operator/mail/smtp');
+
+        $row = DB::table('kmj_native_smtp_settings')->where('id', 1)->first();
+        $this->assertNotSame($login, $row->brevo_login_ciphertext);
+        $this->assertNotSame($password, $row->brevo_password_ciphertext);
+        $this->assertSame($login, Crypt::decryptString($row->brevo_login_ciphertext));
+        $this->assertSame($password, Crypt::decryptString($row->brevo_password_ciphertext));
+        $this->assertSame('loopback', $row->active_profile);
+        $this->get('/operator/mail/smtp')->assertOk()
+            ->assertDontSee($login)->assertDontSee($password)
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('smtp.brevo_credentials_stored', true)
+                ->where('smtp.brevo_ready', false));
+
+        $this->post('/operator/mail/smtp/credentials', ['smtp_login' => 'invalid login', 'password' => $password])
+            ->assertSessionHasErrors('profile');
+        $this->assertNull(session()->getOldInput('smtp_login'));
+        $this->assertNull(session()->getOldInput('password'));
         Mail::assertNothingOutgoing();
     }
 
