@@ -81,13 +81,22 @@ final class SubmitNativeExternalMail implements ShouldQueue
         try {
             // Never silently reroute a queued message to another provider.
             // Only the exact pinned, currently authorized profile is used.
-            $settings->send($profile, (string) $message->recipient_email, new NativeExternalMailMessage(
+            $receipt = $settings->send($profile, (string) $message->recipient_email, new NativeExternalMailMessage(
                 (string) $message->subject,
                 (string) $message->body,
                 (string) $message->sender_email,
             ));
 
-            // This means local mail-server acceptance, NOT recipient delivery.
+            // A canceled Laravel MessageSending event can return no receipt
+            // without throwing. Never report a submission that was not confirmed.
+            if ($receipt === null) {
+                $this->transition('submitting', 'failed', 'transport_receipt_missing');
+                $this->audit((int) $message->sender_user_id, 'kmj_mail_transport_failed', 'failed');
+
+                return;
+            }
+
+            // This means SMTP transport acceptance, NOT recipient delivery.
             DB::table('kmj_mail_messages')->where('id', $this->messageId)
                 ->where('delivery_state', 'submitting')
                 ->update([
