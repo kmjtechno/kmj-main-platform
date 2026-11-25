@@ -14,6 +14,8 @@ return new class extends Migration
         Schema::create('kmj_native_smtp_settings', function (Blueprint $table): void {
             $table->unsignedTinyInteger('id')->primary();
             $table->string('active_profile', 24)->default('loopback');
+            $table->text('brevo_login_ciphertext')->nullable();
+            $table->text('brevo_password_ciphertext')->nullable();
             $table->string('tested_profile', 24)->nullable();
             $table->string('tested_fingerprint', 64)->nullable();
             $table->unsignedBigInteger('tested_by')->nullable();
@@ -28,7 +30,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (DB::table('kmj_native_smtp_settings')->where('active_profile', '!=', 'loopback')->exists()
+        if (DB::table('kmj_native_smtp_settings')->whereNotNull('brevo_login_ciphertext')->exists()
+            || DB::table('kmj_native_smtp_settings')->where('active_profile', '!=', 'loopback')->exists()
             || DB::table('kmj_mail_messages')->whereNotNull('native_smtp_profile')
                 ->where('native_smtp_profile', '!=', 'loopback')->whereIn('delivery_state', ['queued', 'submitting'])->exists()) {
             throw new RuntimeException('Restore the default route and reconcile outstanding SMTP submissions before schema rollback.');
