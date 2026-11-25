@@ -8,7 +8,18 @@ type Smtp = {
     installed: boolean;
     theme_installed: boolean;
     theme: string;
-    themes: Record<string, { label: string; header: string; footer: string; accent: string; ink: string; tint: string; layout: string }>;
+    themes: Record<
+        string,
+        {
+            label: string;
+            header: string;
+            footer: string;
+            accent: string;
+            ink: string;
+            tint: string;
+            layout: string;
+        }
+    >;
     active: string;
     loopback_ready: boolean;
     brevo_ready: boolean;
@@ -318,29 +329,65 @@ export default function OperatorMailSmtp({ smtp }: { smtp: Smtp }) {
                                 onClick={() => setTheme(id)}
                                 className="overflow-hidden rounded-xl border text-left aria-pressed:ring-2 aria-pressed:ring-red-500"
                             >
-                                <div style={{ background: palette.header, color: palette.ink, borderBottom: '3px solid ' + palette.accent }} className="p-3 text-xs font-bold">
+                                <div
+                                    style={{
+                                        background: palette.header,
+                                        color: palette.ink,
+                                        borderBottom:
+                                            '3px solid ' + palette.accent,
+                                    }}
+                                    className="p-3 text-xs font-bold"
+                                >
                                     KMJ TECHNO
                                 </div>
-                                <div style={{ background: '#ffffff', color: '#142035' }} className="space-y-2 p-3 text-xs">
+                                <div
+                                    style={{
+                                        background: '#ffffff',
+                                        color: '#142035',
+                                    }}
+                                    className="space-y-2 p-3 text-xs"
+                                >
                                     <strong>Official communication</strong>
-                                    <div className="h-1 w-10 rounded" style={{ background: palette.accent }} />
+                                    <div
+                                        className="h-1 w-10 rounded"
+                                        style={{ background: palette.accent }}
+                                    />
                                     <p>Subject and message</p>
                                 </div>
-                                <div style={{ background: palette.footer, color: '#ffffff' }} className="p-2 text-xs">KMJ TECHNO · Global Delivery</div>
-                                <div className="p-3 text-sm font-semibold">{palette.label}{smtp.theme === id ? ' · Active' : ''}</div>
+                                <div
+                                    style={{
+                                        background: palette.footer,
+                                        color: '#ffffff',
+                                    }}
+                                    className="p-2 text-xs"
+                                >
+                                    KMJ TECHNO · Global Delivery
+                                </div>
+                                <div className="p-3 text-sm font-semibold">
+                                    {palette.label}
+                                    {smtp.theme === id ? ' · Active' : ''}
+                                </div>
                             </button>
                         ))}
                     </div>
-                    {preview && <p className="text-sm">Selected: {preview.label}</p>}
+                    {preview && (
+                        <p className="text-sm">Selected: {preview.label}</p>
+                    )}
                     <button
                         type="button"
-                        disabled={busy || !smtp.theme_installed || theme === smtp.theme}
+                        disabled={
+                            busy || !smtp.theme_installed || theme === smtp.theme
+                        }
                         onClick={() => {
                             setBusy(true);
-                            router.post('/operator/mail/smtp/theme', { theme }, {
-                                preserveScroll: true,
-                                onFinish: () => setBusy(false),
-                            });
+                            router.post(
+                                '/operator/mail/smtp/theme',
+                                { theme },
+                                {
+                                    preserveScroll: true,
+                                    onFinish: () => setBusy(false),
+                                },
+                            );
                         }}
                         className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40"
                     >
