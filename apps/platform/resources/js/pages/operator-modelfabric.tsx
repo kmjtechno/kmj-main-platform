@@ -514,10 +514,10 @@ function ConnectGuide({
                 />
             </div>
             <p className="text-muted-foreground text-xs">
-                Set KMJ_MODELFABRIC_TOKEN in your client&apos;s private environment
-                or credential store. Samples never contain your actual token.
-                First run the read-only model check; do not paste credentials
-                into source files or shell history.
+                Set KMJ_MODELFABRIC_TOKEN in a private credential store.
+                Samples never contain your actual token. First run the
+                read-only model check. Never paste credentials into source
+                files or shell history.
             </p>
             {snippets.map((snippet) => (
                 <details key={snippet.id} className="rounded-xl border p-2">
