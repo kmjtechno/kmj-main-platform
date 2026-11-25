@@ -1068,7 +1068,9 @@ export default function MailCenter({
                                                             incoming: item.id,
                                                             ...(q ? { q } : {}),
                                                         },
-                                                        { preserveScroll: true },
+                                                        {
+                                                            preserveScroll: true,
+                                                        },
                                                     );
                                                 }}
                                                 className="mt-2 w-full rounded-lg border border-slate-700 p-3 text-left hover:border-red-400"
@@ -1948,8 +1950,8 @@ export default function MailCenter({
                                     </p>
                                 </div>
                                 <p className="mt-4 text-xs text-amber-300">
-                                    Sender authentication is not verified.
-                                    Treat links and requests as untrusted.
+                                    Sender authentication is not verified. Treat
+                                    links and requests as untrusted.
                                 </p>
                                 <button
                                     type="button"
