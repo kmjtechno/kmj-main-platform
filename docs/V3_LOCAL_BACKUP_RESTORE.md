@@ -37,3 +37,12 @@ Proven (2026-11-24, stamp 20261124T145907Z): the ciphertext downloaded to the ow
 
 Not proven: a database restore performed from the owner-decrypted copy (the earlier restore drill used the plain local snapshot), any stamp other than the one tested, automatic daily creation (this was a one-time run, no timer), retention, and a restore on a different host. The owner's private key must be kept in at least two separate places.
 
+## Restore drill and timer evidence (2026-11-25)
+
+- Owner-key vault timer installed (PR #1154): `kmj-owner-key-vault.timer`, hourly, first scheduled run 12:04 IST (not yet observed at the time of writing). The installer's own first run sealed stamp 20261125T023402Z.
+- Owner PC decrypt, second stamp 20261125T023402Z: sidecar SHA-256 matched, decrypt succeeded, 102 tar entries, `platform.dump` 911913 bytes.
+- Disposable restore on the server (PG18 `pg_restore` to SQL, PG16 server, empty scratch DB per stamp, scratch DBs dropped afterwards): `platform.dump` of snapshot 20261124T145907Z and of 20261125T023402Z both restored with `ON_ERROR_STOP=1`, 69 public tables each. Production database untouched.
+- The two snapshots come from different jobs: 20261124T145907Z from the V3 helper (schema kmj.local.full.daily.v3, 261 storage files, 329 checksum lines); 20261125T023402Z from the older root backup job (9 storage files, 2 checksum lines, "Not offsite"). Live `storage/app` is about 32K. File-by-file storage completeness of the older job is NOT verified.
+
+Still not proven: row-level data equality with production, restore of the encrypted copy itself on the server (the key never leaves the owner PC), the scheduled timer run, retention, a different host.
+
