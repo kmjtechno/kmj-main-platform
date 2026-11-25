@@ -60,7 +60,25 @@ try {
             assert.equal(await ai.getAttribute('data-expanded'), 'false');
             assert.equal(await page.locator('#kmj-mail-ai-content').isVisible(), false);
             assert.equal(await reader.getByRole('button', { name: 'View Sent' }).isVisible(), true);
-            const overflow = () => page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+            const overflow = async () => {
+                const state = await page.evaluate(() => ({
+                    overflow: document.documentElement.scrollWidth - innerWidth,
+                    elements: Array.from(document.querySelectorAll('body *'))
+                        .map((node) => ({
+                            tag: node.tagName,
+                            className: node.getAttribute('class'),
+                            right: Math.round(node.getBoundingClientRect().right),
+                            width: Math.round(node.getBoundingClientRect().width),
+                        }))
+                        .filter((node) => node.right > innerWidth + 1 && node.width > 0)
+                        .slice(0, 20),
+                }));
+                if (state.overflow > 1) {
+                    console.error('MAIL_LAYOUT_OVERFLOW', width, JSON.stringify(state));
+                    await page.screenshot({ path: out + '/overflow-' + width + '.png', fullPage: true });
+                }
+                return state.overflow;
+            };
             assert.ok(await overflow() <= 1, 'Inbox overflow at ' + width);
             await page.screenshot({ path: out + '/inbox-' + width + '.png', fullPage: true });
             await ai.getByRole('button', { name: 'Open AI Assistant' }).click();

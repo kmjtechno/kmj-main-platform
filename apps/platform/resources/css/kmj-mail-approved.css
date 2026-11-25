@@ -939,3 +939,64 @@
         min-height: 360px;
     }
 }
+
+/* Give mobile header controls real space instead of forcing one desktop row. */
+@media (max-width: 900px) {
+    .owner-module-shell[data-owner-mail='true'] .owner-header {
+        height: auto;
+        min-height: 62px;
+        flex-wrap: wrap;
+        padding: 8px 10px;
+        gap: 8px;
+    }
+    .owner-module-shell[data-owner-mail='true'] .owner-brand {
+        width: 140px;
+        max-width: 42vw;
+    }
+    .owner-module-shell[data-owner-mail='true'] .owner-brand img {
+        width: 100%;
+        height: auto;
+    }
+    .owner-module-shell[data-owner-mail='true'] .owner-mail-global-search {
+        order: 5;
+        flex: 1 1 100%;
+        width: 100%;
+        min-width: 0;
+    }
+    .owner-module-shell[data-owner-mail='true'] .owner-mail-ai-link {
+        margin-left: auto;
+    }
+    .owner-module-shell[data-owner-mail='true'] .owner-identity {
+        display: inline-flex;
+        min-width: 0;
+        padding: 4px;
+        gap: 0;
+    }
+    .owner-module-shell[data-owner-mail='true'] .owner-identity-details,
+    .owner-module-shell[data-owner-mail='true'] .owner-identity > svg {
+        display: none;
+    }
+    .owner-module-shell[data-owner-mail='true'] .owner-module-body {
+        min-width: 0;
+    }
+    .kmj-mail-approved-shell > .kmj-mail-workspace-grid > * {
+        min-width: 0;
+        max-width: 100%;
+    }
+}
+@media (max-width: 700px) {
+    .owner-module-shell[data-owner-mail='true'] .owner-sidebar {
+        top: 108px;
+    }
+    .owner-module-shell[data-owner-mail='true'] .owner-brand {
+        flex: 1 1 110px;
+        min-width: 0;
+        max-width: 140px;
+    }
+    .kmj-mail-approved-shell .kmj-mail-metric small {
+        white-space: normal;
+    }
+    .kmj-mail-approved-shell .kmj-mail-hero-brand {
+        gap: 8px;
+    }
+}
