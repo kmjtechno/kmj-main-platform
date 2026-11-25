@@ -6,6 +6,7 @@ on:
       - 'apps/platform/resources/js/layouts/owner-module-shell.tsx'
       - 'apps/platform/resources/js/pages/**'
       - 'apps/platform/scripts/check-owner-design-parity.test.mjs'
+      - 'apps/platform/scripts/check-modelfabric.test.mjs'
       - 'apps/platform/scripts/check-owner-product-editor-state.test.mjs'
       - 'apps/platform/resources/private/kmj-commercial-pricebook-20261123.json'
       - '.github/workflows/owner-admin-design-parity-formatter.yml'
@@ -31,6 +32,8 @@ jobs:
           ./node_modules/.bin/vp fmt \
             resources/css/owner-module-shell.css \
             resources/js/layouts/owner-module-shell.tsx \
+            resources/js/pages/operator-modelfabric.tsx \
+            scripts/check-modelfabric.test.mjs \
             resources/js/pages/services/ai-providers.tsx \
             resources/js/pages/services/codebridge.tsx \
             scripts/check-owner-design-parity.test.mjs \
@@ -46,6 +49,8 @@ jobs:
           git diff --no-ext-diff -- \
             resources/css/owner-module-shell.css \
             resources/js/layouts/owner-module-shell.tsx \
+            resources/js/pages/operator-modelfabric.tsx \
+            scripts/check-modelfabric.test.mjs \
             resources/js/pages/services/ai-providers.tsx \
             resources/js/pages/services/codebridge.tsx \
             scripts/check-owner-design-parity.test.mjs \
