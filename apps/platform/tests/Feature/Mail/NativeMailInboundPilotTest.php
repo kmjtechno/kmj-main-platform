@@ -49,6 +49,8 @@ final class NativeMailInboundPilotTest extends TestCase
         $this->receive(self::MIME)
             ->assertOk()->assertExactJson(['state' => 'duplicate']);
         $this->receive(self::MIME.'changed', event: $event)->assertConflict();
+        $this->receive(self::MIME, event: $event, sender: 'other@example.net')->assertConflict();
+        $this->receive(self::MIME, sender: 'other@example.net')->assertConflict();
 
         $this->assertDatabaseCount('kmj_mail_inbound_quarantine', 1);
         $this->assertDatabaseCount('kmj_mail_messages', 0);
@@ -226,10 +228,11 @@ final class NativeMailInboundPilotTest extends TestCase
         ?int $timestamp = null,
         string $recipient = self::RECIPIENT,
         ?string $signature = null,
+        string $sender = self::SENDER,
     ): TestResponse {
         $event ??= (string) Str::uuid();
         $timestamp ??= now()->timestamp;
-        $signed = implode("\n", ['kmj-inbound-v1', $event, (string) $timestamp, $recipient, self::SENDER, hash('sha256', $mime)]);
+        $signed = implode("\n", ['kmj-inbound-v1', $event, (string) $timestamp, $recipient, $sender, hash('sha256', $mime)]);
         $signature ??= hash_hmac('sha256', $signed, hex2bin(self::SECRET));
 
         return $this->call('POST', '/api/kmj-mail/inbound/pilot', [], [], [], [
@@ -238,7 +241,7 @@ final class NativeMailInboundPilotTest extends TestCase
             'HTTP_X_KMJ_MAIL_EVENT' => $event,
             'HTTP_X_KMJ_MAIL_TIMESTAMP' => (string) $timestamp,
             'HTTP_X_KMJ_MAIL_RECIPIENT' => $recipient,
-            'HTTP_X_KMJ_MAIL_ENVELOPE_FROM' => self::SENDER,
+            'HTTP_X_KMJ_MAIL_ENVELOPE_FROM' => $sender,
             'HTTP_X_KMJ_MAIL_SIGNATURE' => $signature,
         ], $mime);
     }
