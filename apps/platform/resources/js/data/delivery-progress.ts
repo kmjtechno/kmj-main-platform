@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-native-request-admission-ticket-20261125',
+        title: 'ModelFabric: one-time request-bound coding admission',
+        state: 'active',
+        detail: 'An authenticated private-source coding client requests a short-lived admission ticket using only a request digest. Native provider checks bind the ticket to an exact route and token; generation consumes the ticket and rechecks admission without a fallback route.',
+        evidence:
+            'Synthetic HTTP tests cover changed request, foreign token, replay and unknown quota. Actual provider-reported quota and signed CodeBridge runtime remain unverified.',
+    },
+    {
         id: 'modelfabric-native-openrouter-account-admission-20261125',
         title: 'ModelFabric: authenticated native account and quota gate',
         state: 'active',
