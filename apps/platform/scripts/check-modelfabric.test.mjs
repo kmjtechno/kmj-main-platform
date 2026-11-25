@@ -316,17 +316,23 @@ void test('guided readiness separates general chat from secure coding and gates 
     assert.match(page, /if \(!generalReady\)/);
     assert.match(page, /if \(chatTokens === 0\)/);
     assert.match(page, /complete: okRequests24h > 0/);
-    assert.match(page, /A chat token cannot authorize private source/);
-    assert.match(page, /disabled=\{tokenPrivate \? !privateReady : !generalReady\}/);
-    assert.match(page, /Never submit private code using a chat token/);
-    assert.doesNotMatch(page, /Create an API token so the coding worker can use these routes/);
+    assert.match(page, /A chat token\s+cannot authorize private source/);
+    assert.match(
+        page,
+        /disabled=\{\s*tokenPrivate\s*\?\s*!privateReady\s*:\s*!generalReady\s*\}/,
+    );
+    assert.match(page, /Never submit\s+private code using a chat token/);
+    assert.doesNotMatch(
+        page,
+        /Create an API token so the coding worker can use these routes/,
+    );
 });
 
 void test('provider management has a dedicated tab, repair action and progressive disclosure', () => {
     assert.match(page, /\{ key: 'providers', label: 'Providers' \}/);
     assert.match(page, /tab === 'providers'/);
     assert.match(page, /Repair connection/);
-    assert.match(page, /<summary[^>]*>Usage and routing limits<\/summary>/);
+    assert.match(page, /<summary[^>]*>\s*Usage and routing limits\s*<\/summary>/);
     assert.match(page, /p.models.length === 0/);
-    assert.match(page, /provider.enabled \? provider.health : 'disabled'/);
+    assert.match(page, /provider.enabled\s*\?\s*provider.health\s*:\s*'disabled'/);
 });
