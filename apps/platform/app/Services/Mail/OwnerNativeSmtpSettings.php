@@ -134,11 +134,14 @@ final class OwnerNativeSmtpSettings
         // The explicit owner action sends one fixed test to that verified owner,
         // never to an arbitrary recipient and never includes mailbox content.
         try {
-            Mail::mailer($mailer)->to($actor->email)->send(new NativeExternalMailMessage(
+            $receipt = Mail::mailer($mailer)->to($actor->email)->send(new NativeExternalMailMessage(
                 '[KMJ SMTP TEST] Transport acceptance',
                 'This is an owner-requested KMJ Mail transport test. Receipt in your mailbox must be checked separately.',
                 $from,
             ));
+            if ($receipt === null) {
+                throw new \RuntimeException('No SMTP submission receipt');
+            }
         } catch (Throwable) {
             $this->audit($actor, 'kmj_native_smtp_test', 'failed', $profile);
             throw ValidationException::withMessages(['profile' => 'SMTP submission failed. No transport setting was activated.']);
