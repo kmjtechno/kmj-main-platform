@@ -307,6 +307,46 @@ final class ModelFabricApiTest extends TestCase
         Http::assertNotSent(fn ($request): bool => $request->method() === 'POST');
     }
 
+    public function test_native_ticket_is_bound_to_request_token_and_consumed_once(): void
+    {
+        $this->evidenced('vendor/model:free', 'no-training-documented', [
+            'name' => 'OpenRouter', 'preset' => 'openrouter', 'base_url' => 'https://openrouter.ai/api/v1', 'models_cache' => ['vendor/model:free'],
+        ]);
+        $this->fakeNativeOpenRouter('complete patch');
+        $token = $this->token();
+        $headers = ['Authorization' => 'Bearer '.$token, 'X-ModelFabric-Policy' => 'strict-free-cloud'];
+        $body = ['model' => 'modelfabric-auto', 'messages' => [['role' => 'user', 'content' => 'synthetic patch']], 'max_tokens' => 1024, 'stream' => false];
+        $digest = hash('sha256', "https://kmjtechno.com/api/modelfabric/v1/chat/completions\n".$token."\n".json_encode($body, JSON_THROW_ON_ERROR));
+        $response = $this->getJson('/api/modelfabric/v1/models', [...$headers, 'X-ModelFabric-Request-Digest' => $digest])->assertOk()
+            ->assertJsonPath('modelfabric.native_admission.source', 'kmj_native_provider_admission')
+            ->assertJsonPath('modelfabric.native_admission.request_digest', $digest)
+            ->assertJsonPath('modelfabric.native_admission.requests_remaining', 5);
+        $ticket = $response->json('modelfabric.native_admission.ticket');
+        $this->assertIsString($ticket);
+        $ticketHeaders = [...$headers, 'X-ModelFabric-Admission-Ticket' => $ticket];
+        Http::assertSentCount(2);
+        $this->postJson('/api/modelfabric/v1/chat/completions', [...$body, 'max_tokens' => 512], $ticketHeaders)->assertStatus(403);
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, [...$ticketHeaders, 'Authorization' => 'Bearer '.$this->token()])->assertStatus(403);
+        Http::assertSentCount(2);
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $ticketHeaders)->assertOk()->assertJsonPath('choices.0.message.content', 'complete patch');
+        Http::assertSentCount(5);
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $ticketHeaders)->assertStatus(403);
+        Http::assertSentCount(5);
+    }
+
+    public function test_native_ticket_is_not_issued_when_provider_remaining_quota_is_unknown(): void
+    {
+        $this->evidenced('vendor/model:free', 'no-training-documented', [
+            'name' => 'OpenRouter', 'preset' => 'openrouter', 'base_url' => 'https://openrouter.ai/api/v1', 'models_cache' => ['vendor/model:free'],
+        ]);
+        Http::fake(['https://openrouter.ai/api/v1/key' => Http::response(['data' => ['is_free_tier' => true]])]);
+        $headers = ['Authorization' => 'Bearer '.$this->token(), 'X-ModelFabric-Policy' => 'strict-free-cloud', 'X-ModelFabric-Request-Digest' => str_repeat('a', 64)];
+        $this->getJson('/api/modelfabric/v1/models', $headers)->assertOk()
+            ->assertJsonPath('modelfabric.native_admission', null);
+        Http::assertSentCount(1);
+        Http::assertNotSent(fn ($request): bool => $request->method() === 'POST');
+    }
+
     private function fakeNativeOpenRouter(string $content, string $finish = 'stop', int $remaining = 5): void
     {
         $account = array_fill_keys(['usage', 'usage_daily', 'usage_weekly', 'usage_monthly', 'byok_usage', 'byok_usage_daily', 'byok_usage_weekly', 'byok_usage_monthly'], 0);
