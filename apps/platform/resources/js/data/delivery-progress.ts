@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-mail-enterprise-workspace-20261125',
+        title: 'KMJ Mail folder-specific enterprise reading workspace',
+        state: 'active',
+        detail: 'Owner rejected Sent preview in empty Inbox and overloaded mail panels. Source removes cross-folder records, introduces folder-aware empty states, four compact metrics and opt-in collapsible AI while retaining real mailbox, consent and delivery boundaries.',
+        evidence:
+            'Folder privacy regression and UI contracts added. Authenticated visual QA, real incoming activation, exact-head CI and guarded Elite release remain pending.',
+    },
+    {
         id: 'kmj-mail-actual-template-preview-20261125',
         title: 'KMJ Mail actual template preview correction',
         state: 'active',

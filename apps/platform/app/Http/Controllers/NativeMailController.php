@@ -45,23 +45,14 @@ final class NativeMailController
         abort_if(isset($values['incoming']) && $externalInbox === null, 404);
         $thread = isset($values['message']) ? $this->mail->thread($user, (int) $values['message']) : null;
         $mailbox = $this->mail->mailbox($user, $folder, $search, (int) ($values['page'] ?? 1));
-        // Show a clearly labeled preview of this same user's Sent records when
-        // Inbox is empty. Never fabricate Inbox mail, cross-tenant records or
-        // inferred recipient delivery; search/filter views keep their true empty state.
-        $recentSent = $folder === 'inbox' && $search === '' && $mailbox['total'] === 0
-            && ($externalInbox === null || $externalInbox['total'] === 0)
-            ? $this->mail->mailbox($user, 'sent', '', 1)
-            : null;
+        // Folder-specific payloads: do not query or expose Sent records in Inbox.
 
         return Inertia::render('mail-center', [
             'audience' => $portal === 'operator' ? 'owner' : 'staff',
             'templates' => WorkforceMailCatalog::forAudience($portal === 'operator' ? 'owner' : 'team'),
             'workspaceMode' => 'native_internal',
             'mailbox' => $mailbox,
-            'recentSent' => $recentSent === null ? null : [
-                'total' => $recentSent['total'],
-                'items' => array_slice($recentSent['items'], 0, 6),
-            ],
+            'recentSent' => null, // Compatibility only; no cross-folder data.
             'mailMetrics' => $this->mail->summary($user),
             'folder' => $folder,
             'q' => $search,
