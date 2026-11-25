@@ -103,6 +103,42 @@ final class JmapReadOnlyTransportTest extends TestCase
         }
     }
 
+    public function test_inbox_summary_reads_metadata_from_validated_query_in_same_session(): void
+    {
+        $history = [];
+        $stack = HandlerStack::create(new MockHandler([
+            $this->session(),
+            new Response(200, ['Content-Type' => 'application/json'], '{"methodResponses":[["Mailbox/get",{"accountId":"a1","state":"s1","list":[{"id":"inbox1","name":"Inbox","parentId":null,"role":"inbox","sortOrder":0,"totalEmails":1,"unreadEmails":1}],"notFound":[]},"mailboxes"]]}'),
+            new Response(200, ['Content-Type' => 'application/json'], '{"methodResponses":[["Email/query",{"accountId":"a1","queryState":"q1","position":0,"ids":["e1"],"total":1},"inbox-query"]]}'),
+            new Response(200, ['Content-Type' => 'application/json'], '{"methodResponses":[["Email/get",{"accountId":"a1","state":"s1","list":[{"id":"e1","threadId":"t1","receivedAt":"2026-11-25T12:00:00Z","subject":"Test","from":[{"name":"Sender","email":"sender@example.test"}],"keywords":{"$seen":true},"hasAttachment":false}],"notFound":[]},"inbox-metadata"]]}'),
+        ]));
+        $stack->push(Middleware::history($history));
+        $transport = new JmapReadOnlyTransport(new Client(['handler' => $stack]));
+        $result = $transport->inboxSummary('owner@example.test', 'test-token');
+        self::assertSame('e1', $result['messages'][0]['id']);
+        self::assertSame(1, $result['total']);
+        self::assertSame([], $result['missing']);
+        self::assertCount(4, $history);
+        $request = json_decode((string) $history[3]['request']->getBody(), true, 32, JSON_THROW_ON_ERROR);
+        self::assertSame('Email/get', $request['methodCalls'][0][0]);
+        self::assertSame(['e1'], $request['methodCalls'][0][1]['ids']);
+        self::assertSame('a1', $request['methodCalls'][0][1]['accountId']);
+    }
+
+    public function test_empty_inbox_summary_does_not_request_metadata(): void
+    {
+        $history = [];
+        $stack = HandlerStack::create(new MockHandler([
+            $this->session(),
+            new Response(200, ['Content-Type' => 'application/json'], '{"methodResponses":[["Mailbox/get",{"accountId":"a1","state":"s1","list":[{"id":"inbox1","name":"Inbox","parentId":null,"role":"inbox","sortOrder":0,"totalEmails":0,"unreadEmails":0}],"notFound":[]},"mailboxes"]]}'),
+            new Response(200, ['Content-Type' => 'application/json'], '{"methodResponses":[["Email/query",{"accountId":"a1","queryState":"q1","position":0,"ids":[],"total":0},"inbox-query"]]}'),
+        ]));
+        $stack->push(Middleware::history($history));
+        $transport = new JmapReadOnlyTransport(new Client(['handler' => $stack]));
+        self::assertSame(['messages' => [], 'missing' => [], 'position' => 0, 'total' => 0], $transport->inboxSummary('owner@example.test', 'test-token'));
+        self::assertCount(3, $history);
+    }
+
     private function session(): Response
     {
         $mail = 'urn:ietf:params:jmap:mail';
