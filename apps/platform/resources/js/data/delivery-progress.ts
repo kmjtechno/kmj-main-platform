@@ -10,6 +10,13 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-mail-native-info-envelope-20261125',
+        title: 'KMJ Mail: exact native info mailbox identity',
+        state: 'active',
+        detail: 'Preserve the selected SMTP recipient through signed intake and Inbox.',
+        evidence: 'Source contract and synthetic regressions; external delivery pending.',
+    },
+    {
         id: 'kmj-mail-jmap-owner-inbox-ui-20261125',
         title: 'KMJ Mail: explicit owner Inbox summary panel',
         state: 'active',
