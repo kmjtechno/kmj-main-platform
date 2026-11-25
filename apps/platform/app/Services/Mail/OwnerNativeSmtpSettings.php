@@ -8,6 +8,9 @@ use App\Mail\NativeExternalMailMessage;
 use App\Models\OperatorActionAudit;
 use App\Models\User;
 use App\Services\PlatformOwnerAccess;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Mail\SentMessage;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
@@ -16,7 +19,8 @@ use Throwable;
 
 /**
  * Admin selection of server-pinned SMTP profiles, not an arbitrary relay.
- * Credentials stay in protected server configuration, never browser props.
+ * Remote credentials are encrypted at rest or supplied by the server;
+ * they never appear in browser props.
  */
 final class OwnerNativeSmtpSettings
 {
@@ -66,8 +70,7 @@ final class OwnerNativeSmtpSettings
             return false;
         }
 
-        $username = config('mail.mailers.kmj_brevo.username');
-        $password = config('mail.mailers.kmj_brevo.password');
+        $credentials = $this->brevoCredentials();
 
         return config('mail.mailers.kmj_brevo.transport') === 'smtp'
             && config('mail.mailers.kmj_brevo.scheme') === 'smtps'
@@ -77,8 +80,7 @@ final class OwnerNativeSmtpSettings
             && config('mail.mailers.kmj_brevo.url') === null
             && config('mail.mailers.kmj_brevo.verify_peer', true) === true
             && config('mail.mailers.kmj_brevo.kmj_activation_confirmed') === true
-            && is_string($username) && trim($username) !== ''
-            && is_string($password) && trim($password) !== '';
+            && $credentials !== null;
     }
 
     public function mailer(string $profile): ?string
@@ -113,6 +115,8 @@ final class OwnerNativeSmtpSettings
             'active' => $this->activeProfile(),
             'loopback_ready' => $this->ready('loopback'),
             'brevo_ready' => $this->ready('brevo'),
+            'brevo_credentials_stored' => $row !== null && is_string($row->brevo_login_ciphertext) && is_string($row->brevo_password_ciphertext),
+            'brevo_server_approved' => config('mail.mailers.kmj_brevo.kmj_activation_confirmed') === true,
             'tested_profile' => $row->tested_profile ?? null,
             'tested_at' => $row->tested_at ?? null,
             'sender' => (string) config('mail.from.address', ''),
@@ -134,7 +138,7 @@ final class OwnerNativeSmtpSettings
         // The explicit owner action sends one fixed test to that verified owner,
         // never to an arbitrary recipient and never includes mailbox content.
         try {
-            $receipt = Mail::mailer($mailer)->to($actor->email)->send(new NativeExternalMailMessage(
+            $receipt = $this->send($profile, (string) $actor->email, new NativeExternalMailMessage(
                 '[KMJ SMTP TEST] Transport acceptance',
                 'This is an owner-requested KMJ Mail transport test. Receipt in your mailbox must be checked separately.',
                 $from,
@@ -206,6 +210,91 @@ final class OwnerNativeSmtpSettings
         $this->audit($actor, 'kmj_native_smtp_pause', 'success', 'paused');
     }
 
+    public function saveBrevoCredentials(User $actor, mixed $login, mixed $password): void
+    {
+        $this->owner->require($actor);
+        abort_unless($this->installed(), 503);
+        if (! is_string($login) || ! is_string($password)
+            || $login === '' || $password === '' || strlen($login) > 254 || strlen($password) > 1024
+            || preg_match('/[\x00-\x20\x7f]/', $login) === 1
+            || preg_match('/[\x00-\x20\x7f]/', $password) === 1) {
+            throw new \InvalidArgumentException('Invalid SMTP credentials.');
+        }
+
+        DB::transaction(function () use ($actor, $login, $password): void {
+            $row = DB::table('kmj_native_smtp_settings')->where('id', 1)->lockForUpdate()->first();
+            if ($row !== null && $row->active_profile === 'brevo') {
+                throw new \InvalidArgumentException('Pause or select local SMTP before rotating remote credentials.');
+            }
+            DB::table('kmj_native_smtp_settings')->upsert([[
+                'id' => 1,
+                'brevo_login_ciphertext' => Crypt::encryptString($login),
+                'brevo_password_ciphertext' => Crypt::encryptString($password),
+                'tested_profile' => null,
+                'tested_fingerprint' => null,
+                'tested_by' => null,
+                'tested_at' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]], ['id'], ['brevo_login_ciphertext', 'brevo_password_ciphertext', 'tested_profile', 'tested_fingerprint', 'tested_by', 'tested_at', 'updated_at']);
+            $this->audit($actor, 'kmj_native_smtp_credentials_saved', 'saved_unverified', 'brevo');
+        });
+    }
+
+    /** @return array{username:string,password:string}|null */
+    private function brevoCredentials(): ?array
+    {
+        $row = $this->installed() ? DB::table('kmj_native_smtp_settings')->where('id', 1)->first() : null;
+        if ($row !== null && ($row->brevo_login_ciphertext !== null || $row->brevo_password_ciphertext !== null)) {
+            if (! is_string($row->brevo_login_ciphertext) || ! is_string($row->brevo_password_ciphertext)) {
+                return null;
+            }
+            try {
+                $username = Crypt::decryptString($row->brevo_login_ciphertext);
+                $password = Crypt::decryptString($row->brevo_password_ciphertext);
+            } catch (DecryptException) {
+                return null;
+            }
+        } else {
+            $username = config('mail.mailers.kmj_brevo.username');
+            $password = config('mail.mailers.kmj_brevo.password');
+        }
+
+        return is_string($username) && trim($username) !== ''
+            && is_string($password) && trim($password) !== ''
+            ? ['username' => $username, 'password' => $password] : null;
+    }
+
+    public function send(string $profile, string $recipient, NativeExternalMailMessage $message): ?SentMessage
+    {
+        $mailer = $this->mailer($profile);
+        if ($mailer === null) {
+            throw new \RuntimeException('SMTP route is unavailable.');
+        }
+        if ($profile === 'loopback') {
+            return Mail::mailer($mailer)->to($recipient)->send($message);
+        }
+
+        $credentials = $this->brevoCredentials();
+        if ($credentials === null) {
+            throw new \RuntimeException('SMTP credentials unavailable.');
+        }
+
+        // Build an isolated instance for every remote submission. Never
+        // overwrite global transactional mail configuration or cache a secret.
+        return Mail::build([
+            'name' => 'kmj_native_brevo_runtime',
+            'transport' => 'smtp',
+            'scheme' => 'smtps',
+            'host' => 'smtp-relay.brevo.com',
+            'port' => 465,
+            'timeout' => 10,
+            'local_domain' => 'kmjtechno.com',
+            'verify_peer' => true,
+            ...$credentials,
+        ])->to($recipient)->send($message);
+    }
+
     private function fingerprint(string $profile): string
     {
         $name = $profile === 'loopback' ? 'kmj_native_loopback' : 'kmj_brevo';
@@ -213,6 +302,7 @@ final class OwnerNativeSmtpSettings
         return hash_hmac('sha256', json_encode([
             config('mail.mailers.'.$name),
             config('mail.from.address'),
+            $profile === 'brevo' ? $this->brevoCredentials() : null,
         ], JSON_THROW_ON_ERROR), (string) config('app.key'));
     }
 
