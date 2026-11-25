@@ -36,7 +36,7 @@ final class JmapOwnerPilot
         return $this->transport->inboxPage($grant['username'], $grant['token'], $position);
     }
 
-    /** @return array{messages: list<array>, missing: list<string>, position: int, total: int} */
+    /** @return array{messages: list<array<string, mixed>>, missing: list<string>, position: int, total: int} */
     public function inboxSummary(User $actor, int $position = 0): array
     {
         $grant = $this->grant($actor);
