@@ -6,6 +6,7 @@ namespace Tests\Feature\Mail;
 
 use App\Jobs\SubmitNativeExternalMail;
 use App\Models\User;
+use App\Services\Mail\EnterpriseMailTheme;
 use App\Services\Mail\NativeExternalMailService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Mail\Mailer;
@@ -135,6 +136,72 @@ final class NativeExternalMailFlowTest extends TestCase
         $this->actingAs($other)->withSession(['auth.password_confirmed_at' => time()])
             ->get('/operator/mail/smtp')->assertForbidden();
         $this->post('/operator/mail/smtp/pause')->assertForbidden();
+        Mail::assertNothingOutgoing();
+    }
+
+    public function test_owner_can_select_each_enterprise_theme_without_changing_smtp_route(): void
+    {
+        $owner = $this->owner();
+        $this->activateOutbound();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()]);
+        $themes = EnterpriseMailTheme::catalog();
+        self::assertCount(6, $themes);
+        foreach ($themes as $id => $palette) {
+            $this->travel(1)->minutes();
+            $this->post('/operator/mail/smtp/theme', ['theme' => $id])->assertRedirect('/operator/mail/smtp');
+            $this->assertDatabaseHas('kmj_native_smtp_settings', ['enterprise_theme' => $id, 'active_profile' => 'loopback']);
+            $html = view('emails.kmj-native-outgoing', [
+                'heading' => 'Theme <script>',
+                'body' => 'Example <img src=x>',
+                'senderAddress' => 'info@kmjtechno.com',
+            ])->render();
+            self::assertStringContainsString($palette['header'], $html);
+            self::assertStringContainsString($palette['accent'], $html);
+            self::assertStringContainsString('KMJ TECHNO SOLUTIONS', $html);
+            self::assertStringContainsString('&lt;script&gt;', $html);
+            self::assertStringNotContainsString('<img src=x>', $html);
+            self::assertStringNotContainsString('Message delivered', $html);
+
+            $url = 'https://kmjtechno.com/reset-password/synthetic?email=fixture%40example.net&signature=synthetic';
+            $data = [
+                'subject' => 'Synthetic QA',
+                'preheader' => 'Preview only',
+                'eyebrow' => 'ACCOUNT SECURITY',
+                'heading' => 'Theme <script>',
+                'intro' => 'Example <img src=x>',
+                'actionText' => 'Secure action',
+                'actionUrl' => $url,
+                'expiryText' => 'Valid for 60 minutes',
+                'category' => 'SERVICE',
+                'greeting' => 'Hello',
+                'details' => [['label' => 'Reference', 'value' => '<script>']],
+                'notice' => 'Synthetic notice',
+            ];
+
+            foreach (['kmj-auth-transactional', 'kmj-transactional'] as $view) {
+                $rendered = view('emails.'.$view, $data)->render();
+                self::assertStringContainsString($palette['header'], $rendered);
+                self::assertStringContainsString($palette['footer'], $rendered);
+                self::assertStringContainsString($palette['accent'], $rendered);
+                self::assertStringContainsString('kmj-sender-avatar.png', $rendered);
+                self::assertStringContainsString('&amp;signature=synthetic', $rendered);
+                self::assertStringContainsString('&lt;script&gt;', $rendered);
+                self::assertStringNotContainsString('<img src=x>', $rendered);
+                self::assertStringNotContainsString('<script>', $rendered);
+                $plain = view('emails.'.$view.'-text', $data)->render();
+                self::assertStringContainsString($url, $plain);
+                self::assertStringNotContainsString('&amp;signature=synthetic', $plain);
+            }
+        }
+        $this->travel(1)->minutes();
+        $this->post('/operator/mail/smtp/theme', ['theme' => 'unrecognized-theme'])
+            ->assertSessionHasErrors('theme');
+        $this->assertDatabaseHas('kmj_native_smtp_settings', ['enterprise_theme' => 'executive-gold', 'active_profile' => 'loopback']);
+        self::assertSame('sendmail', config('mail.default'));
+        $other = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($other)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/mail/smtp/theme', ['theme' => 'signature-red'])->assertForbidden();
+        $this->assertDatabaseHas('kmj_native_smtp_settings', ['enterprise_theme' => 'executive-gold']);
         Mail::assertNothingOutgoing();
     }
 

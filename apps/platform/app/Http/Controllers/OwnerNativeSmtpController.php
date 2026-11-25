@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\Mail\EnterpriseMailTheme;
 use App\Services\Mail\OwnerNativeSmtpSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,6 +33,14 @@ final class OwnerNativeSmtpController
         }
 
         return redirect()->to('/operator/mail/smtp')->with('status', 'Credentials encrypted and saved. Test the provider before activating.');
+    }
+
+    public function theme(Request $request, OwnerNativeSmtpSettings $settings): RedirectResponse
+    {
+        $values = $request->validate(['theme' => ['required', 'string', 'in:'.implode(',', array_keys(EnterpriseMailTheme::catalog()))]]);
+        $settings->saveTheme($this->actor($request), (string) $values['theme']);
+
+        return redirect()->to('/operator/mail/smtp')->with('status', 'Default KMJ email branding saved. Existing SMTP transport is unchanged.');
     }
 
     public function test(Request $request, OwnerNativeSmtpSettings $settings): RedirectResponse

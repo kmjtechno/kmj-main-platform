@@ -78,6 +78,10 @@ class EmailLockupTrimTest(unittest.TestCase):
     def test_all_email_templates_use_reference_readable_html_wordmark(self):
         for name in ("kmj-transactional", "kmj-auth-transactional", "kmj-native-outgoing"):
             html = (VIEWS / f"{name}.blade.php").read_text(encoding="utf-8")
+            shared_include = "@include('emails.partials.kmj-enterprise-header')"
+            self.assertEqual(html.count(shared_include), 1, name)
+            header = (VIEWS / "partials/kmj-enterprise-header.blade.php").read_text(encoding="utf-8")
+            html = html.replace(shared_include, header, 1)
             self.assertIn("/assets/brand/kmj-sender-avatar.png", html, name)
             self.assertIn('class="kmj-tagline"', html, name)
             self.assertIn('font-size:15px;line-height:21px;font-weight:700', html, name)
