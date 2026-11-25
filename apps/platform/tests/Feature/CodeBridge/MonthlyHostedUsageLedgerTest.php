@@ -186,6 +186,7 @@ final class MonthlyHostedUsageLedgerTest extends TestCase
 
         foreach ([
             fn () => $ledger->reserveTrusted($organization, 'account', (string) Str::uuid(), 'community', $this->month()),
+            fn () => $ledger->reserveTrusted($organization, 'account', $execution, 'community', $this->month()),
             fn () => $ledger->completeTrusted($organization, 'account', $execution, true),
         ] as $action) {
             try {
@@ -200,6 +201,25 @@ final class MonthlyHostedUsageLedgerTest extends TestCase
         $this->assertDatabaseHas('codebridge_usage_executions', [
             'execution_id' => $execution,
             'state' => 'reserved',
+        ]);
+    }
+
+    public function test_late_completion_only_updates_original_utc_period(): void
+    {
+        $ledger = app(MonthlyHostedUsageLedger::class);
+        $organization = (string) Str::uuid();
+        $previous = (string) Str::uuid();
+        $ledger->reserveTrusted($organization, 'account', $previous, 'community', $this->month('2026-11-30T23:59:59Z'));
+        $ledger->reserveTrusted($organization, 'account', (string) Str::uuid(), 'community', $this->month('2026-12-01T00:00:00Z'));
+
+        $settled = $ledger->completeTrusted($organization, 'account', $previous, true);
+        $this->assertSame('2026-11-01', $settled['period']);
+        $this->assertSame(1, $settled['completed']);
+        $this->assertDatabaseHas('codebridge_usage_periods', [
+            'organization_id' => $organization,
+            'period_start_utc' => '2026-12-01',
+            'completed_calls' => 0,
+            'reserved_calls' => 1,
         ]);
     }
 
