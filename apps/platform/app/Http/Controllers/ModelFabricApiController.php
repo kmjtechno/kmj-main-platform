@@ -32,8 +32,9 @@ final class ModelFabricApiController extends Controller
     public function models(Request $request): JsonResponse
     {
         $token = $this->token($request);
+        $strictFreeCloud = $this->strictFreeCloud($request, $token);
         $capability = $token->private_source ? 'code' : 'chat';
-        $plan = $this->router->plan($token->organization_id, $capability, $token->private_source);
+        $plan = $this->router->plan($token->organization_id, $capability, $token->private_source, $strictFreeCloud);
 
         return response()->json([
             'object' => 'list',
@@ -44,6 +45,7 @@ final class ModelFabricApiController extends Controller
                 // Derived from the authenticated token, never a client claim.
                 // Counts describe planning only, not available quota or an invoice.
                 'scope' => $token->private_source ? 'private-source-coding' : 'general-chat',
+                'policy' => $strictFreeCloud ? 'strict-free-cloud' : 'default',
                 'free_routes' => count(array_filter($plan['routes'], static fn (array $route): bool => ($route['cost_class'] ?? null) === 'free')),
             ],
         ]);
@@ -52,6 +54,7 @@ final class ModelFabricApiController extends Controller
     public function chat(Request $request): JsonResponse|StreamedResponse
     {
         $token = $this->token($request);
+        $strictFreeCloud = $this->strictFreeCloud($request, $token);
         // Unsupported controls must not be silently discarded before a paid-or-free
         // upstream request. In particular, tools and output limits change semantics.
         if (array_diff(array_keys($request->all()), ['messages', 'stream', 'model']) !== []) {
@@ -77,7 +80,7 @@ final class ModelFabricApiController extends Controller
 
         // The caller's "model" field is ignored on purpose: it cannot pick a paid or unverified model.
         $capability = $token->private_source ? 'code' : 'chat';
-        $result = $this->gateway->complete($token->organization_id, $messages, $capability, $token->private_source, $this->sessionKey($request));
+        $result = $this->gateway->complete($token->organization_id, $messages, $capability, $token->private_source, $this->sessionKey($request), $strictFreeCloud);
         if (! $result['ok']) {
             $code = (string) $result['error_code'];
 
@@ -99,7 +102,7 @@ final class ModelFabricApiController extends Controller
                 'message' => ['role' => 'assistant', 'content' => (string) $result['content']],
                 'finish_reason' => 'stop',
             ]],
-            'modelfabric' => ['provider' => $result['provider'], 'attempts' => $result['attempts'], 'profile' => $result['profile']],
+            'modelfabric' => ['provider' => $result['provider'], 'attempts' => $result['attempts'], 'profile' => $result['profile'], 'policy' => $strictFreeCloud ? 'strict-free-cloud' : 'default'],
         ]);
     }
 
@@ -138,6 +141,18 @@ final class ModelFabricApiController extends Controller
         $key = trim((string) $request->header('X-ModelFabric-Session'));
 
         return preg_match('/^[A-Za-z0-9._:-]{1,64}$/', $key) === 1 ? $key : null;
+    }
+
+    private function strictFreeCloud(Request $request, AiModelToken $token): bool
+    {
+        $policy = $request->header('X-ModelFabric-Policy');
+        if ($policy === null) {
+            return false;
+        }
+        abort_unless($policy === 'strict-free-cloud', 400, 'Unsupported ModelFabric policy.');
+        abort_unless($token->private_source, 403, 'A private-source coding token is required.');
+
+        return true;
     }
 
     private function token(Request $request): AiModelToken
