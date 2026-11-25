@@ -184,7 +184,10 @@ void test('mail folder reader never substitutes Sent previews and AI is opt-in',
     const page = read('resources/js/pages/mail-center.tsx');
     const ai = read('resources/js/components/mail-ai-copilot.tsx');
     const controller = read('app/Http/Controllers/NativeMailController.php');
-    assert.doesNotMatch(page, /latestSent|recentSent|kmj-mail-recent-sent-reader/);
+    assert.doesNotMatch(
+        page,
+        /latestSent|recentSent|kmj-mail-recent-sent-reader/,
+    );
     assert.match(page, /Inbox is clear/);
     assert.match(page, /View Sent/);
     assert.match(controller, /'recentSent' => null/);

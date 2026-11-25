@@ -472,7 +472,8 @@ export default function MailCenter({
     const selected =
         selectedThread?.items.find((item) => item.id === selectedMessageId) ??
         selectedThread?.items.at(-1);
-    const folderLabel = folderDefs.find((item) => item.id === folder)?.label ?? 'Mail';
+    const folderLabel =
+        folderDefs.find((item) => item.id === folder)?.label ?? 'Mail';
     // These are UI filters on the current page only, not invented server-side
     // priority or spam classifiers. The actual full mailbox remains accessible.
     const visibleItems = useMemo(() => {
@@ -746,14 +747,15 @@ export default function MailCenter({
                                     Privacy and diagnostics
                                 </summary>
                                 <p className="mt-2">
-                                    Only authorized KMJ staff can open private team
-                                    mail. External Inbox uses a limited plain-text
-                                    pilot; attachments and CC/BCC require separate
-                                    verified services.
+                                    Only authorized KMJ staff can open private
+                                    team mail. External Inbox uses a limited
+                                    plain-text pilot; attachments and CC/BCC
+                                    require separate verified services.
                                 </p>
                                 <p className="mt-2">
                                     Stored mail text (approx.):{' '}
-                                    {mailMetrics.mail_text_bytes.toLocaleString()} B
+                                    {mailMetrics.mail_text_bytes.toLocaleString()}{' '}
+                                    B
                                 </p>
                             </details>
                         </div>
@@ -905,9 +907,7 @@ export default function MailCenter({
                                                           ),
                                                 )
                                             }
-                                            disabled={
-                                                visibleItems.length === 0
-                                            }
+                                            disabled={visibleItems.length === 0}
                                             className="size-4 accent-red-500"
                                         />
                                         Select page
@@ -2207,7 +2207,7 @@ export default function MailCenter({
                                         <div className="flex size-14 items-center justify-center rounded-2xl border border-slate-600/50 bg-slate-800/50">
                                             <MailOpen className="size-8 text-[#ff4763]" />
                                         </div>
-                                         <h2 className="mt-5 text-2xl leading-tight font-semibold tracking-tight">
+                                        <h2 className="mt-5 text-2xl leading-tight font-semibold tracking-tight">
                                             {visibleItems.length
                                                 ? 'Select a conversation'
                                                 : activeSearch
@@ -2216,7 +2216,8 @@ export default function MailCenter({
                                                     ? 'No messages in this filter'
                                                     : folder === 'inbox'
                                                       ? 'Inbox is clear'
-                                                      : folderLabel + ' is empty'}
+                                                      : folderLabel +
+                                                        ' is empty'}
                                         </h2>
                                         <p className="text-muted-foreground mt-3 max-w-md text-sm leading-7">
                                             {visibleItems.length
@@ -2225,7 +2226,10 @@ export default function MailCenter({
                                                   ? 'Clear your search or try another term.'
                                                   : mailTab !== 'primary'
                                                     ? 'Choose Primary to see the complete page of messages.'
-                                                    : folder === 'inbox' && externalInbox && externalInbox.matching > 0
+                                                    : folder === 'inbox' &&
+                                                        externalInbox &&
+                                                        externalInbox.matching >
+                                                            0
                                                       ? 'No internal conversations. Select an incoming email from External Inbox to read it.'
                                                       : 'There are no private conversations in this folder. Start a new message or choose another folder.'}
                                         </p>
@@ -2272,30 +2276,45 @@ export default function MailCenter({
                                                 <Pencil className="size-4" />
                                                 Compose message
                                             </button>
-                                            {folder === 'inbox' && visibleItems.length === 0 && !activeSearch && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => navigate('sent', undefined, '')}
-                                                    className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-semibold hover:bg-white/[0.08]"
-                                                >
-                                                    <Send className="size-4" />
-                                                    View Sent
-                                                </button>
-                                            )}
+                                            {folder === 'inbox' &&
+                                                visibleItems.length === 0 &&
+                                                !activeSearch && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            navigate(
+                                                                'sent',
+                                                                undefined,
+                                                                '',
+                                                            )
+                                                        }
+                                                        className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-semibold hover:bg-white/[0.08]"
+                                                    >
+                                                        <Send className="size-4" />
+                                                        View Sent
+                                                    </button>
+                                                )}
                                             {mailTab !== 'primary' && (
                                                 <button
                                                     type="button"
-                                                    onClick={() => setMailTab('primary')}
+                                                    onClick={() =>
+                                                        setMailTab('primary')
+                                                    }
                                                     className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-semibold hover:bg-white/[0.08]"
                                                 >
                                                     Show all on page
                                                 </button>
                                             )}
-                                            {folder === 'inbox' && externalInbox && !externalInboundPilotConfigured && (
-                                                <a href="#kmj-external-inbox" className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-semibold hover:bg-white/[0.08]">
-                                                    Review receiving status
-                                                </a>
-                                            )}
+                                            {folder === 'inbox' &&
+                                                externalInbox &&
+                                                !externalInboundPilotConfigured && (
+                                                    <a
+                                                        href="#kmj-external-inbox"
+                                                        className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-semibold hover:bg-white/[0.08]"
+                                                    >
+                                                        Review receiving status
+                                                    </a>
+                                                )}
                                         </div>
                                         <p className="text-muted-foreground mt-6 flex items-center gap-2 text-xs">
                                             <ShieldCheck className="size-4 shrink-0 text-red-400" />

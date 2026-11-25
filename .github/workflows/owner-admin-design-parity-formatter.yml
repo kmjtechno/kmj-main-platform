@@ -36,6 +36,10 @@ jobs:
             scripts/check-owner-design-parity.test.mjs \
             resources/js/pages/operator-products.tsx \
             resources/js/pages/operator-mail-smtp.tsx \
+            resources/js/pages/mail-center.tsx \
+            resources/js/components/mail-ai-copilot.tsx \
+            resources/css/kmj-mail-approved.css \
+            scripts/mail-workspace-browser-verify.mjs \
             scripts/check-mail-inbound-worker.test.mjs \
             scripts/check-owner-product-editor-state.test.mjs \
             resources/private/kmj-commercial-pricebook-20261123.json
@@ -47,6 +51,10 @@ jobs:
             scripts/check-owner-design-parity.test.mjs \
             resources/js/pages/operator-products.tsx \
             resources/js/pages/operator-mail-smtp.tsx \
+            resources/js/pages/mail-center.tsx \
+            resources/js/components/mail-ai-copilot.tsx \
+            resources/css/kmj-mail-approved.css \
+            scripts/mail-workspace-browser-verify.mjs \
             scripts/check-mail-inbound-worker.test.mjs \
             scripts/check-owner-product-editor-state.test.mjs \
             resources/private/kmj-commercial-pricebook-20261123.json
