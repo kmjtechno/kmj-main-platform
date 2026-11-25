@@ -24,7 +24,8 @@ export default function OperatorMailSmtp({ smtp }: { smtp: Smtp }) {
     const [busy, setBusy] = useState(false);
     const [login, setLogin] = useState('');
     const [password, setPassword] = useState('');
-    const ready = profile === 'loopback' ? smtp.loopback_ready : smtp.brevo_ready;
+    const ready =
+        profile === 'loopback' ? smtp.loopback_ready : smtp.brevo_ready;
     const flash = page.props.flash;
     const status =
         flash &&
@@ -261,7 +262,8 @@ export default function OperatorMailSmtp({ smtp }: { smtp: Smtp }) {
                         <p className="rounded-xl border p-3 text-sm">
                             Last accepted test: {smtp.tested_profile} ·{' '}
                             {smtp.tested_at}. Check the real inbox separately.
-                            Activation requires a fresh test on the same profile.
+                            Activation requires a fresh test on the same
+                            profile.
                         </p>
                     )}
                     <div className="flex flex-wrap gap-3">
