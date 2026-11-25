@@ -49,6 +49,25 @@ jobs:
           DB_CONNECTION: sqlite
           DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
         run: bash "$GITHUB_WORKSPACE/ops/self-hosted-runner/verify-platform.sh"
+      - name: Render six real Blade email themes and check browser images
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
+          MAIL_MAILER: array
+        run: |
+          set -euo pipefail
+          cd apps/platform
+          php ../../scripts/operations/render-mail-artwork-preview.php
+          KMJ_CHROMIUM_EXECUTABLE="$(command -v google-chrome)" node ../../scripts/operations/check-mail-artwork-browser.mjs
+      - name: Retain real email preview screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kmj-email-artwork-browser
+          path: apps/platform/visual-results/mail-artwork/
+          retention-days: 3
+          if-no-files-found: warn
       - name: Verify real Vite output includes the owner AI Workspace
         run: |
           set -euo pipefail

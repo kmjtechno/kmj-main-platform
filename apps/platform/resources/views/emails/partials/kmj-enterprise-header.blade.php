@@ -1,3 +1,8 @@
+@if ($artwork !== null)
+<tr><td bgcolor="{{ $theme['header'] }}" style="padding:0;background:{{ $theme['header'] }};color:{{ $theme['ink'] }};border-top:3px solid {{ $theme['accent'] }};">
+<a href="https://kmjtechno.com" style="display:block;color:{{ $theme['ink'] }};text-decoration:none;"><img src="{{ $artwork }}/header.jpg" width="100%" alt="KMJ TECHNO — INNOVATE | BUILD | SCALE" style="display:block;width:100%;height:auto;border:0;color:{{ $theme['ink'] }};font-size:18px;line-height:24px;"></a>
+</td></tr>
+@else
 <tr><td height="5" bgcolor="{{ $theme['accent'] }}" style="height:5px;font-size:0;line-height:5px;background:{{ $theme['accent'] }};">&nbsp;</td></tr>
 <tr><td class="kmj-pad kmj-gutter" bgcolor="{{ $theme['header'] }}" style="padding:26px 36px 22px;background:{{ $theme['header'] }};color:{{ $theme['ink'] }};border-left:{{ $theme['layout'] === 'letterhead' ? '12px solid '.$theme['accent'] : '0' }};">
 @if ($theme['layout'] === 'geometric')
@@ -20,3 +25,4 @@
 <tr><td bgcolor="{{ $theme['header'] }}" style="background:{{ $theme['header'] }};">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td height="5" width="{{ $theme['layout'] === 'wave' ? '68%' : '35%' }}" bgcolor="{{ $theme['accent'] }}" style="font-size:0;line-height:5px;">&nbsp;</td><td bgcolor="{{ $theme['footer'] }}" style="font-size:0;line-height:5px;">&nbsp;</td></tr></table>
 </td></tr>
+@endif

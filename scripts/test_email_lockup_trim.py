@@ -7,6 +7,8 @@ and only its empty margin is removed (the tagline then renders larger at the sam
 """
 from pathlib import Path
 import struct
+import hashlib
+import json
 import unittest
 import zlib
 
@@ -74,6 +76,22 @@ class EmailLockupTrimTest(unittest.TestCase):
                 crows[y0 + y][x0 * cbpp:(x0 + tw) * cbpp],
                 f"row {y} differs from the canonical lockup",
             )
+
+    def test_approved_artwork_bundle_matches_locked_reference_manifest(self):
+        root = BRAND / "mail"
+        manifest = (root / "manifest.json").read_bytes()
+        self.assertEqual(hashlib.sha256(manifest).hexdigest(), "a728f66d44a347de5eac6372464e83dd7f060b3b1acf894a232a75635026e11a")
+        entries = json.loads(manifest)
+        self.assertEqual({x["theme"] for x in entries}, {"signature-red", "blue-wave", "white-geometric", "blue-letterhead", "blue-signature", "executive-gold"})
+        self.assertEqual(len(entries), 6)
+        for entry in entries:
+            expected = {entry["theme"] + "/" + f for f in ("header.jpg", "footer.jpg", "enterprise.png", "projection.png", "remote.png", "cloud.png", "ai.png")}
+            self.assertEqual({x["file"] for x in entry["assets"]}, expected)
+            self.assertEqual(len(entry["assets"]), 7)
+            for asset in entry["assets"]:
+                data = (root / asset["file"]).read_bytes()
+                self.assertEqual(len(data), asset["size"], asset["file"])
+                self.assertEqual(hashlib.sha256(data).hexdigest(), asset["sha256"], asset["file"])
 
     def test_all_email_templates_use_reference_readable_html_wordmark(self):
         for name in ("kmj-transactional", "kmj-auth-transactional", "kmj-native-outgoing"):

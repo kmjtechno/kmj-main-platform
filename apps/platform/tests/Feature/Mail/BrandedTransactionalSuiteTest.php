@@ -62,7 +62,8 @@ final class BrandedTransactionalSuiteTest extends TestCase
             $html = view('emails.kmj-transactional', $message->viewData)->render();
             $text = view('emails.kmj-transactional-text', $message->viewData)->render();
 
-            self::assertStringContainsString('kmj-sender-avatar.png', $html, $kind);
+            self::assertStringContainsString('https://kmjtechno.com/assets/brand/mail/signature-red/header.jpg', $html, $kind);
+            self::assertStringContainsString('https://kmjtechno.com/assets/brand/mail/signature-red/footer.jpg', $html, $kind);
             self::assertStringContainsString('INNOVATE | BUILD | SCALE', $html, $kind);
             self::assertStringContainsString('INNOVATE | BUILD | SCALE', $text, $kind);
             self::assertStringContainsString('Asha', $html, $kind);

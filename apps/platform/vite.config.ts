@@ -61,6 +61,8 @@ export default defineConfig({
             'composer.json',
             'resources/js/components/ui/*',
             'resources/views/mail/*',
+            // Byte-pinned asset manifest is verified by email safety CI.
+            'public/assets/brand/mail/manifest.json',
         ],
         sortTailwindcss: {
             functions: ['clsx', 'cn', 'cva'],

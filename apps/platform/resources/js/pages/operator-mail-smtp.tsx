@@ -30,7 +30,15 @@ type Smtp = {
     sender: string;
 };
 
-export default function OperatorMailSmtp({ smtp }: { smtp: Smtp }) {
+export default function OperatorMailSmtp({
+    smtp,
+    themePreviews,
+    themeArtworkReady,
+}: {
+    smtp: Smtp;
+    themePreviews: Record<string, string>;
+    themeArtworkReady: Record<string, boolean>;
+}) {
     const page = usePage();
     const [profile, setProfile] = useState<Profile>(
         smtp.active === 'brevo' ? 'brevo' : 'loopback',
@@ -38,6 +46,11 @@ export default function OperatorMailSmtp({ smtp }: { smtp: Smtp }) {
     const [busy, setBusy] = useState(false);
     const [theme, setTheme] = useState(smtp.theme);
     const preview = smtp.themes[theme];
+    const previewHtml = (id: string) =>
+        themePreviews[id]?.replaceAll(
+            'https://kmjtechno.com/assets/brand/mail/',
+            '/assets/brand/mail/',
+        );
     const [login, setLogin] = useState('');
     const [password, setPassword] = useState('');
     const ready =
@@ -322,6 +335,10 @@ export default function OperatorMailSmtp({ smtp }: { smtp: Smtp }) {
                         Select the shared theme for new business, account and
                         transactional emails. This does not change SMTP routing.
                     </p>
+                    <p className="text-muted-foreground text-xs">
+                        Actual outgoing HTML rendered with a fixed sample.
+                        Previewing never sends email or changes the saved theme.
+                    </p>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {Object.entries(smtp.themes).map(([id, palette]) => (
                             <button
@@ -331,49 +348,44 @@ export default function OperatorMailSmtp({ smtp }: { smtp: Smtp }) {
                                 onClick={() => setTheme(id)}
                                 className="overflow-hidden rounded-xl border text-left aria-pressed:ring-2 aria-pressed:ring-red-500"
                             >
-                                <div
-                                    style={{
-                                        background: palette.header,
-                                        color: palette.ink,
-                                        borderBottom:
-                                            '3px solid ' + palette.accent,
-                                    }}
-                                    className="p-3 text-xs font-bold"
-                                >
-                                    KMJ TECHNO
-                                </div>
-                                <div
-                                    style={{
-                                        background: '#ffffff',
-                                        color: '#142035',
-                                    }}
-                                    className="space-y-2 p-3 text-xs"
-                                >
-                                    <strong>Official communication</strong>
-                                    <div
-                                        className="h-1 w-10 rounded"
-                                        style={{ background: palette.accent }}
+                                <div className="relative mx-auto h-[310px] w-[186px] overflow-hidden bg-[#edf1f5]">
+                                    <iframe
+                                        title={palette.label + ' thumbnail'}
+                                        srcDoc={previewHtml(id)}
+                                        sandbox=""
+                                        referrerPolicy="no-referrer"
+                                        tabIndex={-1}
+                                        aria-hidden="true"
+                                        loading="lazy"
+                                        className="pointer-events-none absolute top-0 left-0 h-[1033px] w-[620px] origin-top-left scale-[0.3] border-0"
                                     />
-                                    <p>Subject and message</p>
                                 </div>
-                                <div
-                                    style={{
-                                        background: palette.footer,
-                                        color: '#ffffff',
-                                    }}
-                                    className="p-2 text-xs"
-                                >
-                                    KMJ TECHNO · Global Delivery
-                                </div>
-                                <div className="p-3 text-sm font-semibold">
+                                <div className="border-t p-3 text-sm font-semibold">
                                     {palette.label}
                                     {smtp.theme === id ? ' · Active' : ''}
+                                    {!themeArtworkReady[id] && (
+                                        <p className="mt-1 text-xs font-normal text-amber-500">
+                                            Artwork missing · fallback only
+                                        </p>
+                                    )}
                                 </div>
                             </button>
                         ))}
                     </div>
                     {preview && (
-                        <p className="text-sm">Selected: {preview.label}</p>
+                        <div className="space-y-3 rounded-xl border p-3">
+                            <h3 className="text-sm font-semibold">
+                                Full email preview: {preview.label}
+                            </h3>
+                            <iframe
+                                key={theme}
+                                title={preview.label + ' full email preview'}
+                                srcDoc={previewHtml(theme)}
+                                sandbox=""
+                                referrerPolicy="no-referrer"
+                                className="h-[1080px] w-full rounded-lg border-0 bg-[#edf1f5]"
+                            />
+                        </div>
                     )}
                     <button
                         type="button"

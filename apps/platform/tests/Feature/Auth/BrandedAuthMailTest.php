@@ -33,7 +33,8 @@ class BrandedAuthMailTest extends TestCase
 
         $html = view('emails.kmj-auth-transactional', $message->viewData)->render();
         $text = view('emails.kmj-auth-transactional-text', $message->viewData)->render();
-        $this->assertStringContainsString('/assets/brand/kmj-sender-avatar.png', $html);
+        $this->assertStringContainsString('https://kmjtechno.com/assets/brand/mail/signature-red/header.jpg', $html);
+        $this->assertStringContainsString('https://kmjtechno.com/assets/brand/mail/signature-red/footer.jpg', $html);
         $this->assertStringContainsString('INNOVATE | BUILD | SCALE', $html);
         $this->assertStringContainsString('INNOVATE | BUILD | SCALE', $text);
         $this->assertStringContainsString('Verify email address', $html);

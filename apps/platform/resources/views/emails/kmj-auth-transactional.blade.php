@@ -1,4 +1,5 @@
 @php($theme = \App\Services\Mail\EnterpriseMailTheme::palette())
+@php($artwork = \App\Services\Mail\EnterpriseMailTheme::artworkBase($theme))
 <!doctype html>
 <html lang="en">
 <head>

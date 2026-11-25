@@ -139,6 +139,30 @@ final class NativeExternalMailFlowTest extends TestCase
         Mail::assertNothingOutgoing();
     }
 
+    public function test_owner_gallery_uses_actual_email_html_without_saving_or_sending(): void
+    {
+        $owner = $this->owner();
+        $this->activateOutbound();
+        $before = EnterpriseMailTheme::selected();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/mail/smtp')->assertOk()
+            ->assertInertia(function (Assert $page): void {
+                $page->component('operator-mail-smtp')->has('themePreviews', 6);
+                foreach (EnterpriseMailTheme::catalog() as $id => $palette) {
+                    $page->where('themePreviews.'.$id, fn (string $html): bool => $html === view('emails.kmj-native-outgoing', [
+                        'heading' => 'Your email subject',
+                        'body' => "Hello,\n\nYour message will appear here. This sample uses the same HTML template as outgoing KMJ business email.",
+                        'senderAddress' => 'info@kmjtechno.com',
+                        'previewTheme' => $palette,
+                    ])->render());
+                }
+            });
+        self::assertSame($before, EnterpriseMailTheme::selected());
+        $this->assertDatabaseCount('kmj_mail_messages', 0);
+        Queue::assertNothingPushed();
+        Mail::assertNothingOutgoing();
+    }
+
     public function test_owner_can_select_each_enterprise_theme_without_changing_smtp_route(): void
     {
         $owner = $this->owner();
@@ -158,6 +182,14 @@ final class NativeExternalMailFlowTest extends TestCase
             self::assertStringContainsString($palette['header'], $html);
             self::assertStringContainsString($palette['accent'], $html);
             self::assertStringContainsString('KMJ TECHNO SOLUTIONS', $html);
+            $artwork = EnterpriseMailTheme::artworkBase($palette);
+            if ($artwork !== null) {
+                self::assertStringContainsString($artwork.'/header.jpg', $html);
+                self::assertStringContainsString($artwork.'/footer.jpg', $html);
+                foreach (['enterprise', 'projection', 'remote', 'cloud', 'ai'] as $icon) {
+                    self::assertStringContainsString($artwork.'/'.$icon.'.png', $html);
+                }
+            }
             self::assertStringContainsString('&lt;script&gt;', $html);
             self::assertStringNotContainsString('<img src=x>', $html);
             self::assertStringNotContainsString('Message delivered', $html);
@@ -183,7 +215,13 @@ final class NativeExternalMailFlowTest extends TestCase
                 self::assertStringContainsString($palette['header'], $rendered);
                 self::assertStringContainsString($palette['footer'], $rendered);
                 self::assertStringContainsString($palette['accent'], $rendered);
-                self::assertStringContainsString('kmj-sender-avatar.png', $rendered);
+                $artwork = EnterpriseMailTheme::artworkBase($palette);
+                if ($artwork !== null) {
+                    self::assertStringContainsString($artwork.'/header.jpg', $rendered);
+                    self::assertStringContainsString($artwork.'/footer.jpg', $rendered);
+                } else {
+                    self::assertStringContainsString('kmj-sender-avatar.png', $rendered);
+                }
                 self::assertStringContainsString('&amp;signature=synthetic', $rendered);
                 self::assertStringContainsString('&lt;script&gt;', $rendered);
                 self::assertStringNotContainsString('<img src=x>', $rendered);
@@ -496,7 +534,8 @@ final class NativeExternalMailFlowTest extends TestCase
             'body' => 'Hello <img src=x onerror=alert(1)>',
             'senderAddress' => 'info@kmjtechno.com',
         ])->render();
-        self::assertStringContainsString('kmj-sender-avatar.png', $html);
+        self::assertStringContainsString('https://kmjtechno.com/assets/brand/mail/signature-red/header.jpg', $html);
+        self::assertStringContainsString('https://kmjtechno.com/assets/brand/mail/signature-red/footer.jpg', $html);
         self::assertStringNotContainsString('<script>', $html);
         self::assertStringNotContainsString('<img src=x', $html);
         self::assertStringContainsString('&lt;script&gt;', $html);

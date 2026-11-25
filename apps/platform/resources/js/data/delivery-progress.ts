@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-mail-actual-template-preview-20261125',
+        title: 'KMJ Mail actual template preview correction',
+        state: 'active',
+        detail: 'Owner rejected simplified artwork and color swatches despite actual Gmail receipt. Source correction connects six approved header/footer crops and five service icons per theme to the shared renderer, with real sandboxed HTML previews.',
+        evidence:
+            'All 42 binary assets and the locked manifest are committed; email safety CI verified their hashes. Desktop/mobile visual acceptance and Gmail/Outlook rendering still required. No SMTP changes.',
+    },
+    {
         id: 'modelfabric-safe-client-connect-20261125',
         title: 'ModelFabric: safer client onboarding and accurate model preflight',
         state: 'active',
