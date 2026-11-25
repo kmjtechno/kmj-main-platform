@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Mail;
 
 use App\Jobs\SubmitNativeExternalMail;
-use App\Mail\NativeExternalMailMessage;
 use App\Models\User;
 use App\Services\Mail\NativeExternalMailService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
