@@ -134,6 +134,68 @@ final class NativeMailInboundPilotTest extends TestCase
         ]);
     }
 
+    public function test_multipart_alternative_is_default_off_and_projects_only_plain_text_when_enabled(): void
+    {
+        $this->enablePilot();
+        config(['kmj-mail-inbound.publish_text' => true]);
+        $raw = $this->alternativeMessage();
+        $this->receive($raw)->assertCreated();
+        $this->assertDatabaseCount('kmj_mail_external_inbox', 0);
+
+        config(['kmj-mail-inbound.publish_alternative' => true]);
+        $this->receive(str_replace('Subject: Alternative', 'Subject: Allowed alternative', $raw))->assertCreated();
+        $this->assertDatabaseCount('kmj_mail_inbound_quarantine', 2);
+        $this->assertDatabaseCount('kmj_mail_external_inbox', 1);
+        $this->assertDatabaseHas('kmj_mail_external_inbox', [
+            'subject' => 'Allowed alternative',
+            'body' => 'Plain text from outside.',
+        ]);
+    }
+
+    public function test_nested_attachment_and_malformed_alternatives_remain_quarantined(): void
+    {
+        $this->enablePilot();
+        config([
+            'kmj-mail-inbound.publish_text' => true,
+            'kmj-mail-inbound.publish_alternative' => true,
+        ]);
+        $raw = $this->alternativeMessage();
+        $messages = [
+            str_replace('Content-Type: text/html; charset=UTF-8', "Content-Type: text/html; charset=UTF-8\r\nContent-Disposition: attachment; filename=unsafe.html", $raw),
+            str_replace('Content-Type: text/html; charset=UTF-8', 'Content-Type: multipart/mixed; boundary=inner', $raw),
+            str_replace('--kmj-test-boundary--', '', $raw),
+            str_replace('--kmj-test-boundary--', "--kmj-test-boundary\r\nContent-Type: text/plain\r\n\r\nExtra part\r\n--kmj-test-boundary--", $raw),
+        ];
+        foreach ($messages as $message) {
+            $this->receive($message)->assertCreated();
+        }
+        $this->assertDatabaseCount('kmj_mail_inbound_quarantine', 4);
+        $this->assertDatabaseCount('kmj_mail_external_inbox', 0);
+    }
+
+    private function alternativeMessage(): string
+    {
+        return implode("\r\n", [
+            'From: sender@example.net',
+            'To: mail-pilot@kmjtechno.com',
+            'Subject: Alternative',
+            'MIME-Version: 1.0',
+            'Content-Type: multipart/alternative; boundary="kmj-test-boundary"',
+            '',
+            '--kmj-test-boundary',
+            'Content-Type: text/plain; charset=UTF-8',
+            'Content-Transfer-Encoding: quoted-printable',
+            '',
+            'Plain text from outside.',
+            '--kmj-test-boundary',
+            'Content-Type: text/html; charset=UTF-8',
+            '',
+            '<script>never_render_this()</script><p>HTML alternative</p>',
+            '--kmj-test-boundary--',
+            '',
+        ]);
+    }
+
     private function enablePilot(): User
     {
         $owner = User::factory()->create([
