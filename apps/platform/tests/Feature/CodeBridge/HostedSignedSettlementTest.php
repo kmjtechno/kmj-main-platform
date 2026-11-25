@@ -160,6 +160,56 @@ final class HostedSignedSettlementTest extends TestCase
         $this->assertDatabaseCount('codebridge_receipt_signers', 1);
     }
 
+    public function test_signer_challenge_denies_unconfirmed_foreign_and_disabled_requests(): void
+    {
+        $owner = User::factory()->create(['email_verified_at' => now()]);
+        $stranger = User::factory()->create(['email_verified_at' => now()]);
+        $org = $this->tenant($owner, 'desk-a', 'proj-a');
+        config()->set('codebridge.enabled', true);
+        config()->set('codebridge.hosted_metering_pilot_enabled', true);
+        config()->set('codebridge.hosted_metering_pilot_tenant', $org);
+        $path = '/services/kmj-codebridge/organizations/'.$org.'/devices/desk-a/receipt-signer';
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => 0]);
+        $this->postJson($path.'/challenge')->assertStatus(423);
+        $this->actingAs($stranger)->withSession(['auth.password_confirmed_at' => time()]);
+        $this->postJson($path.'/challenge')->assertForbidden();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()]);
+        config()->set('codebridge.hosted_metering_pilot_enabled', false);
+        $this->postJson($path.'/challenge')->assertStatus(503);
+        $this->assertDatabaseCount('codebridge_receipt_signers', 0);
+    }
+
+    public function test_expired_signer_challenge_cannot_pin_even_with_a_valid_signature(): void
+    {
+        $owner = User::factory()->create(['email_verified_at' => now()]);
+        $org = $this->tenant($owner, 'desk-a', 'proj-a');
+        $service = app(HostedSignedSettlement::class);
+        $challenge = $service->issueSignerChallenge($owner, $org, 'desk-a');
+        $challenge['expires_at'] = time() - 1;
+        $pair = sodium_crypto_sign_keypair();
+        $public = base64_encode(sodium_crypto_sign_publickey($pair));
+        $message = implode("\n", [
+            'KMJ_CODEBRIDGE_SIGNER_ENROLLMENT_V1',
+            $org,
+            'desk-a',
+            $challenge['activation_id'],
+            $challenge['credential_id'],
+            (string) $owner->getKey(),
+            $challenge['nonce'],
+            (string) $challenge['expires_at'],
+            $public,
+            '',
+        ]);
+        $signature = base64_encode(sodium_crypto_sign_detached($message, sodium_crypto_sign_secretkey($pair)));
+        try {
+            $service->confirmSignerChallenge($owner, $org, 'desk-a', $challenge, $public, $signature);
+            self::fail('Expired proof must not pin a signer.');
+        } catch (DomainException $exception) {
+            self::assertSame('CODEBRIDGE_SIGNER_PROOF_DENIED', $exception->getMessage());
+        }
+        $this->assertDatabaseCount('codebridge_receipt_signers', 0);
+    }
+
     public function test_foreign_owner_cannot_pin_a_key(): void
     {
         $owner = User::factory()->create(['email_verified_at' => now()]);
