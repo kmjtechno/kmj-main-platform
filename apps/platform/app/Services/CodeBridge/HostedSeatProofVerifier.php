@@ -17,7 +17,7 @@ use JsonException;
 final class HostedSeatProofVerifier
 {
     /**
-     * @param array{organization_id: string, membership_id: string, user_id: string, license_id: string, seat_id: string, assignment_revision: int} $expected
+     * @param  array{organization_id: string, membership_id: string, user_id: string, license_id: string, seat_id: string, assignment_revision: int}  $expected
      */
     public function verifyTrusted(string $token, array $expected, string $pinnedKid, string $pinnedPublicKeyBase64, int $now): bool
     {
