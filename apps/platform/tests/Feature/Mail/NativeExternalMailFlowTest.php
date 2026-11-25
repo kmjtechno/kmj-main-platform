@@ -5,17 +5,20 @@ declare(strict_types=1);
 namespace Tests\Feature\Mail;
 
 use App\Jobs\SubmitNativeExternalMail;
-use App\Mail\NativeExternalMailMessage;
 use App\Models\User;
 use App\Services\Mail\NativeExternalMailService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Mail\Mailer;
 use Illuminate\Mail\MailManager;
+use Illuminate\Mail\Transport\ArrayTransport;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
+use Symfony\Component\Mime\Email;
 use Tests\TestCase;
 
 final class NativeExternalMailFlowTest extends TestCase
@@ -91,6 +94,79 @@ final class NativeExternalMailFlowTest extends TestCase
         Mail::assertNothingOutgoing();
     }
 
+    public function test_owner_smtp_settings_pause_blocks_native_queue_without_changing_transactional_mail(): void
+    {
+        $owner = $this->owner();
+        $this->activateOutbound();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/mail/smtp')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('operator-mail-smtp')
+                ->where('smtp.active', 'loopback')
+                ->where('smtp.loopback_ready', true)
+                ->where('smtp.brevo_ready', false));
+        $this->post('/operator/mail/send-external', $this->payload('recipient@example.net'))
+            ->assertRedirect('/operator/mail?folder=sent');
+        $this->assertDatabaseHas('kmj_mail_messages', ['native_smtp_profile' => 'loopback']);
+        $this->post('/operator/mail/smtp/pause')->assertRedirect('/operator/mail/smtp');
+        self::assertFalse(app(NativeExternalMailService::class)->transportEnabled());
+        self::assertSame('sendmail', config('mail.default'));
+        $this->runQueuedJob();
+        $this->assertDatabaseHas('kmj_mail_messages', ['delivery_state' => 'blocked']);
+        Mail::assertNothingOutgoing();
+    }
+
+    public function test_smtp_owner_routes_reject_unverified_profiles_and_unconfirmed_switches(): void
+    {
+        $owner = $this->owner();
+        $this->activateOutbound();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/mail/smtp/activate', ['profile' => 'loopback'])
+            ->assertSessionHasErrors('profile');
+        $this->post('/operator/mail/smtp/test', ['profile' => 'http://127.0.0.1:8080'])
+            ->assertSessionHasErrors('profile');
+        // Activation and test have separate rate limits. Both valid and
+        // invalid test submissions consume the test action's own limit.
+        $this->post('/operator/mail/smtp/test', ['profile' => 'brevo'])
+            ->assertSessionHasErrors('profile');
+        $this->post('/operator/mail/smtp/test', ['profile' => 'brevo'])
+            ->assertTooManyRequests();
+        $other = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($other)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/mail/smtp')->assertForbidden();
+        $this->post('/operator/mail/smtp/pause')->assertForbidden();
+        Mail::assertNothingOutgoing();
+    }
+
+    public function test_owner_smtp_credentials_are_encrypted_and_not_returned_to_the_browser(): void
+    {
+        $owner = $this->owner();
+        $this->activateOutbound();
+        $login = 'test-smtp-login@example.net';
+        $password = 'synthetic-test-key-not-real';
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/mail/smtp/credentials', ['smtp_login' => $login, 'password' => $password])
+            ->assertRedirect('/operator/mail/smtp');
+
+        $row = DB::table('kmj_native_smtp_settings')->where('id', 1)->first();
+        $this->assertNotSame($login, $row->brevo_login_ciphertext);
+        $this->assertNotSame($password, $row->brevo_password_ciphertext);
+        $this->assertSame($login, Crypt::decryptString($row->brevo_login_ciphertext));
+        $this->assertSame($password, Crypt::decryptString($row->brevo_password_ciphertext));
+        $this->assertSame('loopback', $row->active_profile);
+        $this->get('/operator/mail/smtp')->assertOk()
+            ->assertDontSee($login)->assertDontSee($password)
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('smtp.brevo_credentials_stored', true)
+                ->where('smtp.brevo_ready', false));
+
+        $this->post('/operator/mail/smtp/credentials', ['smtp_login' => 'invalid login', 'password' => $password])
+            ->assertSessionHasErrors('profile');
+        $this->assertNull(session()->getOldInput('smtp_login'));
+        $this->assertNull(session()->getOldInput('password'));
+        Mail::assertNothingOutgoing();
+    }
+
     public function test_native_loopback_smtp_transport_has_automatic_starttls_disabled(): void
     {
         // No network or test email: inspect the real Symfony transport created
@@ -145,18 +221,65 @@ final class NativeExternalMailFlowTest extends TestCase
                 ->where('mailbox.items.0.recipient_email', 'recipient@gmail.com')
                 ->where('mailbox.items.0.delivery_state', 'queued'));
 
+        $transport = $this->useReceiptMailer();
         $this->runQueuedJob();
         $this->assertDatabaseHas('kmj_mail_messages', [
             'recipient_email' => 'recipient@gmail.com',
             'delivery_state' => 'mta_accepted',
         ]);
 
-        // Acceptance by local mail transport does NOT prove Gmail inbox delivery.
-        Mail::assertSent(NativeExternalMailMessage::class, function (NativeExternalMailMessage $mail): bool {
-            return $mail->hasTo('recipient@gmail.com')
-                && $mail->senderAddress === 'info@kmjtechno.com'
-                && $mail->heading === 'Test KMJ external mail';
-        });
+        // The in-memory transport returns a real receipt without network I/O.
+        // Acceptance by an SMTP transport does NOT prove inbox delivery.
+        $this->assertCount(1, $transport->messages());
+        $mail = $transport->messages()->first()->getOriginalMessage();
+        $this->assertInstanceOf(Email::class, $mail);
+        $this->assertSame('recipient@gmail.com', $mail->getTo()[0]->getAddress());
+        $this->assertSame('info@kmjtechno.com', $mail->getFrom()[0]->getAddress());
+        $this->assertSame('Test KMJ external mail', $mail->getSubject());
+    }
+
+    public function test_missing_transport_receipt_is_not_reported_as_accepted(): void
+    {
+        $owner = $this->owner();
+        $this->activateOutbound();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/mail/send-external', $this->payload('recipient@example.net'))
+            ->assertRedirect('/operator/mail?folder=sent');
+
+        // The fake returns no transport receipt, as a canceled send can do.
+        $this->runQueuedJob();
+        $this->assertDatabaseHas('kmj_mail_messages', [
+            'recipient_email' => 'recipient@example.net',
+            'delivery_state' => 'failed',
+            'delivery_error_code' => 'transport_receipt_missing',
+            'transport_accepted_at' => null,
+        ]);
+    }
+
+    public function test_owner_can_activate_a_freshly_tested_local_smtp_profile(): void
+    {
+        $owner = $this->owner();
+        $this->activateOutbound();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/mail/smtp/pause')->assertRedirect('/operator/mail/smtp');
+
+        $transport = $this->useReceiptMailer();
+        $this->post('/operator/mail/smtp/test', ['profile' => 'loopback'])
+            ->assertRedirect('/operator/mail/smtp');
+        $this->assertCount(1, $transport->messages());
+        $this->assertDatabaseHas('kmj_native_smtp_settings', [
+            'active_profile' => 'paused',
+            'tested_profile' => 'loopback',
+            'tested_by' => $owner->id,
+        ]);
+        $this->post('/operator/mail/smtp/activate', ['profile' => 'loopback'])
+            ->assertRedirect('/operator/mail/smtp');
+        $this->assertDatabaseHas('kmj_native_smtp_settings', [
+            'active_profile' => 'loopback',
+            'tested_profile' => null,
+            'tested_fingerprint' => null,
+        ]);
+        $this->assertTrue(app(NativeExternalMailService::class)->transportEnabled());
     }
 
     public function test_idempotency_key_reuse_with_changed_recipient_is_rejected(): void
@@ -339,6 +462,15 @@ final class NativeExternalMailFlowTest extends TestCase
         config()->set('mail.mailers.kmj_native_loopback.password', null);
         config()->set('mail.mailers.kmj_native_loopback.timeout', 8);
         config()->set('mail.mailers.kmj_native_loopback.local_domain', 'kmjtechno.com');
+    }
+
+    private function useReceiptMailer(): ArrayTransport
+    {
+        $transport = new ArrayTransport;
+        $mailer = new Mailer('native-receipt-test', app('view'), $transport, app('events'));
+        Mail::shouldReceive('mailer')->once()->with('kmj_native_loopback')->andReturn($mailer);
+
+        return $transport;
     }
 
     private function runQueuedJob(): void

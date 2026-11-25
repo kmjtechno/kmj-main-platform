@@ -266,12 +266,28 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'PR #1033 and isolated PHP routing regressions. Exact-head PHP/TypeScript/PostgreSQL CI, protected peer review, authenticated staging and signed Elite release still required. Nothing deployed or connected by this source change.',
     },
     {
+        id: 'kmj-owner-native-smtp-settings-20261125',
+        title: 'KMJ Mail: owner SMTP transport settings and test receipt',
+        state: 'active',
+        detail: 'Owner-only settings select pinned Elite Postfix or separately server-approved Brevo SMTPS, test to the verified owner, activate a fresh tested profile or pause native external sending. New queue entries pin the route. No credential disclosure or arbitrary SMTP destination. Transactional mail and inbound routing are unchanged.',
+        evidence:
+            'Source-only until exact CI, owner acceptance, Elite release, post-activation migration and real inbox receipt. Optional Brevo login/key can be saved write-only with application encryption, but server provider approval and a fresh test remain mandatory. No arbitrary SMTP endpoint or paid provider enabled.',
+    },
+    {
         id: 'kmj-native-external-postfix-compose-20261122',
         title: 'KMJ Mail: guarded independent external sending through Elite Postfix',
         state: 'active',
         detail: 'Postfix loopback SMTP (fixed 127.0.0.1:25, 8-second timeout) is LIVE on platform-4e3becf36eb2 but real acceptance is NOT working: the first actual native-mail job failed with transport_error. Owner no-send SMTP handshake isolated a TLS failure under the native Symfony transport. Follow-up source PR changes only the credential-free, loopback-pinned native mailer to auto_tls=false; the ordinary transactional and Internet mail transports retain their TLS settings. Native SMTP requires explicit owner activation and preserves user authorization, quotas and idempotency.',
         evidence:
             '2026-11-22 P0 #1029: production worker restarted successfully, no blocked postdrop children; ID1 submitting UNKNOWN (do not resend); ID2 failed/transport_error without MTA acceptance; 0 pending native jobs; Postfix queue contains only older Nov 21 deferred message. Owner local no-send handshake reported FAIL/TLS; Postfix smtpd 4 localhost connections, 0 rejects. Source change requires exact-head CI, owner-signed Elite deploy, no-send handshake PASS after release, a NEW consented test and independent recipient inbox authentication evidence. Real outbound delivery remains unverified.',
+    },
+    {
+        id: 'kmj-mail-inbound-quarantine-pilot-20261124',
+        title: 'KMJ Mail: signed inbound pilot and encrypted quarantine',
+        state: 'active',
+        detail: 'PR #1123 implements signed single-recipient intake and encrypted quarantine. Follow-up source adds separately gated plain-text publication to an additive owner-scoped External Inbox table, real sender addresses, search, read state, unverified sender labels and explicit compose-to-sender. Existing internal sender foreign keys remain unchanged. A separate default-off pilot gate extracts plain text from a bounded two-part multipart/alternative message, never rendering HTML. Nested MIME and attachments remain quarantined; no production routing enabled.',
+        evidence:
+            'Exact-head CI and independent security review pending. Existing MX and info@ forwarding remain unchanged. Before activation, require reviewed key and retention controls, staging receipt, MIME and attachment security, mailbox integration and real external receipt.',
     },
     {
         id: 'kmj-owner-team-mail-center-20261122',

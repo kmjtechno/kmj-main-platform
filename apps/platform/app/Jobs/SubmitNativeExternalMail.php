@@ -8,13 +8,13 @@ use App\Mail\NativeExternalMailMessage;
 use App\Models\OperatorActionAudit;
 use App\Models\User;
 use App\Services\Mail\NativeExternalMailService;
+use App\Services\Mail\OwnerNativeSmtpSettings;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 /**
@@ -56,6 +56,15 @@ final class SubmitNativeExternalMail implements ShouldQueue
             return;
         }
 
+        $settings = app(OwnerNativeSmtpSettings::class);
+        $profile = (string) ($message->native_smtp_profile ?? 'loopback');
+        $mailer = $settings->mailer($profile);
+        if ($mailer === null || $settings->activeProfile() !== $profile) {
+            $this->transition('queued', 'blocked', 'smtp_profile_changed');
+
+            return;
+        }
+
         // One worker claims this message, preventing competing queue jobs from
         // sending twice. A crash after this point needs manual reconciliation.
         $claimed = DB::table('kmj_mail_messages')
@@ -70,17 +79,24 @@ final class SubmitNativeExternalMail implements ShouldQueue
         }
 
         try {
-            // Only the pinned, bounded, owner-activated local Postfix SMTP
-            // transport; never fork sendmail/postdrop in a sandboxed worker.
-            // This is NOT a remote provider or the transactional mailer.
-            Mail::mailer('kmj_native_loopback')->to((string) $message->recipient_email)
-                ->send(new NativeExternalMailMessage(
-                    (string) $message->subject,
-                    (string) $message->body,
-                    (string) $message->sender_email,
-                ));
+            // Never silently reroute a queued message to another provider.
+            // Only the exact pinned, currently authorized profile is used.
+            $receipt = $settings->send($profile, (string) $message->recipient_email, new NativeExternalMailMessage(
+                (string) $message->subject,
+                (string) $message->body,
+                (string) $message->sender_email,
+            ));
 
-            // This means local mail-server acceptance, NOT recipient delivery.
+            // A canceled Laravel MessageSending event can return no receipt
+            // without throwing. Never report a submission that was not confirmed.
+            if ($receipt === null) {
+                $this->transition('submitting', 'failed', 'transport_receipt_missing');
+                $this->audit((int) $message->sender_user_id, 'kmj_mail_transport_failed', 'failed');
+
+                return;
+            }
+
+            // This means SMTP transport acceptance, NOT recipient delivery.
             DB::table('kmj_mail_messages')->where('id', $this->messageId)
                 ->where('delivery_state', 'submitting')
                 ->update([
