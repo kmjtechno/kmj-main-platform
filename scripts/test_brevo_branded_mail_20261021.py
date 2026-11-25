@@ -23,6 +23,14 @@ def default_html_fixture():
         return value.replace(old, new, 1)
 
     source = replace_once(source, r"@php($theme = \App\Services\Mail\EnterpriseMailTheme::palette())", "")
+    source = replace_once(source, r"@php($artwork = \App\Services\Mail\EnterpriseMailTheme::artworkBase($theme))", "")
+    def fallback_only(partial):
+        if not partial.startswith("@if ($artwork !== null)\n") or not partial.endswith("@endif\n") or partial.count("\n@else\n") != 1:
+            raise ValueError("UNEXPECTED_ARTWORK_BRANCH")
+        return partial.split("\n@else\n", 1)[1].removesuffix("@endif\n")
+
+    header = fallback_only(header)
+    footer = fallback_only(footer)
     begin = "@if ($theme['layout'] === 'geometric')"
     if header.count(begin) != 1 or header.count("@endif") != 1:
         raise ValueError("UNEXPECTED_HEADER_STRUCTURE")
