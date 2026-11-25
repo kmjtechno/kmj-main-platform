@@ -18,7 +18,9 @@ final class OwnerNativeSmtpController
     {
         $snapshot = $settings->snapshot($this->actor($request));
         $previews = [];
+        $artworkReady = [];
         foreach (EnterpriseMailTheme::catalog() as $id => $palette) {
+            $artworkReady[$id] = EnterpriseMailTheme::artworkBase($palette) !== null;
             $previews[$id] = view('emails.kmj-native-outgoing', [
                 'heading' => 'Your email subject',
                 'body' => "Hello,\n\nYour message will appear here. This sample uses the same HTML template as outgoing KMJ business email.",
@@ -30,6 +32,7 @@ final class OwnerNativeSmtpController
         return Inertia::render('operator-mail-smtp', [
             'smtp' => $snapshot,
             'themePreviews' => $previews,
+            'themeArtworkReady' => $artworkReady,
         ]);
     }
 
