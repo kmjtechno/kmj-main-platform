@@ -199,8 +199,10 @@ final class ModelFabricApiTest extends TestCase
 
     public function test_strict_free_cloud_requires_private_token_and_admitted_free_route(): void
     {
-        $this->evidenced('llama-free');
-        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'pong'], 'finish_reason' => 'stop']]], 200)]);
+        $this->evidenced('vendor/model:free', 'no-training-documented', [
+            'name' => 'OpenRouter', 'preset' => 'openrouter', 'base_url' => 'https://openrouter.ai/api/v1', 'models_cache' => ['vendor/model:free'],
+        ]);
+        $this->fakeNativeOpenRouter('pong');
         $body = ['messages' => [['role' => 'user', 'content' => 'ping']]];
         $headers = ['Authorization' => 'Bearer '.$this->token(), 'X-ModelFabric-Policy' => 'strict-free-cloud'];
 
@@ -214,35 +216,45 @@ final class ModelFabricApiTest extends TestCase
         $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)->assertOk()
             ->assertJsonPath('modelfabric.policy', 'strict-free-cloud')
             ->assertJsonPath('choices.0.message.content', 'pong');
-        Http::assertSentCount(1);
+        Http::assertSentCount(3);
+        Http::assertSent(fn ($request): bool => $request->method() === 'POST'
+            && $request['provider']['max_price']['prompt'] === 0
+            && $request['provider']['max_price']['completion'] === 0
+            && $request['provider']['allow_fallbacks'] === false
+            && $request['provider']['data_collection'] === 'deny'
+            && $request['provider']['zdr'] === true);
     }
 
     public function test_strict_coding_rejects_incomplete_provider_output(): void
     {
-        $this->evidenced('llama-free');
+        $this->evidenced('vendor/model:free', 'no-training-documented', [
+            'name' => 'OpenRouter', 'preset' => 'openrouter', 'base_url' => 'https://openrouter.ai/api/v1', 'models_cache' => ['vendor/model:free'],
+        ]);
         $headers = ['Authorization' => 'Bearer '.$this->token(), 'X-ModelFabric-Policy' => 'strict-free-cloud'];
         $body = ['messages' => [['role' => 'user', 'content' => 'patch']], 'max_tokens' => 4096];
-        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'partial patch'], 'finish_reason' => 'length']]], 200)]);
+        $this->fakeNativeOpenRouter('partial patch', 'length');
 
         $this->postJson('/api/modelfabric/v1/chat/completions', [...$body, 'stream' => true], $headers)->assertStatus(400);
         $this->postJson('/api/modelfabric/v1/chat/completions', [...$body, 'max_tokens' => 4097], $headers)->assertStatus(422);
         Http::assertNothingSent();
         $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)
             ->assertStatus(502)->assertJsonPath('error.code', 'incomplete_coding_output');
-        Http::assertSentCount(1);
-        Http::assertSent(fn ($request): bool => $request['max_tokens'] === 4096);
+        Http::assertSentCount(3);
+        Http::assertSent(fn ($request): bool => $request->method() === 'POST' && $request['max_tokens'] === 4096);
     }
 
     public function test_strict_coding_does_not_silently_clip_a_complete_patch(): void
     {
-        $this->evidenced('llama-free');
+        $this->evidenced('vendor/model:free', 'no-training-documented', [
+            'name' => 'OpenRouter', 'preset' => 'openrouter', 'base_url' => 'https://openrouter.ai/api/v1', 'models_cache' => ['vendor/model:free'],
+        ]);
         $headers = ['Authorization' => 'Bearer '.$this->token(), 'X-ModelFabric-Policy' => 'strict-free-cloud'];
         $content = str_repeat('x', 9000);
-        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => $content], 'finish_reason' => 'stop']]], 200)]);
+        $this->fakeNativeOpenRouter($content);
 
         $this->postJson('/api/modelfabric/v1/chat/completions', ['messages' => [['role' => 'user', 'content' => 'patch']], 'max_tokens' => 4096], $headers)
             ->assertOk()->assertJsonPath('choices.0.message.content', $content);
-        Http::assertSentCount(1);
+        Http::assertSentCount(3);
     }
 
     public function test_invalid_roles_fail_validation(): void
@@ -272,6 +284,44 @@ final class ModelFabricApiTest extends TestCase
         $this->assertSame(AiModelToken::hash($plain), AiModelToken::query()->firstOrFail()->token_hash);
     }
 
+    public function test_native_coding_never_posts_to_an_unverified_provider(): void
+    {
+        $this->evidenced('llama-free');
+        Http::fake();
+        $headers = ['Authorization' => 'Bearer '.$this->token(), 'X-ModelFabric-Policy' => 'strict-free-cloud'];
+        $this->postJson('/api/modelfabric/v1/chat/completions', ['messages' => [['role' => 'user', 'content' => 'private source']]], $headers)
+            ->assertStatus(502)->assertJsonPath('error.code', 'native_account_unverified');
+        Http::assertNothingSent();
+    }
+
+    public function test_native_coding_exhausted_quota_never_posts_source(): void
+    {
+        $this->evidenced('vendor/model:free', 'no-training-documented', [
+            'name' => 'OpenRouter', 'preset' => 'openrouter', 'base_url' => 'https://openrouter.ai/api/v1', 'models_cache' => ['vendor/model:free'],
+        ]);
+        $this->fakeNativeOpenRouter('unused', 'stop', 0);
+        $headers = ['Authorization' => 'Bearer '.$this->token(), 'X-ModelFabric-Policy' => 'strict-free-cloud'];
+        $this->postJson('/api/modelfabric/v1/chat/completions', ['messages' => [['role' => 'user', 'content' => 'private source']]], $headers)
+            ->assertStatus(502)->assertJsonPath('error.code', 'native_account_unverified');
+        Http::assertSentCount(1);
+        Http::assertNotSent(fn ($request): bool => $request->method() === 'POST');
+    }
+
+    private function fakeNativeOpenRouter(string $content, string $finish = 'stop', int $remaining = 5): void
+    {
+        $account = array_fill_keys(['usage', 'usage_daily', 'usage_weekly', 'usage_monthly', 'byok_usage', 'byok_usage_daily', 'byok_usage_weekly', 'byok_usage_monthly'], 0);
+        Http::fake([
+            'https://openrouter.ai/api/v1/key' => Http::response(['data' => $account + [
+                'is_free_tier' => true,
+                'is_management_key' => false,
+                'is_provisioning_key' => false,
+                'free_model_daily_requests' => ['limit' => 50, 'used' => 50 - $remaining, 'remaining' => $remaining],
+            ]]),
+            'https://openrouter.ai/api/v1/models*' => Http::response(['data' => [['id' => 'vendor/model:free', 'pricing' => ['prompt' => '0', 'completion' => '0', 'request' => '0']]]]),
+            'https://openrouter.ai/api/v1/chat/completions' => Http::response(['choices' => [['message' => ['content' => $content], 'finish_reason' => $finish]]]),
+        ]);
+    }
+
     /** @param array<string, mixed> $overrides */
     private function token(array $overrides = []): string
     {
@@ -288,9 +338,10 @@ final class ModelFabricApiTest extends TestCase
         return $plain;
     }
 
-    private function evidenced(string $model, string $handling = 'no-training-documented'): void
+    /** @param array<string, mixed> $overrides */
+    private function evidenced(string $model, string $handling = 'no-training-documented', array $overrides = []): void
     {
-        $provider = AiProvider::query()->create($this->providerRow());
+        $provider = AiProvider::query()->create($overrides + $this->providerRow());
         AiModelEvidence::query()->create([
             'organization_id' => $this->org,
             'ai_provider_id' => $provider->id,
