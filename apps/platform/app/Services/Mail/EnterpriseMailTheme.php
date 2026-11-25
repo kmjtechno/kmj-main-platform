@@ -24,6 +24,32 @@ final class EnterpriseMailTheme
         ];
     }
 
+    /** Fixed first-party static artwork; never use request data as a path. */
+    public static function artworkBase(array $theme): ?string
+    {
+        $id = match ($theme['layout'] ?? null) {
+            'signature' => 'signature-red',
+            'wave' => 'blue-wave',
+            'geometric' => 'white-geometric',
+            'letterhead' => 'blue-letterhead',
+            'global' => 'blue-signature',
+            'gold' => 'executive-gold',
+            default => null,
+        };
+
+        if ($id === null) {
+            return null;
+        }
+
+        foreach (['header.jpg', 'footer.jpg', 'enterprise.png', 'projection.png', 'remote.png', 'cloud.png', 'ai.png'] as $file) {
+            if (! is_file(public_path('assets/brand/mail/'.$id.'/'.$file))) {
+                return null;
+            }
+        }
+
+        return 'https://kmjtechno.com/assets/brand/mail/'.$id;
+    }
+
     public static function installed(): bool
     {
         return Schema::hasColumn('kmj_native_smtp_settings', 'enterprise_theme');
