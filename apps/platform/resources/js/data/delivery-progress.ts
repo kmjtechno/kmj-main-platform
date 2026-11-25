@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-mail-jmap-response-boundary-20261125',
+        title: 'KMJ Mail: account-bound mailbox response validation',
+        state: 'active',
+        detail: 'Source-only JMAP Mailbox/get response parser rejects mismatched account, method, request ID, malformed metadata and oversized mailbox lists before use.',
+        evidence:
+            'Synthetic unit regressions added; transport authentication, live session, read-only Inbox and real delivery remain pending.',
+    },
+    {
         id: 'kmj-mail-jmap-session-foundation-20261125',
         title: 'KMJ Mail: independent JMAP engine foundation',
         state: 'active',
