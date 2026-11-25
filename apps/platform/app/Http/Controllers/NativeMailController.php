@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\Mail\NativeExternalMailService;
+use App\Services\Mail\NativeInboundTextPilot;
 use App\Services\Mail\NativeMailService;
 use App\Services\Mail\RegistrationMailReadiness;
 use App\Services\Mail\WorkforceMailActions;
@@ -13,6 +14,7 @@ use App\Services\Mail\WorkforceMailCatalog;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -32,15 +34,22 @@ final class NativeMailController
             'q' => ['sometimes', 'nullable', 'string', 'max:80'],
             'message' => ['sometimes', 'integer', 'min:1'],
             'page' => ['sometimes', 'integer', 'min:1', 'max:1000'],
+            'incoming' => ['sometimes', 'integer', 'min:1'],
         ]);
         $folder = (string) ($values['folder'] ?? 'inbox');
         $search = trim((string) ($values['q'] ?? ''));
+        abort_if(isset($values['incoming']) && ($portal !== 'operator' || $folder !== 'inbox' || isset($values['message'])), 404);
+        $externalInbox = $portal === 'operator' && $folder === 'inbox' && Schema::hasTable('kmj_mail_external_inbox')
+            ? app(NativeInboundTextPilot::class)->inbox((int) $user->getKey(), $search, isset($values['incoming']) ? (int) $values['incoming'] : null)
+            : null;
+        abort_if(isset($values['incoming']) && $externalInbox === null, 404);
         $thread = isset($values['message']) ? $this->mail->thread($user, (int) $values['message']) : null;
         $mailbox = $this->mail->mailbox($user, $folder, $search, (int) ($values['page'] ?? 1));
         // Show a clearly labeled preview of this same user's Sent records when
         // Inbox is empty. Never fabricate Inbox mail, cross-tenant records or
         // inferred recipient delivery; search/filter views keep their true empty state.
         $recentSent = $folder === 'inbox' && $search === '' && $mailbox['total'] === 0
+            && ($externalInbox === null || $externalInbox['total'] === 0)
             ? $this->mail->mailbox($user, 'sent', '', 1)
             : null;
 
@@ -62,6 +71,11 @@ final class NativeMailController
             'staff' => $portal === 'operator' ? $this->mail->activeStaff() : [],
             'myUserId' => (int) $user->getKey(),
             'externalMailEnabled' => $this->external->transportEnabled(),
+            'externalInbox' => $externalInbox,
+            'externalInboundPilotConfigured' => $portal === 'operator'
+                && config('kmj-mail-inbound.enabled') === true
+                && config('kmj-mail-inbound.publish_text') === true
+                && (int) config('kmj-mail-inbound.owner_id') === (int) $user->getKey(),
             'externalOutbound' => $this->external->capability($user),
             'transportCanAttempt' => app(RegistrationMailReadiness::class)->canAttemptDelivery(),
             'testEnabled' => config('services.kmj_workforce_mail.preview_enabled', false) === true,
@@ -107,7 +121,7 @@ final class NativeMailController
         );
 
         return redirect()->to('/'.$portal.'/mail?folder=sent')
-            ->with('status', 'Queued for KMJ Postfix submission. Mail-server acceptance and recipient inbox delivery are separate statuses.');
+            ->with('status', 'Queued for KMJ SMTP submission. Mail-server acceptance and recipient inbox delivery are separate statuses.');
     }
 
     public function draft(Request $request, string $portal): RedirectResponse
