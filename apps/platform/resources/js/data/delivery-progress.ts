@@ -26,6 +26,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Exact-head CI, approved reference visual parity, real Gmail and Outlook rendering, staging migration and protected Elite deployment remain pending. No external send or production activation by this PR.',
     },
     {
+        id: 'modelfabric-quota-reservation-20261125',
+        title: 'ModelFabric: reserve quota before external inference',
+        state: 'active',
+        detail: 'Source-only: serialize provider attempt reservations, recheck admitted route and daily caps under a database lock, count interrupted attempts conservatively and finalize the same metadata record after inference.',
+        evidence:
+            'Regression tests for in-flight and interrupted reservations; exact-head CI and independent PostgreSQL multi-process concurrency acceptance remain pending. No production activation or billing claim.',
+    },
+    {
         id: 'codebridge-team-allocation-regression-20261125',
         title: 'CodeBridge Team allocation boundary regression',
         state: 'active',
