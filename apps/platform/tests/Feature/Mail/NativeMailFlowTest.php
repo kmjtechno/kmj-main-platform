@@ -99,7 +99,7 @@ final class NativeMailFlowTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_empty_inbox_displays_only_own_real_sent_previews_without_changing_inbox_counts(): void
+    public function test_empty_inbox_never_exposes_sent_message_previews(): void
     {
         Mail::fake();
         Notification::fake();
@@ -118,9 +118,7 @@ final class NativeMailFlowTest extends TestCase
             ->where('folder', 'inbox')
             ->where('mailbox.total', 0)
             ->has('mailbox.items', 0)
-            ->where('recentSent.total', 1)
-            ->has('recentSent.items', 1)
-            ->where('recentSent.items.0.subject', 'Actual private progress update'));
+            ->where('recentSent', null));
 
         $this->actingAs($owner)->get('/operator/mail?q=missing')
             ->assertOk()->assertInertia(fn (Assert $page) => $page
@@ -130,6 +128,7 @@ final class NativeMailFlowTest extends TestCase
         $this->actingAs($owner)->get('/operator/mail?folder=sent')
             ->assertOk()->assertInertia(fn (Assert $page) => $page
             ->where('mailbox.total', 1)
+            ->where('mailbox.items.0.subject', 'Actual private progress update')
             ->where('recentSent', null));
 
         $this->actingAs($staff)->get('/team/mail')

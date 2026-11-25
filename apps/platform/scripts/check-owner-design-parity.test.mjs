@@ -179,3 +179,17 @@ void test('locked KMJ Mail reference uses real four-pane UI and functional contr
     assert.doesNotMatch(css, /@media \(max-width: 1500px\)/);
     assert.doesNotMatch(page, /1,248|50 GB|36 Team Recipients/);
 });
+
+void test('mail folder reader never substitutes Sent previews and AI is opt-in', () => {
+    const page = read('resources/js/pages/mail-center.tsx');
+    const ai = read('resources/js/components/mail-ai-copilot.tsx');
+    const controller = read('app/Http/Controllers/NativeMailController.php');
+    assert.doesNotMatch(page, /latestSent|recentSent|kmj-mail-recent-sent-reader/);
+    assert.match(page, /Inbox is clear/);
+    assert.match(page, /View Sent/);
+    assert.match(controller, /'recentSent' => null/);
+    assert.match(ai, /\[expanded, setExpanded\] = useState\(false\)/);
+    assert.match(ai, /aria-expanded=\{expanded\}/);
+    assert.match(ai, /hidden=\{!expanded\}/);
+    assert.match(ai, /consent_to_ai_processing: consent/);
+});

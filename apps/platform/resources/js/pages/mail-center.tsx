@@ -4,7 +4,6 @@ import '../../css/kmj-mail-approved.css';
 import { useMemo, useState } from 'react';
 import {
     Archive,
-    HardDrive,
     Mail,
     SlidersHorizontal,
     Sparkles,
@@ -90,7 +89,6 @@ type Props = {
         unread: number;
         mail_text_bytes: number;
     };
-    recentSent: { total: number; items: MailItem[] } | null;
     folder: Folder;
     q: string;
     selectedThread: { items: ThreadItem[]; thread_id: string } | null;
@@ -147,7 +145,6 @@ export default function MailCenter({
     templates,
     mailbox,
     mailMetrics,
-    recentSent,
     folder,
     q,
     selectedThread,
@@ -221,6 +218,8 @@ export default function MailCenter({
     ) => {
         setView('mail');
         setSelectedIds([]);
+        if (nextFolder !== folder) setMailTab('primary');
+        setSearch(searchTerm);
         router.get(
             base,
             {
@@ -473,9 +472,7 @@ export default function MailCenter({
     const selected =
         selectedThread?.items.find((item) => item.id === selectedMessageId) ??
         selectedThread?.items.at(-1);
-    const latestSent = recentSent?.items[0] ?? null;
-    const sentRecipientName = (item: MailItem) =>
-        item.recipient_email ?? contactName(item.recipient_user_id);
+    const folderLabel = folderDefs.find((item) => item.id === folder)?.label ?? 'Mail';
     // These are UI filters on the current page only, not invented server-side
     // priority or spam classifiers. The actual full mailbox remains accessible.
     const visibleItems = useMemo(() => {
@@ -566,37 +563,16 @@ export default function MailCenter({
                         </div>
                         <div className="kmj-mail-metric">
                             <span className="kmj-mail-metric-icon">
-                                <Users size={22} />
+                                <MailOpen size={22} />
                             </span>
                             <div>
-                                <small>Team Recipients</small>
-                                <strong>
-                                    {
-                                        directory.filter(
-                                            (person) => person.id !== myUserId,
-                                        ).length
-                                    }
-                                </strong>
-                            </div>
-                        </div>
-                        <div className="kmj-mail-metric">
-                            <span className="kmj-mail-metric-icon">
-                                <HardDrive size={22} />
-                            </span>
-                            <div>
-                                <small>Stored Mail Text (approx.)</small>
-                                <strong>
-                                    {mailMetrics.mail_text_bytes < 1024
-                                        ? mailMetrics.mail_text_bytes + ' B'
-                                        : mailMetrics.mail_text_bytes < 1048576
-                                          ? (
-                                                mailMetrics.mail_text_bytes /
-                                                1024
-                                            ).toFixed(1) + ' KB'
-                                          : (
-                                                mailMetrics.mail_text_bytes /
-                                                1048576
-                                            ).toFixed(1) + ' MB'}
+                                <small>External Inbox</small>
+                                <strong className="kmj-mail-metric-status">
+                                    {isOwner
+                                        ? externalInboundPilotConfigured
+                                            ? 'Pilot configured'
+                                            : 'Not activated'
+                                        : 'Owner managed'}
                                 </strong>
                             </div>
                         </div>
@@ -628,7 +604,7 @@ export default function MailCenter({
                 {status && (
                     <p
                         role="status"
-                        className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm"
+                        className="kmj-mail-status rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm"
                     >
                         {status}
                     </p>
@@ -636,7 +612,7 @@ export default function MailCenter({
                 {typeof errorText === 'string' && (
                     <p
                         role="alert"
-                        className="rounded-xl border border-red-500/40 p-4 text-sm text-red-500"
+                        className="kmj-mail-status rounded-xl border border-red-500/40 p-4 text-sm text-red-500"
                     >
                         {errorText}
                     </p>
@@ -765,12 +741,21 @@ export default function MailCenter({
                                 />
                                 Private by default
                             </p>
-                            <p className="mt-2">
-                                Only authorized KMJ staff can open private team
-                                mail. External Inbox uses a limited plain-text
-                                pilot; attachments and CC/BCC require separate
-                                verified services.
-                            </p>
+                            <details className="mt-2">
+                                <summary className="cursor-pointer font-medium">
+                                    Privacy and diagnostics
+                                </summary>
+                                <p className="mt-2">
+                                    Only authorized KMJ staff can open private team
+                                    mail. External Inbox uses a limited plain-text
+                                    pilot; attachments and CC/BCC require separate
+                                    verified services.
+                                </p>
+                                <p className="mt-2">
+                                    Stored mail text (approx.):{' '}
+                                    {mailMetrics.mail_text_bytes.toLocaleString()} B
+                                </p>
+                            </details>
                         </div>
                     </aside>
 
@@ -921,7 +906,7 @@ export default function MailCenter({
                                                 )
                                             }
                                             disabled={
-                                                mailbox.items.length === 0
+                                                visibleItems.length === 0
                                             }
                                             className="size-4 accent-red-500"
                                         />
@@ -1052,12 +1037,18 @@ export default function MailCenter({
                                 )}
                                 {folder === 'inbox' && externalInbox && (
                                     <section
+                                        id="kmj-external-inbox"
                                         aria-label="External incoming email"
                                         className="mt-3 rounded-xl border border-slate-700 p-3"
                                     >
                                         <h3 className="text-sm font-bold">
                                             External Inbox
                                         </h3>
+                                        <p className="mt-1 text-xs font-medium text-slate-300">
+                                            {externalInboundPilotConfigured
+                                                ? 'Plain-text receiving pilot configured'
+                                                : 'Receiving not activated'}
+                                        </p>
                                         <p className="text-muted-foreground mt-1 text-xs">
                                             {externalInbox.unread} unread ·{' '}
                                             {externalInbox.matching} matching ·{' '}
@@ -1100,7 +1091,7 @@ export default function MailCenter({
                                             <p className="text-muted-foreground mt-2 text-xs">
                                                 {externalInboundPilotConfigured
                                                     ? 'No matching incoming messages.'
-                                                    : 'Incoming pilot not activated.'}
+                                                    : 'Incoming routing requires owner activation.'}
                                             </p>
                                         )}
                                         {externalInbox.matching > 40 && (
@@ -1244,71 +1235,19 @@ export default function MailCenter({
                                             <p className="mt-2 text-sm font-semibold">
                                                 {activeSearch
                                                     ? 'No messages match your search'
-                                                    : 'No internal messages in this folder'}
+                                                    : mailTab !== 'primary'
+                                                      ? 'No messages in this filter'
+                                                      : 'No messages in this folder'}
                                             </p>
                                             <p className="text-muted-foreground mt-1 text-xs">
                                                 {activeSearch
-                                                    ? 'Clear the search above to see all messages in this folder. Search covers subject, body and recipient; external Inbox also searches sender.'
-                                                    : 'Internal mail appears here. See the separately scoped External Inbox above for incoming pilot records.'}
+                                                    ? 'Clear search to browse this folder.'
+                                                    : mailTab !== 'primary'
+                                                      ? 'Choose Primary to see all messages on this page.'
+                                                      : 'New conversations will appear here.'}
                                             </p>
                                         </div>
                                     )}
-                                    {visibleItems.length === 0 &&
-                                        folder === 'inbox' &&
-                                        recentSent &&
-                                        recentSent.items.length > 0 && (
-                                            <section
-                                                className="kmj-mail-recent-sent-list"
-                                                aria-label="Recent messages from your Sent folder"
-                                            >
-                                                <div className="kmj-mail-recent-sent-head">
-                                                    <strong>Recent Sent</strong>
-                                                    <small>
-                                                        {recentSent.total} in
-                                                        Sent · Not inbox mail
-                                                    </small>
-                                                </div>
-                                                {recentSent.items.map(
-                                                    (item) => (
-                                                        <button
-                                                            key={item.id}
-                                                            type="button"
-                                                            className="kmj-mail-recent-sent-row"
-                                                            onClick={() =>
-                                                                navigate(
-                                                                    'sent',
-                                                                    item.id,
-                                                                    '',
-                                                                )
-                                                            }
-                                                        >
-                                                            <span
-                                                                className="kmj-mail-sender-avatar"
-                                                                aria-hidden="true"
-                                                            >
-                                                                {sentRecipientName(
-                                                                    item,
-                                                                )
-                                                                    .slice(0, 1)
-                                                                    .toUpperCase()}
-                                                            </span>
-                                                            <span className="min-w-0 flex-1">
-                                                                <strong>
-                                                                    {item.subject ||
-                                                                        '(No subject)'}
-                                                                </strong>
-                                                                <small>
-                                                                    {
-                                                                        item.snippet
-                                                                    }
-                                                                </small>
-                                                            </span>
-                                                            <ChevronRight className="size-4 shrink-0 text-slate-500" />
-                                                        </button>
-                                                    ),
-                                                )}
-                                            </section>
-                                        )}
                                 </div>
                                 {mailbox.total > mailbox.page_size && (
                                     <div className="mt-4 flex items-center justify-between gap-2 border-t pt-3">
@@ -2243,11 +2182,11 @@ export default function MailCenter({
                                 </div>
                             </div>
                         ) : (
-                            <div className="relative flex min-h-[560px] flex-col overflow-hidden bg-gradient-to-b from-[#121d2b]/60 via-transparent to-[#182334]/25">
+                            <div className="kmj-mail-empty-reader relative flex min-h-[420px] flex-col overflow-hidden">
                                 <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4 sm:px-6">
                                     <div>
                                         <p className="text-[10px] font-bold tracking-[0.18em] text-red-400 uppercase">
-                                            KMJ MAIL / READING WORKSPACE
+                                            READING PANE
                                         </p>
                                         <p className="mt-1 text-sm font-semibold">
                                             {
@@ -2265,90 +2204,31 @@ export default function MailCenter({
                                 </div>
                                 <div className="relative flex flex-1 items-center justify-center p-6 sm:p-10">
                                     <div className="w-full max-w-[470px]">
-                                        <div className="flex size-16 items-center justify-center rounded-2xl border border-red-500/20 bg-gradient-to-br from-red-500/15 to-[#1d2939] shadow-[0_20px_45px_-25px_rgba(223,33,68,0.6)]">
+                                        <div className="flex size-14 items-center justify-center rounded-2xl border border-slate-600/50 bg-slate-800/50">
                                             <MailOpen className="size-8 text-[#ff4763]" />
                                         </div>
-                                        <p className="mt-7 text-[11px] font-bold tracking-[0.2em] text-red-400 uppercase">
-                                            PRIVATE COMMUNICATIONS
-                                        </p>
-                                        <h2 className="mt-2 text-2xl leading-tight font-black tracking-tight sm:text-[30px]">
-                                            {mailbox.items.length
-                                                ? 'Your next conversation starts here.'
+                                         <h2 className="mt-5 text-2xl leading-tight font-semibold tracking-tight">
+                                            {visibleItems.length
+                                                ? 'Select a conversation'
                                                 : activeSearch
-                                                  ? 'No matching conversations.'
-                                                  : 'A clear space for every conversation.'}
+                                                  ? 'No matching conversations'
+                                                  : mailTab !== 'primary'
+                                                    ? 'No messages in this filter'
+                                                    : folder === 'inbox'
+                                                      ? 'Inbox is clear'
+                                                      : folderLabel + ' is empty'}
                                         </h2>
                                         <p className="text-muted-foreground mt-3 max-w-md text-sm leading-7">
-                                            {mailbox.items.length
-                                                ? 'Choose a message to view its full thread, sender details and delivery status.'
+                                            {visibleItems.length
+                                                ? 'Select a message from the list to read its conversation and delivery status.'
                                                 : activeSearch
-                                                  ? 'The search “' +
-                                                    activeSearch +
-                                                    '” found no matching messages in this folder. Clear the search to browse the full folder.'
-                                                  : 'This folder has no matching private messages. Compose a new message or choose another folder.'}
+                                                  ? 'Clear your search or try another term.'
+                                                  : mailTab !== 'primary'
+                                                    ? 'Choose Primary to see the complete page of messages.'
+                                                    : folder === 'inbox' && externalInbox && externalInbox.matching > 0
+                                                      ? 'No internal conversations. Select an incoming email from External Inbox to read it.'
+                                                      : 'There are no private conversations in this folder. Start a new message or choose another folder.'}
                                         </p>
-                                        {folder === 'inbox' && latestSent && (
-                                            <section
-                                                className="kmj-mail-recent-sent-reader mt-6"
-                                                aria-label="Real recent sent message preview"
-                                            >
-                                                <div className="kmj-mail-message-brand flex items-center justify-between gap-3 p-3">
-                                                    <img
-                                                        src="/assets/brand/kmj-logo-horizontal-readable.svg"
-                                                        width="168"
-                                                        height="44"
-                                                        alt="KMJ TECHNO"
-                                                        className="h-8 w-auto object-contain"
-                                                    />
-                                                    <span className="text-right text-[11px] font-bold">
-                                                        Official Correspondence
-                                                    </span>
-                                                </div>
-                                                <div className="p-4">
-                                                    <span className="text-[10px] font-bold tracking-wider text-rose-400 uppercase">
-                                                        From your Sent folder ·
-                                                        Not Inbox
-                                                    </span>
-                                                    <h3 className="mt-2 text-base font-extrabold text-white">
-                                                        {latestSent.subject ||
-                                                            '(No subject)'}
-                                                    </h3>
-                                                    <p className="mt-1 text-xs text-slate-300">
-                                                        To:{' '}
-                                                        {sentRecipientName(
-                                                            latestSent,
-                                                        )}
-                                                    </p>
-                                                    <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-200">
-                                                        {latestSent.snippet}
-                                                    </p>
-                                                    {deliveryLabel(
-                                                        latestSent.delivery_state,
-                                                    ) && (
-                                                        <p className="mt-2 text-[11px] font-semibold text-amber-200">
-                                                            {deliveryLabel(
-                                                                latestSent.delivery_state,
-                                                            )}
-                                                        </p>
-                                                    )}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            navigate(
-                                                                'sent',
-                                                                latestSent.id,
-                                                                '',
-                                                            )
-                                                        }
-                                                        className="mt-4 inline-flex min-h-9 items-center gap-2 rounded-lg border border-rose-400/35 bg-rose-500/15 px-3 text-xs font-bold text-white hover:bg-rose-500/25"
-                                                    >
-                                                        <MailOpen className="size-4" />
-                                                        Open real Sent
-                                                        conversation
-                                                    </button>
-                                                </div>
-                                            </section>
-                                        )}
                                         <div className="mt-6 flex flex-wrap gap-3">
                                             {activeSearch !== '' && (
                                                 <button
@@ -2367,13 +2247,13 @@ export default function MailCenter({
                                                     Clear search
                                                 </button>
                                             )}
-                                            {mailbox.items.length > 0 && (
+                                            {visibleItems.length > 0 && (
                                                 <button
                                                     type="button"
                                                     onClick={() =>
                                                         navigate(
                                                             folder,
-                                                            mailbox.items[0].id,
+                                                            visibleItems[0].id,
                                                             q,
                                                             mailbox.page,
                                                         )
@@ -2390,38 +2270,33 @@ export default function MailCenter({
                                                 className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 text-sm font-semibold hover:bg-white/[0.08]"
                                             >
                                                 <Pencil className="size-4" />
-                                                New message
+                                                Compose message
                                             </button>
+                                            {folder === 'inbox' && visibleItems.length === 0 && !activeSearch && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => navigate('sent', undefined, '')}
+                                                    className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-semibold hover:bg-white/[0.08]"
+                                                >
+                                                    <Send className="size-4" />
+                                                    View Sent
+                                                </button>
+                                            )}
+                                            {mailTab !== 'primary' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setMailTab('primary')}
+                                                    className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-semibold hover:bg-white/[0.08]"
+                                                >
+                                                    Show all on page
+                                                </button>
+                                            )}
+                                            {folder === 'inbox' && externalInbox && !externalInboundPilotConfigured && (
+                                                <a href="#kmj-external-inbox" className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-semibold hover:bg-white/[0.08]">
+                                                    Review receiving status
+                                                </a>
+                                            )}
                                         </div>
-                                        {mailbox.items.length > 0 && (
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    navigate(
-                                                        folder,
-                                                        mailbox.items[0].id,
-                                                        q,
-                                                        mailbox.page,
-                                                    )
-                                                }
-                                                className="mt-8 w-full rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-left transition hover:border-red-500/30 hover:bg-white/[0.06]"
-                                            >
-                                                <span className="text-muted-foreground text-[10px] font-bold tracking-[0.2em] uppercase">
-                                                    MOST RECENT ·{' '}
-                                                    {mailbox.items[0].at.slice(
-                                                        0,
-                                                        16,
-                                                    )}
-                                                </span>
-                                                <span className="mt-2 block truncate text-sm font-bold">
-                                                    {mailbox.items[0].subject ||
-                                                        '(No subject)'}
-                                                </span>
-                                                <span className="text-muted-foreground mt-1 line-clamp-2 block text-[13px] leading-6">
-                                                    {mailbox.items[0].snippet}
-                                                </span>
-                                            </button>
-                                        )}
                                         <p className="text-muted-foreground mt-6 flex items-center gap-2 text-xs">
                                             <ShieldCheck className="size-4 shrink-0 text-red-400" />
                                             Private records. Owner-controlled
