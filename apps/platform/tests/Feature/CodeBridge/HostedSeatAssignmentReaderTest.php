@@ -84,7 +84,6 @@ final class HostedSeatAssignmentReaderTest extends TestCase
         $registry->revoke('seat-key');
         self::assertNull($authorization->subjectForMember($member, $org, $seat, $proof, 'seat-key'));
 
-
         DB::table('codebridge_hosted_seat_assignments')->where('id', $seat)->update(['assignment_revision' => 2]);
         self::assertSame(2, $reader->forMember($member, $org, $seat)['assignment_revision']);
         DB::table('kslp_licenses')->where('id', $license)->update(['plan' => 'pro']);
