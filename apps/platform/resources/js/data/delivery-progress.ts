@@ -226,6 +226,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'PR #1033 and isolated PHP routing regressions. Exact-head PHP/TypeScript/PostgreSQL CI, protected peer review, authenticated staging and signed Elite release still required. Nothing deployed or connected by this source change.',
     },
     {
+        id: 'kmj-owner-native-smtp-settings-20261125',
+        title: 'KMJ Mail: owner SMTP transport settings and test receipt',
+        state: 'active',
+        detail: 'Owner-only settings select pinned Elite Postfix or separately server-approved Brevo SMTPS, test to the verified owner, activate a fresh tested profile or pause native external sending. New queue entries pin the route. No credential disclosure or arbitrary SMTP destination. Transactional mail and inbound routing are unchanged.',
+        evidence:
+            'Source-only until exact CI, owner acceptance, Elite release, post-activation migration and real inbox receipt. Provider credentials remain server-provisioned; no general SMTP editor or paid provider enabled.',
+    },
+    {
         id: 'kmj-native-external-postfix-compose-20261122',
         title: 'KMJ Mail: guarded independent external sending through Elite Postfix',
         state: 'active',
