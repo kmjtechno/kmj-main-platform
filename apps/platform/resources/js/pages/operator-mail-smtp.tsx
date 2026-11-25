@@ -24,8 +24,7 @@ export default function OperatorMailSmtp({ smtp }: { smtp: Smtp }) {
     const [busy, setBusy] = useState(false);
     const [login, setLogin] = useState('');
     const [password, setPassword] = useState('');
-    const ready =
-        profile === 'loopback' ? smtp.loopback_ready : smtp.brevo_ready;
+    const ready = profile === 'loopback' ? smtp.loopback_ready : smtp.brevo_ready;
     const flash = page.props.flash;
     const status =
         flash &&
@@ -210,7 +209,7 @@ export default function OperatorMailSmtp({ smtp }: { smtp: Smtp }) {
                                 {smtp.brevo_server_approved
                                     ? 'Server provider approval is present.'
                                     : 'Server provider approval is still required.'}
-                                {' '}Pause or select local SMTP before rotation.
+                                Pause or select local SMTP before rotation.
                             </p>
                             <label className="block text-xs">
                                 SMTP login
