@@ -480,29 +480,28 @@ function ConnectGuide({
     token: string | null | undefined;
 }) {
     const baseUrl = `${origin}/api/modelfabric/v1`;
-    const key = token ?? '<your token>';
+    const protocolHelp =
+        'Custom text chat endpoints only. Streaming replays completed responses; native Responses, tool calling, vision and embeddings are unavailable.';
+    const tokenHelp =
+        'Set KMJ_MODELFABRIC_TOKEN in a private credential store. Samples never contain your token. Run the read-only model check first. Never paste credentials into source or shell history.';
+    // Keep the one-time bearer in the explicit copy row, never in code samples.
     const snippets: { id: string; label: string; code: string }[] = [
         {
             id: 'sdk',
             label: 'Python (OpenAI SDK)',
-            code: `from openai import OpenAI\n\nclient = OpenAI(base_url="${baseUrl}", api_key="${key}")\nreply = client.chat.completions.create(\n    model="modelfabric-auto",\n    messages=[{"role": "user", "content": "ping"}],\n    stream=True,\n)`,
+            code: `import os\nfrom openai import OpenAI\n\nclient = OpenAI(base_url="${baseUrl}", api_key=os.environ["KMJ_MODELFABRIC_TOKEN"])\nreply = client.chat.completions.create(\n    model="modelfabric-auto",\n    messages=[{"role": "user", "content": "ping"}],\n)\nprint(reply.choices[0].message.content)`,
         },
         {
             id: 'curl',
-            label: 'curl',
-            code: `curl ${baseUrl}/chat/completions \\\n  -H "Authorization: Bearer ${key}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"model":"modelfabric-auto","messages":[{"role":"user","content":"ping"}]}'`,
+            label: 'curl (read-only model check)',
+            code: `curl --fail-with-body "${baseUrl}/models" \\\n  -H "Authorization: Bearer $KMJ_MODELFABRIC_TOKEN"`,
         },
     ];
 
     return (
         <div className="mt-4 space-y-3" data-testid="modelfabric-connect-guide">
             <p className="text-sm font-black">Connect in 30 seconds</p>
-            <p className="text-muted-foreground text-xs">
-                Works with any OpenAI-compatible app or IDE (custom endpoint or
-                &ldquo;OpenAI-compatible&rdquo; provider). Paste these three
-                values; the model is always modelfabric-auto and streaming is
-                supported.
-            </p>
+            <p className="text-muted-foreground text-xs">{protocolHelp}</p>
             <div className="grid gap-2 md:grid-cols-3">
                 <CopyRow label="Base URL" value={baseUrl} />
                 <CopyRow label="Model" value="modelfabric-auto" />
@@ -513,6 +512,7 @@ function ConnectGuide({
                     }
                 />
             </div>
+            <p className="text-muted-foreground text-xs">{tokenHelp}</p>
             {snippets.map((snippet) => (
                 <details key={snippet.id} className="rounded-xl border p-2">
                     <summary className="cursor-pointer text-xs font-bold">

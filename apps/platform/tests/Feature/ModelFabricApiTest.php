@@ -141,6 +141,35 @@ final class ModelFabricApiTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_unsupported_protocol_controls_never_send_a_provider_request(): void
+    {
+        $headers = ['Authorization' => 'Bearer '.$this->token(['private_source' => false])];
+        $this->evidenced('llama-free');
+        Http::fake();
+        $body = ['messages' => [['role' => 'user', 'content' => 'ping']]];
+
+        foreach (['tools' => [], 'max_tokens' => 10, 'response_format' => ['type' => 'json_object'], 'n' => 2] as $field => $value) {
+            $this->postJson('/api/modelfabric/v1/chat/completions', [...$body, $field => $value], $headers)
+                ->assertStatus(400)->assertJsonPath('error.code', 'unsupported_parameter');
+        }
+        $this->postJson('/api/modelfabric/v1/chat/completions', ['messages' => [['role' => 'assistant', 'content' => 'x', 'tool_calls' => []]]], $headers)
+            ->assertStatus(422);
+        Http::assertNothingSent();
+    }
+
+    public function test_private_source_model_preflight_requires_coding_capability(): void
+    {
+        $this->evidenced('llama-free');
+        AiModelEvidence::query()->firstOrFail()->update(['capabilities' => ['chat']]);
+        Http::fake();
+
+        $this->getJson('/api/modelfabric/v1/models', ['Authorization' => 'Bearer '.$this->token()])
+            ->assertOk()->assertJsonPath('modelfabric.status', 'NO_FREE_ROUTE_AVAILABLE')->assertJsonPath('modelfabric.routes', 0);
+        $this->getJson('/api/modelfabric/v1/models', ['Authorization' => 'Bearer '.$this->token(['private_source' => false])])
+            ->assertOk()->assertJsonPath('modelfabric.status', 'ROUTE_AVAILABLE')->assertJsonPath('modelfabric.routes', 1);
+        Http::assertNothingSent();
+    }
+
     public function test_invalid_roles_fail_validation(): void
     {
         $headers = ['Authorization' => 'Bearer '.$this->token()];

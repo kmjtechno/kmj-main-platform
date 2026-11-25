@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'All 42 binary assets and the locked manifest are committed; email safety CI verified their hashes. Desktop/mobile visual acceptance and Gmail/Outlook rendering still required. No SMTP changes.',
     },
     {
+        id: 'modelfabric-safe-client-connect-20261125',
+        title: 'ModelFabric: safer client onboarding and accurate model preflight',
+        state: 'active',
+        detail: 'Source-only: SDK examples use a private environment credential instead of embedding the issued token. Read-only model check matches private-source coding capability and documents actual chat protocol support.',
+        evidence:
+            'Source contract tests and exact-head CI pending. Native Responses, tool calling and real provider inference are not claimed; no deployment.',
+    },
+    {
         id: 'kmj-mail-enterprise-theme-suite-20261125',
         title: 'KMJ Mail shared enterprise branding and default theme selection',
         state: 'active',
