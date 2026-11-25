@@ -1,0 +1,254 @@
+[
+  {
+    "theme": "signature-red",
+    "source": "KMJ TECHNO Premium Corporate Email Template.png",
+    "source_sha256": "b4b721823203cf0a7e0da5c3596bbd99eaecc24b243fa22d0a35c376dc5af178",
+    "assets": [
+      {
+        "file": "signature-red/ai.png",
+        "sha256": "1e2f86ddd36a086b135a16c8fe9b58d4586c87d5d3cec4621fffb2255a544544",
+        "size": 5957
+      },
+      {
+        "file": "signature-red/cloud.png",
+        "sha256": "4aece200086610ba14e1e7f7c06f8e5eddb719c4ab15a2801fa6f0664c3268cb",
+        "size": 5574
+      },
+      {
+        "file": "signature-red/enterprise.png",
+        "sha256": "c66e703c2d36647b57eaac1ad313460d95330d3d3cb9ad61bb67a49ca7e08705",
+        "size": 6143
+      },
+      {
+        "file": "signature-red/footer.jpg",
+        "sha256": "da84d71c858806f04660812f6a062453aed39f10e62e0542bee6ebbc17234240",
+        "size": 66376
+      },
+      {
+        "file": "signature-red/header.jpg",
+        "sha256": "b952da6a2c7382519e483742aa84746c15c2696bcf42ab292aade3fd1b13a67d",
+        "size": 120810
+      },
+      {
+        "file": "signature-red/projection.png",
+        "sha256": "e29dc2728b975ab7a57231eab08d1a4e79157fdbdab98dff5e1ea693a1133465",
+        "size": 5542
+      },
+      {
+        "file": "signature-red/remote.png",
+        "sha256": "32157c661505766f7c19caa5962d19ea5bb2bbf626a062ffe688b2d67a1b19f7",
+        "size": 4573
+      }
+    ]
+  },
+  {
+    "theme": "blue-wave",
+    "source": "KMJ TECHNO Corporate Email Template.png",
+    "source_sha256": "c749e219c1d8d2b1c290e7709e124e77c7c9db2743f2dadca7f6c18e3ccfac7a",
+    "assets": [
+      {
+        "file": "blue-wave/ai.png",
+        "sha256": "a8a9b693b7f20678fdfca87142a06a24c1c98c8b1c51779fd1d180e3b2fd1b86",
+        "size": 5885
+      },
+      {
+        "file": "blue-wave/cloud.png",
+        "sha256": "fab43bc6e5758464454bfd89e264adf55ab6470161a681c1f73f40f802c0265f",
+        "size": 5521
+      },
+      {
+        "file": "blue-wave/enterprise.png",
+        "sha256": "94e45c0c53595c97a2c744ecbd44593693e24684d09f096c34f96450fd7c7fb0",
+        "size": 6683
+      },
+      {
+        "file": "blue-wave/footer.jpg",
+        "sha256": "cc6bae072024139e3b87f29598c3bc2cc463186f151bf6e697c70249d36a6f58",
+        "size": 90907
+      },
+      {
+        "file": "blue-wave/header.jpg",
+        "sha256": "7984bc31c62a80067de8dcdda29f97a91d3d2017487173cd43e99328c318e326",
+        "size": 153139
+      },
+      {
+        "file": "blue-wave/projection.png",
+        "sha256": "9d3b1649fefbdebe663e1d2fb15b4c707a64d5dab9a4b143e51240e8acb78d50",
+        "size": 5507
+      },
+      {
+        "file": "blue-wave/remote.png",
+        "sha256": "cd626da93db35bb12b7a95cf23f0d319b8c98592e3d6d9ef1c0d66c080a8c83e",
+        "size": 4401
+      }
+    ]
+  },
+  {
+    "theme": "blue-letterhead",
+    "source": "KMJ TECHNO Corporate Email Template(1).png",
+    "source_sha256": "754a0bcaaa15fa4f063b18019789c412f5f4b8dfae8f2edc780cdf76c38fa785",
+    "assets": [
+      {
+        "file": "blue-letterhead/ai.png",
+        "sha256": "9f02182f9b5b8d4f6a72bc5a3c80047d1c7f0f3cec521704f1e546165720681d",
+        "size": 5947
+      },
+      {
+        "file": "blue-letterhead/cloud.png",
+        "sha256": "f1991c3de8157e3495c52c7a60e1bf37499aa193807a902271280121a024a2ce",
+        "size": 5713
+      },
+      {
+        "file": "blue-letterhead/enterprise.png",
+        "sha256": "524d0d18db2fe914e671fc9aeeada390a910e9b71358fd86aaceb9629ff96162",
+        "size": 6603
+      },
+      {
+        "file": "blue-letterhead/footer.jpg",
+        "sha256": "1521bdec21dcfafb8c037f8d25dce67c8f94b28733e5ce6bd545115025de8532",
+        "size": 107412
+      },
+      {
+        "file": "blue-letterhead/header.jpg",
+        "sha256": "7427c076309ad56dbd4ce64324d10e58f15399a7482af85bca3fbad91009dd5a",
+        "size": 68956
+      },
+      {
+        "file": "blue-letterhead/projection.png",
+        "sha256": "ed4400126c73dcc118e8580ca3298c376d9866c08e77b433235797a92132131e",
+        "size": 5469
+      },
+      {
+        "file": "blue-letterhead/remote.png",
+        "sha256": "65e522704a3a448dda36304d23b2081b21575adc118fb451f16aa31e03fdcfa6",
+        "size": 4133
+      }
+    ]
+  },
+  {
+    "theme": "executive-gold",
+    "source": "KMJ TECHNO Luxury Corporate Email Template.png",
+    "source_sha256": "482000972a8653840c9712a91f5b00982fd69b03fc54d1c134a70c3178b47593",
+    "assets": [
+      {
+        "file": "executive-gold/ai.png",
+        "sha256": "b49793b60cb0874e6f8405210c27d7726a69ccb93b8d9f9758dba314d2a99b54",
+        "size": 4889
+      },
+      {
+        "file": "executive-gold/cloud.png",
+        "sha256": "de68545a9b4223b474dadde55c22723f7f6360974f86488f04abb7b77e35500c",
+        "size": 4965
+      },
+      {
+        "file": "executive-gold/enterprise.png",
+        "sha256": "25002dfe00f66352fa30f3468fe6a49415ff5b6d78cc32584d998eb9306a7d29",
+        "size": 5818
+      },
+      {
+        "file": "executive-gold/footer.jpg",
+        "sha256": "143875d34743d339ddce7b679ff323def97e40de4a1010a32b327b26171275e3",
+        "size": 93551
+      },
+      {
+        "file": "executive-gold/header.jpg",
+        "sha256": "bea402c56289b39778e2c1bcb61bf206355366215f440ba3310898518cfc8e3d",
+        "size": 133623
+      },
+      {
+        "file": "executive-gold/projection.png",
+        "sha256": "9296edba0d0441fa745a42e6d23fb8c7d458ac8da755f7004598d4fc3ca5edbe",
+        "size": 4655
+      },
+      {
+        "file": "executive-gold/remote.png",
+        "sha256": "171f6f0e7f8fb1842f52aa6e34415eed54d2633a0737e11fdf7deb45d29f899f",
+        "size": 3509
+      }
+    ]
+  },
+  {
+    "theme": "white-geometric",
+    "source": "KMJ TECHNO Premium Enterprise Email Template.png",
+    "source_sha256": "4c9ed98460a4ad25225c1983bb9835690940070f2608b1d1386f90380e617bb9",
+    "assets": [
+      {
+        "file": "white-geometric/ai.png",
+        "sha256": "8fc61db6cac77175733b748ee836eb9b95104a7945ba0c781ffe61dde43b108d",
+        "size": 4950
+      },
+      {
+        "file": "white-geometric/cloud.png",
+        "sha256": "86e773915cf246cd2f67128331b4ad0e61d1e263ce5dd1eafa5d556d5293b3bf",
+        "size": 4770
+      },
+      {
+        "file": "white-geometric/enterprise.png",
+        "sha256": "eb533650eeabfd8165463377309f95b9c4205be1bcddf43e5fbce1ba602443c7",
+        "size": 5556
+      },
+      {
+        "file": "white-geometric/footer.jpg",
+        "sha256": "ea5e93ac88f2ff03e0e15c8bf126d8388bac7b44e10cf55199ae654537a278b9",
+        "size": 54852
+      },
+      {
+        "file": "white-geometric/header.jpg",
+        "sha256": "abf2ccd93230138b9462fb47763dde568f7d51122948ceb5cd70a17218e55deb",
+        "size": 144483
+      },
+      {
+        "file": "white-geometric/projection.png",
+        "sha256": "62546f3b528dc3bee3f78ee659cd35f643b6e589b27581a0eb0d409a62f5706b",
+        "size": 4500
+      },
+      {
+        "file": "white-geometric/remote.png",
+        "sha256": "0fe2b8a7d7b7991c6c8f8b47c8f743c43e509c0a898d02622206068bbd873e62",
+        "size": 3479
+      }
+    ]
+  },
+  {
+    "theme": "blue-signature",
+    "source": "KMJ TECHNO Corporate Email Template(2).png",
+    "source_sha256": "ccd77dbc08403db87fdf03545c7b08bcf1dfe55ed9239b13ee58c3767793434e",
+    "assets": [
+      {
+        "file": "blue-signature/ai.png",
+        "sha256": "e6a144bfe7a1655a032ecc40b40454bd75bd53dfcb33dd92d667781d07bf5606",
+        "size": 5382
+      },
+      {
+        "file": "blue-signature/cloud.png",
+        "sha256": "6ac838fca5a6ae3d84e7965a3301b76eb59a0a5300387f1f45a971d20249798c",
+        "size": 4773
+      },
+      {
+        "file": "blue-signature/enterprise.png",
+        "sha256": "7c4ff54efc077f9a449bfbb17f7249acf80e5f9cb097c56c7ba103591073cc86",
+        "size": 5338
+      },
+      {
+        "file": "blue-signature/footer.jpg",
+        "sha256": "836cc1fe8b57de9e352a6d20283ae3e1efdb9100e43f6881307567d39ee301ac",
+        "size": 66199
+      },
+      {
+        "file": "blue-signature/header.jpg",
+        "sha256": "634066ce7006a7ea60bd14f503932eb89c8a8557c4683ed697b9fa2ae3675ac5",
+        "size": 136864
+      },
+      {
+        "file": "blue-signature/projection.png",
+        "sha256": "08d0b78ba2924c9a1320cdbed6757ba2e6dfec7c4ff41142fcad60e4d50186ab",
+        "size": 5006
+      },
+      {
+        "file": "blue-signature/remote.png",
+        "sha256": "c20fcaf770d9c640aa02211e6c7a0a69ce3e7f3f3390012b8e368c5b01dd22f9",
+        "size": 3748
+      }
+    ]
+  }
+]
