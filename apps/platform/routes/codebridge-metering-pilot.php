@@ -36,7 +36,7 @@ Route::post('codebridge/v1/hosted-metering-pilot', function (Request $request, H
             $actor = User::query()->find((int) $match[1]);
             abort_unless($actor instanceof User, 403);
             $requestHash = hash('sha256', "git_status\n".$device."\n".$project."\n");
-            $result = $settlement->reserveForOwner($actor, $tenant, $device, $project, $execution, $requestHash);
+            $result = $settlement->reserveForOwner($actor, $tenant, $device, $project, $execution, $requestHash, true);
             // A replayed completed reservation must not dispatch again.
             abort_unless($result['state'] === 'reserved', 409);
 
@@ -45,7 +45,7 @@ Route::post('codebridge/v1/hosted-metering-pilot', function (Request $request, H
         if ($action === 'settle') {
             $signature = $data['signature'] ?? null;
             abort_unless(count($data) === 5 && ($data['outcome'] ?? null) === 'succeeded' && is_string($signature), 422);
-            $settlement->settleSigned($tenant, $execution, 'succeeded', $signature);
+            $settlement->settleSigned($tenant, $execution, 'succeeded', $signature, true);
 
             return response()->json(['settled' => true])->header('Cache-Control', 'no-store');
         }

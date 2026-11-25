@@ -6,6 +6,7 @@ use App\Models\LicenseAuditEvent;
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
 use App\Services\CodeBridge\DashboardPresence;
+use App\Services\CodeBridge\HostedPilotUsageSnapshot;
 use App\Services\CodeBridge\HostedUsagePreview;
 use App\Services\CodeBridge\OAuth\OAuthServer;
 use App\Services\Commerce\KmjProductCatalog;
@@ -627,6 +628,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'devices' => $devices,
                 'presence_snapshot' => $presence,
                 'hosted_usage_preview' => app(HostedUsagePreview::class)->catalog(),
+                'hosted_pilot_usage' => app(HostedPilotUsageSnapshot::class)->forOwner($user, (string) $organization['id']),
                 // Before approval a pairing has no tenant; show only this
                 // organization's approved pairings awaiting device redemption.
                 'pending_pairings' => DB::table('codebridge_device_pairings')
