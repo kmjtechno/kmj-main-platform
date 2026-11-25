@@ -42,6 +42,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Exact-head CI, approved reference visual parity, real Gmail and Outlook rendering, staging migration and protected Elite deployment remain pending. No external send or production activation by this PR.',
     },
     {
+        id: 'modelfabric-guided-readiness-ux-20261125',
+        title: 'ModelFabric: guided chat and secure coding readiness',
+        state: 'active',
+        detail: 'Source-only: separate chat and private-source route/token readiness, correct next-step guidance, prevent unusable token creation in the UI, move detailed provider management into its own tab and expose repair actions.',
+        evidence:
+            'Source contract checks and exact-head CI pending; authenticated desktop/mobile visual acceptance, real provider account repairs and coding-worker integration remain pending. No external inference or deployment.',
+    },
+    {
         id: 'modelfabric-quota-reservation-20261125',
         title: 'ModelFabric: reserve quota before external inference',
         state: 'active',

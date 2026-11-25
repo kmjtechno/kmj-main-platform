@@ -110,7 +110,7 @@ type Props = {
 
 const BASE = '/operator/modelfabric';
 
-type Tab = 'start' | 'models' | 'tokens' | 'playground' | 'activity';
+type Tab = 'start' | 'providers' | 'models' | 'tokens' | 'playground' | 'activity';
 
 // Suggested places to read a provider's own free-tier terms. These are hints only: the owner must
 // open the page and confirm it names the exact model before saving evidence.
@@ -598,9 +598,17 @@ export default function OperatorModelFabric({
             ? 'https://kmjtechno.com'
             : window.location.origin;
 
-    const healthy = providers.filter((p) => p.health === 'ok').length;
+    const healthy = providers.filter(
+        (p) => p.enabled && p.health === 'ok',
+    ).length;
     const currentEvidence = evidence.filter((row) => row.current).length;
     const activeTokens = tokens.filter((token) => token.active).length;
+    const chatTokens = tokens.filter(
+        (token) => token.active && !token.private_source,
+    ).length;
+    const codingTokens = tokens.filter(
+        (token) => token.active && token.private_source,
+    ).length;
     const requests24h = analytics.reduce((sum, row) => sum + row.requests, 0);
     const okRequests24h = analytics.reduce((sum, row) => sum + row.ok, 0);
     const generalReady = plans.chat.status !== 'NO_FREE_ROUTE_AVAILABLE';
@@ -652,15 +660,15 @@ export default function OperatorModelFabric({
             tab: 'models',
         },
         {
-            title: 'Create a scoped API token',
+            title: 'Create a chat API token',
             detail: 'Copy the hashed-at-rest token once and keep it private.',
-            complete: activeTokens > 0,
+            complete: chatTokens > 0,
             tab: 'tokens',
         },
         {
             title: 'Test then monitor',
-            detail: 'Check your token without inference, then explicitly send a safe prompt.',
-            complete: requests24h > 0,
+            detail: 'Check your chat token, then explicitly send a safe prompt. Completion reflects aggregate recent successful usage.',
+            complete: okRequests24h > 0,
             tab: 'playground',
         },
     ];
@@ -680,22 +688,22 @@ export default function OperatorModelFabric({
                 href: '/services/kmj-codebridge/ai-providers',
             };
         }
-        if (currentEvidence === 0 && allowlistProviders.length > 0) {
+        if (!generalReady) {
             return {
                 text: 'Approve at least one free model: open its provider page, confirm it is free, then save the evidence.',
                 action: 'Verify a free model',
                 tab: 'models' as Tab,
             };
         }
-        if (activeTokens === 0) {
+        if (chatTokens === 0) {
             return {
-                text: 'Create an API token so the coding worker can use these routes.',
+                text: 'Create a general chat API token. Secure coding needs its own verified routes and token.',
                 action: 'Create API token',
                 tab: 'tokens' as Tab,
             };
         }
 
-        if (requests24h === 0) {
+        if (okRequests24h === 0) {
             return {
                 text: 'Your routes and token are ready. Validate the ModelFabric token and run a safe, consented Playground test.',
                 action: 'Open Playground',
@@ -704,7 +712,7 @@ export default function OperatorModelFabric({
         }
 
         return {
-            text: 'Everything needed is set up. Watch usage in the Activity tab.',
+            text: 'ModelFabric has recorded a successful request in the last 24 hours. Check Activity; secure coding readiness is separate.',
             action: 'Open Activity',
             tab: 'activity' as Tab,
         };
@@ -764,7 +772,7 @@ export default function OperatorModelFabric({
             p.enabled &&
             p.health === 'ok' &&
             p.discovered_model_count > 0 &&
-            !evidence.some((row) => row.provider_id === p.id && row.current),
+            p.models.length === 0,
     ).length;
     if (unapproved > 0) {
         todos.push({
@@ -936,6 +944,7 @@ export default function OperatorModelFabric({
 
     const tabs: { key: Tab; label: string }[] = [
         { key: 'start', label: 'Overview' },
+        { key: 'providers', label: 'Providers' },
         { key: 'models', label: 'Free models' },
         { key: 'tokens', label: 'API tokens' },
         { key: 'playground', label: 'Playground' },
@@ -971,7 +980,11 @@ export default function OperatorModelFabric({
                                 <button
                                     type="button"
                                     className="owner-primary"
-                                    onClick={() => setTab(next.tab as Tab)}
+                                    onClick={() => {
+                                        if (next.tab === 'tokens')
+                                            setTokenPrivate(false);
+                                        setTab(next.tab as Tab);
+                                    }}
                                 >
                                     <Zap size={16} />
                                     {next.action}
@@ -1045,7 +1058,7 @@ export default function OperatorModelFabric({
                         tone="amber"
                         label="API tokens"
                         value={String(activeTokens)}
-                        detail="Active for the coding worker"
+                        detail={`${chatTokens} chat · ${codingTokens} coding`}
                     />
                     <StatTile
                         icon={Activity}
@@ -1091,6 +1104,109 @@ export default function OperatorModelFabric({
                 {tab === 'start' ? (
                     <>
                         <section
+                            aria-label="Choose your AI workflow"
+                            data-testid="modelfabric-workflow-readiness"
+                            className="grid gap-3 lg:grid-cols-2"
+                        >
+                            <div className="owner-panel space-y-3">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <h2 className="text-base font-bold">
+                                        General AI chat
+                                    </h2>
+                                    <StatusPill
+                                        tone={
+                                            generalReady && chatTokens > 0
+                                                ? 'ok'
+                                                : 'warn'
+                                        }
+                                    >
+                                        {generalReady && chatTokens > 0
+                                            ? 'Ready to test'
+                                            : 'Setup required'}
+                                    </StatusPill>
+                                </div>
+                                <p className="text-muted-foreground text-sm">
+                                    {plans.chat.routes.length} eligible routes ·{' '}
+                                    {chatTokens} active chat tokens. Use
+                                    non-confidential prompts only.
+                                </p>
+                                <button
+                                    type="button"
+                                    className={primaryButton}
+                                    onClick={() => {
+                                        if (generalReady && chatTokens === 0)
+                                            setTokenPrivate(false);
+                                        setTab(
+                                            !generalReady
+                                                ? 'models'
+                                                : chatTokens === 0
+                                                  ? 'tokens'
+                                                  : 'playground',
+                                        );
+                                    }}
+                                >
+                                    {!generalReady
+                                        ? 'Review free routes'
+                                        : chatTokens === 0
+                                          ? 'Create chat token'
+                                          : 'Test chat'}{' '}
+                                    <ArrowRight size={15} />
+                                </button>
+                            </div>
+                            <div className="owner-panel space-y-3">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <h2 className="text-base font-bold">
+                                        Secure coding
+                                    </h2>
+                                    <StatusPill
+                                        tone={
+                                            privateReady && codingTokens > 0
+                                                ? 'ok'
+                                                : 'warn'
+                                        }
+                                    >
+                                        {privateReady && codingTokens > 0
+                                            ? 'Route and token ready'
+                                            : 'Blocked'}
+                                    </StatusPill>
+                                </div>
+                                <p className="text-muted-foreground text-sm">
+                                    {plans.privateSource.routes.length} eligible
+                                    coding routes · {codingTokens} active coding
+                                    tokens. Separate source-transfer consent and
+                                    worker activation are required.
+                                </p>
+                                {!privateReady ? (
+                                    <p className="text-sm">
+                                        Review exact-model pricing, code capability
+                                        and no-training evidence. A chat token
+                                        cannot authorize private source.
+                                    </p>
+                                ) : null}
+                                <button
+                                    type="button"
+                                    className={ghostButton}
+                                    onClick={() => {
+                                        if (!privateReady) {
+                                            setTab('models');
+                                        } else if (codingTokens === 0) {
+                                            setTokenPrivate(true);
+                                            setTab('tokens');
+                                        } else {
+                                            setTab('activity');
+                                        }
+                                    }}
+                                >
+                                    {!privateReady
+                                        ? 'Review coding evidence'
+                                        : codingTokens === 0
+                                          ? 'Create coding token'
+                                          : 'View activity'}{' '}
+                                    <ArrowRight size={15} />
+                                </button>
+                            </div>
+                        </section>
+                        <section
                             className="owner-panel"
                             aria-label="ModelFabric setup journey"
                             data-testid="modelfabric-setup-journey"
@@ -1114,7 +1230,7 @@ export default function OperatorModelFabric({
                                 and zero paid fallback. A step is never marked
                                 complete from a simulated request.
                             </p>
-                            <ol className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                            <ol className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
                                 {setupJourney.map((step, index) => (
                                     <li
                                         key={step.title}
@@ -1231,13 +1347,36 @@ export default function OperatorModelFabric({
                                 plan={plans.privateSource}
                             />
                         </section>
+                        <div className="owner-panel flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <h2 className="text-sm font-bold">
+                                    Provider management
+                                </h2>
+                                <p className="text-muted-foreground text-sm">
+                                    {healthy} of {providers.length} providers
+                                    healthy. Review connection errors, quotas
+                                    and model evidence in Providers.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                className={ghostButton}
+                                onClick={() => setTab('providers')}
+                            >
+                                Manage providers <ArrowRight size={15} />
+                            </button>
+                        </div>
+                    </>
+                ) : null}
+                {tab === 'providers' ? (
+                    <>
                         <Card
                             id="providers"
                             title="Providers"
                             label="Providers"
                             help="Add keys or connect OpenRouter on the provider connect page. Gemini and Groq need your price evidence per model; OpenRouter admits only models ending in :free."
                         >
-                            <div className="grid gap-3 md:grid-cols-3">
+                            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                                 {providers.length === 0 ? (
                                     <p className="text-sm">
                                         No provider connected yet.
@@ -1252,12 +1391,16 @@ export default function OperatorModelFabric({
                                             <strong>{provider.name}</strong>
                                             <StatusPill
                                                 tone={
-                                                    provider.health === 'ok'
-                                                        ? 'ok'
-                                                        : 'bad'
+                                                    !provider.enabled
+                                                        ? 'muted'
+                                                        : provider.health === 'ok'
+                                                          ? 'ok'
+                                                          : 'bad'
                                                 }
                                             >
-                                                {provider.health}
+                                                {provider.enabled
+                                                    ? provider.health
+                                                    : 'disabled'}
                                             </StatusPill>
                                         </div>
                                         <p className="text-muted-foreground mt-1 text-xs">
@@ -1290,10 +1433,24 @@ export default function OperatorModelFabric({
                                                 {errorHelp(provider.error_code)}
                                             </p>
                                         ) : null}
-                                        <ProviderLimits
-                                            provider={provider}
-                                            canManage={canManage}
-                                        />
+                                        {provider.enabled &&
+                                        provider.health !== 'ok' ? (
+                                            <a
+                                                className={`${ghostButton} mt-3`}
+                                                href="/services/kmj-codebridge/ai-providers"
+                                            >
+                                                Repair connection
+                                            </a>
+                                        ) : null}
+                                        <details className="mt-3 rounded-lg border p-2">
+                                            <summary className="cursor-pointer text-sm font-medium">
+                                                Usage and routing limits
+                                            </summary>
+                                            <ProviderLimits
+                                                provider={provider}
+                                                canManage={canManage}
+                                            />
+                                        </details>
                                         {canManage &&
                                         provider.free_tier === 'allowlist' ? (
                                             <button
@@ -2042,12 +2199,17 @@ export default function OperatorModelFabric({
                                             setTokenPrivate(e.target.checked)
                                         }
                                     />
-                                    Private source (stricter)
+                                    Private source (secure coding)
                                 </label>
                                 <div className="flex items-end">
                                     <button
                                         type="submit"
                                         className={primaryButton}
+                                        disabled={
+                                            tokenPrivate
+                                                ? !privateReady
+                                                : !generalReady
+                                        }
                                     >
                                         Create token
                                     </button>
@@ -2057,11 +2219,13 @@ export default function OperatorModelFabric({
                                         className="text-xs font-bold text-amber-600 md:col-span-4 dark:text-amber-300"
                                         data-testid="modelfabric-private-warning"
                                     >
-                                        No model has no-training proof yet, so a
-                                        private-source token would answer
-                                        NO_FREE_ROUTE_AVAILABLE for every
-                                        request. Untick Private source to use
-                                        your approved free models.
+                                        No eligible private-source route is
+                                        available, so a private-source token
+                                        would answer NO_FREE_ROUTE_AVAILABLE
+                                        for every request. Untick Private source
+                                        only for general chat with
+                                        non-confidential prompts. Never submit
+                                        private code using a chat token.
                                     </p>
                                 ) : null}
                             </form>

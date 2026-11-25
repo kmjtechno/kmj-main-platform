@@ -308,3 +308,31 @@ void test('connection samples do not embed the issued bearer or claim unsupporte
     const api = read('app/Http/Controllers/ModelFabricApiController.php');
     assert.match(api, /\$token->private_source \? 'code' : 'chat'/);
 });
+
+void test('guided readiness separates general chat from secure coding and gates unusable tokens', () => {
+    assert.match(page, /modelfabric-workflow-readiness/);
+    assert.match(page, /token.active && !token.private_source/);
+    assert.match(page, /token.active && token.private_source/);
+    assert.match(page, /if \(!generalReady\)/);
+    assert.match(page, /if \(chatTokens === 0\)/);
+    assert.match(page, /complete: okRequests24h > 0/);
+    assert.match(page, /A chat token\s+cannot authorize private source/);
+    assert.match(
+        page,
+        /disabled=\{\s*tokenPrivate\s*\?\s*!privateReady\s*:\s*!generalReady\s*\}/,
+    );
+    assert.match(page, /Never submit\s+private code using a chat token/);
+    assert.doesNotMatch(
+        page,
+        /Create an API token so the coding worker can use these routes/,
+    );
+});
+
+void test('provider management has a dedicated tab, repair action and progressive disclosure', () => {
+    assert.match(page, /\{ key: 'providers', label: 'Providers' \}/);
+    assert.match(page, /tab === 'providers'/);
+    assert.match(page, /Repair connection/);
+    assert.match(page, /<summary[^>]*>\s*Usage and routing limits\s*<\/summary>/);
+    assert.match(page, /p.models.length === 0/);
+    assert.match(page, /provider.enabled\s*\?\s*provider.health\s*:\s*'disabled'/);
+});
