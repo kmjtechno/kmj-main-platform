@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-monthly-ledger-invariants-20261125',
+        title: 'CodeBridge monthly ledger counter and replay integrity',
+        state: 'active',
+        detail: 'SOURCE ONLY: reject inconsistent monthly quota counters before reservation and completion, and prevent a competing execution uniqueness collision from incrementing a losing seat counter.',
+        evidence:
+            'PR #1159 adds counter-invariant regression coverage. Previous head passed application and PostgreSQL workflows; exact-head CI, concurrent PostgreSQL stress, independent review, trusted paid-seat authority and protected production activation remain separate. No customer billing enabled.',
+    },
+    {
         id: 'codebridge-owner-signer-proof-20261125',
         title: 'CodeBridge owner-confirmed signer enrollment',
         state: 'active',
