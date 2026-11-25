@@ -713,6 +713,15 @@ export default function MailCenter({
                                 <FileText className="size-4" /> Templates
                             </button>
                             {isOwner && (
+                                <a
+                                    href="/operator/mail/smtp"
+                                    className="text-muted-foreground hover:text-foreground flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-sm"
+                                >
+                                    <ShieldCheck className="size-4" /> SMTP
+                                    settings
+                                </a>
+                            )}
+                            {isOwner && (
                                 <button
                                     type="button"
                                     onClick={() => setView('staff')}
