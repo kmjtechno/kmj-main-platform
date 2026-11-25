@@ -61,6 +61,32 @@ final class NativeMailInboundPilotTest extends TestCase
         $this->assertStringNotContainsString('Private message body.', $row->encrypted_mime);
     }
 
+    public function test_explicit_info_mailbox_preserves_envelope_and_rejects_other_addresses(): void
+    {
+        $owner = $this->enablePilot();
+        config([
+            'kmj-mail-inbound.recipient' => 'info@kmjtechno.com',
+            'kmj-mail-inbound.publish_text' => true,
+        ]);
+        $raw = str_replace(self::RECIPIENT, 'info@kmjtechno.com', self::MIME);
+        $this->receive($raw)->assertUnauthorized();
+        $this->receive($raw, recipient: 'sales@kmjtechno.com')->assertUnauthorized();
+        $this->receive($raw, recipient: 'info@kmjtechno.com')->assertCreated();
+        $this->assertDatabaseCount('kmj_mail_inbound_quarantine', 1);
+        $this->assertDatabaseHas('kmj_mail_inbound_quarantine', [
+            'mailbox_user_id' => $owner->id,
+            'recipient' => 'info@kmjtechno.com',
+        ]);
+        $this->assertDatabaseHas('kmj_mail_external_inbox', [
+            'mailbox_user_id' => $owner->id,
+            'recipient_email' => 'info@kmjtechno.com',
+            'sender_email' => self::SENDER,
+        ]);
+        config(['kmj-mail-inbound.recipient' => 'sales@kmjtechno.com']);
+        $this->receive($raw, recipient: 'sales@kmjtechno.com')->assertServiceUnavailable();
+        $this->assertDatabaseCount('kmj_mail_inbound_quarantine', 1);
+    }
+
     public function test_revoked_owner_cannot_receive_even_with_valid_signature(): void
     {
         $owner = $this->enablePilot();

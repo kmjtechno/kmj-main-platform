@@ -21,7 +21,7 @@ final class NativeMailInboundPilotController
         $ownerId = (int) config('kmj-mail-inbound.owner_id');
         $recipient = (string) config('kmj-mail-inbound.recipient');
         abort_unless(is_string($secret) && preg_match('/\A[0-9a-f]{64}\z/D', $secret) === 1
-            && $ownerId > 0 && $recipient === 'mail-pilot@kmjtechno.com', 503);
+            && $ownerId > 0 && in_array($recipient, ['mail-pilot@kmjtechno.com', 'info@kmjtechno.com'], true), 503);
 
         abort_unless($request->header('Content-Type') === 'message/rfc822', 415);
         $raw = $request->getContent();

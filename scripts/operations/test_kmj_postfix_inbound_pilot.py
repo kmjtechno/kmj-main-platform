@@ -42,11 +42,25 @@ class DirectPilotTest(unittest.TestCase):
                 self.assertEqual(self.deliver(status, receipt)[0], pilot.TEMPFAIL)
 
     def test_recipient_fail_closed(self):
-        for args in [[], ["sender=x@y", "recipient=info@kmjtechno.com"],
+        for args in [[], ["sender=x@y", "recipient=sales@kmjtechno.com"],
                      ARGS + ["recipient=other@example.invalid"]]:
             code, receiver = self.deliver(args=args)
             self.assertEqual(code, pilot.TEMPFAIL)
             receiver.assert_not_called()
+
+    def test_info_envelope_is_signed_without_rewriting(self):
+        address = "info@kmjtechno.com"
+        code, receiver = self.deliver(args=["sender=sender@example.invalid",
+                                             "recipient=" + address])
+        self.assertEqual(code, pilot.OK)
+        raw, headers = receiver.call_args.args
+        self.assertEqual(headers["X-KMJ-Mail-Recipient"], address)
+        fields = ["kmj-inbound-v1", headers["X-KMJ-Mail-Event"],
+                  headers["X-KMJ-Mail-Timestamp"], address,
+                  "sender@example.invalid", hashlib.sha256(raw).hexdigest()]
+        self.assertEqual(headers["X-KMJ-Mail-Signature"],
+                         hmac.new(KEY, "\n".join(fields).encode(),
+                                  hashlib.sha256).hexdigest())
 
     def test_bounded_input_and_key(self):
         for raw in [b"", b"x" * (pilot.MAX_BYTES + 1)]:
