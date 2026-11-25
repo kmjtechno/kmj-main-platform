@@ -110,7 +110,13 @@ type Props = {
 
 const BASE = '/operator/modelfabric';
 
-type Tab = 'start' | 'providers' | 'models' | 'tokens' | 'playground' | 'activity';
+type Tab =
+    | 'start'
+    | 'providers'
+    | 'models'
+    | 'tokens'
+    | 'playground'
+    | 'activity';
 
 // Suggested places to read a provider's own free-tier terms. These are hints only: the owner must
 // open the page and confirm it names the exact model before saving evidence.
@@ -1178,9 +1184,10 @@ export default function OperatorModelFabric({
                                 </p>
                                 {!privateReady ? (
                                     <p className="text-sm">
-                                        Review exact-model pricing, code capability
-                                        and no-training evidence. A chat token
-                                        cannot authorize private source.
+                                        Review exact-model pricing, code
+                                        capability and no-training evidence. A
+                                        chat token cannot authorize private
+                                        source.
                                     </p>
                                 ) : null}
                                 <button
@@ -1393,7 +1400,8 @@ export default function OperatorModelFabric({
                                                 tone={
                                                     !provider.enabled
                                                         ? 'muted'
-                                                        : provider.health === 'ok'
+                                                        : provider.health ===
+                                                            'ok'
                                                           ? 'ok'
                                                           : 'bad'
                                                 }
@@ -2221,8 +2229,8 @@ export default function OperatorModelFabric({
                                     >
                                         No eligible private-source route is
                                         available, so a private-source token
-                                        would answer NO_FREE_ROUTE_AVAILABLE
-                                        for every request. Untick Private source
+                                        would answer NO_FREE_ROUTE_AVAILABLE for
+                                        every request. Untick Private source
                                         only for general chat with
                                         non-confidential prompts. Never submit
                                         private code using a chat token.
