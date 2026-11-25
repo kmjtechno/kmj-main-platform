@@ -598,7 +598,7 @@ export default function OperatorModelFabric({
             ? 'https://kmjtechno.com'
             : window.location.origin;
 
-    const healthy = providers.filter((p) => p.health === 'ok').length;
+    const healthy = providers.filter((p) => p.enabled && p.health === 'ok').length;
     const currentEvidence = evidence.filter((row) => row.current).length;
     const activeTokens = tokens.filter((token) => token.active).length;
     const chatTokens = tokens.filter((token) => token.active && !token.private_source).length;
@@ -661,7 +661,7 @@ export default function OperatorModelFabric({
         },
         {
             title: 'Test then monitor',
-            detail: 'Check your token without inference, then explicitly send a safe prompt.',
+            detail: 'Check your chat token, then explicitly send a safe prompt. Completion reflects aggregate recent successful usage.',
             complete: okRequests24h > 0,
             tab: 'playground',
         },
@@ -706,7 +706,7 @@ export default function OperatorModelFabric({
         }
 
         return {
-            text: 'General chat has recorded a successful request in the last 24 hours. Secure coding readiness is separate.',
+            text: 'ModelFabric has recorded a successful request in the last 24 hours. Check Activity; secure coding readiness is separate.',
             action: 'Open Activity',
             tab: 'activity' as Tab,
         };
@@ -766,7 +766,7 @@ export default function OperatorModelFabric({
             p.enabled &&
             p.health === 'ok' &&
             p.discovered_model_count > 0 &&
-            !evidence.some((row) => row.provider_id === p.id && row.current),
+            p.models.length === 0,
     ).length;
     if (unapproved > 0) {
         todos.push({
@@ -1297,12 +1297,14 @@ export default function OperatorModelFabric({
                                             <strong>{provider.name}</strong>
                                             <StatusPill
                                                 tone={
-                                                    provider.health === 'ok'
-                                                        ? 'ok'
-                                                        : 'bad'
+                                                    !provider.enabled
+                                                        ? 'muted'
+                                                        : provider.health === 'ok'
+                                                          ? 'ok'
+                                                          : 'bad'
                                                 }
                                             >
-                                                {provider.health}
+                                                {provider.enabled ? provider.health : 'disabled'}
                                             </StatusPill>
                                         </div>
                                         <p className="text-muted-foreground mt-1 text-xs">
@@ -1335,7 +1337,7 @@ export default function OperatorModelFabric({
                                                 {errorHelp(provider.error_code)}
                                             </p>
                                         ) : null}
-                                        {provider.health !== 'ok' ? (
+                                        {provider.enabled && provider.health !== 'ok' ? (
                                             <a className={`${ghostButton} mt-3`} href="/services/kmj-codebridge/ai-providers">Repair connection</a>
                                         ) : null}
                                         <details className="mt-3 rounded-lg border p-2">
@@ -2106,7 +2108,7 @@ export default function OperatorModelFabric({
                                         className="text-xs font-bold text-amber-600 md:col-span-4 dark:text-amber-300"
                                         data-testid="modelfabric-private-warning"
                                     >
-                                        No model has no-training proof yet, so a
+                                        No eligible private-source route is available, so a
                                         private-source token would answer
                                         NO_FREE_ROUTE_AVAILABLE for every
                                         request. Untick Private source only for general chat with non-confidential prompts. Never submit private code using a chat token.
