@@ -208,7 +208,7 @@ final class ProviderManager
      * @param  list<array{role: string, content: string}>  $messages
      * @return array{ok: bool, content: ?string, error_code: ?string, rate?: array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int}}
      */
-    public function complete(AiProvider $provider, string $model, array $messages): array
+    public function complete(AiProvider $provider, string $model, array $messages, ?int $strictCodingTokens = null): array
     {
         try {
             $this->assertInferenceAllowed($provider, $model);
@@ -216,7 +216,7 @@ final class ProviderManager
             return ['ok' => false, 'content' => null, 'error_code' => $exception->getMessage()];
         }
 
-        return $this->adapter->complete($provider->base_url, $provider->api_key, $this->approvedHosts(), $model, $messages);
+        return $this->adapter->complete($provider->base_url, $provider->api_key, $this->approvedHosts(), $model, $messages, $strictCodingTokens);
     }
 
     /** @return array<string, mixed> */
