@@ -316,7 +316,7 @@ void test('guided readiness separates general chat from secure coding and gates 
     assert.match(page, /if \(!generalReady\)/);
     assert.match(page, /if \(chatTokens === 0\)/);
     assert.match(page, /complete: okRequests24h > 0/);
-    assert.match(page, /A chat token\s+cannot authorize private source/);
+    assert.match(page, /A\s+chat token cannot authorize private\s+source/);
     assert.match(
         page,
         /disabled=\{\s*tokenPrivate\s*\?\s*!privateReady\s*:\s*!generalReady\s*\}/,
@@ -332,7 +332,13 @@ void test('provider management has a dedicated tab, repair action and progressiv
     assert.match(page, /\{ key: 'providers', label: 'Providers' \}/);
     assert.match(page, /tab === 'providers'/);
     assert.match(page, /Repair connection/);
-    assert.match(page, /<summary[^>]*>\s*Usage and routing limits\s*<\/summary>/);
+    assert.match(
+        page,
+        /<summary[^>]*>\s*Usage and routing limits\s*<\/summary>/,
+    );
     assert.match(page, /p.models.length === 0/);
-    assert.match(page, /provider.enabled\s*\?\s*provider.health\s*:\s*'disabled'/);
+    assert.match(
+        page,
+        /provider.enabled\s*\?\s*provider.health\s*:\s*'disabled'/,
+    );
 });
