@@ -66,16 +66,16 @@ Route::middleware(['auth', 'verified', 'password.confirm'])->group(function (): 
     Route::get('operator/mail/smtp', [OwnerNativeSmtpController::class, 'index'])
         ->name('kmj-mail.smtp-settings');
     Route::post('operator/mail/smtp/credentials', [OwnerNativeSmtpController::class, 'credentials'])
-        ->middleware('throttle:3,10')
+        ->middleware('throttle:3,10,kmj-native-smtp-credentials')
         ->name('kmj-mail.smtp-credentials');
     Route::post('operator/mail/smtp/test', [OwnerNativeSmtpController::class, 'test'])
-        ->middleware('throttle:2,1')
+        ->middleware('throttle:2,1,kmj-native-smtp-test')
         ->name('kmj-mail.smtp-test');
     Route::post('operator/mail/smtp/activate', [OwnerNativeSmtpController::class, 'activate'])
-        ->middleware('throttle:4,1')
+        ->middleware('throttle:4,1,kmj-native-smtp-activate')
         ->name('kmj-mail.smtp-activate');
     Route::post('operator/mail/smtp/pause', [OwnerNativeSmtpController::class, 'pause'])
-        ->middleware('throttle:4,1')
+        ->middleware('throttle:4,1,kmj-native-smtp-pause')
         ->name('kmj-mail.smtp-pause');
 
     Route::post('operator/mail/staff', [NativeMailController::class, 'grantStaff'])
