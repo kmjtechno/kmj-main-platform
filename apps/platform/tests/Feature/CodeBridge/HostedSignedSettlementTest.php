@@ -210,6 +210,19 @@ final class HostedSignedSettlementTest extends TestCase
         $this->assertDatabaseCount('codebridge_receipt_signers', 0);
     }
 
+    public function test_signer_enrollment_requires_consumed_pairing(): void
+    {
+        $owner = User::factory()->create(['email_verified_at' => now()]);
+        $org = $this->tenant($owner, 'desk-a', 'proj-a');
+        $service = app(HostedSignedSettlement::class);
+        DB::table('codebridge_device_pairings')->where('tenant_id', $org)
+            ->update(['status' => 'approved', 'consumed_at' => null]);
+
+        $this->expectException(DomainException::class);
+        $this->expectExceptionMessage('CODEBRIDGE_RECEIPT_SCOPE_DENIED');
+        $service->issueSignerChallenge($owner, $org, 'desk-a');
+    }
+
     public function test_foreign_owner_cannot_pin_a_key(): void
     {
         $owner = User::factory()->create(['email_verified_at' => now()]);
