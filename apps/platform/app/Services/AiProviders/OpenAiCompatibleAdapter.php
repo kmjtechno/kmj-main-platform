@@ -23,6 +23,10 @@ final class OpenAiCompatibleAdapter
 
     private const MAX_COMPLETION_TOKENS = 1024;
 
+    private const MAX_CODING_TOKENS = 4096;
+
+    private const MAX_CODING_CHARS = 32768;
+
     public function __construct(private readonly EndpointGuard $guard) {}
 
     /**
@@ -117,8 +121,11 @@ final class OpenAiCompatibleAdapter
      * @param  list<array{role: string, content: string}>  $messages
      * @return array{ok: bool, content: ?string, error_code: ?string, rate?: array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int}}
      */
-    public function complete(string $baseUrl, string $apiKey, array $approvedHosts, string $model, array $messages): array
+    public function complete(string $baseUrl, string $apiKey, array $approvedHosts, string $model, array $messages, ?int $strictCodingTokens = null): array
     {
+        if ($strictCodingTokens !== null && ($strictCodingTokens < 1 || $strictCodingTokens > self::MAX_CODING_TOKENS)) {
+            return ['ok' => false, 'content' => null, 'error_code' => 'invalid_output_limit'];
+        }
         try {
             $target = $this->guard->validate($baseUrl, $approvedHosts);
         } catch (InvalidArgumentException $exception) {
@@ -135,7 +142,7 @@ final class OpenAiCompatibleAdapter
             ])->withToken($apiKey)->acceptJson()->timeout(45)->connectTimeout(5)->post($target['base'].'/chat/completions', [
                 'model' => $model,
                 'messages' => $messages,
-                'max_tokens' => self::MAX_COMPLETION_TOKENS,
+                'max_tokens' => $strictCodingTokens ?? self::MAX_COMPLETION_TOKENS,
                 'stream' => false,
             ]);
         } catch (ConnectionException) {
@@ -166,6 +173,15 @@ final class OpenAiCompatibleAdapter
         $content = $response->json('choices.0.message.content');
         if (! is_string($content) || trim($content) === '') {
             return $fail('empty_response');
+        }
+
+        if ($strictCodingTokens !== null) {
+            // A coding patch must not be silently clipped or marked complete after an interrupted reply.
+            if ($response->json('choices.0.finish_reason') !== 'stop' || mb_strlen($content) > self::MAX_CODING_CHARS || str_contains($content, "\0")) {
+                return $fail('incomplete_coding_output');
+            }
+
+            return ['ok' => true, 'content' => $content, 'error_code' => null, 'rate' => $rate];
         }
 
         return ['ok' => true, 'content' => mb_substr($content, 0, 8000), 'error_code' => null, 'rate' => $rate];

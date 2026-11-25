@@ -57,7 +57,8 @@ final class ModelFabricApiController extends Controller
         $strictFreeCloud = $this->strictFreeCloud($request, $token);
         // Unsupported controls must not be silently discarded before a paid-or-free
         // upstream request. In particular, tools and output limits change semantics.
-        if (array_diff(array_keys($request->all()), ['messages', 'stream', 'model']) !== []) {
+        $allowed = $strictFreeCloud ? ['messages', 'stream', 'model', 'max_tokens'] : ['messages', 'stream', 'model'];
+        if (array_diff(array_keys($request->all()), $allowed) !== []) {
             return $this->error(400, 'unsupported_parameter', 'Only text chat messages, model and stream are supported.');
         }
         $data = $request->validate([
@@ -67,7 +68,11 @@ final class ModelFabricApiController extends Controller
             'messages.*.content' => ['required', 'string', 'max:'.self::MAX_CHARS],
             'stream' => ['sometimes', 'boolean'],
             'model' => ['sometimes', 'nullable', 'string', 'max:128'],
+            'max_tokens' => ['sometimes', 'integer', 'min:1', 'max:4096'],
         ]);
+        if ($strictFreeCloud && ! empty($data['stream'])) {
+            return $this->error(400, 'unsupported_parameter', 'Strict coding requires a complete non-streaming response.');
+        }
         $messages = [];
         $chars = 0;
         foreach ($data['messages'] as $message) {
@@ -80,7 +85,7 @@ final class ModelFabricApiController extends Controller
 
         // The caller's "model" field is ignored on purpose: it cannot pick a paid or unverified model.
         $capability = $token->private_source ? 'code' : 'chat';
-        $result = $this->gateway->complete($token->organization_id, $messages, $capability, $token->private_source, $this->sessionKey($request), $strictFreeCloud);
+        $result = $this->gateway->complete($token->organization_id, $messages, $capability, $token->private_source, $this->sessionKey($request), $strictFreeCloud, isset($data['max_tokens']) ? (int) $data['max_tokens'] : null);
         if (! $result['ok']) {
             $code = (string) $result['error_code'];
 

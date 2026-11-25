@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-native-coding-output-integrity-20261125',
+        title: 'ModelFabric: bounded complete coding output',
+        state: 'active',
+        detail: 'Strict-free private-source requests support a bounded output token budget and reject incomplete or oversized provider replies without silently clipping a patch. Existing chat clients retain their previous behavior.',
+        evidence:
+            'Synthetic provider response regressions cover incomplete output, token limits and complete patches. Real provider billing, signed worker integration and deployment remain unverified.',
+    },
+    {
         id: 'modelfabric-native-codebridge-scope-20261125',
         title: 'ModelFabric: native CodeBridge token scope preflight',
         state: 'active',
