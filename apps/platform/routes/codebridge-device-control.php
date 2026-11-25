@@ -160,3 +160,5 @@ Route::post('services/kmj-codebridge/organizations/{tenantId}/devices/{deviceId}
         ->header('Cache-Control', 'no-store, private');
 })->middleware('throttle:10,1')
     ->name('services.codebridge.devices.projects.assign');
+
+require __DIR__.'/codebridge-signer-enrollment.php';

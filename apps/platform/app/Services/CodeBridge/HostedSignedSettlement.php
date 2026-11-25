@@ -26,6 +26,71 @@ final class HostedSignedSettlement
         private readonly WorkspaceJobService $grants,
     ) {}
 
+    /** @return array<string, mixed> */
+    public function issueSignerChallenge(User $actor, string $organization, string $device): array
+    {
+        $this->assertOwner($actor, $organization);
+        if (preg_match('/\\A[A-Za-z0-9_-]{1,64}\\z/D', $device) !== 1) {
+            throw new DomainException('CODEBRIDGE_RECEIPT_SCOPE_DENIED');
+        }
+
+        return DB::transaction(function () use ($actor, $organization, $device): array {
+            $credential = $this->activeCredential($organization, $device);
+
+            return [
+                'organization_id' => $organization,
+                'device_id' => $device,
+                'activation_id' => $credential['activation_id'],
+                'credential_id' => $credential['id'],
+                'owner_id' => (string) $actor->getKey(),
+                'nonce' => bin2hex(random_bytes(32)),
+                'expires_at' => time() + 300,
+            ];
+        }, 3);
+    }
+
+    /** @param array<string, mixed> $challenge */
+    public function confirmSignerChallenge(User $actor, string $organization, string $device, array $challenge, string $publicKey, string $signature): void
+    {
+        $this->assertOwner($actor, $organization);
+        $bytes = base64_decode($publicKey, true);
+        $proof = base64_decode($signature, true);
+        if (($challenge['organization_id'] ?? null) !== $organization
+            || ($challenge['device_id'] ?? null) !== $device
+            || ($challenge['owner_id'] ?? null) !== (string) $actor->getKey()
+            || ! is_int($challenge['expires_at'] ?? null) || $challenge['expires_at'] <= time()
+            || $challenge['expires_at'] > time() + 300
+            || ! is_string($challenge['nonce'] ?? null) || preg_match('/\\A[a-f0-9]{64}\\z/D', $challenge['nonce']) !== 1
+            || ! is_string($bytes) || strlen($bytes) !== 32 || base64_encode($bytes) !== $publicKey
+            || ! is_string($proof) || strlen($proof) !== 64 || base64_encode($proof) !== $signature) {
+            throw new DomainException('CODEBRIDGE_SIGNER_PROOF_DENIED');
+        }
+
+        DB::transaction(function () use ($actor, $organization, $device, $challenge, $publicKey, $bytes, $proof): void {
+            $credential = $this->activeCredential($organization, $device);
+            if (($challenge['activation_id'] ?? null) !== $credential['activation_id']
+                || ($challenge['credential_id'] ?? null) !== $credential['id']) {
+                throw new DomainException('CODEBRIDGE_SIGNER_PROOF_DENIED');
+            }
+            $message = implode("\n", [
+                'KMJ_CODEBRIDGE_SIGNER_ENROLLMENT_V1',
+                $organization,
+                $device,
+                $credential['activation_id'],
+                $credential['id'],
+                (string) $actor->getKey(),
+                $challenge['nonce'],
+                (string) $challenge['expires_at'],
+                $publicKey,
+                '',
+            ]);
+            if (! sodium_crypto_sign_verify_detached($proof, $message, $bytes)) {
+                throw new DomainException('CODEBRIDGE_SIGNER_PROOF_DENIED');
+            }
+            $this->pinApprovedSigner($actor, $organization, $device, $publicKey);
+        }, 3);
+    }
+
     public function pinApprovedSigner(User $actor, string $organization, string $device, string $publicKey): void
     {
         $this->assertOwner($actor, $organization);
@@ -170,6 +235,14 @@ final class HostedSignedSettlement
             ->where('l.customer_id', $organization)->where('l.product', 'KMJ_CODEBRIDGE')
             ->whereColumn('a.license_id', 'l.id')->whereNull('a.deactivated_at')
             ->whereNull('c.revoked_at')->where('c.expires_at_epoch', '>', time())
+            ->whereExists(static function ($query): void {
+                $query->selectRaw('1')->from('codebridge_device_pairings as p')
+                    ->whereColumn('p.tenant_id', 'c.tenant_id')
+                    ->whereColumn('p.device_id', 'c.device_id')
+                    ->whereColumn('p.license_id', 'c.license_id')
+                    ->whereColumn('p.activation_id', 'c.activation_id')
+                    ->where('p.status', 'consumed')->whereNotNull('p.consumed_at');
+            })
             ->where('l.status', 'active')->whereNull('l.revoked_at')
             ->where('l.starts_at', '<=', now())->where('l.expires_at', '>', now())
             ->lockForUpdate()->first(['c.id', 'c.activation_id', 'l.plan']);
