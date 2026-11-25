@@ -24,7 +24,11 @@ final class EnterpriseMailTheme
         ];
     }
 
-    /** Fixed first-party static artwork; never use request data as a path. */
+    /**
+     * Fixed first-party static artwork; never use request data as a path.
+     *
+     * @param array<string, string> $theme
+     */
     public static function artworkBase(array $theme): ?string
     {
         $id = match ($theme['layout'] ?? null) {
