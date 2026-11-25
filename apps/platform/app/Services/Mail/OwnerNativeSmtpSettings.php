@@ -112,6 +112,9 @@ final class OwnerNativeSmtpSettings
 
         return [
             'installed' => $this->installed(),
+            'theme_installed' => EnterpriseMailTheme::installed(),
+            'theme' => EnterpriseMailTheme::selected(),
+            'themes' => EnterpriseMailTheme::catalog(),
             'active' => $this->activeProfile(),
             'loopback_ready' => $this->ready('loopback'),
             'brevo_ready' => $this->ready('brevo'),
@@ -121,6 +124,20 @@ final class OwnerNativeSmtpSettings
             'tested_at' => $row->tested_at ?? null,
             'sender' => (string) config('mail.from.address', ''),
         ];
+    }
+
+    public function saveTheme(User $actor, string $theme): void
+    {
+        $this->owner->require($actor);
+        abort_unless(EnterpriseMailTheme::installed(), 503);
+        abort_unless(isset(EnterpriseMailTheme::catalog()[$theme]), 422);
+        DB::table('kmj_native_smtp_settings')->upsert([[
+            'id' => 1,
+            'enterprise_theme' => $theme,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]], ['id'], ['enterprise_theme', 'updated_at']);
+        $this->audit($actor, 'kmj_mail_enterprise_theme', 'success', $theme);
     }
 
     public function test(User $actor, string $profile): void
