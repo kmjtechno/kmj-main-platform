@@ -8,6 +8,44 @@ ROOT = Path(__file__).resolve().parents[1]
 PROBE = ROOT / "scripts/operations/probe-owner-brevo-enterprise-email-20261021.py"
 VIEW = ROOT / "apps/platform/resources/views/emails/kmj-auth-transactional.blade.php"
 TEXT = ROOT / "apps/platform/resources/views/emails/kmj-auth-transactional-text.blade.php"
+HEADER = VIEW.parent / "partials/kmj-enterprise-header.blade.php"
+FOOTER = VIEW.parent / "partials/kmj-enterprise-footer.blade.php"
+
+# Offline fixture for the explicit default palette only. The historical,
+# pinned-release SMTP probe remains unchanged; no PHP or Blade is executed.
+def default_html_fixture():
+    source = VIEW.read_text(encoding="utf-8")
+    header = HEADER.read_text(encoding="utf-8")
+    footer = FOOTER.read_text(encoding="utf-8")
+    def replace_once(value, old, new):
+        if value.count(old) != 1:
+            raise ValueError("UNEXPECTED_TEMPLATE_STRUCTURE")
+        return value.replace(old, new, 1)
+
+    source = replace_once(source, r"@php($theme = \App\Services\Mail\EnterpriseMailTheme::palette())", "")
+    begin = "@if ($theme['layout'] === 'geometric')"
+    if header.count(begin) != 1 or header.count("@endif") != 1:
+        raise ValueError("UNEXPECTED_HEADER_STRUCTURE")
+    before, conditional = header.split(begin, 1)
+    _, after = conditional.split("@endif", 1)
+    header = before + after
+    for expression, value in {
+        "{{ $theme['layout'] === 'letterhead' ? '12px solid '.$theme['accent'] : '0' }}": "0",
+        "{{ $theme['layout'] === 'letterhead' ? 'center' : 'left' }}": "left",
+        "{{ $theme['layout'] === 'wave' ? '68%' : '35%' }}": "35%",
+    }.items():
+        if expression not in header:
+            raise ValueError("UNEXPECTED_HEADER_EXPRESSION")
+        header = header.replace(expression, value)
+    source = replace_once(source, "@include('emails.partials.kmj-enterprise-header')", header)
+    notice = "PRIVATE ACCOUNT COMMUNICATION — Official account-security communication from KMJ TECHNO. Verify the sender domain before following security links."
+    source = replace_once(source, "@include('emails.partials.kmj-enterprise-footer', ['footerNotice' => '" + notice + "'])", replace_once(footer, "{{ $footerNotice }}", notice))
+    for key, value in {"header": "#0b1425", "footer": "#101b30", "accent": "#c71935", "ink": "#ffffff", "tint": "#fff2f4"}.items():
+        source = source.replace("{{ $theme['" + key + "'] }}", value)
+    if any(token in source for token in ("@php", "@include", "@if", "@endif", "@foreach", "{!!")):
+        raise ValueError("UNEXPECTED_TEMPLATE_SYNTAX")
+    return source
+
 spec = importlib.util.spec_from_file_location("kmj_mail_preview", PROBE)
 assert spec is not None and spec.loader is not None
 probe = importlib.util.module_from_spec(spec)
@@ -16,7 +54,7 @@ spec.loader.exec_module(probe)
 
 class BrandedEmailProbeSafety(unittest.TestCase):
     def test_static_template_fixture_escapes_html_and_preserves_plaintext_url(self):
-        html_source = VIEW.read_text(encoding="utf-8")
+        html_source = default_html_fixture()
         text_source = TEXT.read_text(encoding="utf-8")
         d = {
             "subject": "Test", "preheader": "Test", "eyebrow": "QA",
@@ -43,7 +81,7 @@ class BrandedEmailProbeSafety(unittest.TestCase):
 
     def test_enterprise_display_name_and_logo_readability(self):
         source = PROBE.read_text(encoding="utf-8")
-        markup = VIEW.read_text(encoding="utf-8")
+        markup = default_html_fixture()
         self.assertIn('formataddr(("KMJ TECHNO", SENDER))', source)
         self.assertIn(".kmj-brevo-enterprise-20261021.once", source)
         self.assertIn("KMJ TECHNO Enterprise Mail QA", source)
