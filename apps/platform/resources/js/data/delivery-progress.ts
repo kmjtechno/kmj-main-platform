@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-signed-paid-seat-proof-contract-20261125',
+        title: 'CodeBridge KSLP signed paid-seat proof contract',
+        state: 'active',
+        detail: 'SOURCE ONLY: verify canonical short-lived Ed25519 proof bound to current tenant, membership, user, license, seat and assignment revision with a separately pinned KSLP key. Device allowance is not a paid seat.',
+        evidence:
+            'Unit regression for scope mismatch, revision, expiry, wrong key and audience. Commercial assignment persistence, issuer, revocation authority, gateway dispatch integration and production acceptance remain pending; no seats or billing enabled.',
+    },
+    {
         id: 'codebridge-monthly-ledger-invariants-20261125',
         title: 'CodeBridge monthly ledger counter and replay integrity',
         state: 'active',
