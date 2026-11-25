@@ -42,9 +42,12 @@ final class ModelFabricGateway
      * @param  list<array{role: string, content: string}>  $messages
      * @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string}
      */
-    public function complete(string $organizationId, array $messages, string $capability = 'chat', bool $privateSource = false, ?string $sessionKey = null, bool $strictFreeCloud = false): array
+    public function complete(string $organizationId, array $messages, string $capability = 'chat', bool $privateSource = false, ?string $sessionKey = null, bool $strictFreeCloud = false, ?int $maxCodingTokens = null): array
     {
         $profile = $this->profiler->classify($messages, $capability);
+        if ($strictFreeCloud && ($capability !== 'code' || ! $privateSource || ($maxCodingTokens !== null && ($maxCodingTokens < 1 || $maxCodingTokens > 4096)))) {
+            return $this->fail('invalid_coding_policy', 0, $profile);
+        }
         $plan = $this->router->plan($organizationId, $capability, $privateSource, $strictFreeCloud);
         if ($plan['status'] === ModelFabricRouter::NO_ROUTE) {
             return $this->fail(ModelFabricRouter::NO_ROUTE, 0, $profile);
@@ -109,7 +112,7 @@ final class ModelFabricGateway
 
             $attempts++;
             $started = hrtime(true);
-            $result = $this->manager->complete($provider, (string) $route['model'], $messages);
+            $result = $this->manager->complete($provider, (string) $route['model'], $messages, $strictFreeCloud ? ($maxCodingTokens ?? 1024) : null);
             $latency = (int) ((hrtime(true) - $started) / 1_000_000);
 
             $attempt->update([
