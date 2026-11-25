@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-mail-jmap-owner-grant-20261125',
+        title: 'KMJ Mail: default-off owner mailbox pilot grant',
+        state: 'active',
+        detail: 'Source-only single-owner read-only pilot requires current verified platform owner with a passkey, exact configured user ID and KMJ mailbox principal. Credentials remain server-side.',
+        evidence:
+            'Synthetic authorization regressions added. No HTTP route, staff access, automatic account provisioning, real OAuth grant or live activation.',
+    },
+    {
         id: 'kmj-mail-jmap-transport-boundary-20261125',
         title: 'KMJ Mail: authenticated read-only JMAP transport',
         state: 'active',
