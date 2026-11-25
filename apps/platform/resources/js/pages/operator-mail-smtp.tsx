@@ -6,6 +6,9 @@ type Profile = 'loopback' | 'brevo';
 
 type Smtp = {
     installed: boolean;
+    theme_installed: boolean;
+    theme: string;
+    themes: Record<string, { label: string; header: string; footer: string; accent: string; ink: string; tint: string; layout: string }>;
     active: string;
     loopback_ready: boolean;
     brevo_ready: boolean;
@@ -22,6 +25,8 @@ export default function OperatorMailSmtp({ smtp }: { smtp: Smtp }) {
         smtp.active === 'brevo' ? 'brevo' : 'loopback',
     );
     const [busy, setBusy] = useState(false);
+    const [theme, setTheme] = useState(smtp.theme);
+    const preview = smtp.themes[theme];
     const [login, setLogin] = useState('');
     const [password, setPassword] = useState('');
     const ready =
@@ -297,6 +302,50 @@ export default function OperatorMailSmtp({ smtp }: { smtp: Smtp }) {
                             Pause sending
                         </button>
                     </div>
+                </section>
+                <section className="bg-card space-y-4 rounded-2xl border p-5">
+                    <h2 className="text-lg font-bold">Default email branding</h2>
+                    <p className="text-muted-foreground text-sm">
+                        Select the shared theme for new business, account and
+                        transactional emails. This does not change SMTP routing.
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {Object.entries(smtp.themes).map(([id, palette]) => (
+                            <button
+                                key={id}
+                                type="button"
+                                aria-pressed={theme === id}
+                                onClick={() => setTheme(id)}
+                                className="overflow-hidden rounded-xl border text-left aria-pressed:ring-2 aria-pressed:ring-red-500"
+                            >
+                                <div style={{ background: palette.header, color: palette.ink, borderBottom: '3px solid ' + palette.accent }} className="p-3 text-xs font-bold">
+                                    KMJ TECHNO
+                                </div>
+                                <div style={{ background: '#ffffff', color: '#142035' }} className="space-y-2 p-3 text-xs">
+                                    <strong>Official communication</strong>
+                                    <div className="h-1 w-10 rounded" style={{ background: palette.accent }} />
+                                    <p>Subject and message</p>
+                                </div>
+                                <div style={{ background: palette.footer, color: '#ffffff' }} className="p-2 text-xs">KMJ TECHNO · Global Delivery</div>
+                                <div className="p-3 text-sm font-semibold">{palette.label}{smtp.theme === id ? ' · Active' : ''}</div>
+                            </button>
+                        ))}
+                    </div>
+                    {preview && <p className="text-sm">Selected: {preview.label}</p>}
+                    <button
+                        type="button"
+                        disabled={busy || !smtp.theme_installed || theme === smtp.theme}
+                        onClick={() => {
+                            setBusy(true);
+                            router.post('/operator/mail/smtp/theme', { theme }, {
+                                preserveScroll: true,
+                                onFinish: () => setBusy(false),
+                            });
+                        }}
+                        className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-40"
+                    >
+                        Save default branding
+                    </button>
                 </section>
                 <div className="bg-card flex gap-3 rounded-xl border p-4">
                     <ShieldCheck className="size-5 shrink-0 text-red-400" />
