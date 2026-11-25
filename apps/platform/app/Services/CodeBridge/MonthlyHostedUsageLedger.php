@@ -95,11 +95,14 @@ final class MonthlyHostedUsageLedger
 
             $completed = (int) $counter->completed_calls;
             $reserved = (int) $counter->reserved_calls;
+            if ($completed < 0 || $reserved < 0 || $completed > $limit || $reserved > $limit - $completed) {
+                throw new DomainException('CODEBRIDGE_MONTHLY_COUNTER_CONFLICT');
+            }
             if ($completed + $reserved >= $limit) {
                 throw new DomainException('CODEBRIDGE_MONTHLY_REMOTE_TOOL_CALL_LIMIT_REACHED');
             }
 
-            DB::table('codebridge_usage_executions')->insert([
+            $inserted = DB::table('codebridge_usage_executions')->insertOrIgnore([
                 'organization_id' => $organizationId,
                 'subject_key' => $subjectKey,
                 'execution_id' => $executionId,
@@ -108,6 +111,19 @@ final class MonthlyHostedUsageLedger
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+            if ($inserted !== 1) {
+                // Two different seat/month locks can race on the global execution
+                // uniqueness key. Never increment a losing reservation.
+                $existing = DB::table('codebridge_usage_executions')
+                    ->where('organization_id', $organizationId)
+                    ->where('execution_id', $executionId)
+                    ->first();
+                if ($existing === null || $existing->subject_key !== $subjectKey || $existing->period_start_utc !== $period) {
+                    throw new DomainException('CODEBRIDGE_MONTHLY_EXECUTION_REPLAY_CONFLICT');
+                }
+
+                return $this->summary($period, $limit, $completed, $reserved, (string) $existing->state);
+            }
             DB::table('codebridge_usage_periods')->where('id', $counter->id)
                 ->update(['reserved_calls' => $reserved + 1, 'updated_at' => now()]);
 
@@ -161,6 +177,10 @@ final class MonthlyHostedUsageLedger
 
             $completed = (int) $counter->completed_calls;
             $reserved = (int) $counter->reserved_calls;
+            $limit = (int) $counter->monthly_limit;
+            if ($completed < 0 || $reserved < 0 || $completed > $limit || $reserved > $limit - $completed) {
+                throw new DomainException('CODEBRIDGE_MONTHLY_COUNTER_CONFLICT');
+            }
             if ($current->state === 'completed') {
                 return $this->summary($entry->period_start_utc, (int) $counter->monthly_limit, $completed, $reserved, 'completed');
             }

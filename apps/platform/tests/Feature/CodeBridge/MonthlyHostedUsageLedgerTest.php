@@ -175,6 +175,34 @@ final class MonthlyHostedUsageLedgerTest extends TestCase
         $this->assertDatabaseCount('kslp_licenses', 0);
     }
 
+    public function test_inconsistent_monthly_counter_cannot_reserve_or_complete(): void
+    {
+        $ledger = app(MonthlyHostedUsageLedger::class);
+        $organization = (string) Str::uuid();
+        $execution = (string) Str::uuid();
+        $ledger->reserveTrusted($organization, 'account', $execution, 'community', $this->month());
+        DB::table('codebridge_usage_periods')->where('organization_id', $organization)
+            ->update(['completed_calls' => 10000, 'reserved_calls' => 1]);
+
+        foreach ([
+            fn () => $ledger->reserveTrusted($organization, 'account', (string) Str::uuid(), 'community', $this->month()),
+            fn () => $ledger->completeTrusted($organization, 'account', $execution, true),
+        ] as $action) {
+            try {
+                $action();
+                $this->fail('An inconsistent quota counter must fail closed.');
+            } catch (DomainException $e) {
+                $this->assertSame('CODEBRIDGE_MONTHLY_COUNTER_CONFLICT', $e->getMessage());
+            }
+        }
+
+        $this->assertDatabaseCount('codebridge_usage_executions', 1);
+        $this->assertDatabaseHas('codebridge_usage_executions', [
+            'execution_id' => $execution,
+            'state' => 'reserved',
+        ]);
+    }
+
     public function test_internal_snapshot_is_seat_scoped_and_never_a_live_meter(): void
     {
         $ledger = app(MonthlyHostedUsageLedger::class);
