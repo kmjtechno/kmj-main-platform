@@ -9,5 +9,5 @@ return [
     'publish_alternative' => (bool) env('KMJ_MAIL_INBOUND_PILOT_PUBLISH_ALTERNATIVE', false),
     'owner_id' => (int) env('KMJ_MAIL_INBOUND_PILOT_OWNER_ID', 0),
     'secret_hex' => env('KMJ_MAIL_INBOUND_PILOT_SECRET_HEX', ''),
-    'recipient' => 'mail-pilot@kmjtechno.com',
+    'recipient' => env('KMJ_MAIL_INBOUND_PILOT_RECIPIENT', 'mail-pilot@kmjtechno.com'),
 ];

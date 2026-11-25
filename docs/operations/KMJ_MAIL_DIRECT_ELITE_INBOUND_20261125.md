@@ -32,3 +32,7 @@ This is a pilot: strict plain/approved alternative projection only. Raw MIME enc
 ## Acceptance evidence
 
 Require real external TCP25 and SMTP, no open relay, exact known-recipient rejection, durable queue/quarantine, private Inbox, spam verdict, delivery retry/deduplication, recovery rehearsal, outbound regression and actual recipient receipt. No claims of complete two-way email before these gates. Source CI is not proof of host activation.
+
+## Exact info mailbox follow-up (source only)
+
+The Postfix adapter may sign either the historical pilot address or `info@kmjtechno.com` as supplied by the actual SMTP envelope. The application accepts exactly one owner-selected recipient via `KMJ_MAIL_INBOUND_PILOT_RECIPIENT`, defaults to the historical pilot, and rejects all other configured or caller-supplied addresses. Do not rewrite info to pilot. The Postfix accepted-recipient map must match the chosen exact address; no catch-all or external relay. The old Cloudflare worker remains pilot-only and must not be activated. No environment, DNS, listener, mailbox or publication change is made by this source change. Independent ingress, security, backup/restore, spam and real delivery gates remain required.

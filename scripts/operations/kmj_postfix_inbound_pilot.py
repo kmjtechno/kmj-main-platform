@@ -13,6 +13,7 @@ import time
 import uuid
 
 RECIPIENT = "mail-pilot@kmjtechno.com"
+RECIPIENTS = frozenset({RECIPIENT, "info@kmjtechno.com"})
 HOST = "kmjtechno.com"
 PATH = "/api/kmj-mail/inbound/pilot"
 SECRET_PATH = "/etc/kmj-mail-inbound/pilot.hex"
@@ -37,17 +38,19 @@ def load_key():
     return bytes.fromhex(encoded.decode("ascii").strip())
 
 
-def headers_for(raw, sender, key, event=None, timestamp=None):
+def headers_for(raw, sender, key, event=None, timestamp=None, *, recipient=RECIPIENT):
+    if recipient not in RECIPIENTS:
+        raise ValueError("unsupported recipient")
     event = event or str(uuid.uuid4())
     timestamp = timestamp or str(int(time.time()))
     digest = hashlib.sha256(raw).hexdigest()
-    signed = "\n".join(("kmj-inbound-v1", event, timestamp, RECIPIENT, sender, digest))
+    signed = "\n".join(("kmj-inbound-v1", event, timestamp, recipient, sender, digest))
     signature = hmac.new(key, signed.encode("ascii"), hashlib.sha256).hexdigest()
     return {
         "Content-Type": "message/rfc822",
         "X-KMJ-Mail-Event": event,
         "X-KMJ-Mail-Timestamp": timestamp,
-        "X-KMJ-Mail-Recipient": RECIPIENT,
+        "X-KMJ-Mail-Recipient": recipient,
         "X-KMJ-Mail-Envelope-From": sender,
         "X-KMJ-Mail-Signature": signature,
     }
@@ -68,7 +71,10 @@ def deliver(args, stream, key_loader=load_key, receiver=submit):
     # Postfix supplies exactly two single argv values (no shell).
     # Null reverse-path is the literal empty value, not a fabricated sender.
     if (len(args) != 2 or not args[0].startswith("sender=")
-            or args[1] != "recipient=" + RECIPIENT):
+            or not args[1].startswith("recipient=")):
+        return TEMPFAIL
+    recipient = args[1][len("recipient="):]
+    if recipient not in RECIPIENTS:
         return TEMPFAIL
     sender = args[0][len("sender="):]
     if len(sender) > 254 or (sender and not re.fullmatch(
@@ -81,7 +87,7 @@ def deliver(args, stream, key_loader=load_key, receiver=submit):
         key = key_loader()
         if not isinstance(key, bytes) or len(key) != 32:
             return TEMPFAIL
-        status, receipt = receiver(raw, headers_for(raw, sender, key))
+        status, receipt = receiver(raw, headers_for(raw, sender, key, recipient=recipient))
         if status not in (200, 201) or len(receipt) > MAX_RECEIPT:
             return TEMPFAIL
         parsed = json.loads(receipt)
