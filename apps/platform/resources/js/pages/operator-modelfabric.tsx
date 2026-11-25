@@ -480,17 +480,17 @@ function ConnectGuide({
     token: string | null | undefined;
 }) {
     const baseUrl = `${origin}/api/modelfabric/v1`;
-    const key = token ?? '<your token>';
+    // Keep the one-time bearer in the explicit copy row, never in code samples.
     const snippets: { id: string; label: string; code: string }[] = [
         {
             id: 'sdk',
             label: 'Python (OpenAI SDK)',
-            code: `from openai import OpenAI\n\nclient = OpenAI(base_url="${baseUrl}", api_key="${key}")\nreply = client.chat.completions.create(\n    model="modelfabric-auto",\n    messages=[{"role": "user", "content": "ping"}],\n    stream=True,\n)`,
+            code: `import os\nfrom openai import OpenAI\n\nclient = OpenAI(base_url="${baseUrl}", api_key=os.environ["KMJ_MODELFABRIC_TOKEN"])\nreply = client.chat.completions.create(\n    model="modelfabric-auto",\n    messages=[{"role": "user", "content": "ping"}],\n)\nprint(reply.choices[0].message.content)`,
         },
         {
             id: 'curl',
-            label: 'curl',
-            code: `curl ${baseUrl}/chat/completions \\\n  -H "Authorization: Bearer ${key}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"model":"modelfabric-auto","messages":[{"role":"user","content":"ping"}]}'`,
+            label: 'curl (read-only model check)',
+            code: `curl --fail-with-body "${baseUrl}/models" \\\n  -H "Authorization: Bearer $KMJ_MODELFABRIC_TOKEN"`,
         },
     ];
 
@@ -498,10 +498,10 @@ function ConnectGuide({
         <div className="mt-4 space-y-3" data-testid="modelfabric-connect-guide">
             <p className="text-sm font-black">Connect in 30 seconds</p>
             <p className="text-muted-foreground text-xs">
-                Works with any OpenAI-compatible app or IDE (custom endpoint or
-                &ldquo;OpenAI-compatible&rdquo; provider). Paste these three
-                values; the model is always modelfabric-auto and streaming is
-                supported.
+                Use a client that supports custom OpenAI-compatible text chat
+                endpoints. The model is always modelfabric-auto. Streaming
+                replays completed responses; native Responses, tool calling,
+                vision and embedding APIs are not available here yet.
             </p>
             <div className="grid gap-2 md:grid-cols-3">
                 <CopyRow label="Base URL" value={baseUrl} />
@@ -513,6 +513,12 @@ function ConnectGuide({
                     }
                 />
             </div>
+            <p className="text-muted-foreground text-xs">
+                Set KMJ_MODELFABRIC_TOKEN in your client&apos;s private environment
+                or credential store. Samples never contain your actual token.
+                First run the read-only model check; do not paste credentials
+                into source files or shell history.
+            </p>
             {snippets.map((snippet) => (
                 <details key={snippet.id} className="rounded-xl border p-2">
                     <summary className="cursor-pointer text-xs font-bold">
@@ -525,7 +531,7 @@ function ConnectGuide({
             ))}
             <p className="text-muted-foreground text-xs">
                 Optional: send an X-ModelFabric-Session header (any short id) to
-                keep one conversation on the same route.
+                prefer the previous eligible route for that conversation.
             </p>
         </div>
     );
