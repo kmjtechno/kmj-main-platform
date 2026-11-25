@@ -27,6 +27,37 @@ final class JmapReadOnlyTransport
      */
     public function mailboxes(string $expectedUsername, #[\SensitiveParameter] string $token): array
     {
+        $session = $this->authenticatedSession($expectedUsername, $token);
+
+        $contract = new JmapMailboxContract;
+        $account = $contract->primaryMailAccount($session);
+        $response = $this->request('POST', $account['apiUrl'], $token, $contract->mailboxGet($session));
+
+        return (new JmapMailboxResponse)->parse($session, $response);
+    }
+
+    /**
+     * @return array{ids: list<string>, position: int, total: int}
+     */
+    public function inboxPage(string $expectedUsername, #[\SensitiveParameter] string $token, int $position = 0): array
+    {
+        if ($position < 0 || $position > 40000) {
+            throw new UnexpectedValueException('Invalid KMJ Inbox position.');
+        }
+
+        $session = $this->authenticatedSession($expectedUsername, $token);
+        $contract = new JmapMailboxContract;
+        $account = $contract->primaryMailAccount($session);
+        $mailboxes = $this->request('POST', $account['apiUrl'], $token, $contract->mailboxGet($session));
+        $query = new JmapInboxQuery;
+        $response = $this->request('POST', $account['apiUrl'], $token, $query->request($session, $mailboxes, $position));
+
+        return $query->parse($session, $response, $position);
+    }
+
+    /** @return array<string, mixed> */
+    private function authenticatedSession(string $expectedUsername, #[\SensitiveParameter] string $token): array
+    {
         if ($expectedUsername === '' || strlen($expectedUsername) > 320
             || preg_match('/[\x00-\x1F\x7F]/', $expectedUsername) === 1
             || preg_match('/\A[A-Za-z0-9._~+\/-]{1,4096}=*\z/D', $token) !== 1
@@ -39,11 +70,7 @@ final class JmapReadOnlyTransport
             throw new UnexpectedValueException('KMJ mailbox identity mismatch.');
         }
 
-        $contract = new JmapMailboxContract;
-        $account = $contract->primaryMailAccount($session);
-        $response = $this->request('POST', $account['apiUrl'], $token, $contract->mailboxGet($session));
-
-        return (new JmapMailboxResponse)->parse($session, $response);
+        return $session;
     }
 
     /**

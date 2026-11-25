@@ -68,6 +68,41 @@ final class JmapReadOnlyTransportTest extends TestCase
         $transport->mailboxes('owner@example.test', 'test-token');
     }
 
+    public function test_inbox_transport_derives_folder_and_reads_only_validated_page(): void
+    {
+        $history = [];
+        $stack = HandlerStack::create(new MockHandler([
+            $this->session(),
+            new Response(200, ['Content-Type' => 'application/json'], '{"methodResponses":[["Mailbox/get",{"accountId":"a1","state":"s1","list":[{"id":"inbox1","name":"Inbox","parentId":null,"role":"inbox","sortOrder":0,"totalEmails":1,"unreadEmails":1}],"notFound":[]},"mailboxes"]]}'),
+            new Response(200, ['Content-Type' => 'application/json'], '{"methodResponses":[["Email/query",{"accountId":"a1","queryState":"q1","position":0,"ids":["e1"],"total":1},"inbox-query"]]}'),
+        ]));
+        $stack->push(Middleware::history($history));
+        $transport = new JmapReadOnlyTransport(new Client(['handler' => $stack]));
+
+        self::assertSame(['ids' => ['e1'], 'position' => 0, 'total' => 1], $transport->inboxPage('owner@example.test', 'test-token'));
+        self::assertCount(3, $history);
+        self::assertSame('https://mail.kmjtechno.com/jmap/', (string) $history[2]['request']->getUri());
+        $request = json_decode((string) $history[2]['request']->getBody(), true, 32, JSON_THROW_ON_ERROR);
+        self::assertSame('Email/query', $request['methodCalls'][0][0]);
+        self::assertSame(['inMailbox' => 'inbox1'], $request['methodCalls'][0][1]['filter']);
+        self::assertSame('a1', $request['methodCalls'][0][1]['accountId']);
+    }
+
+    public function test_inbox_invalid_position_never_makes_request(): void
+    {
+        $history = [];
+        $stack = HandlerStack::create(new MockHandler([]));
+        $stack->push(Middleware::history($history));
+        $transport = new JmapReadOnlyTransport(new Client(['handler' => $stack]));
+
+        try {
+            $transport->inboxPage('owner@example.test', 'test-token', -1);
+            self::fail('Invalid Inbox position accepted.');
+        } catch (UnexpectedValueException) {
+            self::assertSame([], $history);
+        }
+    }
+
     private function session(): Response
     {
         $mail = 'urn:ietf:params:jmap:mail';
