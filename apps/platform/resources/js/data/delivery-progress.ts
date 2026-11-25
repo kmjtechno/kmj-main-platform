@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-safe-client-connect-20261125',
+        title: 'ModelFabric: safer client onboarding and accurate model preflight',
+        state: 'active',
+        detail: 'Source-only: SDK examples use a private environment credential instead of embedding the issued token. Read-only model check matches private-source coding capability and documents actual chat protocol support.',
+        evidence:
+            'Source contract tests and exact-head CI pending. Native Responses, tool calling and real provider inference are not claimed; no deployment.',
+    },
+    {
         id: 'kmj-mail-enterprise-theme-suite-20261125',
         title: 'KMJ Mail shared enterprise branding and default theme selection',
         state: 'active',

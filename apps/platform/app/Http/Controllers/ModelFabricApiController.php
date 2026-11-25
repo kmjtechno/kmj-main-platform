@@ -32,7 +32,8 @@ final class ModelFabricApiController extends Controller
     public function models(Request $request): JsonResponse
     {
         $token = $this->token($request);
-        $plan = $this->router->plan($token->organization_id, 'chat', $token->private_source);
+        $capability = $token->private_source ? 'code' : 'chat';
+        $plan = $this->router->plan($token->organization_id, $capability, $token->private_source);
 
         return response()->json([
             'object' => 'list',
@@ -44,8 +45,14 @@ final class ModelFabricApiController extends Controller
     public function chat(Request $request): JsonResponse|StreamedResponse
     {
         $token = $this->token($request);
+        // Unsupported controls must not be silently discarded before a paid-or-free
+        // upstream request. In particular, tools and output limits change semantics.
+        if (array_diff(array_keys($request->all()), ['messages', 'stream', 'model']) !== []) {
+            return $this->error(400, 'unsupported_parameter', 'Only text chat messages, model and stream are supported.');
+        }
         $data = $request->validate([
             'messages' => ['required', 'array', 'min:1', 'max:'.self::MAX_MESSAGES],
+            'messages.*' => ['required', 'array:role,content'],
             'messages.*.role' => ['required', Rule::in(['system', 'user', 'assistant'])],
             'messages.*.content' => ['required', 'string', 'max:'.self::MAX_CHARS],
             'stream' => ['sometimes', 'boolean'],
