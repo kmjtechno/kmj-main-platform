@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-team-capacity-allocation-20261125',
+        title: 'CodeBridge commercial Team capacity and allocation source',
+        state: 'active',
+        detail: 'SOURCE ONLY: empty order/entitlement/license-linked capacity registry and serialized allocator. Require exact confirmed order, fulfilled entitlement, matching live settlement evidence and verified member; deny absent capacity.',
+        evidence:
+            'Missing-capacity regression and reversible schema. Live reconciler, approved offer snapshot writer, refund/reversal enforcement, allocation concurrency acceptance and gateway integration remain pending; no live billing or dispatch enabled.',
+    },
+    {
         id: 'codebridge-internal-seat-proof-issuer-20261125',
         title: 'CodeBridge internal signed seat proof issuance',
         state: 'active',
