@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-owner-signer-proof-20261125',
+        title: 'CodeBridge owner-confirmed signer enrollment',
+        state: 'active',
+        detail: 'SOURCE ONLY: password-confirmed owner session issues a short-lived scoped nonce and verifies device Ed25519 proof before immutable key pinning.',
+        evidence:
+            'Default-off single-tenant pilot only. No production enrollment, paid Team seat, full metering or deployment claim.',
+    },
+    {
         id: 'codebridge-pilot-receipt-dashboard-20261125',
         title: 'CodeBridge signed pilot reconciliation and dashboard',
         state: 'active',

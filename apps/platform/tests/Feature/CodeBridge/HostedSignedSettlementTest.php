@@ -123,6 +123,43 @@ final class HostedSignedSettlementTest extends TestCase
         self::assertNull($snapshot->forOwner($owner, $org));
     }
 
+    public function test_owner_signer_enrollment_requires_fresh_proof_and_consumes_challenge(): void
+    {
+        $owner = User::factory()->create(['email_verified_at' => now()]);
+        $org = $this->tenant($owner, 'desk-a', 'proj-a');
+        config()->set('codebridge.enabled', true);
+        config()->set('codebridge.hosted_metering_pilot_enabled', true);
+        config()->set('codebridge.hosted_metering_pilot_tenant', $org);
+        $path = '/services/kmj-codebridge/organizations/'.$org.'/devices/desk-a/receipt-signer';
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()]);
+        $challenge = $this->postJson($path.'/challenge')->assertOk()->json();
+        $pair = sodium_crypto_sign_keypair();
+        $public = base64_encode(sodium_crypto_sign_publickey($pair));
+        $message = implode("\n", [
+            'KMJ_CODEBRIDGE_SIGNER_ENROLLMENT_V1',
+            $org,
+            'desk-a',
+            $challenge['activation_id'],
+            $challenge['credential_id'],
+            (string) $owner->getKey(),
+            $challenge['nonce'],
+            (string) $challenge['expires_at'],
+            $public,
+            '',
+        ]);
+        $input = [
+            'public_key' => $public,
+            'signature' => base64_encode(sodium_crypto_sign_detached($message, sodium_crypto_sign_secretkey($pair))),
+            'confirm' => 'APPROVE_DEVICE_RECEIPT_SIGNER',
+        ];
+        $this->postJson($path.'/confirm', $input)->assertOk()->assertExactJson(['enrollment' => 'PINNED']);
+        $this->postJson($path.'/confirm', $input)->assertConflict();
+        self::assertDatabaseHas('codebridge_receipt_signers', ['public_key' => $public]);
+        $this->postJson($path.'/challenge')->assertOk();
+        $this->postJson($path.'/confirm', $input)->assertConflict();
+        $this->assertDatabaseCount('codebridge_receipt_signers', 1);
+    }
+
     public function test_foreign_owner_cannot_pin_a_key(): void
     {
         $owner = User::factory()->create(['email_verified_at' => now()]);
