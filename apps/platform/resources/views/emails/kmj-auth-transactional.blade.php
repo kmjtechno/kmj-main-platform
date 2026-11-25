@@ -80,7 +80,7 @@
                             </table>
                         </td>
                     </tr>
-@include('emails.partials.kmj-enterprise-footer', ['footerNotice' => 'Official account-security communication from KMJ TECHNO. Verify the sender domain before following security links.'])
+@include('emails.partials.kmj-enterprise-footer', ['footerNotice' => 'PRIVATE ACCOUNT COMMUNICATION — Official account-security communication from KMJ TECHNO. Verify the sender domain before following security links.'])
                     <tr>
                         <td align="center" style="padding:22px 13px;color:#7b8798;font-size:11px;line-height:18px;">&copy; {{ date('Y') }} KMJ TECHNO. Automated service notification.</td>
                     </tr>
