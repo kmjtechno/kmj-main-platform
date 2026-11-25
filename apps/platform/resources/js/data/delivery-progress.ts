@@ -10,6 +10,22 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-paid-seat-assignment-registry-20261125',
+        title: 'CodeBridge explicit paid-seat assignment registry',
+        state: 'active',
+        detail: 'SOURCE ONLY: empty KSLP-linked assignment registry and member-scoped read model reject missing, expired, revoked, mismatched tenant, non-Team license or another member assignment.',
+        evidence:
+            'Feature regression and reversible migration; no assignment writer, commercial proof, seat allocation, signer issuance, dispatch or billing activation. Commercial reference retention requires explicit lifecycle review.',
+    },
+    {
+        id: 'codebridge-signed-paid-seat-proof-contract-20261125',
+        title: 'CodeBridge KSLP signed paid-seat proof contract',
+        state: 'active',
+        detail: 'SOURCE ONLY: verify canonical short-lived Ed25519 proof bound to current tenant, membership, user, license, seat and assignment revision with a separately pinned KSLP key. Device allowance is not a paid seat.',
+        evidence:
+            'Unit regression for scope mismatch, revision, expiry, wrong key and audience. Commercial assignment persistence, issuer, revocation authority, gateway dispatch integration and production acceptance remain pending; no seats or billing enabled.',
+    },
+    {
         id: 'codebridge-monthly-ledger-invariants-20261125',
         title: 'CodeBridge monthly ledger counter and replay integrity',
         state: 'active',
