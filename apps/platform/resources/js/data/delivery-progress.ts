@@ -13,37 +13,29 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'kmj-mail-jmap-owner-inbox-ui-20261125',
         title: 'KMJ Mail: explicit owner Inbox summary panel',
         state: 'active',
-        detail:
-            'Read-only Inbox summaries behind the default-off owner pilot.',
-        evidence:
-            'Source-only UI; live mailbox and browser qualification pending.',
+        detail: 'Explicit read-only Inbox panel behind owner pilot.',
+        evidence: 'Source-only UI; live and browser QA pending.',
     },
     {
         id: 'kmj-mail-jmap-inbox-metadata-20261125',
         title: 'KMJ Mail: bounded Inbox metadata',
         state: 'active',
-        detail:
-            'Account-bound message summary validation, query-order preservation and explicit missing IDs.',
-        evidence:
-            'Source and synthetic tests only; no live mail or deployment.',
+        detail: 'Account-bound Inbox summaries and exact ID validation.',
+        evidence: 'Synthetic tests only; no live mail or deployment.',
     },
     {
         id: 'kmj-mail-jmap-inbox-summary-20261125',
         title: 'KMJ Mail: authenticated Inbox summary transport',
         state: 'active',
-        detail:
-            'Same-session Inbox discovery, query and metadata retrieval with empty-page handling.',
-        evidence:
-            'Mock HTTP tests added; live mailbox qualification pending.',
+        detail: 'Same-session Inbox discovery, query and metadata retrieval.',
+        evidence: 'Mock HTTP tests; live qualification pending.',
     },
     {
         id: 'kmj-mail-jmap-owner-endpoint-20261125',
         title: 'KMJ Mail: default-off owner Inbox endpoint',
         state: 'active',
-        detail:
-            'Owner-bound read-only endpoint with confirmed authentication, throttling and no-store responses.',
-        evidence:
-            'Synthetic denial tests added; no live server access or activation.',
+        detail: 'Owner-only read endpoint with throttling and no-store.',
+        evidence: 'Synthetic denial tests; no live activation.',
     },
     {
         id: 'kmj-mail-jmap-inbox-transport-20261125',
