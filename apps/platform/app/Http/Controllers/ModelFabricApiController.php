@@ -32,7 +32,8 @@ final class ModelFabricApiController extends Controller
     public function models(Request $request): JsonResponse
     {
         $token = $this->token($request);
-        $plan = $this->router->plan($token->organization_id, 'chat', $token->private_source);
+        $capability = $token->private_source ? 'code' : 'chat';
+        $plan = $this->router->plan($token->organization_id, $capability, $token->private_source);
 
         return response()->json([
             'object' => 'list',
