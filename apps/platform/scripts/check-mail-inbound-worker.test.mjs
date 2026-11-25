@@ -7,7 +7,9 @@ const recipient = 'mail-pilot@kmjtechno.com';
 const sender = 'sender@example.net';
 const secret = '0123456789abcdef'.repeat(4);
 const env = { KMJ_MAIL_INBOUND_PILOT_SECRET_HEX: secret };
-const raw = Buffer.from('From: sender@example.net\r\nSubject: Pilot\r\n\r\nTest.');
+const raw = Buffer.from(
+    'From: sender@example.net\r\nSubject: Pilot\r\n\r\nTest.',
+);
 
 function message(overrides = {}) {
     const rejections = [];
