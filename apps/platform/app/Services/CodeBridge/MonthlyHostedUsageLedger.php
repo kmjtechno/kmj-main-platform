@@ -74,6 +74,12 @@ final class MonthlyHostedUsageLedger
                 throw new DomainException('CODEBRIDGE_MONTHLY_PLAN_SNAPSHOT_CONFLICT');
             }
 
+            $completed = (int) $counter->completed_calls;
+            $reserved = (int) $counter->reserved_calls;
+            if ($completed < 0 || $reserved < 0 || $completed > $limit || $reserved > $limit - $completed) {
+                throw new DomainException('CODEBRIDGE_MONTHLY_COUNTER_CONFLICT');
+            }
+
             $existing = DB::table('codebridge_usage_executions')
                 ->where('organization_id', $organizationId)
                 ->where('execution_id', $executionId)
@@ -93,11 +99,6 @@ final class MonthlyHostedUsageLedger
                 );
             }
 
-            $completed = (int) $counter->completed_calls;
-            $reserved = (int) $counter->reserved_calls;
-            if ($completed < 0 || $reserved < 0 || $completed > $limit || $reserved > $limit - $completed) {
-                throw new DomainException('CODEBRIDGE_MONTHLY_COUNTER_CONFLICT');
-            }
             if ($completed + $reserved >= $limit) {
                 throw new DomainException('CODEBRIDGE_MONTHLY_REMOTE_TOOL_CALL_LIMIT_REACHED');
             }

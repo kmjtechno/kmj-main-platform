@@ -223,6 +223,25 @@ final class HostedSignedSettlementTest extends TestCase
         $service->issueSignerChallenge($owner, $org, 'desk-a');
     }
 
+    public function test_team_device_license_alone_cannot_authorize_a_paid_seat(): void
+    {
+        $owner = User::factory()->create(['email_verified_at' => now()]);
+        $org = $this->tenant($owner, 'desk-a', 'proj-a');
+        $service = app(HostedSignedSettlement::class);
+        $pair = sodium_crypto_sign_keypair();
+        $service->pinApprovedSigner($owner, $org, 'desk-a', base64_encode(sodium_crypto_sign_publickey($pair)));
+        DB::table('kslp_licenses')->where('customer_id', $org)->update(['plan' => 'team']);
+
+        try {
+            $service->reserveForOwner($owner, $org, 'desk-a', 'proj-a', (string) Str::uuid(), str_repeat('a', 64));
+            self::fail('A device license must not be treated as a paid human seat.');
+        } catch (DomainException $exception) {
+            self::assertSame('CODEBRIDGE_MONTHLY_PLAN_UNAVAILABLE', $exception->getMessage());
+        }
+        $this->assertDatabaseCount('codebridge_receipt_bindings', 0);
+        $this->assertDatabaseCount('codebridge_usage_executions', 0);
+    }
+
     public function test_foreign_owner_cannot_pin_a_key(): void
     {
         $owner = User::factory()->create(['email_verified_at' => now()]);
