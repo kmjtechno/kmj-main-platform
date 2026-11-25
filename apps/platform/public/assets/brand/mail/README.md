@@ -1,0 +1,3 @@
+# Approved KMJ enterprise email artwork
+
+Import the six approved theme folders and `manifest.json` from the owner-approved `KMJ-approved-email-artwork.zip` here without resampling or renaming. The expected SHA-256 of the manifest is `a728f66d44a347de5eac6372464e83dd7f060b3b1acf894a232a75635026e11a`. The existing email safety workflow verifies each of the 42 asset hashes and sizes. Subject, body, signature, actual hyperlinks and security notices stay live HTML. Artwork includes conceptual building imagery and is not proof of office location. Do not claim verified sender or successful delivery based on artwork. No production deployment until complete visual acceptance.
