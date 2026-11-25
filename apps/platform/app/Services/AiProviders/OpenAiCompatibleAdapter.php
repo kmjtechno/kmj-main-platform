@@ -135,16 +135,32 @@ final class OpenAiCompatibleAdapter
             return ['ok' => false, 'content' => null, 'error_code' => 'pinning_unavailable'];
         }
 
+        $body = [
+            'model' => $model,
+            'messages' => $messages,
+            'max_tokens' => $strictCodingTokens ?? self::MAX_COMPLETION_TOKENS,
+            'stream' => false,
+        ];
+        if ($strictCodingTokens !== null) {
+            // Independently verify this exact account and model before sending source.
+            // Do not route unsupported providers through the general chat path.
+            if (! (new NativeOpenRouterAdmission($this->guard))->verify($target['base'], $apiKey, $approvedHosts, $model)) {
+                return ['ok' => false, 'content' => null, 'error_code' => 'native_account_unverified'];
+            }
+            $body['provider'] = [
+                'allow_fallbacks' => false,
+                'require_parameters' => true,
+                'data_collection' => 'deny',
+                'zdr' => true,
+                'max_price' => ['prompt' => 0, 'completion' => 0, 'request' => 0, 'image' => 0],
+            ];
+        }
+
         try {
             $response = Http::withOptions([
                 'allow_redirects' => false,
                 'curl' => [CURLOPT_RESOLVE => [$target['host'].':443:'.$target['ip']]],
-            ])->withToken($apiKey)->acceptJson()->timeout(45)->connectTimeout(5)->post($target['base'].'/chat/completions', [
-                'model' => $model,
-                'messages' => $messages,
-                'max_tokens' => $strictCodingTokens ?? self::MAX_COMPLETION_TOKENS,
-                'stream' => false,
-            ]);
+            ])->withToken($apiKey)->acceptJson()->timeout(45)->connectTimeout(5)->post($target['base'].'/chat/completions', $body);
         } catch (ConnectionException) {
             return ['ok' => false, 'content' => null, 'error_code' => 'connection_failed'];
         }
