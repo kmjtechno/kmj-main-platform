@@ -10,6 +10,15 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-mail-jmap-inbox-metadata-20261125',
+        title: 'KMJ Mail: bounded Inbox metadata',
+        state: 'active',
+        detail:
+            'Account-bound message summary validation, query-order preservation and explicit missing IDs.',
+        evidence:
+            'Source and synthetic tests only; no live mail or deployment.',
+    },
+    {
         id: 'kmj-mail-jmap-inbox-transport-20261125',
         title: 'KMJ Mail: authenticated Inbox transport integration',
         state: 'active',
