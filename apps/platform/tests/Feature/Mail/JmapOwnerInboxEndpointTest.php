@@ -71,7 +71,10 @@ final class JmapOwnerInboxEndpointTest extends TestCase
         $this->configure($owner);
         $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()]);
 
-        foreach ([null, '0', true, -1, 40001, [], 0.5] as $position) {
+        foreach ([null, '0', true, -1, 40001, [], 0.5] as $index => $position) {
+            if ($index === 4) {
+                $this->travel(61)->seconds();
+            }
             $this->postJson(route('kmj-mail.jmap-inbox'), ['position' => $position])
                 ->assertUnprocessable()->assertJsonPath('status', 'invalid_position');
         }
@@ -85,7 +88,7 @@ final class JmapOwnerInboxEndpointTest extends TestCase
         $history = [];
         $this->configure($owner);
         $this->installPilot($history, [
-            $this->session(),
+            $this->jmapSessionResponse(),
             new Response(200, ['Content-Type' => 'application/json'], '{"methodResponses":[["Mailbox/get",{"accountId":"a1","state":"s1","list":[{"id":"inbox1","name":"Inbox","parentId":null,"role":"inbox","sortOrder":0,"totalEmails":1,"unreadEmails":1}],"notFound":[]},"mailboxes"]]}'),
             new Response(200, ['Content-Type' => 'application/json'], '{"methodResponses":[["Email/query",{"accountId":"a1","queryState":"q1","position":0,"ids":["e1"],"total":1},"inbox-query"]]}'),
             new Response(200, ['Content-Type' => 'application/json'], '{"methodResponses":[["Email/get",{"accountId":"a1","state":"s1","list":[{"id":"e1","threadId":"t1","receivedAt":"2026-11-25T12:00:00Z","subject":"Synthetic message","from":[{"name":"Sender","email":"sender@example.test"}],"keywords":{},"hasAttachment":false,"bodyValues":{"hidden":{"value":"not exposed"}}}],"notFound":[]},"inbox-metadata"]]}'),
@@ -132,7 +135,7 @@ final class JmapOwnerInboxEndpointTest extends TestCase
         config()->set('kmj-mail-engine.pilot_access_token', 'synthetic-token');
     }
 
-    private function session(): Response
+    private function jmapSessionResponse(): Response
     {
         $mail = 'urn:ietf:params:jmap:mail';
 
