@@ -1061,15 +1061,26 @@
 .kmj-mail-approved-shell .kmj-mail-list .kmj-mail-message-list button {
     padding: 9px 7px;
 }
-.kmj-mail-approved-shell .kmj-mail-list .kmj-mail-message-list button[aria-current='true'] {
+.kmj-mail-approved-shell
+    .kmj-mail-list
+    .kmj-mail-message-list
+    button[aria-current='true'] {
     background: #202d40;
     outline: 1px solid #ad4358;
     box-shadow: inset 3px 0 #dc3450;
 }
-.kmj-mail-approved-shell .kmj-mail-list .kmj-mail-message-list button .truncate {
+.kmj-mail-approved-shell
+    .kmj-mail-list
+    .kmj-mail-message-list
+    button
+    .truncate {
     font-size: 13px;
 }
-.kmj-mail-approved-shell .kmj-mail-list .kmj-mail-message-list button > div:nth-child(2) {
+.kmj-mail-approved-shell
+    .kmj-mail-list
+    .kmj-mail-message-list
+    button
+    > div:nth-child(2) {
     font-size: 14px;
 }
 .kmj-mail-approved-shell .kmj-mail-copilot .kmj-mail-ai-card,
@@ -1087,10 +1098,14 @@
     border-color: #71839f;
 }
 @media (min-width: 901px) {
-    .kmj-mail-approved-shell[data-compose-focus='true'] > .kmj-mail-workspace-grid > .kmj-mail-list {
+    .kmj-mail-approved-shell[data-compose-focus='true']
+        > .kmj-mail-workspace-grid
+        > .kmj-mail-list {
         display: none;
     }
-    .kmj-mail-approved-shell[data-compose-focus='true'] > .kmj-mail-workspace-grid > .kmj-mail-reader {
+    .kmj-mail-approved-shell[data-compose-focus='true']
+        > .kmj-mail-workspace-grid
+        > .kmj-mail-reader {
         grid-column: 2 / 4;
     }
     .kmj-mail-approved-shell > .kmj-mail-workspace-grid > .kmj-mail-copilot {
@@ -1100,15 +1115,21 @@
     }
 }
 @media (max-width: 900px) {
-    .kmj-mail-approved-shell[data-compose-focus='true'] > .kmj-mail-workspace-grid > .kmj-mail-list {
+    .kmj-mail-approved-shell[data-compose-focus='true']
+        > .kmj-mail-workspace-grid
+        > .kmj-mail-list {
         display: none;
     }
-    .kmj-mail-approved-shell[data-compose-focus='true'] > .kmj-mail-workspace-grid > .kmj-mail-reader {
+    .kmj-mail-approved-shell[data-compose-focus='true']
+        > .kmj-mail-workspace-grid
+        > .kmj-mail-reader {
         grid-column: 1 / -1;
         grid-row: 1;
         order: -1;
     }
-    .kmj-mail-approved-shell[data-compose-focus='true'] > .kmj-mail-workspace-grid > .kmj-mail-folders {
+    .kmj-mail-approved-shell[data-compose-focus='true']
+        > .kmj-mail-workspace-grid
+        > .kmj-mail-folders {
         grid-column: 1 / -1;
         grid-row: 2;
     }
@@ -1120,7 +1141,10 @@
     .kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-floating-compose > div {
         padding: 14px;
     }
-    .kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-floating-compose textarea {
+    .kmj-mail-approved-shell
+        .kmj-mail-reader
+        .kmj-mail-floating-compose
+        textarea {
         min-height: 180px;
     }
 }

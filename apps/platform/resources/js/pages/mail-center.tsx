@@ -317,7 +317,9 @@ export default function MailCenter({
         if (busy) return;
         if (
             (recipientEmail || recipientId || subject || body) &&
-            !window.confirm('Close without saving? Your unsaved edits will be lost.')
+            !window.confirm(
+                'Close without saving? Your unsaved edits will be lost.',
+            )
         ) {
             return;
         }
@@ -525,7 +527,9 @@ export default function MailCenter({
             <div
                 data-test="kmj-native-mail"
                 data-view={view}
-                data-compose-focus={view === 'compose' && composerFocused && !composerMinimized}
+                data-compose-focus={
+                    view === 'compose' && composerFocused && !composerMinimized
+                }
                 className="owner-admin-page kmj-admin-shell kmj-mail-approved-shell mx-auto flex w-full max-w-[1720px] min-w-0 flex-col gap-3 px-3 py-4 sm:px-5 lg:px-6"
             >
                 <header
@@ -1521,7 +1525,11 @@ export default function MailCenter({
                                     (composerMinimized ? 'is-minimized' : '')
                                 }
                             >
-                                <div className="kmj-mail-floating-compose" aria-label="Mail composer" role="region">
+                                <div
+                                    className="kmj-mail-floating-compose"
+                                    aria-label="Mail composer"
+                                    role="region"
+                                >
                                     <div className="p-5 sm:p-6">
                                         <div className="kmj-mail-compose-head">
                                             <strong className="flex items-center gap-2 text-sm">
@@ -1536,11 +1544,19 @@ export default function MailCenter({
                                                 {!composerMinimized && (
                                                     <button
                                                         type="button"
-                                                        aria-pressed={composerFocused}
-                                                        onClick={() => setComposerFocused((old) => !old)}
+                                                        aria-pressed={
+                                                            composerFocused
+                                                        }
+                                                        onClick={() =>
+                                                            setComposerFocused(
+                                                                (old) => !old,
+                                                            )
+                                                        }
                                                         className="kmj-mail-focus-toggle rounded-md border px-3 text-xs"
                                                     >
-                                                        {composerFocused ? 'Show message list' : 'Focus composer'}
+                                                        {composerFocused
+                                                            ? 'Show message list'
+                                                            : 'Focus composer'}
                                                     </button>
                                                 )}
                                                 <button
@@ -1752,7 +1768,9 @@ export default function MailCenter({
                                                 </span>
                                             </label>
                                             <p className="text-muted-foreground text-xs leading-5">
-                                                One external recipient per message. CC/BCC and attachments are not supported yet.
+                                                One external recipient per
+                                                message. CC/BCC and attachments
+                                                are not supported yet.
                                             </p>
                                             <p
                                                 role="status"
@@ -1760,7 +1778,8 @@ export default function MailCenter({
                                                 id="kmj-mail-send-status"
                                                 className="kmj-mail-send-status text-sm"
                                             >
-                                                {sendBlockReason ?? 'Ready for your review. Nothing is sent until you choose Send.'}
+                                                {sendBlockReason ??
+                                                    'Ready for your review. Nothing is sent until you choose Send.'}
                                             </p>
                                             <div className="flex flex-wrap items-center justify-end gap-2 border-t border-white/10 pt-3">
                                                 <button
@@ -1768,7 +1787,9 @@ export default function MailCenter({
                                                     onClick={() =>
                                                         submit('send')
                                                     }
-                                                    disabled={sendBlockReason !== null}
+                                                    disabled={
+                                                        sendBlockReason !== null
+                                                    }
                                                     aria-describedby="kmj-mail-send-status"
                                                     className="flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-40"
                                                 >

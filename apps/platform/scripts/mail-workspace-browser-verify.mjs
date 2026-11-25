@@ -152,25 +152,71 @@ try {
                 path: out + '/sent-' + width + '.png',
                 fullPage: true,
             });
-            await page.getByRole('button', { name: 'Compose', exact: true }).click();
-            const composer = page.getByRole('region', { name: 'Mail composer' });
+            await page
+                .getByRole('button', { name: 'Compose', exact: true })
+                .click();
+            const composer = page.getByRole('region', {
+                name: 'Mail composer',
+            });
             await composer.waitFor();
-            assert.equal(await page.locator('.kmj-mail-compose-underlay').count(), 0);
-            assert.equal(await page.locator('.kmj-mail-list').isVisible(), false);
-            await composer.getByRole('textbox', { name: 'External recipient email address' }).fill('qa@example.invalid');
-            await composer.getByRole('textbox', { name: 'Mail subject' }).fill('Synthetic draft');
-            await composer.getByRole('textbox', { name: 'Message body' }).fill('Private test text');
-            assert.equal(await composer.getByRole('button', { name: 'Send email' }).isDisabled(), true);
-            assert.match(await composer.locator('#kmj-mail-send-status').innerText(), /External sending is not activated/);
+            assert.equal(
+                await page.locator('.kmj-mail-compose-underlay').count(),
+                0,
+            );
+            assert.equal(
+                await page.locator('.kmj-mail-list').isVisible(),
+                false,
+            );
+            await composer
+                .getByRole('textbox', {
+                    name: 'External recipient email address',
+                })
+                .fill('qa@example.invalid');
+            await composer
+                .getByRole('textbox', { name: 'Mail subject' })
+                .fill('Synthetic draft');
+            await composer
+                .getByRole('textbox', { name: 'Message body' })
+                .fill('Private test text');
+            assert.equal(
+                await composer
+                    .getByRole('button', { name: 'Send email' })
+                    .isDisabled(),
+                true,
+            );
+            assert.match(
+                await composer.locator('#kmj-mail-send-status').innerText(),
+                /External sending is not activated/,
+            );
             assert.ok((await overflow()) <= 1, 'Composer overflow at ' + width);
-            await page.screenshot({ path: out + '/compose-' + width + '.png', fullPage: true });
-            await composer.getByRole('button', { name: 'Show message list' }).click();
-            assert.equal(await page.locator('.kmj-mail-list').isVisible(), true);
-            assert.equal(await composer.getByRole('textbox', { name: 'Mail subject' }).inputValue(), 'Synthetic draft');
-            await composer.getByRole('button', { name: 'Focus composer' }).click();
-            assert.equal(await page.locator('.kmj-mail-list').isVisible(), false);
+            await page.screenshot({
+                path: out + '/compose-' + width + '.png',
+                fullPage: true,
+            });
+            await composer
+                .getByRole('button', { name: 'Show message list' })
+                .click();
+            assert.equal(
+                await page.locator('.kmj-mail-list').isVisible(),
+                true,
+            );
+            assert.equal(
+                await composer
+                    .getByRole('textbox', { name: 'Mail subject' })
+                    .inputValue(),
+                'Synthetic draft',
+            );
+            await composer
+                .getByRole('button', { name: 'Focus composer' })
+                .click();
+            assert.equal(
+                await page.locator('.kmj-mail-list').isVisible(),
+                false,
+            );
             page.once('dialog', (dialog) => dialog.dismiss());
-            await composer.getByRole('button', { name: 'Close compose window' }).click();
+            await composer
+                .getByRole('button', { name: 'Close compose window' })
+                .click();
             assert.equal(await composer.isVisible(), true);
             assert.deepEqual(mutations, []);
             assert.deepEqual(errors, []);
