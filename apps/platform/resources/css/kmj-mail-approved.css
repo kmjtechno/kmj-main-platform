@@ -1001,3 +1001,126 @@
         gap: 8px;
     }
 }
+
+/* Mail Enterprise V2: focused composition rather than overlaying a thread. */
+.kmj-mail-approved-shell .kmj-mail-reader,
+.kmj-mail-approved-shell .kmj-mail-list,
+.kmj-mail-approved-shell .kmj-mail-folders {
+    box-shadow: none;
+}
+.kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-compose-overlay-layout {
+    min-height: 0;
+    padding: clamp(12px, 2vw, 28px);
+    background: #0e1723;
+}
+.kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-floating-compose {
+    width: 100%;
+    max-width: 960px;
+    margin: 0 auto;
+    border: 1px solid #344156;
+    border-radius: 14px;
+    background: #111c29;
+    box-shadow: none;
+}
+.kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-floating-compose > div {
+    padding: clamp(16px, 2vw, 28px);
+}
+.kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-compose-head {
+    flex-wrap: wrap;
+    margin: 0 0 18px;
+    padding: 0 0 16px;
+    border-bottom: 1px solid #344156;
+    background: transparent;
+}
+.kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-compose-head strong {
+    font-size: 18px;
+}
+.kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-floating-compose label {
+    font-size: 13px;
+    line-height: 1.5;
+}
+.kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-floating-compose input,
+.kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-floating-compose textarea,
+.kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-floating-compose select {
+    font-size: 15px;
+}
+.kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-floating-compose textarea {
+    min-height: 220px;
+    line-height: 1.7;
+}
+.kmj-mail-approved-shell .kmj-mail-send-status {
+    color: #bdcbe0;
+    min-height: 20px;
+}
+.kmj-mail-approved-shell .kmj-mail-list .kmj-mail-message-list {
+    max-height: max(320px, calc(100dvh - 345px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+.kmj-mail-approved-shell .kmj-mail-list .kmj-mail-message-list button {
+    padding: 9px 7px;
+}
+.kmj-mail-approved-shell .kmj-mail-list .kmj-mail-message-list button[aria-current='true'] {
+    background: #202d40;
+    outline: 1px solid #ad4358;
+    box-shadow: inset 3px 0 #dc3450;
+}
+.kmj-mail-approved-shell .kmj-mail-list .kmj-mail-message-list button .truncate {
+    font-size: 13px;
+}
+.kmj-mail-approved-shell .kmj-mail-list .kmj-mail-message-list button > div:nth-child(2) {
+    font-size: 14px;
+}
+.kmj-mail-approved-shell .kmj-mail-copilot .kmj-mail-ai-card,
+.kmj-mail-approved-shell .kmj-mail-copilot .kmj-mail-ai-result {
+    background: #182338;
+    border-color: #45536c;
+}
+.kmj-mail-approved-shell .kmj-mail-copilot .kmj-mail-ai-actions button {
+    background: #162131;
+    border-color: #35445b;
+    font-size: 12px;
+}
+.kmj-mail-approved-shell .kmj-mail-copilot .kmj-mail-ai-actions button:hover {
+    background: #223047;
+    border-color: #71839f;
+}
+@media (min-width: 901px) {
+    .kmj-mail-approved-shell[data-compose-focus='true'] > .kmj-mail-workspace-grid > .kmj-mail-list {
+        display: none;
+    }
+    .kmj-mail-approved-shell[data-compose-focus='true'] > .kmj-mail-workspace-grid > .kmj-mail-reader {
+        grid-column: 2 / 4;
+    }
+    .kmj-mail-approved-shell > .kmj-mail-workspace-grid > .kmj-mail-copilot {
+        max-height: calc(100dvh - 90px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+}
+@media (max-width: 900px) {
+    .kmj-mail-approved-shell[data-compose-focus='true'] > .kmj-mail-workspace-grid > .kmj-mail-list {
+        display: none;
+    }
+    .kmj-mail-approved-shell[data-compose-focus='true'] > .kmj-mail-workspace-grid > .kmj-mail-reader {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        order: -1;
+    }
+    .kmj-mail-approved-shell[data-compose-focus='true'] > .kmj-mail-workspace-grid > .kmj-mail-folders {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+}
+@media (max-width: 700px) {
+    .kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-compose-overlay-layout {
+        padding: 8px;
+    }
+    .kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-floating-compose > div {
+        padding: 14px;
+    }
+    .kmj-mail-approved-shell .kmj-mail-reader .kmj-mail-floating-compose textarea {
+        min-height: 180px;
+    }
+}

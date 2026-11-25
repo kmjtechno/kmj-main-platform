@@ -196,3 +196,13 @@ void test('mail folder reader never substitutes Sent previews and AI is opt-in',
     assert.match(ai, /hidden=\{!expanded\}/);
     assert.match(ai, /consent_to_ai_processing: consent/);
 });
+
+void test('focused mail composer preserves recipients, removes old thread underlay and explains send blockers', () => {
+    const page = read('resources/js/pages/mail-center.tsx');
+    assert.doesNotMatch(page, /kmj-mail-compose-underlay/);
+    assert.match(page, /data-compose-focus=/);
+    assert.match(page, /sendBlockReason/);
+    assert.match(page, /aria-describedby="kmj-mail-send-status"/);
+    assert.match(page, /if \(view !== 'compose'\) startCompose\(\)/);
+    assert.match(page, /Close without saving/);
+});

@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-mail-enterprise-v2-focused-compose-20261125',
+        title: 'KMJ Mail Enterprise V2 focused composition',
+        state: 'active',
+        detail: 'Owner live screenshot showed distracting old-thread underlay, narrow compose form, excessive red and purple and unexplained disabled send. Focused composer replaces the underlay, keeps recipients during AI insertion, shows send blockers and provides independent message scrolling.',
+        evidence:
+            'Synthetic browser checks cover focus/list switching, draft preservation, no-send and five widths. Actual provider connection, incoming delivery and production acceptance remain separate.',
+    },
+    {
         id: 'kmj-mail-enterprise-workspace-20261125',
         title: 'KMJ Mail folder-specific enterprise reading workspace',
         state: 'active',
