@@ -65,6 +65,9 @@ Route::middleware(['auth', 'verified', 'password.confirm'])->group(function (): 
 
     Route::get('operator/mail/smtp', [OwnerNativeSmtpController::class, 'index'])
         ->name('kmj-mail.smtp-settings');
+    Route::post('operator/mail/smtp/credentials', [OwnerNativeSmtpController::class, 'credentials'])
+        ->middleware('throttle:3,10')
+        ->name('kmj-mail.smtp-credentials');
     Route::post('operator/mail/smtp/test', [OwnerNativeSmtpController::class, 'test'])
         ->middleware('throttle:2,1')
         ->name('kmj-mail.smtp-test');
