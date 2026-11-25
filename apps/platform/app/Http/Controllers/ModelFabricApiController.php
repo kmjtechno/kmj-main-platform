@@ -38,7 +38,14 @@ final class ModelFabricApiController extends Controller
         return response()->json([
             'object' => 'list',
             'data' => [['id' => 'modelfabric-auto', 'object' => 'model', 'owned_by' => 'kmj-modelfabric']],
-            'modelfabric' => ['status' => $plan['status'], 'routes' => count($plan['routes'])],
+            'modelfabric' => [
+                'status' => $plan['status'],
+                'routes' => count($plan['routes']),
+                // Derived from the authenticated token, never a client claim.
+                // Counts describe planning only, not available quota or an invoice.
+                'scope' => $token->private_source ? 'private-source-coding' : 'general-chat',
+                'free_routes' => count(array_filter($plan['routes'], static fn (array $route): bool => ($route['cost_class'] ?? null) === 'free')),
+            ],
         ]);
     }
 
