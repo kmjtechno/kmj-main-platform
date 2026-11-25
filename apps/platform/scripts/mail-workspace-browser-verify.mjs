@@ -52,14 +52,26 @@ try {
             });
             const reader = page.locator('.kmj-mail-reader');
             const ai = page.locator('#kmj-ai-copilot');
-            await reader.getByRole('heading', { name: 'Inbox is clear' }).waitFor();
+            await reader
+                .getByRole('heading', { name: 'Inbox is clear' })
+                .waitFor();
             assert.equal(
-                await page.getByText('Synthetic sent-only record', { exact: true }).count(),
+                await page
+                    .getByText('Synthetic sent-only record', { exact: true })
+                    .count(),
                 0,
             );
             assert.equal(await ai.getAttribute('data-expanded'), 'false');
-            assert.equal(await page.locator('#kmj-mail-ai-content').isVisible(), false);
-            assert.equal(await reader.getByRole('button', { name: 'View Sent' }).isVisible(), true);
+            assert.equal(
+                await page.locator('#kmj-mail-ai-content').isVisible(),
+                false,
+            );
+            assert.equal(
+                await reader
+                    .getByRole('button', { name: 'View Sent' })
+                    .isVisible(),
+                true,
+            );
             const overflow = async () => {
                 const state = await page.evaluate(() => ({
                     overflow: document.documentElement.scrollWidth - innerWidth,
@@ -67,38 +79,88 @@ try {
                         .map((node) => ({
                             tag: node.tagName,
                             className: node.getAttribute('class'),
-                            right: Math.round(node.getBoundingClientRect().right),
-                            width: Math.round(node.getBoundingClientRect().width),
+                            right: Math.round(
+                                node.getBoundingClientRect().right,
+                            ),
+                            width: Math.round(
+                                node.getBoundingClientRect().width,
+                            ),
                         }))
-                        .filter((node) => node.right > innerWidth + 1 && node.width > 0)
+                        .filter(
+                            (node) =>
+                                node.right > innerWidth + 1 && node.width > 0,
+                        )
                         .slice(0, 20),
                 }));
                 if (state.overflow > 1) {
-                    console.error('MAIL_LAYOUT_OVERFLOW', width, JSON.stringify(state));
-                    await page.screenshot({ path: out + '/overflow-' + width + '.png', fullPage: true });
+                    console.error(
+                        'MAIL_LAYOUT_OVERFLOW',
+                        width,
+                        JSON.stringify(state),
+                    );
+                    await page.screenshot({
+                        path: out + '/overflow-' + width + '.png',
+                        fullPage: true,
+                    });
                 }
                 return state.overflow;
             };
-            assert.ok(await overflow() <= 1, 'Inbox overflow at ' + width);
-            await page.screenshot({ path: out + '/inbox-' + width + '.png', fullPage: true });
+            assert.ok((await overflow()) <= 1, 'Inbox overflow at ' + width);
+            await page.screenshot({
+                path: out + '/inbox-' + width + '.png',
+                fullPage: true,
+            });
             await ai.getByRole('button', { name: 'Open AI Assistant' }).click();
             assert.equal(await ai.getAttribute('data-expanded'), 'true');
-            assert.equal(await page.locator('#kmj-mail-ai-content').isVisible(), true);
-            assert.ok(await overflow() <= 1, 'Expanded AI overflow at ' + width);
-            await page.screenshot({ path: out + '/ai-' + width + '.png', fullPage: true });
-            await ai.getByRole('button', { name: 'Collapse AI Assistant' }).click();
-            assert.equal(await ai.getAttribute('data-expanded'), 'false');
-            await page.goto(new URL('/mail-workspace.html?folder=sent', base).href, {
-                waitUntil: 'networkidle',
+            assert.equal(
+                await page.locator('#kmj-mail-ai-content').isVisible(),
+                true,
+            );
+            assert.ok(
+                (await overflow()) <= 1,
+                'Expanded AI overflow at ' + width,
+            );
+            await page.screenshot({
+                path: out + '/ai-' + width + '.png',
+                fullPage: true,
             });
-            await reader.getByRole('heading', { name: 'Select a conversation' }).waitFor();
-            assert.equal(await page.getByText('Synthetic sent-only record', { exact: true }).count(), 1);
-            assert.equal(await reader.getByRole('button', { name: 'View Sent' }).count(), 0);
-            assert.ok(await overflow() <= 1, 'Sent overflow at ' + width);
-            await page.screenshot({ path: out + '/sent-' + width + '.png', fullPage: true });
+            await ai
+                .getByRole('button', { name: 'Collapse AI Assistant' })
+                .click();
+            assert.equal(await ai.getAttribute('data-expanded'), 'false');
+            await page.goto(
+                new URL('/mail-workspace.html?folder=sent', base).href,
+                {
+                    waitUntil: 'networkidle',
+                },
+            );
+            await reader
+                .getByRole('heading', { name: 'Select a conversation' })
+                .waitFor();
+            assert.equal(
+                await page
+                    .getByText('Synthetic sent-only record', { exact: true })
+                    .count(),
+                1,
+            );
+            assert.equal(
+                await reader.getByRole('button', { name: 'View Sent' }).count(),
+                0,
+            );
+            assert.ok((await overflow()) <= 1, 'Sent overflow at ' + width);
+            await page.screenshot({
+                path: out + '/sent-' + width + '.png',
+                fullPage: true,
+            });
             assert.deepEqual(mutations, []);
             assert.deepEqual(errors, []);
-            results.push({ width, inbox: 'PASS', ai: 'PASS', sent: 'PASS', providerCalls: 0 });
+            results.push({
+                width,
+                inbox: 'PASS',
+                ai: 'PASS',
+                sent: 'PASS',
+                providerCalls: 0,
+            });
         } finally {
             await page.close();
         }
@@ -106,7 +168,10 @@ try {
 } finally {
     if (browser) await browser.close();
     await server.close();
-    await writeFile(out + '/results.json', JSON.stringify(results, null, 2) + '\n');
+    await writeFile(
+        out + '/results.json',
+        JSON.stringify(results, null, 2) + '\n',
+    );
 }
 assert.equal(results.length, 5);
 console.log('MAIL_WORKSPACE_REAL_COMPONENT=PASS samples=15 SMTP_SEND=NONE');

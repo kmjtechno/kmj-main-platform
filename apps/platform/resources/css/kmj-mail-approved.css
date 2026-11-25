@@ -922,7 +922,8 @@
     }
     .kmj-mail-approved-shell
         .kmj-mail-copilot[data-expanded='false']
-        .kmj-mail-ai-toggle span {
+        .kmj-mail-ai-toggle
+        span {
         display: none;
     }
 }

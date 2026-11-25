@@ -191,7 +191,9 @@ export default function MailAiCopilot({
                 type="button"
                 aria-expanded={expanded}
                 aria-controls="kmj-mail-ai-content"
-                aria-label={expanded ? 'Collapse AI Assistant' : 'Open AI Assistant'}
+                aria-label={
+                    expanded ? 'Collapse AI Assistant' : 'Open AI Assistant'
+                }
                 title={expanded ? 'Collapse AI Assistant' : 'Open AI Assistant'}
                 onClick={() => setExpanded((current) => !current)}
                 className="kmj-mail-ai-toggle flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-fuchsia-400/25 px-2 text-xs font-semibold text-fuchsia-200 hover:bg-fuchsia-500/10"
@@ -264,10 +266,14 @@ export default function MailAiCopilot({
                             Tone
                             <select
                                 value={tone}
-                                onChange={(event) => setTone(event.target.value)}
+                                onChange={(event) =>
+                                    setTone(event.target.value)
+                                }
                                 className="rounded-lg border border-white/15 bg-[#111827] px-2 py-1.5"
                             >
-                                <option value="professional">Professional</option>
+                                <option value="professional">
+                                    Professional
+                                </option>
                                 <option value="formal">Formal</option>
                                 <option value="friendly">Friendly</option>
                                 <option value="firm">Firm</option>
@@ -364,12 +370,16 @@ export default function MailAiCopilot({
                         <input
                             type="checkbox"
                             checked={consent}
-                            onChange={(event) => setConsent(event.target.checked)}
+                            onChange={(event) =>
+                                setConsent(event.target.checked)
+                            }
                             className="mt-1 size-4 shrink-0 accent-fuchsia-500"
                         />
                         I consent to sending my instructions
-                        {mode !== 'compose' ? ' and selected email content' : ''} to
-                        a verified private AI provider for this request.
+                        {mode !== 'compose'
+                            ? ' and selected email content'
+                            : ''}{' '}
+                        to a verified private AI provider for this request.
                     </label>
                     <button
                         type="button"
@@ -413,7 +423,10 @@ export default function MailAiCopilot({
                         Quick Actions
                     </h3>
                     <div className="space-y-1.5">
-                        <button type="button" onClick={() => selectMode('compose')}>
+                        <button
+                            type="button"
+                            onClick={() => selectMode('compose')}
+                        >
                             <FilePenLine size={15} /> नई ईमेल लिखें (AI Compose)
                         </button>
                         <button
@@ -421,7 +434,8 @@ export default function MailAiCopilot({
                             onClick={() => selectMode('explain')}
                             disabled={selectedMessageId === null}
                         >
-                            <ClipboardList size={15} /> ईमेल का हिंदी सार (Summarize)
+                            <ClipboardList size={15} /> ईमेल का हिंदी सार
+                            (Summarize)
                         </button>
                         <button
                             type="button"
@@ -430,9 +444,12 @@ export default function MailAiCopilot({
                         >
                             <MessageCircle size={15} /> Reply सुझाव (Smart Reply)
                         </button>
-                        <button type="button" onClick={() => setShowTools(true)}>
-                            <SlidersHorizontal size={15} /> Professional / Formal /
-                            Friendly
+                        <button
+                            type="button"
+                            onClick={() => setShowTools(true)}
+                        >
+                            <SlidersHorizontal size={15} /> Professional /
+                            Formal / Friendly
                         </button>
                         <a
                             href="/operator/modelfabric"
@@ -498,7 +515,9 @@ export default function MailAiCopilot({
                             <button
                                 type="button"
                                 onClick={() =>
-                                    void navigator.clipboard.writeText(result.text)
+                                    void navigator.clipboard.writeText(
+                                        result.text,
+                                    )
                                 }
                                 className="flex min-h-9 items-center gap-1.5 rounded-lg border border-white/20 px-3 text-xs"
                             >
@@ -508,14 +527,15 @@ export default function MailAiCopilot({
                         </div>
                         <p className="mt-3 flex gap-2 text-[11px] leading-5 text-slate-400">
                             <ShieldCheck className="size-4 shrink-0" />
-                            AI can make mistakes. Check facts, recipients and tone.
-                            AI cannot send your email.
+                            AI can make mistakes. Check facts, recipients and
+                            tone. AI cannot send your email.
                         </p>
                     </div>
                 )}
                 <p className="mt-5 text-[11px] leading-5 text-slate-400">
                     ModelFabric only: verified free routes with documented
-                    no-training handling. No fallback to unknown or paid providers.
+                    no-training handling. No fallback to unknown or paid
+                    providers.
                 </p>
             </div>
         </aside>
