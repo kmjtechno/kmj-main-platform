@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'kmj-mail-jmap-session-foundation-20261125',
+        title: 'KMJ Mail: independent JMAP engine foundation',
+        state: 'active',
+        detail: 'Source-only primary personal mailbox session validation and Mailbox/get request construction with a pinned HTTPS API origin. Existing native mail remains unchanged.',
+        evidence:
+            'Synthetic unit tests added; exact-head CI, authenticated Stalwart session qualification, user-scoped transport, real Inbox delivery and guarded Elite activation remain pending.',
+    },
+    {
         id: 'modelfabric-native-request-admission-ticket-20261125',
         title: 'ModelFabric: one-time request-bound coding admission',
         state: 'active',
