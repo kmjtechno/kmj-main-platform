@@ -480,6 +480,10 @@ function ConnectGuide({
     token: string | null | undefined;
 }) {
     const baseUrl = `${origin}/api/modelfabric/v1`;
+    const protocolHelp =
+        'Custom text chat endpoints only. Streaming replays completed responses; native Responses, tool calling, vision and embeddings are unavailable.';
+    const tokenHelp =
+        'Set KMJ_MODELFABRIC_TOKEN in a private credential store. Samples never contain your token. Run the read-only model check first. Never paste credentials into source or shell history.';
     // Keep the one-time bearer in the explicit copy row, never in code samples.
     const snippets: { id: string; label: string; code: string }[] = [
         {
@@ -497,12 +501,7 @@ function ConnectGuide({
     return (
         <div className="mt-4 space-y-3" data-testid="modelfabric-connect-guide">
             <p className="text-sm font-black">Connect in 30 seconds</p>
-            <p className="text-muted-foreground text-xs">
-                Use a client that supports custom OpenAI-compatible text chat
-                endpoints. The model is always modelfabric-auto. Streaming
-                replays completed responses; native Responses, tool calling,
-                vision and embedding APIs are not available here yet.
-            </p>
+            <p className="text-muted-foreground text-xs">{protocolHelp}</p>
             <div className="grid gap-2 md:grid-cols-3">
                 <CopyRow label="Base URL" value={baseUrl} />
                 <CopyRow label="Model" value="modelfabric-auto" />
@@ -513,12 +512,7 @@ function ConnectGuide({
                     }
                 />
             </div>
-            <p className="text-muted-foreground text-xs">
-                Set KMJ_MODELFABRIC_TOKEN in a private credential store.
-                Samples never contain your actual token. First run the
-                read-only model check. Never paste credentials into source
-                files or shell history.
-            </p>
+            <p className="text-muted-foreground text-xs">{tokenHelp}</p>
             {snippets.map((snippet) => (
                 <details key={snippet.id} className="rounded-xl border p-2">
                     <summary className="cursor-pointer text-xs font-bold">
@@ -531,7 +525,7 @@ function ConnectGuide({
             ))}
             <p className="text-muted-foreground text-xs">
                 Optional: send an X-ModelFabric-Session header (any short id) to
-                prefer the previous eligible route for that conversation.
+                keep one conversation on the same route.
             </p>
         </div>
     );
