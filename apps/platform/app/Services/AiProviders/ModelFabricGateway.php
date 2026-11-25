@@ -40,9 +40,10 @@ final class ModelFabricGateway
 
     /**
      * @param  list<array{role: string, content: string}>  $messages
+     * @param  array{provider_id: string, model: string}|null  $nativeRoute
      * @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string}
      */
-    public function complete(string $organizationId, array $messages, string $capability = 'chat', bool $privateSource = false, ?string $sessionKey = null, bool $strictFreeCloud = false, ?int $maxCodingTokens = null): array
+    public function complete(string $organizationId, array $messages, string $capability = 'chat', bool $privateSource = false, ?string $sessionKey = null, bool $strictFreeCloud = false, ?int $maxCodingTokens = null, ?array $nativeRoute = null): array
     {
         $profile = $this->profiler->classify($messages, $capability);
         if ($strictFreeCloud && ($capability !== 'code' || ! $privateSource || ($maxCodingTokens !== null && ($maxCodingTokens < 1 || $maxCodingTokens > 4096)))) {
@@ -51,6 +52,15 @@ final class ModelFabricGateway
         $plan = $this->router->plan($organizationId, $capability, $privateSource, $strictFreeCloud);
         if ($plan['status'] === ModelFabricRouter::NO_ROUTE) {
             return $this->fail(ModelFabricRouter::NO_ROUTE, 0, $profile);
+        }
+        if ($nativeRoute !== null) {
+            if (! $strictFreeCloud) {
+                return $this->fail('invalid_coding_policy', 0, $profile);
+            }
+            $plan['routes'] = array_values(array_filter($plan['routes'], static fn (array $route): bool => $route['provider_id'] === $nativeRoute['provider_id'] && $route['model'] === $nativeRoute['model']));
+            if ($plan['routes'] === []) {
+                return $this->fail(ModelFabricRouter::NO_ROUTE, 0, $profile);
+            }
         }
         $limits = $this->providerLimits($organizationId);
         $plan['routes'] = $this->scorer->order($plan['routes'], $profile, fn (string $id, string $model): array => [
