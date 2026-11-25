@@ -9,6 +9,8 @@ type Smtp = {
     active: string;
     loopback_ready: boolean;
     brevo_ready: boolean;
+    brevo_credentials_stored: boolean;
+    brevo_server_approved: boolean;
     tested_profile: string | null;
     tested_at: string | null;
     sender: string;
@@ -20,6 +22,8 @@ export default function OperatorMailSmtp({ smtp }: { smtp: Smtp }) {
         smtp.active === 'brevo' ? 'brevo' : 'loopback',
     );
     const [busy, setBusy] = useState(false);
+    const [login, setLogin] = useState('');
+    const [password, setPassword] = useState('');
     const ready =
         profile === 'loopback' ? smtp.loopback_ready : smtp.brevo_ready;
     const flash = page.props.flash;
@@ -65,6 +69,23 @@ export default function OperatorMailSmtp({ smtp }: { smtp: Smtp }) {
             {
                 preserveScroll: true,
                 onFinish: () => setBusy(false),
+            },
+        );
+    };
+
+    const saveCredentials = () => {
+        if (busy || !login || !password) return;
+        setBusy(true);
+        router.post(
+            '/operator/mail/smtp/credentials',
+            { smtp_login: login, password },
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    setBusy(false);
+                    setLogin('');
+                    setPassword('');
+                },
             },
         );
     };
@@ -160,7 +181,9 @@ export default function OperatorMailSmtp({ smtp }: { smtp: Smtp }) {
                             <strong>
                                 {profile === 'loopback'
                                     ? 'No credentials on local hop'
-                                    : 'Server-provisioned credentials'}
+                                    : smtp.brevo_credentials_stored
+                                      ? 'Encrypted owner credentials'
+                                      : 'Server-provisioned credentials'}
                             </strong>
                         </div>
                         <div className="rounded-xl border p-3">
@@ -172,6 +195,64 @@ export default function OperatorMailSmtp({ smtp }: { smtp: Smtp }) {
                             </strong>
                         </div>
                     </div>
+                    {profile === 'brevo' && (
+                        <form
+                            className="space-y-3 rounded-xl border p-4"
+                            onSubmit={(event) => {
+                                event.preventDefault();
+                                saveCredentials();
+                            }}
+                        >
+                            <h2 className="text-sm font-bold">
+                                Brevo SMTP credentials
+                            </h2>
+                            <p className="text-muted-foreground text-xs">
+                                {smtp.brevo_server_approved
+                                    ? 'Server provider approval is present.'
+                                    : 'Server provider approval is still required.'}
+                                {' '}Pause or select local SMTP before rotation.
+                            </p>
+                            <label className="block text-xs">
+                                SMTP login
+                                <input
+                                    type="password"
+                                    autoComplete="off"
+                                    value={login}
+                                    maxLength={254}
+                                    onChange={(event) =>
+                                        setLogin(event.target.value)
+                                    }
+                                    className="bg-background mt-1 block min-h-10 w-full rounded-lg border px-3"
+                                />
+                            </label>
+                            <label className="block text-xs">
+                                SMTP password / key
+                                <input
+                                    type="password"
+                                    autoComplete="new-password"
+                                    value={password}
+                                    maxLength={1024}
+                                    onChange={(event) =>
+                                        setPassword(event.target.value)
+                                    }
+                                    className="bg-background mt-1 block min-h-10 w-full rounded-lg border px-3"
+                                />
+                            </label>
+                            <button
+                                type="submit"
+                                disabled={
+                                    busy ||
+                                    !smtp.installed ||
+                                    smtp.active === 'brevo' ||
+                                    !login ||
+                                    !password
+                                }
+                                className="rounded-lg border px-3 py-2 text-sm font-semibold disabled:opacity-40"
+                            >
+                                Save encrypted credentials
+                            </button>
+                        </form>
+                    )}
                     <p className="text-muted-foreground text-sm">
                         Passwords and keys are never returned to the browser.
                         Remote SMTP requires a server-approved provider account.
