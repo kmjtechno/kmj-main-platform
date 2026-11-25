@@ -338,7 +338,9 @@ export default function CodeBridgeControlCenterHub({
                     </p>
                     {hostedPilotUsage?.status === 'pilot_only' && (
                         <div className="mt-4 rounded-xl border p-4">
-                            <h3 className="font-bold">Signed read-only pilot</h3>
+                            <h3 className="font-bold">
+                                Signed read-only pilot
+                            </h3>
                             <p className="text-muted-foreground mt-1 text-xs">
                                 Non-billable git_status only. Not total usage.
                             </p>
