@@ -15,7 +15,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'active',
         detail: 'Authenticated model discovery exposes server-derived coding or chat token scope and the strictly free planned route count. FreeLLMAPI is not a required runtime for the native integration.',
         evidence:
-            'Controller feature regressions cover scope and route counts. Counts do not prove billing, live quota or inference. Native strict-free generation and live worker acceptance remain pending.',
+            'Controller feature regressions cover scope, route counts and opt-in strict-free cloud routing; credit-limited and custom endpoints are excluded at planning and reservation. Billing, live quota, native CodeBridge transport and worker acceptance remain unverified.',
     },
     {
         id: 'kmj-mail-enterprise-v2-focused-compose-20261125',
