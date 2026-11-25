@@ -178,6 +178,7 @@ export default function MailCenter({
         'primary' | 'team' | 'updates' | 'system'
     >('primary');
     const [composerMinimized, setComposerMinimized] = useState(false);
+    const [composerFocused, setComposerFocused] = useState(true);
     const [search, setSearch] = useState(q);
     const activeSearch = q.trim();
     const [busy, setBusy] = useState(false);
@@ -242,6 +243,7 @@ export default function MailCenter({
         setDraftId(null);
         setReplyId(null);
         setComposerMinimized(false);
+        setComposerFocused(true);
         setView('compose');
     };
 
@@ -273,6 +275,7 @@ export default function MailCenter({
         setDraftId(null);
         setReplyId(latest.id);
         setComposerMinimized(false);
+        setComposerFocused(true);
         setView('compose');
     };
 
@@ -290,22 +293,43 @@ export default function MailCenter({
         setDraftId(selected.id);
         setReplyId(null);
         setComposerMinimized(false);
+        setComposerFocused(true);
         setView('compose');
+    };
+
+    const sendBlockReason = busy
+        ? 'A mail action is in progress.'
+        : recipientType === 'external' &&
+            externalOutbound.state !== 'ready_to_queue'
+          ? 'External sending is not activated. You can save a draft.'
+          : recipientType === 'external' &&
+              !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail.trim())
+            ? 'Enter a valid recipient email address.'
+            : recipientType === 'internal' && !recipientId
+              ? 'Choose an approved colleague.'
+              : !subject.trim()
+                ? 'Enter a subject.'
+                : !body.trim()
+                  ? 'Write your message.'
+                  : null;
+
+    const closeComposer = () => {
+        if (busy) return;
+        if (
+            (recipientEmail || recipientId || subject || body) &&
+            !window.confirm(
+                'Close without saving? Your unsaved edits will be lost.',
+            )
+        ) {
+            return;
+        }
+        setView('mail');
     };
 
     const submit = (action: 'send' | 'draft') => {
         if (busy) return;
         const external = recipientType === 'external';
-        if (
-            action === 'send' &&
-            (!subject.trim() ||
-                !body.trim() ||
-                (external
-                    ? !recipientEmail.trim() ||
-                      externalOutbound.state !== 'ready_to_queue'
-                    : !recipientId))
-        )
-            return;
+        if (action === 'send' && sendBlockReason) return;
 
         const key = clientKey || crypto.randomUUID();
         setClientKey(key);
@@ -422,6 +446,7 @@ export default function MailCenter({
         setDraftId(null);
         setReplyId(null);
         setComposerMinimized(false);
+        setComposerFocused(true);
         setView('compose');
     };
 
@@ -501,6 +526,10 @@ export default function MailCenter({
             <Head title="KMJ Mail · Enterprise inbox and correspondence" />
             <div
                 data-test="kmj-native-mail"
+                data-view={view}
+                data-compose-focus={
+                    view === 'compose' && composerFocused && !composerMinimized
+                }
                 className="owner-admin-page kmj-admin-shell kmj-mail-approved-shell mx-auto flex w-full max-w-[1720px] min-w-0 flex-col gap-3 px-3 py-4 sm:px-5 lg:px-6"
             >
                 <header
@@ -633,7 +662,14 @@ export default function MailCenter({
                     >
                         <button
                             type="button"
-                            onClick={startCompose}
+                            onClick={() => {
+                                if (view === 'compose') {
+                                    setComposerMinimized(false);
+                                    setComposerFocused(true);
+                                } else {
+                                    startCompose();
+                                }
+                            }}
                             className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#e32143] to-[#b91035] px-4 text-sm font-bold text-white shadow-[0_12px_25px_-15px_rgba(240,42,76,0.9)] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
                         >
                             <Pencil className="size-4" /> Compose
@@ -1192,7 +1228,8 @@ export default function MailCenter({
                                                               ))}
                                                     </span>
                                                     <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
-                                                        {item.at.slice(0, 16)}
+                                                        {item.at.slice(5, 10)}{' '}
+                                                        {item.at.slice(11, 16)}
                                                     </span>
                                                 </div>
                                                 {deliveryLabel(
@@ -1488,35 +1525,11 @@ export default function MailCenter({
                                     (composerMinimized ? 'is-minimized' : '')
                                 }
                             >
-                                <div className="kmj-mail-compose-underlay">
-                                    <p className="text-[10px] font-bold tracking-[0.15em] text-red-400 uppercase">
-                                        PRIVATE CONVERSATION
-                                    </p>
-                                    <h2 className="mt-2 text-xl font-extrabold">
-                                        {selectedThread?.items[0]?.subject ??
-                                            'Start a new conversation'}
-                                    </h2>
-                                    <div className="kmj-mail-message-brand mt-6 flex items-center gap-3 rounded-t-xl p-4">
-                                        <img
-                                            src="/assets/brand/kmj-logo-horizontal-readable.svg"
-                                            width="180"
-                                            height="45"
-                                            alt="KMJ TECHNO — INNOVATE | BUILD | SCALE"
-                                            className="h-9 w-auto object-contain"
-                                        />
-                                        <div className="ml-auto text-right text-xs">
-                                            <strong>KMJ Mail Enterprise</strong>
-                                            <small className="block">
-                                                Official correspondence
-                                            </small>
-                                        </div>
-                                    </div>
-                                    <div className="rounded-b-xl border border-t-0 border-white/10 p-5 text-sm leading-7 whitespace-pre-wrap">
-                                        {selectedThread?.items.at(-1)?.body ??
-                                            'Your message appears here after selecting a conversation.'}
-                                    </div>
-                                </div>
-                                <div className="kmj-mail-floating-compose">
+                                <div
+                                    className="kmj-mail-floating-compose"
+                                    aria-label="Mail composer"
+                                    role="region"
+                                >
                                     <div className="p-5 sm:p-6">
                                         <div className="kmj-mail-compose-head">
                                             <strong className="flex items-center gap-2 text-sm">
@@ -1528,6 +1541,24 @@ export default function MailCenter({
                                                       : 'New message'}
                                             </strong>
                                             <div className="flex items-center gap-2">
+                                                {!composerMinimized && (
+                                                    <button
+                                                        type="button"
+                                                        aria-pressed={
+                                                            composerFocused
+                                                        }
+                                                        onClick={() =>
+                                                            setComposerFocused(
+                                                                (old) => !old,
+                                                            )
+                                                        }
+                                                        className="kmj-mail-focus-toggle rounded-md border px-3 text-xs"
+                                                    >
+                                                        {composerFocused
+                                                            ? 'Show message list'
+                                                            : 'Focus composer'}
+                                                    </button>
+                                                )}
                                                 <button
                                                     type="button"
                                                     onClick={() =>
@@ -1553,9 +1584,8 @@ export default function MailCenter({
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    onClick={() =>
-                                                        setView('mail')
-                                                    }
+                                                    onClick={closeComposer}
+                                                    disabled={busy}
                                                     aria-label="Close compose window"
                                                     className="rounded-md border border-white/20 p-1"
                                                 >
@@ -1591,8 +1621,7 @@ export default function MailCenter({
                                                                 : 'text-muted-foreground hover:text-foreground')
                                                         }
                                                     >
-                                                        Email address · Gmail /
-                                                        Outlook / Any
+                                                        External email
                                                     </button>
                                                     <button
                                                         type="button"
@@ -1649,8 +1678,8 @@ export default function MailCenter({
                                                         </strong>
                                                         {externalOutbound.state ===
                                                         'ready_to_queue'
-                                                            ? 'You can queue one external email. Postfix acceptance will appear in Sent; recipient Inbox delivery is not guaranteed.'
-                                                            : 'External sending is not activated for this mailbox. You can save an external draft, but the Send action is disabled until KMJ mail transport and sender authorization are approved.'}
+                                                            ? 'Ready to queue · server acceptance is not inbox delivery.'
+                                                            : 'Sending not activated · drafts are available.'}
                                                     </div>
                                                 </div>
                                             ) : (
@@ -1729,7 +1758,7 @@ export default function MailCenter({
                                                         setBody(e.target.value)
                                                     }
                                                     maxLength={12000}
-                                                    rows={6}
+                                                    rows={10}
                                                     aria-label="Message body"
                                                     placeholder="Write a clear, professional message..."
                                                     className="bg-background mt-2 w-full resize-y rounded-xl border p-4 text-sm leading-6"
@@ -1738,13 +1767,19 @@ export default function MailCenter({
                                                     {body.length}/12,000
                                                 </span>
                                             </label>
-                                            <p className="text-muted-foreground rounded-xl border border-dashed p-3 text-xs leading-5">
-                                                Recipient privacy is enforced.
-                                                This release supports one
-                                                external recipient per message;
-                                                CC/BCC and attachments require
-                                                separately reviewed transport
-                                                and scanning.
+                                            <p className="text-muted-foreground text-xs leading-5">
+                                                One external recipient per
+                                                message. CC/BCC and attachments
+                                                are not supported yet.
+                                            </p>
+                                            <p
+                                                role="status"
+                                                aria-live="polite"
+                                                id="kmj-mail-send-status"
+                                                className="kmj-mail-send-status text-sm"
+                                            >
+                                                {sendBlockReason ??
+                                                    'Ready for your review. Nothing is sent until you choose Send.'}
                                             </p>
                                             <div className="flex flex-wrap items-center justify-end gap-2 border-t border-white/10 pt-3">
                                                 <button
@@ -1753,22 +1788,15 @@ export default function MailCenter({
                                                         submit('send')
                                                     }
                                                     disabled={
-                                                        busy ||
-                                                        (recipientType ===
-                                                        'external'
-                                                            ? !recipientEmail.trim() ||
-                                                              externalOutbound.state !==
-                                                                  'ready_to_queue'
-                                                            : !recipientId) ||
-                                                        !subject.trim() ||
-                                                        !body.trim()
+                                                        sendBlockReason !== null
                                                     }
+                                                    aria-describedby="kmj-mail-send-status"
                                                     className="flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-40"
                                                 >
                                                     <Send className="size-4" />{' '}
                                                     {recipientType ===
                                                     'external'
-                                                        ? 'Queue external email'
+                                                        ? 'Send email'
                                                         : 'Send internally'}
                                                 </button>
                                                 <button
@@ -2330,7 +2358,8 @@ export default function MailCenter({
                         base={base}
                         selectedMessageId={selected?.id ?? null}
                         onUseCompose={(suggestedSubject, suggestedBody) => {
-                            startCompose();
+                            if (view !== 'compose') startCompose();
+                            setComposerMinimized(false);
                             setSubject(suggestedSubject);
                             setBody(suggestedBody);
                         }}
