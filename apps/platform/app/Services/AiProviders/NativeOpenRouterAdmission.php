@@ -22,8 +22,14 @@ final class NativeOpenRouterAdmission
     /** @param list<string> $approvedHosts */
     public function verify(string $baseUrl, string $apiKey, array $approvedHosts, string $model): bool
     {
+        return $this->remainingRequests($baseUrl, $apiKey, $approvedHosts, $model) > 0;
+    }
+
+    /** @param list<string> $approvedHosts */
+    public function remainingRequests(string $baseUrl, string $apiKey, array $approvedHosts, string $model): int
+    {
         if ($baseUrl !== self::BASE || ! self::validModel($model) || ! defined('CURLOPT_RESOLVE')) {
-            return false;
+            return 0;
         }
 
         try {
@@ -34,16 +40,16 @@ final class NativeOpenRouterAdmission
             ])->withToken($apiKey)->acceptJson()->timeout(10)->connectTimeout(5);
             $key = $client->get(self::BASE.'/key');
             if ($key->status() !== 200 || strlen($key->body()) > 65536 || ! self::accountEligible($key->json('data'))) {
-                return false;
+                return 0;
             }
             $catalog = $client->get(self::BASE.'/models', ['max_price' => 0]);
             if ($catalog->status() !== 200 || strlen($catalog->body()) > 8000000) {
-                return false;
+                return 0;
             }
 
-            return self::modelEligible($catalog->json('data'), $model);
+            return self::modelEligible($catalog->json('data'), $model) ? (int) $key->json('data.free_model_daily_requests.remaining') : 0;
         } catch (ConnectionException|InvalidArgumentException) {
-            return false;
+            return 0;
         }
     }
 
@@ -58,6 +64,8 @@ final class NativeOpenRouterAdmission
                 return false;
             }
         }
+        // Not a guaranteed field of the documented /key contract. Absent provider-reported
+        // quota must remain unavailable, not be inferred from the published daily plan limit.
         $quota = $account['free_model_daily_requests'] ?? null;
         if (! is_array($quota) || ! is_int($quota['limit'] ?? null) || ! is_int($quota['used'] ?? null) || ! is_int($quota['remaining'] ?? null)) {
             return false;

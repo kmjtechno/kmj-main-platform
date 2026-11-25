@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Models\AiModelToken;
 use App\Services\AiProviders\ModelFabricGateway;
 use App\Services\AiProviders\ModelFabricRouter;
+use App\Services\AiProviders\NativeCodingAdmissionTicket;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -27,6 +28,7 @@ final class ModelFabricApiController extends Controller
     public function __construct(
         private readonly ModelFabricGateway $gateway,
         private readonly ModelFabricRouter $router,
+        private readonly NativeCodingAdmissionTicket $nativeAdmission,
     ) {}
 
     public function models(Request $request): JsonResponse
@@ -35,6 +37,12 @@ final class ModelFabricApiController extends Controller
         $strictFreeCloud = $this->strictFreeCloud($request, $token);
         $capability = $token->private_source ? 'code' : 'chat';
         $plan = $this->router->plan($token->organization_id, $capability, $token->private_source, $strictFreeCloud);
+        $digest = $request->header('X-ModelFabric-Request-Digest');
+        $admission = null;
+        if ($digest !== null) {
+            abort_unless($strictFreeCloud && preg_match('/\A[a-f0-9]{64}\z/', $digest) === 1, 400, 'Invalid native admission request.');
+            $admission = $this->nativeAdmission->issue($token, $digest);
+        }
 
         return response()->json([
             'object' => 'list',
@@ -47,6 +55,7 @@ final class ModelFabricApiController extends Controller
                 'scope' => $token->private_source ? 'private-source-coding' : 'general-chat',
                 'policy' => $strictFreeCloud ? 'strict-free-cloud' : 'default',
                 'free_routes' => count(array_filter($plan['routes'], static fn (array $route): bool => ($route['cost_class'] ?? null) === 'free')),
+                ...($digest === null ? [] : ['native_admission' => $admission]),
             ],
         ]);
     }
@@ -83,9 +92,20 @@ final class ModelFabricApiController extends Controller
             return $this->error(413, 'request_too_large', 'Conversation is too large.');
         }
 
+        $nativeRoute = null;
+        $ticket = $request->header('X-ModelFabric-Admission-Ticket');
+        if ($ticket !== null) {
+            abort_unless($strictFreeCloud, 400, 'Native ticket requires strict cloud policy.');
+            $digest = hash('sha256', "https://kmjtechno.com/api/modelfabric/v1/chat/completions\n".$request->bearerToken()."\n".$request->getContent());
+            $nativeRoute = $this->nativeAdmission->consume($token, $ticket, $digest);
+            if ($nativeRoute === null) {
+                return $this->error(403, 'native_admission_invalid', 'Native coding admission is unavailable.');
+            }
+        }
+
         // The caller's "model" field is ignored on purpose: it cannot pick a paid or unverified model.
         $capability = $token->private_source ? 'code' : 'chat';
-        $result = $this->gateway->complete($token->organization_id, $messages, $capability, $token->private_source, $this->sessionKey($request), $strictFreeCloud, isset($data['max_tokens']) ? (int) $data['max_tokens'] : null);
+        $result = $this->gateway->complete($token->organization_id, $messages, $capability, $token->private_source, $this->sessionKey($request), $strictFreeCloud, isset($data['max_tokens']) ? (int) $data['max_tokens'] : null, $nativeRoute);
         if (! $result['ok']) {
             $code = (string) $result['error_code'];
 
