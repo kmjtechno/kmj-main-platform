@@ -14,7 +14,7 @@ final class JmapInboxMetadata
 {
     private const PROPERTIES = ['id', 'threadId', 'receivedAt', 'subject', 'from', 'keywords', 'hasAttachment'];
 
-    /** @param list<string> $ids */
+    /** @param  list<string>  $ids */
     public function request(array $session, array $ids): array
     {
         $this->validateIds($ids);
@@ -33,7 +33,7 @@ final class JmapInboxMetadata
     }
 
     /**
-     * @param list<string> $ids
+     * @param  list<string>  $ids
      * @return array{messages: list<array>, missing: list<string>}
      */
     public function parse(array $session, array $ids, array $response): array
