@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-team-allocation-regression-20261125',
+        title: 'CodeBridge Team allocation boundary regression',
+        state: 'active',
+        detail: 'SOURCE ONLY: reject expired or invalid existing assignments on allocation replay; exercise synthetic settlement, sandbox denial, idempotency, serial seat limit and revoked entitlement.',
+        evidence:
+            'Disposable test records only, not live payment proof. Concurrent last-seat, commercial offer writer, refund enforcement and gateway acceptance remain pending.',
+    },
+    {
         id: 'codebridge-team-capacity-allocation-20261125',
         title: 'CodeBridge commercial Team capacity and allocation source',
         state: 'active',
