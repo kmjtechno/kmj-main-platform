@@ -7,6 +7,7 @@ namespace App\Services\AiProviders;
 use App\Models\AiModelRequest;
 use App\Models\AiProvider;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Failover over verified-zero routes only (design ideas adopted from the MIT-licensed FreeLLMAPI
@@ -94,17 +95,28 @@ final class ModelFabricGateway
 
                 continue;
             }
-            $provider = AiProvider::query()->where('organization_id', $organizationId)->whereKey($providerId)->first();
-            if ($provider === null) {
+            // Reserve the attempt BEFORE the outbound request. A short database
+            // transaction serializes reservations for the same provider, including
+            // across PHP workers. A crash consumes the reservation conservatively.
+            $reservation = $this->reserveAttempt($organizationId, $providerId, (string) $route['model'], $capability, $privateSource);
+            if ($reservation['error'] !== null) {
+                $last = $reservation['error'];
+
                 continue;
             }
+            $provider = $reservation['provider'];
+            $attempt = $reservation['attempt'];
 
             $attempts++;
             $started = hrtime(true);
             $result = $this->manager->complete($provider, (string) $route['model'], $messages);
             $latency = (int) ((hrtime(true) - $started) / 1_000_000);
 
-            $this->record($organizationId, $provider, (string) $route['model'], $result['ok'], $result['error_code'], $latency);
+            $attempt->update([
+                'outcome' => $result['ok'] ? 'ok' : 'failed',
+                'error_code' => $result['ok'] ? null : $result['error_code'],
+                'latency_ms' => max(0, $latency),
+            ]);
             $this->learnLimits($providerId, (string) $route['model'], (bool) ($limits[$providerId]['model_scoped'] ?? false), $result['rate'] ?? null);
             if ($result['ok']) {
                 Cache::forget($this->failKey($providerId));
@@ -351,16 +363,61 @@ final class ModelFabricGateway
         return $failures >= self::CIRCUIT_THRESHOLD ? self::CIRCUIT_COOLDOWN : self::SOFT_FAIL_COOLDOWN;
     }
 
-    private function record(string $organizationId, AiProvider $provider, string $model, bool $ok, ?string $code, int $latency): void
+    /**
+     * @return array{provider: ?AiProvider, attempt: ?AiModelRequest, error: ?string}
+     */
+    private function reserveAttempt(string $organizationId, string $providerId, string $model, string $capability, bool $privateSource): array
     {
-        AiModelRequest::query()->create([
-            'organization_id' => $organizationId,
-            'ai_provider_id' => $provider->id,
-            'model_id' => $model,
-            'outcome' => $ok ? 'ok' : 'failed',
-            'error_code' => $ok ? null : $code,
-            'latency_ms' => max(0, $latency),
-        ]);
+        return DB::transaction(function () use ($organizationId, $providerId, $model, $capability, $privateSource): array {
+            $deny = static fn (string $code): array => ['provider' => null, 'attempt' => null, 'error' => $code];
+            $provider = AiProvider::query()->where('organization_id', $organizationId)->whereKey($providerId)->lockForUpdate()->first();
+            if ($provider === null) {
+                return $deny('provider_unavailable');
+            }
+
+            // Re-evaluate the current plan under the reservation lock. Never
+            // reserve a previously admitted but now revoked or expired route.
+            $current = null;
+            foreach ($this->router->plan($organizationId, $capability, $privateSource)['routes'] as $candidate) {
+                if ($candidate['provider_id'] === $providerId && $candidate['model'] === $model) {
+                    $current = $candidate;
+                    break;
+                }
+            }
+            if ($current === null) {
+                return $deny(ModelFabricRouter::NO_ROUTE);
+            }
+            if (self::coolingUntil($providerId) !== null || $this->modelCoolingUntil($providerId, $model) !== null) {
+                return $deny('all_routes_cooling_down');
+            }
+
+            $today = AiModelRequest::query()
+                ->where('organization_id', $organizationId)
+                ->where('ai_provider_id', $providerId)
+                ->where('created_at', '>=', now()->utc()->startOfDay());
+            if ($provider->daily_request_cap !== null && (clone $today)->count() >= (int) $provider->daily_request_cap) {
+                return $deny('daily_cap_reached');
+            }
+            if (($current['cost_class'] ?? 'free') === 'credit-limited') {
+                $cap = (int) ($current['credit_daily_cap'] ?? 0);
+                if ($cap <= 0 || (clone $today)->where('model_id', $model)->count() >= $cap) {
+                    return $deny('credit_cap_reached');
+                }
+            }
+
+            // Metadata only. Failed or interrupted reservations count against
+            // the cap; never release an ambiguous upstream attempt automatically.
+            $attempt = AiModelRequest::query()->create([
+                'organization_id' => $organizationId,
+                'ai_provider_id' => $providerId,
+                'model_id' => $model,
+                'outcome' => 'failed',
+                'error_code' => 'attempt_reserved',
+                'latency_ms' => 0,
+            ]);
+
+            return ['provider' => $provider, 'attempt' => $attempt, 'error' => null];
+        });
     }
 
     private function failKey(string $providerId): string
