@@ -186,7 +186,7 @@ final class NativeInboundTextPilot
 
         // Exactly two non-nested alternatives, in the common plain/HTML order.
         // Never parse, decode, execute or expose the HTML alternative.
-        $boundary = $matches[1] !== '' ? $matches[1] : $matches[2];
+        $boundary = $matches[1] !== '' ? $matches[1] : ($matches[2] ?? '');
         $open = '--'.$boundary;
         $close = $open.'--';
         $parts = [];
@@ -266,8 +266,7 @@ final class NativeInboundTextPilot
         } elseif (! in_array($encoding, ['7bit', '8bit'], true)) {
             return null;
         }
+
         return trim(str_replace("\r\n", "\n", $body));
-
     }
-
 }
