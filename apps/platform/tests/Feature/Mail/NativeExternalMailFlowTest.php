@@ -138,6 +138,37 @@ final class NativeExternalMailFlowTest extends TestCase
         Mail::assertNothingOutgoing();
     }
 
+    public function test_owner_can_select_each_enterprise_theme_without_changing_smtp_route(): void
+    {
+        $owner = $this->owner();
+        $this->activateOutbound();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()]);
+        $themes = \App\Services\Mail\EnterpriseMailTheme::catalog();
+        self::assertCount(6, $themes);
+        foreach ($themes as $id => $palette) {
+            $this->travel(1)->minutes();
+            $this->post('/operator/mail/smtp/theme', ['theme' => $id])->assertRedirect('/operator/mail/smtp');
+            $this->assertDatabaseHas('kmj_native_smtp_settings', ['enterprise_theme' => $id, 'active_profile' => 'loopback']);
+            $html = view('emails.kmj-native-outgoing', [
+                'heading' => 'Theme <script>',
+                'body' => 'Example <img src=x>',
+                'senderAddress' => 'info@kmjtechno.com',
+            ])->render();
+            self::assertStringContainsString($palette['header'], $html);
+            self::assertStringContainsString($palette['accent'], $html);
+            self::assertStringContainsString('KMJ TECHNO SOLUTIONS', $html);
+            self::assertStringContainsString('&lt;script&gt;', $html);
+            self::assertStringNotContainsString('<img src=x>', $html);
+            self::assertStringNotContainsString('Message delivered', $html);
+        }
+        self::assertSame('sendmail', config('mail.default'));
+        $other = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($other)->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/operator/mail/smtp/theme', ['theme' => 'signature-red'])->assertForbidden();
+        $this->assertDatabaseHas('kmj_native_smtp_settings', ['enterprise_theme' => 'executive-gold']);
+        Mail::assertNothingOutgoing();
+    }
+
     public function test_owner_smtp_credentials_are_encrypted_and_not_returned_to_the_browser(): void
     {
         $owner = $this->owner();
