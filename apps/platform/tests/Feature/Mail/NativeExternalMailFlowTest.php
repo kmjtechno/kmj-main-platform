@@ -6,6 +6,7 @@ namespace Tests\Feature\Mail;
 
 use App\Jobs\SubmitNativeExternalMail;
 use App\Models\User;
+use App\Services\Mail\EnterpriseMailTheme;
 use App\Services\Mail\NativeExternalMailService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Mail\Mailer;
@@ -143,7 +144,7 @@ final class NativeExternalMailFlowTest extends TestCase
         $owner = $this->owner();
         $this->activateOutbound();
         $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()]);
-        $themes = \App\Services\Mail\EnterpriseMailTheme::catalog();
+        $themes = EnterpriseMailTheme::catalog();
         self::assertCount(6, $themes);
         foreach ($themes as $id => $palette) {
             $this->travel(1)->minutes();
