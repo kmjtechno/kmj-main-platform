@@ -13,9 +13,9 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         id: 'kmj-mail-actual-template-preview-20261125',
         title: 'KMJ Mail actual template preview correction',
         state: 'active',
-        detail: 'Owner screenshot confirmed delivery to Gmail but rejected the simplified artwork and color swatches. Source correction uses real server-rendered HTML in sandboxed thumbnail and full-size previews.',
+        detail: 'Owner rejected simplified artwork and color swatches despite actual Gmail receipt. Source correction connects six approved header/footer crops and five service icons per theme to the shared renderer, with real sandboxed HTML previews.',
         evidence:
-            'Exact reference artwork import, desktop and mobile visual comparison, Gmail and Outlook rendering, exact-head CI and guarded release remain pending. No sending or SMTP changes from preview.',
+            'All 42 binary assets must be imported under public/assets/brand/mail with the locked manifest; CI rejects missing or altered files. Desktop/mobile visual acceptance and Gmail/Outlook rendering still required. No SMTP changes.',
     },
     {
         id: 'kmj-mail-enterprise-theme-suite-20261125',
