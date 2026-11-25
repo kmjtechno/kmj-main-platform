@@ -200,7 +200,7 @@ final class ModelFabricApiTest extends TestCase
     public function test_strict_free_cloud_requires_private_token_and_admitted_free_route(): void
     {
         $this->evidenced('llama-free');
-        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'pong']]]], 200)]);
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'pong'], 'finish_reason' => 'stop']]], 200)]);
         $body = ['messages' => [['role' => 'user', 'content' => 'ping']]];
         $headers = ['Authorization' => 'Bearer '.$this->token(), 'X-ModelFabric-Policy' => 'strict-free-cloud'];
 
@@ -214,6 +214,34 @@ final class ModelFabricApiTest extends TestCase
         $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)->assertOk()
             ->assertJsonPath('modelfabric.policy', 'strict-free-cloud')
             ->assertJsonPath('choices.0.message.content', 'pong');
+        Http::assertSentCount(1);
+    }
+
+    public function test_strict_coding_rejects_incomplete_provider_output(): void
+    {
+        $this->evidenced('llama-free');
+        $headers = ['Authorization' => 'Bearer '.$this->token(), 'X-ModelFabric-Policy' => 'strict-free-cloud'];
+        $body = ['messages' => [['role' => 'user', 'content' => 'patch']], 'max_tokens' => 4096];
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'partial patch'], 'finish_reason' => 'length']]], 200)]);
+
+        $this->postJson('/api/modelfabric/v1/chat/completions', [...$body, 'stream' => true], $headers)->assertStatus(400);
+        $this->postJson('/api/modelfabric/v1/chat/completions', [...$body, 'max_tokens' => 4097], $headers)->assertStatus(422);
+        Http::assertNothingSent();
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)
+            ->assertStatus(502)->assertJsonPath('error.code', 'incomplete_coding_output');
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request): bool => $request['max_tokens'] === 4096);
+    }
+
+    public function test_strict_coding_does_not_silently_clip_a_complete_patch(): void
+    {
+        $this->evidenced('llama-free');
+        $headers = ['Authorization' => 'Bearer '.$this->token(), 'X-ModelFabric-Policy' => 'strict-free-cloud'];
+        $content = str_repeat('x', 9000);
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => $content], 'finish_reason' => 'stop']]], 200)]);
+
+        $this->postJson('/api/modelfabric/v1/chat/completions', ['messages' => [['role' => 'user', 'content' => 'patch']], 'max_tokens' => 4096], $headers)
+            ->assertOk()->assertJsonPath('choices.0.message.content', $content);
         Http::assertSentCount(1);
     }
 
