@@ -15,7 +15,7 @@ export const deliveryMilestones: DeliveryMilestone[] = [
         state: 'active',
         detail: 'Owner rejected simplified artwork and color swatches despite actual Gmail receipt. Source correction connects six approved header/footer crops and five service icons per theme to the shared renderer, with real sandboxed HTML previews.',
         evidence:
-            'All 42 binary assets must be imported under public/assets/brand/mail with the locked manifest; CI rejects missing or altered files. Desktop/mobile visual acceptance and Gmail/Outlook rendering still required. No SMTP changes.',
+            'All 42 binary assets and the locked manifest are committed; email safety CI verified their hashes. Desktop/mobile visual acceptance and Gmail/Outlook rendering still required. No SMTP changes.',
     },
     {
         id: 'kmj-mail-enterprise-theme-suite-20261125',

@@ -534,7 +534,8 @@ final class NativeExternalMailFlowTest extends TestCase
             'body' => 'Hello <img src=x onerror=alert(1)>',
             'senderAddress' => 'info@kmjtechno.com',
         ])->render();
-        self::assertStringContainsString('kmj-sender-avatar.png', $html);
+        self::assertStringContainsString('https://kmjtechno.com/assets/brand/mail/signature-red/header.jpg', $html);
+        self::assertStringContainsString('https://kmjtechno.com/assets/brand/mail/signature-red/footer.jpg', $html);
         self::assertStringNotContainsString('<script>', $html);
         self::assertStringNotContainsString('<img src=x', $html);
         self::assertStringContainsString('&lt;script&gt;', $html);
