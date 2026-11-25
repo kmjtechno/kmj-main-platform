@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'codebridge-internal-seat-proof-issuer-20261125',
+        title: 'CodeBridge internal signed seat proof issuance',
+        state: 'active',
+        detail: 'SOURCE ONLY: issue a five-minute KSLP seat proof for an explicit current assignment, then re-read and verify it against the current scoped key and member identity before returning.',
+        evidence:
+            'Feature regression for authorized member, foreign member, wrong signer and revoked signer. No purchase allocation, commercial fulfillment authority, public issuance endpoint, dispatch or billing enabled.',
+    },
+    {
         id: 'codebridge-current-seat-authorization-20261125',
         title: 'CodeBridge current member seat and KSLP key authorization',
         state: 'active',
