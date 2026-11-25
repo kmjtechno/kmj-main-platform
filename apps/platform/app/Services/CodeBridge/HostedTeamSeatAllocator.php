@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\CodeBridge;
 
 use DomainException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -83,7 +84,10 @@ final class HostedTeamSeatAllocator
             $existing = DB::table('codebridge_hosted_seat_assignments')->where('license_id', $license->id)
                 ->where('membership_id', $membershipId)->lockForUpdate()->first();
             if ($existing !== null) {
-                if ($existing->revoked_at !== null || (string) $existing->organization_id !== (string) $license->customer_id) {
+                if ($existing->revoked_at !== null || (string) $existing->organization_id !== (string) $license->customer_id
+                    || (int) $existing->assignment_revision < 1
+                    || Carbon::parse($existing->starts_at)->gt($now)
+                    || Carbon::parse($existing->ends_at)->lte($now)) {
                     throw new DomainException('CODEBRIDGE_SEAT_ASSIGNMENT_CONFLICT');
                 }
 
