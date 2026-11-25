@@ -1,4 +1,4 @@
-@php($theme = \App\Services\Mail\EnterpriseMailTheme::palette())
+@php($theme = $previewTheme ?? \App\Services\Mail\EnterpriseMailTheme::palette())
 <!doctype html>
 <html lang="en">
 <head>
