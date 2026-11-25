@@ -315,7 +315,9 @@ export default function OperatorMailSmtp({ smtp }: { smtp: Smtp }) {
                     </div>
                 </section>
                 <section className="bg-card space-y-4 rounded-2xl border p-5">
-                    <h2 className="text-lg font-bold">Default email branding</h2>
+                    <h2 className="text-lg font-bold">
+                        Default email branding
+                    </h2>
                     <p className="text-muted-foreground text-sm">
                         Select the shared theme for new business, account and
                         transactional emails. This does not change SMTP routing.
@@ -376,7 +378,9 @@ export default function OperatorMailSmtp({ smtp }: { smtp: Smtp }) {
                     <button
                         type="button"
                         disabled={
-                            busy || !smtp.theme_installed || theme === smtp.theme
+                            busy ||
+                            !smtp.theme_installed ||
+                            theme === smtp.theme
                         }
                         onClick={() => {
                             setBusy(true);
