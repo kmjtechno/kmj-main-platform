@@ -6,6 +6,7 @@ namespace App\Services\Commerce;
 
 use App\Models\OperatorActionAudit;
 use App\Models\User;
+use App\Services\Staff\PlatformStaffAuthority;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
@@ -17,6 +18,8 @@ use Illuminate\Support\Facades\DB;
  */
 final class OrderRefundRecorder
 {
+    public function __construct(private readonly PlatformStaffAuthority $authority) {}
+
     /**
      * @return array{id:int,order_id:string,amount_minor:int,refunded_total_minor:int,reused:bool}
      */
@@ -29,8 +32,8 @@ final class OrderRefundRecorder
         ?string $providerRefundReference = null,
     ): array {
         $actor = User::query()->find($actorUserId);
-        if (! $actor instanceof User || ! (bool) $actor->is_platform_owner) {
-            throw new DomainException('REFUND_RECORD_OWNER_ONLY');
+        if (! $actor instanceof User || ! $this->authority->allows($actor, PlatformStaffAuthority::BILLING_REFUND_RECORD)) {
+            throw new DomainException('REFUND_RECORD_NOT_AUTHORIZED');
         }
 
         $requestKey = trim($requestKey);

@@ -10,6 +10,7 @@ use App\Services\CodeBridge\HostedPilotUsageSnapshot;
 use App\Services\CodeBridge\HostedUsagePreview;
 use App\Services\CodeBridge\OAuth\OAuthServer;
 use App\Services\Commerce\KmjProductCatalog;
+use App\Services\Commerce\OrderRefundRecorder;
 use App\Services\Commerce\PublicProductCatalog;
 use App\Services\Licensing\CodeBridge\CodeBridgeCustomerDeviceDirectory;
 use App\Services\Licensing\CodeBridge\CodeBridgeDevicePairingService;
@@ -18,6 +19,7 @@ use App\Services\Licensing\SandboxLicenseLifecycle;
 use App\Services\PlatformOwnerAccess;
 use App\Services\Releases\CustomerReleaseAccess;
 use App\Services\Releases\ReleaseArtifactDelivery;
+use App\Services\Staff\PlatformStaffAuthority;
 use App\Services\SuperAdminDevelopmentPolicy;
 use DateTimeImmutable as ImmutableDateTime;
 use Illuminate\Http\Request;
@@ -892,6 +894,39 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         return redirect()->route('operator.index');
     })->name('operator.orders.fulfill')->middleware('password.confirm');
+
+    Route::post('operator/orders/{order}/refund-record', function (
+        Request $request,
+        string $order,
+        PlatformStaffAuthority $authority,
+        OrderRefundRecorder $recorder,
+    ) {
+        $user = $request->user();
+        abort_unless($user instanceof User, 401);
+        abort_unless($authority->allows($user, PlatformStaffAuthority::BILLING_REFUND_RECORD), 403);
+
+        $data = $request->validate([
+            'amount_minor' => ['required', 'integer', 'min:1'],
+            'reason' => ['required', 'string', 'max:240'],
+            'request_key' => ['required', 'string', 'min:8', 'max:120'],
+            'provider_refund_reference' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        try {
+            $result = $recorder->record(
+                (int) $user->getKey(),
+                $order,
+                (int) $data['amount_minor'],
+                (string) $data['reason'],
+                (string) $data['request_key'],
+                $data['provider_refund_reference'] ?? null,
+            );
+        } catch (\DomainException $e) {
+            return response()->json(['code' => $e->getMessage()], 422);
+        }
+
+        return response()->json($result, $result['reused'] ? 200 : 201);
+    })->name('operator.orders.refund-record')->middleware('password.confirm');
 
     Route::post('operator/orders/{order}/sandbox-license', function (
         Request $request,
