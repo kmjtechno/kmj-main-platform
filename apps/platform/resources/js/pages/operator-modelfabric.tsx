@@ -1596,7 +1596,7 @@ export default function OperatorModelFabric({
                                                 startEvidence(provider.id)
                                             }
                                         >
-                                            Approve a free model
+                                            Review free models
                                         </button>
                                     ) : null}
                                 </>
