@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-provider-discovery-automation-20261126',
+        title: 'ModelFabric: provider expansion and automatic recheck',
+        state: 'active',
+        detail: 'Add four discovery-only provider presets, apply current owner rules immediately on recheck, and block the retired GitHub Models provider.',
+        evidence:
+            'Source and synthetic regressions; exact-head CI and live account qualification pending.',
+    },
+    {
         id: 'modelfabric-single-provider-card-20261126',
         title: 'ModelFabric: single provider management card',
         state: 'active',
