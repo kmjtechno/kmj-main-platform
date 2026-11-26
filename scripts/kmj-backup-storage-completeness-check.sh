@@ -52,7 +52,10 @@ else
   live_root="$live_real"; layout="storage_app"
 fi
 
-manifest() { ( cd "$1" && find . -xdev -type f ! -type l -print0 | LC_ALL=C sort -z | xargs -0 -r sha256sum ) ; }
+# The daily backup deliberately skips regenerable framework/views and logs
+# (rsync --exclude 'framework/views/*' --exclude 'logs/*'); mirror that here so
+# the check compares what the backup promises to hold, not compiled caches.
+manifest() { ( cd "$1" && find . -xdev \( -path ./framework/views -o -path ./logs \) -prune -o -type f ! -type l -print0 | LC_ALL=C sort -z | xargs -0 -r sha256sum ) ; }
 tmp="$(mktemp -d)"; trap 'rm -rf -- "$tmp"' EXIT
 manifest "$sroot" > "$tmp/snap.txt"
 manifest "$live_root" > "$tmp/live.txt"
