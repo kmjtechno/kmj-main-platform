@@ -46,3 +46,13 @@ Not proven: a database restore performed from the owner-decrypted copy (the earl
 
 Still not proven: row-level data equality with production, restore of the encrypted copy itself on the server (the key never leaves the owner PC), the scheduled timer run, retention, a different host.
 
+
+## Row-count restore drill (2026-11-26)
+
+`scripts/kmj-backup-restore-rowcount-drill.sh` (PR #1199, volatile-table fix PR #1200, merge `97685ab`) restores the newest checksum-verified daily snapshot into a disposable scratch database, compares per-table row counts with the live database (read-only), drops the scratch database and writes a counts-only receipt to `/var/lib/kmj-restore-drill/`.
+
+- Owner root run on KMJ-elite, snapshot `20261126T023521Z`, script SHA-256 `0d812e0f947b83dd7d47084269683dcd6f64bff752d1388627fae3011ec0524f`: `RESTORE_DRILL=PASS`.
+- First run with the earlier script (before PR #1200) gave FAIL only because `sessions` shrank 125 -> 103 (expected expiry). Same restore, 76 of 76 tables on both sides, 65 equal, 10 with higher live counts (new rows since the snapshot), none missing or extra.
+- Rule: fail on any missing or extra table and on any non-volatile table where the snapshot has more rows than live. Volatile tables (sessions, cache, cache_locks, jobs, job_batches) are reported, not failed.
+
+Not proven by this drill: row-by-row data equality (counts only, snapshot is older than live), `platform-storage/` file completeness, any other snapshot, retention, a restore on a different host, and mail delivery.
