@@ -113,9 +113,7 @@ function ProviderCard({
                     <h2 className="text-base font-black">{provider.name}</h2>
                     <p className="text-muted-foreground text-xs">
                         {provider.host} ·{' '}
-                        {keyless
-                            ? 'No API key'
-                            : `key ${provider.key_mask}`}
+                        {keyless ? 'No API key' : `key ${provider.key_mask}`}
                     </p>
                 </div>
                 <div className="flex gap-2 text-xs font-bold">
@@ -769,7 +767,9 @@ export default function AiProviders({
                                     onConnectOpenRouter={startOpenRouter}
                                     onConnectHuggingFace={startHuggingFace}
                                     onConnectKiloFree={startKiloFree}
-                                    onConnectHordeAnonymous={startHordeAnonymous}
+                                    onConnectHordeAnonymous={
+                                        startHordeAnonymous
+                                    }
                                     selectedPreset={
                                         preferredPreset?.key ?? null
                                     }

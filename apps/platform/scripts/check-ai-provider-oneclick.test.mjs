@@ -130,7 +130,9 @@ void test('configured providers use honest summary and deliberate advanced contr
     assert.match(page, /const \[expanded, setExpanded\] = useState\(false\)/);
     assert.match(page, /aria-expanded=\{expanded\}/);
     assert.match(page, /\{expanded && \(/);
-    assert.match(page, /\{canManage && replaceVisible && \(/);
+    assert.match(page, /\{canManage && !keyless && replaceVisible && \(/);
+    assert.match(page, /\{canManage && !keyless && \(/);
+    assert.match(page, /\['kilo-free', 'horde-anonymous'\]\.includes\(provider\.preset\)/);
     assert.match(page, /window\.confirm/);
     assert.match(page, /data: \{ confirm: 'DELETE' \}/);
     assert.match(page, /fallback_models: next/);
@@ -205,4 +207,13 @@ void test('ModelFabric has one workspace and honest auth labels', () => {
     assert.match(hub, /new Set\(\['openrouter', 'huggingface'\]\)/);
     assert.match(hub, /Use account authorization/);
     assert.match(hub, /Other providers use official API\s+keys/);
+});
+
+void test('anonymous provider setup requires explicit consent and no pasted key', () => {
+    assert.match(hub, /keylessKeys\.has\(selected\.key\)/);
+    assert.match(hub, /onClick=\{onConnectHordeAnonymous\}/);
+    assert.match(hub, /disabled=\{hordeDisabled\}/);
+    assert.match(page, /BASE \+ '\/connect\/horde-anonymous'/);
+    assert.match(page, /community_terms_confirmed: true/);
+    assert.match(page, /\{canManage && !keyless && replaceVisible && \(/);
 });
