@@ -23,8 +23,8 @@ phases:
     tasks:
       - id: P1-01
         title: Establish protected development workflow, CODEOWNERS and CI
-        status: blocked_main_branch_protection
-        note: CODEOWNERS and CI are active; GitHub main branch protection is not yet enabled and cannot be changed by the connected GitHub tool.
+        status: active
+        note: CODEOWNERS and CI are active. Main branch protection was enabled by the owner and read back on 2026-11-26 via the GitHub API - required status check `verify`, enforce_admins on, force pushes and branch deletion blocked. Remaining gaps against the roadmap target, left as owner decisions - require a pull request before merge with CODEOWNERS review, and require branches to be up to date (strict checks are off).
       - id: P1-02
         title: Add architecture tests and module skeletons
         status: done
