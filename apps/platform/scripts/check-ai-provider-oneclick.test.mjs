@@ -134,7 +134,10 @@ void test('configured providers use honest summary and deliberate advanced contr
     assert.match(page, /window\.confirm/);
     assert.match(page, /data: \{ confirm: 'DELETE' \}/);
     assert.match(page, /fallback_models: next/);
-    assert.match(page, /\{ api_key: newKey \}/);
+    assert.match(
+        page,
+        /\{\s*api_key: newKey,\s*verify_connection: true,?\s*\}/,
+    );
     assert.match(page, /onSuccess:\s*\(\)\s*=>\s*\{\s*setNewKey\(''\);/);
     assert.match(page, /setReplaceVisible\(\s*false,\s*\);/);
 });
