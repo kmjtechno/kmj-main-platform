@@ -79,7 +79,7 @@ void test('dashboard renders separate request-only cards', () => {
         ui,
         /Pending project setup — separate from registered devices/,
     );
-    assert.match(ui, /Request project on this existing/);
+    assert.match(ui, /Request project on this\s+existing/);
     assert.match(ui, /this does not grant another project to its/);
     assert.doesNotMatch(ui, /Awaiting local project setup/);
     assert.doesNotMatch(ui, /Connect this Windows PC/);
