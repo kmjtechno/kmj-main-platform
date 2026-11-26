@@ -102,6 +102,25 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
         self::assertStringNotContainsString($secret, json_encode($audit->metadata, JSON_THROW_ON_ERROR));
     }
 
+    public function test_last_changed_is_sent_as_explicit_utc_so_the_console_can_show_ist(): void
+    {
+        $owner = $this->owner();
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->put('/operator/payments/gateways/razorpay', [
+                ...$this->payload(),
+                'client_id' => 'rzp_test_demoKey12345',
+                'client_secret' => 'sandbox_secret_example_12345',
+                'webhook_secret' => 'sandbox_webhook_secret_12345',
+            ])->assertRedirect('/operator/payments');
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/payments')
+            ->assertOk()->assertInertia(fn (Assert $page) => $page
+                ->where('gatewaySettings.1.last_updated', fn ($value): bool => is_string($value)
+                    && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/', $value) === 1)
+                ->where('gatewaySettings.0.last_updated', null));
+    }
+
     public function test_empty_fields_preserve_secrets_and_revocation_removes_them(): void
     {
         $owner = $this->owner();

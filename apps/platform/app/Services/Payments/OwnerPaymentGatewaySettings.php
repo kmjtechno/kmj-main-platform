@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 
@@ -44,7 +45,11 @@ final class OwnerPaymentGatewaySettings
                 'client_id_stored' => $storedClientIdValid,
                 'client_secret_stored' => $storedClientSecretValid,
                 'webhook_secret_stored' => self::usableStoredCredential($row?->encrypted_webhook_secret, $provider, false),
-                'last_updated' => $row?->updated_at,
+                // DB::table returns a timezone-less string; the console formatter
+                // rejects ambiguous datetimes. Storage is UTC, so send explicit Zulu.
+                'last_updated' => $row?->updated_at === null
+                    ? null
+                    : Carbon::parse((string) $row->updated_at, 'UTC')->utc()->toIso8601ZuluString(),
                 'live_charging_enabled' => false,
                 'sandbox_transaction_verified' => false,
                 'note' => 'Credentials saved securely, but provider connection and sandbox checkout are not yet verified.',
