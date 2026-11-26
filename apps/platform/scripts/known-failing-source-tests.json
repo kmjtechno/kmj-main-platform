@@ -1,12 +1,4 @@
 {
     "note": "Source tests that already fail on main and wait for their lane owners to decide whether the test or the code is right. Do not add entries to hide new failures; remove an entry when it is fixed.",
-    "names": [
-        "sticky sessions only reorder routes the plan already admitted",
-        "provider errors are explained in plain language with a next step",
-        "guided readiness separates general chat from secure coding and gates unusable tokens",
-        "provider management has a dedicated tab, repair action and progressive disclosure",
-        "premium guided setup keeps chat and coding journeys separate",
-        "one canonical Licensing Hub is shown in the owner sidebar",
-        "KMJ Mail enterprise inbox controls operate on real mailbox records"
-    ]
+    "names": []
 }
