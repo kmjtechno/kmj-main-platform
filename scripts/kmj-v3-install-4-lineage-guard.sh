@@ -33,7 +33,9 @@ grep -q "^ExecStartPre=/usr/bin/sha256sum --check --status $LIBEXEC/$OLD.sha256\
 python3 -I -B "$src" --selftest >/dev/null 2>&1 || fail SELFTEST_FAILED 6
 
 install -m 0600 -o root -g root "$src" "$LIBEXEC/$NEW.py"
-( cd "$LIBEXEC" && sha256sum "$NEW.py" > "$NEW.sha256" && chmod 0600 "$NEW.sha256" && sha256sum --check --status "$NEW.sha256" ) || fail INSTALLED_FILE_HASH 7
+# The unit runs ExecStartPre from another cwd, so the .sha256 must name the file by absolute path.
+sha256sum "$LIBEXEC/$NEW.py" > "$LIBEXEC/$NEW.sha256" && chmod 0600 "$LIBEXEC/$NEW.sha256" || fail INSTALLED_FILE_HASH 7
+( cd / && sha256sum --check --status "$LIBEXEC/$NEW.sha256" ) || fail INSTALLED_FILE_HASH 7
 
 backup="$UNIT.bak.$(date -u +%Y%m%dT%H%M%SZ)"
 cp -p "$UNIT" "$backup"

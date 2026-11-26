@@ -43,7 +43,12 @@ class InstallerTest(unittest.TestCase):
         self.assertIn("BACKUP_NOT_STARTED=YES", r.stdout)
         new = self.lib / "kmj-v3-dual-local-health-onepass-20261126.py"
         self.assertEqual(oct(new.stat().st_mode & 0o777), "0o600")
-        self.assertTrue((self.lib / "kmj-v3-dual-local-health-onepass-20261126.sha256").exists())
+        sha_file = self.lib / "kmj-v3-dual-local-health-onepass-20261126.sha256"
+        self.assertTrue(sha_file.exists())
+        # ExecStartPre runs from another cwd: the file must be named by absolute path
+        # and verify from "/".
+        self.assertIn(str(self.lib / "kmj-v3-dual-local-health-onepass-20261126.py"), sha_file.read_text())
+        self.assertEqual(subprocess.run(["sha256sum", "--check", "--status", str(sha_file)], cwd="/").returncode, 0)
         text = self.unit.read_text()
         self.assertIn("onepass-20261126.py --run-once-local", text)
         self.assertIn("onepass-20261126.sha256", text)
