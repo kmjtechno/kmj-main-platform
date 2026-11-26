@@ -63,6 +63,7 @@ final class ModelFabricController extends Controller
             'maxEvidenceDays' => self::MAX_EVIDENCE_DAYS,
             'initialTab' => $request->query('tab') === 'providers' || session('modelfabric_provider_tab') ? 'providers' : 'start',
             'providerPresets' => collect($this->manager->presets())
+                ->reject(fn (array $preset): bool => $preset['retired'] ?? false)
                 ->map(fn (array $preset, string $key): array => [
                     'key' => $key,
                     'label' => $preset['label'],

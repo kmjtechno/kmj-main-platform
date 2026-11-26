@@ -79,7 +79,9 @@ final class ModelFabricRuleApplier
 
         foreach ($rules as $rule) {
             $provider = $rule->provider;
-            if (! $provider instanceof AiProvider || ! $provider->enabled || $provider->health !== 'ok') {
+            if (! $provider instanceof AiProvider || ! $provider->enabled || $provider->health !== 'ok'
+                || $provider->organization_id !== $rule->organization_id
+                || $provider->models_checked_at === null || $provider->models_checked_at->lt(now()->subHours(24))) {
                 continue;
             }
             if (($this->manager->presets()[$provider->preset]['free_tier'] ?? 'none') !== 'allowlist') {

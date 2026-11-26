@@ -213,14 +213,14 @@ void test('Auto-approve rules stay narrow, expiring, chat-only and revocable', (
     assert.match(page, /Save auto-approve rule/);
 });
 
-void test('GitHub Models is an allowlist-only preset with its own read-only catalog URL', () => {
+void test('GitHub Models is retired and cannot admit inference', () => {
     const config = read('config/ai_providers.php');
     const adapter = read(
         'app/Services/AiProviders/OpenAiCompatibleAdapter.php',
     );
     assert.match(
         config,
-        /'github' => \['label' => 'GitHub Models', 'base_url' => 'https:\/\/models\.github\.ai\/inference', 'free_tier' => 'allowlist'\]/,
+        /'github' => \['label' => 'GitHub Models \(retired\)', 'base_url' => 'https:\/\/models\.github\.ai\/inference', 'free_tier' => 'none', 'retired' => true\]/,
     );
     assert.match(adapter, /https:\/\/models\.github\.ai\/catalog\/models/);
 });

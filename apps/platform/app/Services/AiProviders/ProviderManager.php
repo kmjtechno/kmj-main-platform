@@ -19,7 +19,7 @@ final class ProviderManager
         private readonly EndpointGuard $guard,
     ) {}
 
-    /** @return array<string, array{label: string, base_url: ?string, free_tier: string}> */
+    /** @return array<string, array{label: string, base_url: ?string, free_tier: string, retired?: bool}> */
     public function presets(): array
     {
         return Config::get('ai_providers.presets', []);
@@ -43,6 +43,9 @@ final class ProviderManager
     {
         $presetKey = (string) ($data['preset'] ?? '');
         $preset = $this->presets()[$presetKey] ?? throw new InvalidArgumentException('preset_unknown');
+        if ($preset['retired'] ?? false) {
+            throw new InvalidArgumentException('provider_retired');
+        }
         $baseUrl = $preset['base_url'] ?? ($data['base_url'] ?? null);
         if (! is_string($baseUrl) || $baseUrl === '') {
             throw new InvalidArgumentException('endpoint_scheme');
@@ -105,6 +108,18 @@ final class ProviderManager
 
     public function test(AiProvider $provider): AiProvider
     {
+        if ($this->presets()[$provider->preset]['retired'] ?? false) {
+            $provider->health = 'blocked';
+            $provider->health_checked_at = now();
+            $provider->last_error_code = 'provider_retired';
+            $provider->models_cache = null;
+            $provider->models_checked_at = null;
+            $provider->rate_limit = ['status' => 'unknown'];
+            $provider->save();
+
+            return $provider;
+        }
+
         $result = $this->adapter->probe($provider->base_url, $provider->api_key, $this->approvedHosts());
         $provider->health = $result['health'];
         $provider->health_checked_at = now();
@@ -159,6 +174,9 @@ final class ProviderManager
     {
         if (! $provider->enabled) {
             throw new InvalidArgumentException('provider_disabled');
+        }
+        if ($this->presets()[$provider->preset]['retired'] ?? false) {
+            throw new InvalidArgumentException('provider_retired');
         }
         if ($provider->health !== 'ok') {
             throw new InvalidArgumentException('provider_unhealthy');
@@ -240,7 +258,7 @@ final class ProviderManager
             'discovered_model_count' => count($provider->models_cache ?? []),
             'health' => $provider->health,
             'health_checked_at' => $provider->health_checked_at?->toIso8601String(),
-            'error_code' => $provider->last_error_code,
+            'error_code' => ($this->presets()[$provider->preset]['retired'] ?? false) ? 'provider_retired' : $provider->last_error_code,
             'rate_limit' => $provider->rate_limit ?? ['status' => 'unknown'],
         ];
     }
