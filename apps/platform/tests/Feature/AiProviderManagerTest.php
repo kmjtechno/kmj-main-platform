@@ -314,6 +314,25 @@ final class AiProviderManagerTest extends TestCase
         $this->assertSame('unknown', $provider->health);
     }
 
+    public function test_replace_and_verify_discovers_models_without_sending_inference(): void
+    {
+        config(['ai_providers.free_models.groq' => []]);
+        $this->add('Groq main');
+        $provider = AiProvider::query()->firstOrFail();
+        Http::fake(['api.groq.com/*' => Http::response(['data' => [['id' => 'unknown-cost-model']]])]);
+
+        $this->confirmed($this->owner)->patch('/services/kmj-codebridge/ai-providers/'.$provider->id, [
+            'api_key' => 'new-test-key-123456',
+            'verify_connection' => true,
+        ])->assertSessionHasNoErrors();
+
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request): bool => $request->method() === 'GET' && $request->body() === '');
+        $this->assertSame('ok', $provider->refresh()->health);
+        $this->assertSame(['unknown-cost-model'], $provider->models_cache);
+        $this->assertSame([], app(ProviderManager::class)->admittedFreeModels($provider));
+    }
+
     public function test_owner_model_selector_shows_only_fresh_verified_free_ids_and_honest_catalog_count(): void
     {
         config(['ai_providers.free_models.groq' => ['verified-free']]);

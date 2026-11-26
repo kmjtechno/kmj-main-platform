@@ -321,7 +321,10 @@ function ProviderCard({
                                         act(() =>
                                             router.patch(
                                                 `${BASE}/${provider.id}`,
-                                                { api_key: newKey },
+                                                {
+                                                    api_key: newKey,
+                                                    verify_connection: true,
+                                                },
                                                 {
                                                     ...options,
                                                     onSuccess: () => {
@@ -354,7 +357,7 @@ function ProviderCard({
                                     className="inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-bold"
                                 >
                                     <KeyRound className="h-3.5 w-3.5" />
-                                    Replace key
+                                    Replace key &amp; verify
                                 </button>
                             </form>
                         </div>
