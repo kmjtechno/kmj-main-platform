@@ -25,7 +25,7 @@ class VaultSidecarTest(unittest.TestCase):
         c.write_bytes(data)
         if sidecar:
             h = sidecar_hash or hashlib.sha256(data).hexdigest()
-            (self.vault / f"{stamp}.tar.age.sha256").write_text(f"{h}  {c.name}\n")
+            (self.vault / f"{stamp}.sha256").write_text(f"{h}  {c.name}\n")
 
     def run_check(self):
         env = {**os.environ, "KMJ_ALLOW_NONROOT_FOR_TESTS": "1", "KMJ_VAULT_DIR": str(self.vault),
@@ -52,6 +52,21 @@ class VaultSidecarTest(unittest.TestCase):
         self.pair("20261126T133036Z", sidecar=False)
         self.assertEqual(self.run_check().returncode, 1)
         self.pair("20261126T023521Z", sidecar_hash="zz")
+        r = self.run_check()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("bad_format=1", r.stdout)
+
+    def test_old_wrong_sidecar_name_is_not_accepted(self):
+        self.pair("20261126T133036Z", sidecar=False)
+        (self.vault / "20261126T133036Z.tar.age.sha256").write_text("0" * 64 + "  x\n")
+        r = self.run_check()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("missing_sidecar=1", r.stdout)
+
+    def test_sidecar_naming_other_file_is_bad_format(self):
+        self.pair("20261126T133036Z")
+        (self.vault / "20261126T133036Z.sha256").write_text(
+            hashlib.sha256(b"synthetic").hexdigest() + "  other.tar.age\n")
         r = self.run_check()
         self.assertEqual(r.returncode, 1)
         self.assertIn("bad_format=1", r.stdout)
