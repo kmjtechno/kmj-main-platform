@@ -62,3 +62,10 @@ Research snapshot: 26 November 2026. FreeLLMAPI is an architectural reference, n
 - https://anyapi.ai/pricing
 
 No live account or inference verification is claimed by this research or source change.
+
+## OAuth provider qualification and canonical workspace (26 November)
+
+- Existing OpenRouter PKCE and Hugging Face delegated inference authorization are retained. Owner legacy provider GET resolves to the canonical ModelFabric workspace; non-platform organization users retain their scoped page.
+- Pollinations documents app registration and PKCE at https://gen.pollinations.ai/docs and https://github.com/pollinations/pollinations/blob/main/BRING_YOUR_OWN_POLLEN.md. Its user-authorized keys can spend a wallet budget. Do not advertise it as a working free router until a registered app, authenticated key validation, exact zero-price admission and non-billable request proof exist.
+- Google Gemini OAuth requires a connected Cloud project; API-key setup remains the verified implementation. Do not request broad cloud permissions or silently enable billing. See https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/migrate/migrate-google-ai and https://ai.google.dev/gemini-api/docs/pricing.
+- Do not use private CLI/session tokens, browser cookies, or retired GitHub Models to inflate OAuth counts. Account authorization is separate from model free-tier admission and private-source consent.

@@ -10,6 +10,7 @@ use App\Services\AiProviders\ModelFabricRuleApplier;
 use App\Services\AiProviders\OpenRouterConnect;
 use App\Services\AiProviders\ProviderManager;
 use App\Services\AiProviders\ResolvesAiProviderScope;
+use App\Services\PlatformOwnerAccess;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,11 +26,19 @@ final class AiProviderController extends Controller
         private readonly ResolvesAiProviderScope $scope,
         private readonly ProviderManager $manager,
         private readonly OpenRouterConnect $openRouter,
+        private readonly PlatformOwnerAccess $access,
     ) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request): Response|RedirectResponse
     {
-        $scope = $this->scope->for($this->user($request));
+        $user = $this->user($request);
+        $scope = $this->scope->for($user);
+
+        // Platform owners have a single canonical workspace; organization
+        // users retain their scoped provider view and existing permissions.
+        if ($this->access->allows($user)) {
+            return redirect()->route('operator.modelfabric.index', ['tab' => 'providers']);
+        }
 
         return Inertia::render('services/ai-providers', [
             'status' => session('status'),

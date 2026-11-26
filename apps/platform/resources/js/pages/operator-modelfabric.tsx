@@ -111,7 +111,7 @@ type Props = {
     canManage: boolean;
     maxEvidenceDays: number;
     providerPresets: Preset[];
-    initialTab: 'start' | 'providers';
+    initialTab: 'start' | 'providers' | 'tokens';
     providers: Provider[];
     evidence: Evidence[];
     rules: Rule[];
@@ -122,7 +122,6 @@ type Props = {
 const BASE = '/operator/modelfabric';
 
 type Tab =
-    | 'start'
     | 'providers'
     | 'models'
     | 'tokens'
@@ -1521,7 +1520,7 @@ export default function OperatorModelFabric({
                                                     className={ghostButton}
                                                     onClick={() =>
                                                         openWorkflowStep(
-                                                            step.tab ?? 'start',
+                                                            step.tab ?? 'providers',
                                                         )
                                                     }
                                                 >
