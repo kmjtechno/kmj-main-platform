@@ -1,3 +1,4 @@
+import { passwordRequirements } from '@/lib/password-rules-hint';
 import { Form, Head } from '@inertiajs/react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
@@ -22,6 +23,8 @@ export default function Register({
     const [accountType, setAccountType] = useState<'individual' | 'business'>(
         'individual',
     );
+    const [password, setPassword] = useState('');
+    const requirements = passwordRequirements(passwordRules);
 
     return (
         <>
@@ -138,6 +141,9 @@ export default function Register({
                                     autoComplete="tel"
                                     placeholder="+91 98765 43210"
                                 />
+                                <p className="text-muted-foreground text-xs">
+                                    Include your country code, for example +91.
+                                </p>
                                 <InputError message={errors.phone} />
                             </div>
 
@@ -202,7 +208,30 @@ export default function Register({
                                     name="password"
                                     placeholder="Password"
                                     passwordrules={passwordRules}
+                                    value={password}
+                                    onChange={(event) =>
+                                        setPassword(event.target.value)
+                                    }
+                                    aria-describedby="password-requirements"
                                 />
+                                <ul
+                                    id="password-requirements"
+                                    className="text-muted-foreground grid gap-1 text-xs"
+                                >
+                                    {requirements.map((item) => (
+                                        <li
+                                            key={item.id}
+                                            className={
+                                                item.test(password)
+                                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                                    : undefined
+                                            }
+                                        >
+                                            {item.test(password) ? '✓' : '○'}{' '}
+                                            {item.label}
+                                        </li>
+                                    ))}
+                                </ul>
                                 <InputError message={errors.password} />
                             </div>
 
@@ -234,6 +263,12 @@ export default function Register({
                                 </TextLink>
                                 .
                             </div>
+
+                            <p className="text-muted-foreground text-xs leading-5">
+                                What happens next: we email you a verification
+                                link, you confirm your email, and your dashboard
+                                opens with the steps to request a product.
+                            </p>
 
                             <Button
                                 type="submit"
