@@ -249,7 +249,7 @@ final class ProviderManager
      * There is no paid or fallback route: a refusal is returned as an error code.
      *
      * @param  list<array{role: string, content: string}>  $messages
-     * @return array{ok: bool, content: ?string, error_code: ?string, rate?: array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int}}
+     * @return array{ok: bool, content: ?string, error_code: ?string, rate?: array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int, daily_requests_limit?: int, daily_reset_seconds?: int}}
      */
     public function complete(AiProvider $provider, string $model, array $messages, ?int $strictCodingTokens = null): array
     {

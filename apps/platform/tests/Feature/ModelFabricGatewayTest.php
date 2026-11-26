@@ -129,6 +129,119 @@ final class ModelFabricGatewayTest extends TestCase
         $this->assertSame('B Gemini', $second['provider']);
     }
 
+    public function test_sticky_session_shifts_before_model_quota_is_exhausted(): void
+    {
+        $groq = $this->provider('groq', 'A Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        $groq->models_cache = ['model-a', 'model-b'];
+        $groq->save();
+        AiModelEvidence::query()->create([
+            'organization_id' => $this->org,
+            'ai_provider_id' => $groq->id,
+            'model_id' => 'model-b',
+            'price_evidence_url' => 'https://example.com/pricing',
+            'price_evidence_note' => 'Second model independently verified free.',
+            'verified_at' => now(),
+            'expires_at' => now()->addDays(10),
+            'data_handling' => 'unknown',
+            'capabilities' => ['chat'],
+        ]);
+
+        Http::fake([
+            'api.groq.com/*' => Http::sequence()
+                ->push(['choices' => [['message' => ['content' => 'a']]]], 200, ['x-ratelimit-remaining-requests' => '1'])
+                ->push(['choices' => [['message' => ['content' => 'b']]]], 200),
+        ]);
+
+        $gateway = app(ModelFabricGateway::class);
+        $messages = [['role' => 'user', 'content' => 'hello']];
+        $first = $gateway->complete($this->org, $messages, sessionKey: 'conversation');
+        $second = $gateway->complete($this->org, $messages, sessionKey: 'conversation');
+
+        $this->assertSame('model-a', $first['model']);
+        $this->assertSame('model-b', $second['model']);
+        $this->assertSame(1, $second['attempts']);
+        Http::assertSentCount(2);
+        $this->assertSame(0, AiModelRequest::query()->where('outcome', 'failed')->count());
+    }
+
+    public function test_sticky_session_shifts_at_eighty_percent_of_owner_daily_cap(): void
+    {
+        $groq = $this->provider('groq', 'A Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        $this->provider('gemini', 'B Gemini', 'https://generativelanguage.googleapis.com/v1beta/openai', 'model-b');
+        $groq->daily_request_cap = 5;
+        $groq->save();
+
+        Http::fake([
+            'api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'a']]]], 200),
+            'generativelanguage.googleapis.com/*' => Http::response(['choices' => [['message' => ['content' => 'b']]]], 200),
+        ]);
+
+        $gateway = app(ModelFabricGateway::class);
+        $messages = [['role' => 'user', 'content' => 'hello']];
+        for ($i = 0; $i < 4; $i++) {
+            $result = $gateway->complete($this->org, $messages, sessionKey: 'conversation');
+            $this->assertSame('A Groq', $result['provider']);
+        }
+
+        $shifted = $gateway->complete($this->org, $messages, sessionKey: 'conversation');
+        $this->assertSame('B Gemini', $shifted['provider']);
+        $this->assertSame(1, $shifted['attempts']);
+        $this->assertSame(4, AiModelRequest::query()->where('ai_provider_id', $groq->id)->count());
+        Http::assertSentCount(5);
+    }
+
+    public function test_documented_groq_daily_quota_outlives_short_rate_signal(): void
+    {
+        $this->provider('groq', 'A Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        $this->provider('gemini', 'B Gemini', 'https://generativelanguage.googleapis.com/v1beta/openai', 'model-b');
+        Http::fake([
+            'api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'a']]]], 200, [
+                'x-ratelimit-limit-requests' => '100',
+                'x-ratelimit-remaining-requests' => '19',
+                'x-ratelimit-reset-requests' => '10m0.5s',
+            ]),
+            'generativelanguage.googleapis.com/*' => Http::response(['choices' => [['message' => ['content' => 'b']]]], 200),
+        ]);
+
+        $gateway = app(ModelFabricGateway::class);
+        $messages = [['role' => 'user', 'content' => 'hello']];
+        $first = $gateway->complete($this->org, $messages, sessionKey: 'conversation');
+        $this->assertSame('A Groq', $first['provider']);
+
+        $this->travel(3)->minutes();
+        $shifted = $gateway->complete($this->org, $messages, sessionKey: 'conversation');
+        $this->assertSame('B Gemini', $shifted['provider']);
+        $this->assertSame(1, $shifted['attempts']);
+        Http::assertSentCount(2);
+    }
+
+    public function test_reported_zero_daily_quota_blocks_until_documented_reset(): void
+    {
+        $this->provider('groq', 'A Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        Http::fake([
+            'api.groq.com/*' => Http::sequence()
+                ->push(['choices' => [['message' => ['content' => 'last']]]], 200, [
+                    'x-ratelimit-limit-requests' => '100',
+                    'x-ratelimit-remaining-requests' => '0',
+                    'x-ratelimit-reset-requests' => '10m0.5s',
+                ])
+                ->push(['choices' => [['message' => ['content' => 'renewed']]]], 200),
+        ]);
+
+        $gateway = app(ModelFabricGateway::class);
+        $messages = [['role' => 'user', 'content' => 'hello']];
+        $this->assertTrue($gateway->complete($this->org, $messages)['ok']);
+        $this->travel(3)->minutes();
+        $blocked = $gateway->complete($this->org, $messages);
+        $this->assertSame('provider_daily_quota_exhausted', $blocked['error_code']);
+        $this->assertSame(0, $blocked['attempts']);
+        Http::assertSentCount(1);
+
+        $this->travel(8)->minutes();
+        $this->assertTrue($gateway->complete($this->org, $messages)['ok']);
+        Http::assertSentCount(2);
+    }
+
     public function test_unevidenced_model_is_never_sent_even_when_a_provider_is_healthy(): void
     {
         Http::fake();

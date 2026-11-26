@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-proactive-quota-rotation-20261126',
+        title: 'ModelFabric: proactive quota rotation',
+        state: 'active',
+        detail: 'Prefer verified free routes with available quota before daily caps are exhausted, even for sticky sessions. Preserve hard caps and atomic reservations.',
+        evidence:
+            'Model and provider quota regression tests added; exact-head CI and production verification pending.',
+    },
+    {
         id: 'payments-recent-webhook-events-20261126',
         title: 'Payments console: recent webhook events and IST times',
         state: 'active',
