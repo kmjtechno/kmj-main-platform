@@ -63,7 +63,7 @@ void test('one canonical Licensing Hub is shown in the owner sidebar', () => {
     assert.doesNotMatch(groups, /href: '\/developer\/apps'/);
     assert.doesNotMatch(groups, /label: 'Subscriptions & Plans'/);
     const hub = read('resources/js/pages/operator-kslp.tsx');
-    assert.match(hub, /<DeveloperAppsWorkspace [\s\S]*?embedded/);
+    assert.match(hub, /<DeveloperAppsWorkspace\s[\s\S]*?embedded/);
     assert.match(hub, /Apps, Keys & SDK/);
 });
 
@@ -124,7 +124,7 @@ void test('KMJ Mail enterprise inbox controls operate on real mailbox records', 
     assert.match(source, /forwardMessage/);
     assert.match(source, /aria-label="Select all visible messages"/);
     assert.match(source, /activeSearch = q\.trim\(\)/);
-    assert.match(source, /Colored shortcuts search this folder/);
+    assert.match(source, /Colored\s+shortcuts search this folder/);
     assert.match(source, /No messages match your search/);
     assert.match(
         source,
@@ -165,8 +165,8 @@ void test('locked KMJ Mail reference uses real four-pane UI and functional contr
     assert.match(page, /kmj-mail-sender-avatar/);
     assert.match(page, /kmj-mail-message-brand/);
     assert.match(page, /kmj-mail-floating-compose/);
-    assert.match(page, /onClick=\{\(\) => submit\('send'\)\}/);
-    assert.match(page, /onClick=\{\(\) => submit\('draft'\)\}/);
+    assert.match(page, /onClick=\{\(\) =>\s*submit\('send'\)\s*\}/);
+    assert.match(page, /onClick=\{\(\) =>\s*submit\('draft'\)\s*\}/);
     assert.match(page, /kmj-mail-search-labels/);
     assert.match(ai, /id="kmj-ai-copilot"/);
     assert.match(ai, /Quick Actions/);
