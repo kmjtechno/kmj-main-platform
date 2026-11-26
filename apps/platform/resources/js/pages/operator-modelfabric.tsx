@@ -1555,112 +1555,52 @@ export default function OperatorModelFabric({
                     </>
                 ) : null}
                 {tab === 'providers' ? (
-                    <>
-                        <AiProviders
-                            embedded
-                            canManage={canManage}
-                            presets={providerPresets}
-                            providers={providers}
-                        />
-                        <Card
-                            id="providers"
-                            title="Routing controls"
-                            label="Providers"
-                            help="Review model eligibility and routing limits for connected providers. Connection alone never authorizes inference."
-                        >
-                            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                                {providers.length === 0 ? (
-                                    <p className="text-sm">
-                                        No provider connected yet.
-                                    </p>
-                                ) : null}
-                                {providers.map((provider) => (
-                                    <div
-                                        key={provider.id}
-                                        className="rounded-xl border p-4 text-sm"
-                                    >
-                                        <div className="flex items-center justify-between gap-2">
-                                            <strong>{provider.name}</strong>
-                                            <StatusPill
-                                                tone={
-                                                    !provider.enabled
-                                                        ? 'muted'
-                                                        : provider.health ===
-                                                            'ok'
-                                                          ? 'ok'
-                                                          : 'bad'
-                                                }
-                                            >
-                                                {provider.enabled
-                                                    ? provider.health
-                                                    : 'disabled'}
-                                            </StatusPill>
-                                        </div>
-                                        <p className="text-muted-foreground mt-1 text-xs">
-                                            {provider.host} · tier{' '}
-                                            {provider.free_tier}
+                    <AiProviders
+                        embedded
+                        canManage={canManage}
+                        presets={providerPresets}
+                        providers={providers}
+                        renderRoutingControls={(id) => {
+                            const provider = providers.find(
+                                (item) => item.id === id,
+                            );
+                            if (!provider) return null;
+                            return (
+                                <>
+                                    {provider.error_code &&
+                                    errorHelp(provider.error_code) ? (
+                                        <p
+                                            className="text-muted-foreground text-xs"
+                                            data-testid="modelfabric-error-help"
+                                        >
+                                            {errorHelp(provider.error_code)}
                                         </p>
-                                        <p className="mt-3 text-2xl font-black">
-                                            {provider.models.length}
-                                            <span className="text-muted-foreground text-xs font-normal">
-                                                {' '}
-                                                usable of{' '}
-                                                {
-                                                    provider.discovered_model_count
-                                                }{' '}
-                                                found
-                                            </span>
-                                        </p>
-                                        {provider.error_code ? (
-                                            <p className="mt-1 text-xs text-red-500">
-                                                Last error:{' '}
-                                                {provider.error_code}
-                                            </p>
-                                        ) : null}
-                                        {provider.error_code &&
-                                        errorHelp(provider.error_code) ? (
-                                            <p
-                                                className="text-muted-foreground mt-1 text-xs"
-                                                data-testid="modelfabric-error-help"
-                                            >
-                                                {errorHelp(provider.error_code)}
-                                            </p>
-                                        ) : null}
-                                        {provider.enabled &&
-                                        provider.health !== 'ok' ? (
-                                            <a
-                                                className={`${ghostButton} mt-3`}
-                                                href="#provider-connections"
-                                            >
-                                                Repair connection
-                                            </a>
-                                        ) : null}
-                                        <details className="mt-3 rounded-lg border p-2">
-                                            <summary className="cursor-pointer text-sm font-medium">
-                                                Usage and routing limits
-                                            </summary>
-                                            <ProviderLimits
-                                                provider={provider}
-                                                canManage={canManage}
-                                            />
-                                        </details>
-                                        {canManage &&
-                                        provider.free_tier === 'allowlist' ? (
-                                            <button
-                                                type="button"
-                                                className={`${ghostButton} mt-3`}
-                                                onClick={() =>
-                                                    startEvidence(provider.id)
-                                                }
-                                            >
-                                                Approve a free model
-                                            </button>
-                                        ) : null}
-                                    </div>
-                                ))}
-                            </div>
-                        </Card>
-                    </>
+                                    ) : null}
+                                    <details className="rounded-lg border p-2">
+                                        <summary className="cursor-pointer text-sm font-medium">
+                                            Usage and routing limits
+                                        </summary>
+                                        <ProviderLimits
+                                            provider={provider}
+                                            canManage={canManage}
+                                        />
+                                    </details>
+                                    {canManage &&
+                                    provider.free_tier === 'allowlist' ? (
+                                        <button
+                                            type="button"
+                                            className={ghostButton}
+                                            onClick={() =>
+                                                startEvidence(provider.id)
+                                            }
+                                        >
+                                            Approve a free model
+                                        </button>
+                                    ) : null}
+                                </>
+                            );
+                        }}
+                    />
                 ) : null}
 
                 {tab === 'models' ? (

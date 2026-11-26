@@ -386,7 +386,14 @@ void test('provider setup stays inside the native ModelFabric workspace', () => 
     const providerPage = read('resources/js/pages/services/ai-providers.tsx');
     assert.doesNotMatch(page, /\/services\/kmj-codebridge\/ai-providers/);
     assert.match(page, /\/operator\/modelfabric\?tab=providers/);
-    assert.match(page, /href="#provider-connections"/);
+    assert.match(page, /renderRoutingControls=\{\(id\) =>/);
+    assert.doesNotMatch(page, /title="Routing controls"/);
+    assert.match(
+        providerPage,
+        /routingControls=\{renderRoutingControls\?\.\(\s*provider\.id,?\s*\)\}/,
+    );
+    assert.match(providerPage, /\{routingControls\}/);
+    assert.match(providerPage, /Connect or reconnect a provider/);
     assert.match(page, /presets=\{providerPresets\}/);
     assert.match(controller, /'providerPresets' => collect/);
     assert.match(controller, /modelfabric_provider_tab/);

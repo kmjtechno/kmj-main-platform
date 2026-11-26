@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-single-provider-card-20261126',
+        title: 'ModelFabric: single provider management card',
+        state: 'active',
+        detail: 'Combine connection management, health guidance, model approval and routing limits in one card per provider, with compact optional connection setup.',
+        evidence:
+            'Source regression coverage; exact-head CI and live authenticated acceptance pending.',
+    },
+    {
         id: 'modelfabric-unified-provider-workspace-20261126',
         title: 'ModelFabric: unified provider connection workspace',
         state: 'active',

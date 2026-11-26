@@ -151,7 +151,7 @@ void test('API-key setup is progressive instead of a permanently open form', () 
         page,
         /setShowKeyForm\(false\);\s*setPreferredPreset\(null\);/,
     );
-    assert.match(page, /Connect another provider using an API key/);
+    assert.match(page, /Connect another provider using an API\s+key/);
     assert.match(page, /<AddProvider/);
 });
 
