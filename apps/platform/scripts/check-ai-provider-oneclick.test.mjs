@@ -210,5 +210,5 @@ void test('ModelFabric has one provider workspace with truthful connection metho
         /oauthKeys = new Set\(\['openrouter', 'huggingface'\]\)/,
     );
     assert.match(hub, /Use account authorization/);
-    assert.match(hub, /Other providers use official API keys/);
+    assert.match(hub, /Other providers use official API\s+keys/);
 });
