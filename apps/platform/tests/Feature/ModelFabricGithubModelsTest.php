@@ -27,15 +27,16 @@ final class ModelFabricGithubModelsTest extends TestCase
         $this->app->instance(EndpointGuard::class, new EndpointGuard(fn (): array => ['93.184.216.34']));
     }
 
-    public function test_github_is_an_allowlist_preset_so_nothing_is_free_without_owner_evidence(): void
+    public function test_github_is_retired_and_never_admits_inference(): void
     {
         $presets = app(ProviderManager::class)->presets();
 
-        $this->assertSame('allowlist', $presets['github']['free_tier']);
+        $this->assertSame('none', $presets['github']['free_tier']);
+        $this->assertTrue($presets['github']['retired']);
         $this->assertSame('https://models.github.ai/inference', $presets['github']['base_url']);
     }
 
-    public function test_discovery_reads_the_bare_list_catalog_with_a_get_and_no_prompt(): void
+    public function test_retired_provider_skips_network_and_clears_discovery(): void
     {
         Http::fake(['models.github.ai/*' => Http::response([
             ['id' => 'openai/gpt-4.1'],
@@ -56,15 +57,14 @@ final class ModelFabricGithubModelsTest extends TestCase
 
         $tested = app(ProviderManager::class)->test($provider);
 
-        Http::assertSent(fn ($request): bool => $request->url() === 'https://models.github.ai/catalog/models'
-            && $request->method() === 'GET'
-            && $request->body() === ''
-            && $request->hasHeader('Accept', 'application/vnd.github+json'));
-        $this->assertSame('ok', $tested->health);
-        $this->assertSame(['meta/llama-3.3-70b-instruct', 'openai/gpt-4.1'], $tested->models_cache);
+        Http::assertNothingSent();
+        $this->assertSame('blocked', $tested->health);
+        $this->assertSame('provider_retired', $tested->last_error_code);
+        $this->assertNull($tested->models_cache);
+        $this->assertSame([], app(ProviderManager::class)->admittedFreeModels($tested));
     }
 
-    public function test_a_non_list_github_catalog_reports_its_shape_but_never_its_values(): void
+    public function test_retired_provider_never_sends_credentials_even_if_catalog_returns_success(): void
     {
         Http::fake(['models.github.ai/*' => Http::response('OK', 200, ['Content-Type' => 'text/plain'])]);
         $provider = AiProvider::query()->create([
@@ -81,7 +81,8 @@ final class ModelFabricGithubModelsTest extends TestCase
 
         $tested = app(ProviderManager::class)->test($provider);
 
-        $this->assertSame('unreachable', $tested->health);
-        $this->assertSame('invalid_catalog:text/plain|txt:2', $tested->last_error_code);
+        Http::assertNothingSent();
+        $this->assertSame('blocked', $tested->health);
+        $this->assertSame('provider_retired', $tested->last_error_code);
     }
 }
