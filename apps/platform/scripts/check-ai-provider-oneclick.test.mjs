@@ -172,3 +172,16 @@ void test('empty provider view remains cloud-only with strict zero-spend policy'
     assert.match(page, /inference stays blocked/);
     assert.doesNotMatch(page, /Local Ollama|local LLM/i);
 });
+
+void test('embedded ModelFabric exposes a searchable discover-first directory and filtered connection list', () => {
+    assert.match(page, /const \[showConnect, setShowConnect\] = useState\(true\)/);
+    assert.match(page, /compact=\{embedded\}/);
+    assert.match(hub, /Search provider directory/);
+    assert.match(hub, /Not connected/);
+    assert.match(hub, /One-click OAuth/);
+    assert.match(hub, /onChooseKeyProvider\(preset.key\)/);
+    assert.match(page, /Search connected providers/);
+    assert.match(page, /Needs attention/);
+    assert.match(page, /Model eligibility &amp; routing/);
+    assert.match(hub, /Discovery does not prove free inference eligibility/);
+});
