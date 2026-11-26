@@ -61,10 +61,12 @@ function ProviderCard({
     provider,
     canManage,
     routingControls,
+    compact = false,
 }: {
     provider: Provider;
     canManage: boolean;
     routingControls?: ReactNode;
+    compact?: boolean;
 }) {
     const [busy, setBusy] = useState(false);
     const [newKey, setNewKey] = useState('');
@@ -85,7 +87,7 @@ function ProviderCard({
     };
 
     return (
-        <article className="kmj-ai-managed-provider border-sidebar-border/70 dark:border-sidebar-border flex flex-col gap-3 rounded-2xl border p-5">
+        <article className="kmj-ai-managed-provider border-sidebar-border/70 dark:border-sidebar-border flex flex-col gap-3 rounded-2xl border p-5" data-compact={compact ? 'true' : undefined}>
             <header className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h2 className="text-base font-black">{provider.name}</h2>
@@ -95,7 +97,7 @@ function ProviderCard({
                 </div>
                 <div className="flex gap-2 text-xs font-bold">
                     <span className="rounded-full border px-3 py-1">
-                        Health: {provider.health}
+                        {provider.error_code === 'provider_retired' ? 'Retired' : provider.health === 'ok' ? (provider.models.length > 0 ? 'Ready' : 'Needs free-model evidence') : provider.health === 'auth_failed' ? 'Reconnect required' : `Health: ${provider.health}`}
                     </span>
                     <span className="rounded-full border px-3 py-1">
                         {provider.enabled ? 'Enabled' : 'Disabled'}
@@ -157,7 +159,12 @@ function ProviderCard({
                 </button>
             </div>
 
-            {routingControls}
+            {compact ? (
+                <details className="kmj-ai-advanced rounded-lg border p-2">
+                    <summary className="cursor-pointer text-sm font-medium">Model eligibility &amp; routing</summary>
+                    <div className="mt-2 flex flex-col gap-2">{routingControls}</div>
+                </details>
+            ) : routingControls}
 
             {expanded && (
                 <div
@@ -551,9 +558,15 @@ export default function AiProviders({
     } | null>(null);
     const [oauthBusy, setOauthBusy] = useState(false);
     const [showKeyForm, setShowKeyForm] = useState(false);
-    const [showConnect, setShowConnect] = useState(
-        !embedded || providers.length === 0,
-    );
+    const [showConnect, setShowConnect] = useState(true);
+    const [connectionFilter, setConnectionFilter] = useState<'all' | 'ready' | 'attention' | 'inactive'>('all');
+    const [connectionSearch, setConnectionSearch] = useState('');
+    const ready = (provider: Provider) => provider.enabled && provider.health === 'ok' && provider.models.length > 0 && provider.error_code !== 'provider_retired';
+    const inactive = (provider: Provider) => !provider.enabled || provider.error_code === 'provider_retired';
+    const visibleProviders = providers.filter((provider) => {
+        const matches = (provider.name + ' ' + provider.preset + ' ' + provider.host).toLowerCase().includes(connectionSearch.trim().toLowerCase());
+        return matches && (connectionFilter === 'all' || (connectionFilter === 'ready' && ready(provider)) || (connectionFilter === 'attention' && !ready(provider) && !inactive(provider)) || (connectionFilter === 'inactive' && inactive(provider)));
+    });
     const startOpenRouter = () => {
         if (oauthBusy) return;
         setOauthBusy(true);
@@ -601,16 +614,13 @@ export default function AiProviders({
                 <div>
                     {embedded ? (
                         <h2 className="text-2xl font-black">
-                            Provider connections
+                            AI connections
                         </h2>
                     ) : (
                         <h1 className="text-2xl font-black">AI Providers</h1>
                     )}
                     <p className="text-muted-foreground text-sm">
-                        Keys stay on the server, encrypted. Connection tests
-                        only list models and never send a prompt. Credit status
-                        is shown only when the provider reports it; otherwise it
-                        is Unknown.
+                        Connect an account, discover models and manage verified-free routes in one place. Connection checks never send a prompt.
                     </p>
                 </div>
                 {status && (
@@ -659,6 +669,8 @@ export default function AiProviders({
                             >
                                 <AiProviderConnectHub
                                     presets={presets}
+                                    compact={embedded}
+                                    connectedPresets={providers.map((provider) => provider.preset)}
                                     oauthBusy={oauthBusy}
                                     onConnectOpenRouter={startOpenRouter}
                                     onConnectHuggingFace={startHuggingFace}
@@ -711,10 +723,32 @@ export default function AiProviders({
                         Only organization owners can change providers.
                     </p>
                 )}
+                {embedded && (
+                    <div id="modelfabric-connected-providers" className="kmj-ai-connections-header flex flex-col gap-3 rounded-2xl border p-4">
+                        <div>
+                            <p className="text-xs font-bold tracking-wider text-red-400 uppercase">Step 2 · Connections</p>
+                            <h2 className="text-xl font-black">Your connected providers</h2>
+                            <p className="text-muted-foreground text-sm">
+                                {providers.filter(ready).length} ready · {providers.filter((provider) => !ready(provider) && !inactive(provider)).length} need attention · {providers.filter(inactive).length} inactive
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <input aria-label="Search connected providers" placeholder="Find a connection…" value={connectionSearch} onChange={(event) => setConnectionSearch(event.target.value)} className="min-w-0 flex-1 rounded-lg border px-3 py-2" />
+                            <div aria-label="Connected provider filters" className="flex flex-wrap gap-1">
+                                {([
+                                    ['all', 'All'],
+                                    ['ready', 'Ready'],
+                                    ['attention', 'Needs attention'],
+                                    ['inactive', 'Inactive'],
+                                ] as const).map(([value, label]) => (
+                                    <button key={value} type="button" aria-pressed={connectionFilter === value} onClick={() => setConnectionFilter(value)} className="kmj-ai-filter rounded-lg border px-3 text-sm font-semibold">{label}</button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
                 <section
-                    className={
-                        embedded ? 'grid gap-4 xl:grid-cols-2' : 'grid gap-4'
-                    }
+                    className={embedded ? 'kmj-ai-connection-list grid gap-2' : 'grid gap-4'}
                     aria-label="Configured providers"
                 >
                     {providers.length === 0 && (
@@ -725,11 +759,15 @@ export default function AiProviders({
                             unknown-price inference stays blocked.
                         </p>
                     )}
-                    {providers.map((provider) => (
+                    {embedded && providers.length > 0 && visibleProviders.length === 0 && (
+                        <p role="status" className="text-muted-foreground text-sm">No connections match this filter.</p>
+                    )}
+                    {(embedded ? visibleProviders : providers).map((provider) => (
                         <ProviderCard
                             key={provider.id}
                             provider={provider}
                             canManage={canManage}
+                            compact={embedded}
                             routingControls={renderRoutingControls?.(
                                 provider.id,
                             )}
