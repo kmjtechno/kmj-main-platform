@@ -1150,7 +1150,9 @@ export default function OperatorModelFabric({
                             <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
                             <span>
                                 <strong className="block text-[10px] tracking-wide text-red-500 uppercase">
-                                    {workflow === 'coding' ? 'Secure coding · next step' : 'General chat · next step'}
+                                    {workflow === 'coding'
+                                        ? 'Secure coding · next step'
+                                        : 'General chat · next step'}
                                 </strong>
                                 {next.text}
                             </span>
@@ -1183,10 +1185,16 @@ export default function OperatorModelFabric({
                             data-testid="modelfabric-workflow-readiness"
                             className="grid gap-3 lg:grid-cols-2"
                         >
-                            <div className={`owner-panel space-y-4 ${workflow === 'chat' ? 'ring-1 ring-red-500/50' : ''}`}>
+                            <div
+                                className={`owner-panel space-y-4 ${workflow === 'chat' ? 'ring-1 ring-red-500/50' : ''}`}
+                            >
                                 <div className="flex flex-wrap items-center justify-between gap-2">
                                     <h2 className="flex items-center gap-2 text-base font-bold">
-                                        <Zap size={18} className="text-cyan-400" /> General AI chat
+                                        <Zap
+                                            size={18}
+                                            className="text-cyan-400"
+                                        />{' '}
+                                        General AI chat
                                     </h2>
                                     <StatusPill
                                         tone={
@@ -1202,18 +1210,32 @@ export default function OperatorModelFabric({
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="bg-muted/25 rounded-xl border p-3">
-                                        <div className="text-xl font-bold tabular-nums">{plans.chat.routes.length}</div>
-                                        <div className="text-muted-foreground text-xs">Eligible chat routes</div>
+                                        <div className="text-xl font-bold tabular-nums">
+                                            {plans.chat.routes.length}
+                                        </div>
+                                        <div className="text-muted-foreground text-xs">
+                                            Eligible chat routes
+                                        </div>
                                     </div>
                                     <div className="bg-muted/25 rounded-xl border p-3">
-                                        <div className="text-xl font-bold tabular-nums">{chatTokens}</div>
-                                        <div className="text-muted-foreground text-xs">Active chat tokens</div>
+                                        <div className="text-xl font-bold tabular-nums">
+                                            {chatTokens}
+                                        </div>
+                                        <div className="text-muted-foreground text-xs">
+                                            Active chat tokens
+                                        </div>
                                     </div>
                                 </div>
-                                <p className="text-muted-foreground text-sm">For non-confidential prompts only.</p>
+                                <p className="text-muted-foreground text-sm">
+                                    For non-confidential prompts only.
+                                </p>
                                 <button
                                     type="button"
-                                    className={workflow === 'chat' ? primaryButton : ghostButton}
+                                    className={
+                                        workflow === 'chat'
+                                            ? primaryButton
+                                            : ghostButton
+                                    }
                                     onClick={() => {
                                         setWorkflow('chat');
                                         setConfirmed(false);
@@ -1238,10 +1260,16 @@ export default function OperatorModelFabric({
                                     <ArrowRight size={15} />
                                 </button>
                             </div>
-                            <div className={`owner-panel space-y-4 ${workflow === 'coding' ? 'ring-1 ring-red-500/50' : ''}`}>
+                            <div
+                                className={`owner-panel space-y-4 ${workflow === 'coding' ? 'ring-1 ring-red-500/50' : ''}`}
+                            >
                                 <div className="flex flex-wrap items-center justify-between gap-2">
                                     <h2 className="flex items-center gap-2 text-base font-bold">
-                                        <LockKeyhole size={18} className="text-violet-400" /> Secure coding
+                                        <LockKeyhole
+                                            size={18}
+                                            className="text-violet-400"
+                                        />{' '}
+                                        Secure coding
                                     </h2>
                                     <StatusPill
                                         tone={
@@ -1257,15 +1285,26 @@ export default function OperatorModelFabric({
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="bg-muted/25 rounded-xl border p-3">
-                                        <div className="text-xl font-bold tabular-nums">{plans.privateSource.routes.length}</div>
-                                        <div className="text-muted-foreground text-xs">Eligible coding routes</div>
+                                        <div className="text-xl font-bold tabular-nums">
+                                            {plans.privateSource.routes.length}
+                                        </div>
+                                        <div className="text-muted-foreground text-xs">
+                                            Eligible coding routes
+                                        </div>
                                     </div>
                                     <div className="bg-muted/25 rounded-xl border p-3">
-                                        <div className="text-xl font-bold tabular-nums">{codingTokens}</div>
-                                        <div className="text-muted-foreground text-xs">Active coding tokens</div>
+                                        <div className="text-xl font-bold tabular-nums">
+                                            {codingTokens}
+                                        </div>
+                                        <div className="text-muted-foreground text-xs">
+                                            Active coding tokens
+                                        </div>
                                     </div>
                                 </div>
-                                <p className="text-muted-foreground text-sm">Separate source-transfer consent and worker activation required.</p>
+                                <p className="text-muted-foreground text-sm">
+                                    Separate source-transfer consent and worker
+                                    activation required.
+                                </p>
                                 {!privateReady ? (
                                     <p className="text-sm leading-relaxed">
                                         Review exact-model pricing, code
@@ -1276,7 +1315,11 @@ export default function OperatorModelFabric({
                                 ) : null}
                                 <button
                                     type="button"
-                                    className={workflow === 'coding' ? primaryButton : ghostButton}
+                                    className={
+                                        workflow === 'coding'
+                                            ? primaryButton
+                                            : ghostButton
+                                    }
                                     onClick={() => {
                                         setWorkflow('coding');
                                         if (!privateReady) {
@@ -1288,7 +1331,9 @@ export default function OperatorModelFabric({
                                             setTokenPrivate(true);
                                             setTab('tokens');
                                         } else {
-                                            router.visit('/services/kmj-codebridge');
+                                            router.visit(
+                                                '/services/kmj-codebridge',
+                                            );
                                         }
                                     }}
                                 >
@@ -1309,24 +1354,38 @@ export default function OperatorModelFabric({
                             <div className="flex flex-wrap items-center justify-between gap-4">
                                 <div>
                                     <h2 className="flex items-center gap-2 text-base font-bold">
-                                        <ShieldCheck size={18} className="text-red-500" /> Guided setup
+                                        <ShieldCheck
+                                            size={18}
+                                            className="text-red-500"
+                                        />{' '}
+                                        Guided setup
                                     </h2>
                                     <p className="text-muted-foreground mt-1 text-xs">
-                                        Complete one workflow at a time. No step runs inference automatically.
+                                        Complete one workflow at a time. No step
+                                        runs inference automatically.
                                     </p>
                                 </div>
-                                <div className="flex gap-1 rounded-xl border p-1" aria-label="Choose setup workflow">
-                                    {(['chat', 'coding'] as const).map((mode) => (
-                                        <button
-                                            key={mode}
-                                            type="button"
-                                            aria-pressed={workflow === mode}
-                                            className={`rounded-lg px-3 py-2 text-xs font-bold transition ${workflow === mode ? 'bg-red-600 text-white' : 'text-muted-foreground hover:bg-muted'}`}
-                                            onClick={() => setWorkflow(mode)}
-                                        >
-                                            {mode === 'chat' ? 'General chat' : 'Secure coding'}
-                                        </button>
-                                    ))}
+                                <div
+                                    className="flex gap-1 rounded-xl border p-1"
+                                    aria-label="Choose setup workflow"
+                                >
+                                    {(['chat', 'coding'] as const).map(
+                                        (mode) => (
+                                            <button
+                                                key={mode}
+                                                type="button"
+                                                aria-pressed={workflow === mode}
+                                                className={`rounded-lg px-3 py-2 text-xs font-bold transition ${workflow === mode ? 'bg-red-600 text-white' : 'text-muted-foreground hover:bg-muted'}`}
+                                                onClick={() =>
+                                                    setWorkflow(mode)
+                                                }
+                                            >
+                                                {mode === 'chat'
+                                                    ? 'General chat'
+                                                    : 'Secure coding'}
+                                            </button>
+                                        ),
+                                    )}
                                 </div>
                             </div>
                             <div className="mt-4 flex items-center gap-3">
@@ -1338,9 +1397,17 @@ export default function OperatorModelFabric({
                                     aria-valuenow={completedSteps}
                                     className="bg-muted h-2 flex-1 overflow-hidden rounded-full"
                                 >
-                                    <div className="h-full rounded-full bg-red-600 transition-all" style={{ width: `${completedSteps / setupJourney.length * 100}%` }} />
+                                    <div
+                                        className="h-full rounded-full bg-red-600 transition-all"
+                                        style={{
+                                            width: `${(completedSteps / setupJourney.length) * 100}%`,
+                                        }}
+                                    />
                                 </div>
-                                <span className="text-muted-foreground text-xs tabular-nums">{completedSteps} / {setupJourney.length} evidenced</span>
+                                <span className="text-muted-foreground text-xs tabular-nums">
+                                    {completedSteps} / {setupJourney.length}{' '}
+                                    evidenced
+                                </span>
                             </div>
                             <ol className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
                                 {setupJourney.map((step, index) => (
@@ -1361,7 +1428,9 @@ export default function OperatorModelFabric({
                                             >
                                                 {step.complete
                                                     ? 'Evidence found'
-                                                    : index === activeStep ? 'Next action' : 'Pending'}
+                                                    : index === activeStep
+                                                      ? 'Next action'
+                                                      : 'Pending'}
                                             </StatusPill>
                                         </div>
                                         <p className="text-muted-foreground flex-1 text-xs leading-5">
@@ -1380,10 +1449,14 @@ export default function OperatorModelFabric({
                                                 type="button"
                                                 className={ghostButton}
                                                 onClick={() =>
-                                                    openWorkflowStep(step.tab ?? 'start')
+                                                    openWorkflowStep(
+                                                        step.tab ?? 'start',
+                                                    )
                                                 }
                                             >
-                                                {step.complete ? 'Review' : 'Open step'}{' '}
+                                                {step.complete
+                                                    ? 'Review'
+                                                    : 'Open step'}{' '}
                                                 <ChevronRight size={13} />
                                             </button>
                                         )}
@@ -1444,18 +1517,23 @@ export default function OperatorModelFabric({
                             )}
                         </section>
                         <details className="owner-panel" id="routes">
-                            <summary className="cursor-pointer text-sm font-bold">Routing diagnostics &amp; provider eligibility</summary>
-                            <section className="mt-4 grid gap-4 md:grid-cols-2" aria-label="Route plan">
-                            <PlanCard
-                                title="General chat"
-                                note="Used by CodeBridge chat and Kristi guided features."
-                                plan={plans.chat}
-                            />
-                            <PlanCard
-                                title="Private source code"
-                                note="Needs proof the provider does not train on submitted data. Your consent for source transfer is still separate."
-                                plan={plans.privateSource}
-                            />
+                            <summary className="cursor-pointer text-sm font-bold">
+                                Routing diagnostics &amp; provider eligibility
+                            </summary>
+                            <section
+                                className="mt-4 grid gap-4 md:grid-cols-2"
+                                aria-label="Route plan"
+                            >
+                                <PlanCard
+                                    title="General chat"
+                                    note="Used by CodeBridge chat and Kristi guided features."
+                                    plan={plans.chat}
+                                />
+                                <PlanCard
+                                    title="Private source code"
+                                    note="Needs proof the provider does not train on submitted data. Your consent for source transfer is still separate."
+                                    plan={plans.privateSource}
+                                />
                             </section>
                         </details>
                         <div className="owner-panel flex flex-wrap items-center justify-between gap-3">
@@ -1656,9 +1734,17 @@ export default function OperatorModelFabric({
                     >
                         {workflow === 'coding' ? (
                             <div className="mb-4 rounded-xl border border-violet-500/25 bg-violet-500/5 p-4 text-sm">
-                                <h3 className="flex items-center gap-2 font-bold"><LockKeyhole size={16} /> Secure coding eligibility</h3>
+                                <h3 className="flex items-center gap-2 font-bold">
+                                    <LockKeyhole size={16} /> Secure coding
+                                    eligibility
+                                </h3>
                                 <p className="text-muted-foreground mt-2 leading-relaxed">
-                                    Select the exact discovered model. Verify zero-cost pricing, select Code capability, and select documented no-training handling only when supported by the provider. Source-transfer consent and device activation are separate.
+                                    Select the exact discovered model. Verify
+                                    zero-cost pricing, select Code capability,
+                                    and select documented no-training handling
+                                    only when supported by the provider.
+                                    Source-transfer consent and device
+                                    activation are separate.
                                 </p>
                             </div>
                         ) : null}
