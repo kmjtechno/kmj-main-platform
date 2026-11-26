@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AiProvider;
 use App\Models\User;
+use App\Services\AiProviders\ModelFabricRuleApplier;
 use App\Services\AiProviders\OpenRouterConnect;
 use App\Services\AiProviders\ProviderManager;
 use App\Services\AiProviders\ResolvesAiProviderScope;
@@ -34,6 +35,7 @@ final class AiProviderController extends Controller
             'status' => session('status'),
             'canManage' => $scope['can_manage'],
             'presets' => collect($this->manager->presets())
+                ->reject(fn (array $preset): bool => $preset['retired'] ?? false)
                 ->map(fn (array $preset, string $key): array => [
                     'key' => $key,
                     'label' => $preset['label'],
@@ -232,13 +234,18 @@ final class AiProviderController extends Controller
         return $base.' '.bin2hex(random_bytes(3));
     }
 
-    public function test(Request $request, string $provider): RedirectResponse
+    public function test(Request $request, string $provider, ModelFabricRuleApplier $rules): RedirectResponse
     {
         $tested = $this->manager->test($this->find($request, $provider, true));
+        if ($tested->health !== 'ok') {
+            return back()->with('status', 'Connection check finished: '.$tested->health.'.');
+        }
 
-        return back()->with('status', $tested->health === 'ok'
-            ? 'Connection verified; '.count($tested->models_cache ?? []).' models discovered.'
-            : 'Connection check finished: '.$tested->health.'.');
+        $applied = $rules->apply($tested);
+        $admitted = $this->manager->admittedFreeModels($tested);
+
+        return back()->with('status', 'Connection verified; '.count($tested->models_cache ?? []).' models discovered; '
+            .count($admitted).' free models admitted; '.$applied['approved'].' newly approved by current owner rules.');
     }
 
     public function destroy(Request $request, string $provider): RedirectResponse
