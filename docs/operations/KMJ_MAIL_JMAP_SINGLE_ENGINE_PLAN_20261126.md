@@ -15,9 +15,9 @@ Live JMAP session against the real engine, per-user identity, response-size boun
 Exactly one engine is authoritative for mailboxes at a time. The Main Platform keeps ownership of identity, entitlement and audit; the engine owns message storage. No second writer, no duplicate delivery path, and no MX change until the gates below pass.
 
 ## Proposed slices (each its own small PR, exact-head CI, no deploy)
-1. Contract audit: list every config key and route the JMAP path touches; add a static test that the origin allowlist rejects redirects, HTTP and foreign hosts.
-2. Transport hardening tests: TLS required, redirects rejected, response size bounded, method-response account id checked, token never serialized (extend `JmapReadOnlyTransportTest`).
-3. Authorization: require recent password/passkey confirmation on the route (the pilot docblock already requires it) with a failing-first test.
+1. Contract audit: list every config key and route the JMAP path touches; origin allowlist, redirect and foreign-host rejection are covered by existing contract and transport tests.
+2. Transport hardening tests: extended in PR #1204 (non-JSON reply, 401, malformed credential sends no request, foreign apiUrl never requested, credential absent from failure text). Redirect, oversize and identity-mismatch tests already existed. Not yet covered: method-response account id checks beyond the existing response parsers.
+3. Authorization: DONE in source, no work needed. The route sits inside the `auth`, `verified`, `password.confirm` group in `routes/workforce-mail.php`, and `JmapOwnerInboxEndpointTest` already asserts guest 401, unconfirmed owner 423, disabled/unbound owner 403 with no engine call, and no browser-supplied ids. (Corrected 2026-11-26: the first version of this plan wrongly listed it as missing.)
 4. Qualification (owner-run, read-only): authenticated session discovery with synthetic data on the isolated engine; record the receipt.
 5. Per-user identity mapping and audit events, still read-only.
 6. Only then: write paths (send, move), after independent external SMTP/TLS/relay proof and owner gates.
