@@ -504,6 +504,28 @@ final class AiProviderManagerTest extends TestCase
         app(ProviderManager::class)->assertInferenceAllowed($provider, 'some-model');
     }
 
+    public function test_kilo_keyless_connect_requires_public_consent_and_filters_catalog(): void
+    {
+        Http::fake(['ai-gateway.kilo.ai/*' => Http::response(['data' => [
+            ['id' => 'sample/public:free'],
+            ['id' => 'sample/paid'],
+            ['id' => 'nvidia/trial:free'],
+        ]], 200)]);
+
+        $url = '/services/kmj-codebridge/ai-providers/connect/kilo-free';
+        $this->confirmed($this->owner)->post($url)->assertSessionHasErrors('public_prompts_confirmed');
+        $this->confirmed($this->member)->post($url, ['public_prompts_confirmed' => true])->assertForbidden();
+        $this->confirmed($this->owner)->post($url, ['public_prompts_confirmed' => true])->assertSessionHasNoErrors();
+        $this->confirmed($this->owner)->post($url, ['public_prompts_confirmed' => true])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('ai_providers', 1);
+        $provider = AiProvider::query()->firstOrFail();
+        $this->assertSame(['sample/public:free'], app(ProviderManager::class)->admittedFreeModels($provider));
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request): bool => $request->method() === 'GET' && ! $request->hasHeader('Authorization'));
+        $this->assertSame([], app(\App\Services\AiProviders\ModelFabricRouter::class)->plan($this->orgA, 'code', true)['routes']);
+    }
+
     private function confirmed(User $user): static
     {
         return $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()]);

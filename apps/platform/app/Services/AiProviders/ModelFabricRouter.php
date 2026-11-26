@@ -31,6 +31,11 @@ final class ModelFabricRouter
 
         $providers = AiProvider::query()->where('organization_id', $organizationId)->orderBy('name')->get();
         foreach ($providers as $provider) {
+            if ($provider->preset === 'kilo-free' && ($privateSource || $strictFreeCloud || $capability !== 'chat')) {
+                $reasons[] = ['provider' => $provider->name, 'reason' => 'public_chat_only'];
+
+                continue;
+            }
             $evidence = $this->currentEvidence($provider);
             $models = $this->manager->admittedFreeModels($provider);
             if ($models === []) {

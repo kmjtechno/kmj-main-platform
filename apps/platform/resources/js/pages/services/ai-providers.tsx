@@ -95,7 +95,9 @@ function ProviderCard({
                 <div>
                     <h2 className="text-base font-black">{provider.name}</h2>
                     <p className="text-muted-foreground text-xs">
-                        {provider.host} · key {provider.key_mask}
+                        {provider.host} · {provider.preset === 'kilo-free'
+                            ? 'No API key'
+                            : `key ${provider.key_mask}`}
                     </p>
                 </div>
                 <div className="flex gap-2 text-xs font-bold">
@@ -111,7 +113,11 @@ function ProviderCard({
                                 : `Health: ${provider.health}`}
                     </span>
                     <span className="rounded-full border px-3 py-1">
-                        {provider.enabled ? 'Enabled' : 'Disabled'}
+                        {provider.error_code === 'provider_retired'
+                            ? 'Inactive'
+                            : provider.enabled
+                              ? 'Enabled'
+                              : 'Disabled'}
                     </span>
                 </div>
             </header>
@@ -122,7 +128,7 @@ function ProviderCard({
                 {provider.preset === 'openrouter'
                     ? 'zero-prompt-price catalog candidates'
                     : 'catalog models'}{' '}
-                discovered
+                {provider.health !== 'ok' ? ' cached' : ' discovered'}
                 {provider.models.length === 0
                     ? ' · Inference blocked until verified-free admission'
                     : ' · Free-only policy active'}
@@ -623,6 +629,16 @@ export default function AiProviders({
         );
     };
 
+    const startKiloFree = () => {
+        if (oauthBusy) return;
+        setOauthBusy(true);
+        router.post(
+            BASE + '/connect/kilo-free',
+            { public_prompts_confirmed: true },
+            { preserveScroll: true, onFinish: () => setOauthBusy(false) },
+        );
+    };
+
     const startHuggingFace = () => {
         if (oauthBusy) return;
         setOauthBusy(true);
@@ -721,6 +737,7 @@ export default function AiProviders({
                                     oauthBusy={oauthBusy}
                                     onConnectOpenRouter={startOpenRouter}
                                     onConnectHuggingFace={startHuggingFace}
+                                    onConnectKiloFree={startKiloFree}
                                     selectedPreset={
                                         preferredPreset?.key ?? null
                                     }
@@ -745,7 +762,9 @@ export default function AiProviders({
                                             Close key setup
                                         </button>
                                         <AddProvider
-                                            presets={presets}
+                                            presets={presets.filter(
+                                                (preset) => preset.key !== 'kilo-free',
+                                            )}
                                             preferredPreset={preferredPreset}
                                             onManualProviderChange={() =>
                                                 setPreferredPreset(null)

@@ -101,6 +101,7 @@ export default function AiProviderConnectHub({
     oauthBusy,
     onConnectOpenRouter,
     onConnectHuggingFace,
+    onConnectKiloFree,
     onChooseKeyProvider,
     selectedPreset,
     compact = false,
@@ -110,6 +111,7 @@ export default function AiProviderConnectHub({
     oauthBusy: boolean;
     onConnectOpenRouter: () => void;
     onConnectHuggingFace: () => void;
+    onConnectKiloFree: () => void;
     onChooseKeyProvider: (preset: string) => void;
     selectedPreset: string | null;
     compact?: boolean;
@@ -117,6 +119,7 @@ export default function AiProviderConnectHub({
 }) {
     const supported = new Set(presets.map((preset) => preset.key));
     const [hfFree, setHfFree] = useState(false);
+    const [kiloPublic, setKiloPublic] = useState(false);
     const [query, setQuery] = useState('');
     const [hideConnected, setHideConnected] = useState(false);
     const [choice, setChoice] = useState('');
@@ -180,9 +183,11 @@ export default function AiProviderConnectHub({
                             {visible.map((preset) => (
                                 <option key={preset.key} value={preset.key}>
                                     {preset.label}
-                                    {oauthKeys.has(preset.key)
-                                        ? ' · OAuth'
-                                        : ' · API key'}
+                                    {preset.key === 'kilo-free'
+                                        ? ' · No key required'
+                                        : oauthKeys.has(preset.key)
+                                          ? ' · OAuth'
+                                          : ' · API key'}
                                     {connected.has(preset.key)
                                         ? ' · Connected'
                                         : ''}
@@ -232,7 +237,14 @@ export default function AiProviderConnectHub({
                                     <ExternalLink className="h-3 w-3" />
                                 </a>
                             )}
-                            {oauthKeys.has(selected.key) ? (
+                            {selected.key === 'kilo-free' ? (
+                                <a
+                                    href="#modelfabric-keyless-connect"
+                                    className="kmj-ai-primary-action inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-bold"
+                                >
+                                    Connect without a key
+                                </a>
+                            ) : oauthKeys.has(selected.key) ? (
                                 <a
                                     href="#modelfabric-oauth-connect"
                                     className="kmj-ai-primary-action inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-bold"
@@ -281,7 +293,9 @@ export default function AiProviderConnectHub({
                                     onClick={onConnectOpenRouter}
                                     className="kmj-ai-primary-action mt-3 min-h-11 w-full rounded-lg px-3 text-sm font-bold"
                                 >
-                                    Connect OpenRouter
+                                    {connected.has('openrouter')
+                                        ? 'Add OpenRouter account'
+                                        : 'Connect OpenRouter'}
                                 </button>
                             </article>
                         )}
@@ -316,6 +330,38 @@ export default function AiProviderConnectHub({
                         )}
                     </div>
                 </div>
+                {supported.has('kilo-free') && (
+                    <article
+                        id="modelfabric-keyless-connect"
+                        className="kmj-ai-directory-item mt-4 rounded-xl border p-3"
+                    >
+                        <h3 className="font-bold">One-click without API key</h3>
+                        <h4 className="mt-2 font-bold">Kilo Gateway</h4>
+                        <p className="text-muted-foreground text-xs">
+                            Free public chat · 200 requests/hour per IP shared across models.
+                        </p>
+                        <label className="mt-2 flex items-start gap-2 text-xs">
+                            <input
+                                type="checkbox"
+                                checked={kiloPublic}
+                                onChange={(event) =>
+                                    setKiloPublic(event.target.checked)
+                                }
+                            />
+                            Public, non-confidential prompts only; provider terms apply.
+                        </label>
+                        <button
+                            type="button"
+                            disabled={oauthBusy || !kiloPublic || connected.has('kilo-free')}
+                            onClick={onConnectKiloFree}
+                            className="kmj-ai-primary-action mt-3 min-h-11 rounded-lg px-4 text-sm font-bold disabled:opacity-50"
+                        >
+                            {connected.has('kilo-free')
+                                ? 'Connected'
+                                : 'Connect Kilo Free'}
+                        </button>
+                    </article>
+                )}
                 <p className="text-muted-foreground mt-3 text-xs">
                     Discovery does not prove free inference eligibility.
                 </p>

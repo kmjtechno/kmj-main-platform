@@ -54,6 +54,9 @@ final class ProviderManager
         }
         $this->guard->validate($baseUrl, $this->approvedHosts());
         $apiKey = (string) ($data['api_key'] ?? '');
+        if ($presetKey === 'kilo-free' && $apiKey !== '') {
+            throw new InvalidArgumentException('keyless_provider');
+        }
 
         return AiProvider::query()->create([
             'organization_id' => $organizationId,
@@ -76,6 +79,9 @@ final class ProviderManager
     {
         $replacingKey = isset($data['api_key']) && is_string($data['api_key']) && $data['api_key'] !== '';
         if ($replacingKey) {
+            if ($provider->preset === 'kilo-free') {
+                throw new InvalidArgumentException('keyless_provider');
+            }
             if ($this->presets()[$provider->preset]['retired'] ?? false) {
                 throw new InvalidArgumentException('provider_retired');
             }
@@ -184,7 +190,8 @@ final class ProviderManager
 
         return array_values(array_filter(
             $provider->models_cache ?? [],
-            static fn (string $model): bool => FreePolicy::inferenceAllowed($tier, $model, $allowlist),
+            fn (string $model): bool => ($provider->preset !== 'kilo-free' || OpenAiCompatibleAdapter::kiloPublicModel($model))
+                && FreePolicy::inferenceAllowed($tier, $model, $allowlist),
         ));
     }
 
@@ -212,6 +219,9 @@ final class ProviderManager
         }
         if (! in_array($model, $provider->models_cache ?? [], true)) {
             throw new InvalidArgumentException('model_not_discovered');
+        }
+        if ($provider->preset === 'kilo-free' && ! OpenAiCompatibleAdapter::kiloPublicModel($model)) {
+            throw new InvalidArgumentException('zero_spend_blocked');
         }
         $tier = $this->presets()[$provider->preset]['free_tier'] ?? 'none';
         FreePolicy::assertInferenceAllowed($tier, $model, $this->allowlist($provider, $tier));
@@ -272,7 +282,7 @@ final class ProviderManager
             'name' => $provider->name,
             'preset' => $provider->preset,
             'host' => (string) parse_url($provider->base_url, PHP_URL_HOST),
-            'key_mask' => '••••'.$provider->key_last4,
+            'key_mask' => $provider->preset === 'kilo-free' ? 'Not required' : '••••'.$provider->key_last4,
             'enabled' => $provider->enabled,
             'zero_spend' => true,
             'credit_balance' => 'unknown',
