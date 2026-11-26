@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\AiProviders;
 
+use App\Models\AiModelEvidence;
 use App\Models\AiModelRequest;
 use App\Models\AiProvider;
 use Illuminate\Support\Facades\Cache;
@@ -73,13 +74,13 @@ final class ModelFabricGateway
             'priority' => (int) ($limits[$id]['priority'] ?? 100),
         ]);
 
-        // ADR-004 rev 2: a credit-limited route is skipped at its owner-set daily cap and sinks at 80%, so
-        // a mis-stated provider limit can never spend the owner's money. A missing or zero cap fails closed.
+        // Count every local attempt against the most conservative current credit cap for a connection.
+        // A request count is not a monetary balance. The provider's hard no-overage policy is still required.
         $creditUsed = $this->creditUsage($organizationId, $plan['routes']);
         // Sticky sessions are a preference only. Apply quota partitioning AFTER stickiness so
         // continuity and owner priority cannot keep sending work to a nearly exhausted route.
         $plan['routes'] = $this->preferSticky($plan['routes'], $organizationId, $sessionKey);
-        $plan['routes'] = $this->sinkNearQuota($plan['routes'], $creditUsed, $limits);
+        $plan['routes'] = $this->sinkNearQuota($organizationId, $plan['routes'], $creditUsed, $limits);
 
         $attempts = 0;
         $last = 'all_routes_cooling_down';
@@ -103,8 +104,8 @@ final class ModelFabricGateway
                 continue;
             }
             if (($route['cost_class'] ?? 'free') === 'credit-limited') {
-                $cap = (int) ($route['credit_daily_cap'] ?? 0);
-                if ($cap <= 0 || ($creditUsed[$providerId.'|'.(string) $route['model']] ?? 0) >= $cap) {
+                $cap = $this->sharedCreditCap($organizationId, $providerId, (int) ($route['credit_daily_cap'] ?? 0));
+                if ($cap <= 0 || ($creditUsed[$providerId] ?? 0) >= $cap) {
                     $last = 'credit_cap_reached';
 
                     continue;
@@ -193,7 +194,7 @@ final class ModelFabricGateway
     }
 
     /**
-     * Today's routed attempts (UTC day) per "provider|model" for credit-limited routes only.
+     * Today's total routed attempts (UTC day) per connection, including non-credit models.
      *
      * @param  list<array<string, mixed>>  $routes
      * @return array<string, int>
@@ -215,12 +216,12 @@ final class ModelFabricGateway
             ->where('organization_id', $organizationId)
             ->whereIn('ai_provider_id', array_keys($providerIds))
             ->where('created_at', '>=', now()->utc()->startOfDay())
-            ->selectRaw('ai_provider_id, model_id, count(*) as c')
-            ->groupBy('ai_provider_id', 'model_id')
+            ->selectRaw('ai_provider_id, count(*) as c')
+            ->groupBy('ai_provider_id')
             ->toBase()
             ->get();
         foreach ($rows as $row) {
-            $used[(string) $row->ai_provider_id.'|'.(string) $row->model_id] = (int) $row->c;
+            $used[(string) $row->ai_provider_id] = (int) $row->c;
         }
 
         return $used;
@@ -234,14 +235,15 @@ final class ModelFabricGateway
      * @param  array<string, array{priority: int, cap: ?int, used: int, model_scoped: bool, keyless_near: bool}>  $limits
      * @return list<array<string, mixed>>
      */
-    private function sinkNearQuota(array $routes, array $creditUsed, array $limits): array
+    private function sinkNearQuota(string $organizationId, array $routes, array $creditUsed, array $limits): array
     {
         $normal = [];
         $near = [];
         foreach ($routes as $route) {
-            $cap = (int) ($route['credit_daily_cap'] ?? 0);
-            $used = $creditUsed[(string) $route['provider_id'].'|'.(string) $route['model']] ?? 0;
             $providerId = (string) $route['provider_id'];
+            $cap = ($route['cost_class'] ?? 'free') === 'credit-limited'
+                ? $this->sharedCreditCap($organizationId, $providerId, (int) ($route['credit_daily_cap'] ?? 0)) : 0;
+            $used = $creditUsed[$providerId] ?? 0;
             $limit = $limits[$providerId] ?? null;
             $nearCreditCap = ($route['cost_class'] ?? 'free') === 'credit-limited' && $cap > 0 && $used * 10 >= $cap * 8;
             if ($nearCreditCap || ($limit['keyless_near'] ?? false) || $this->nearDailyCap($limit)
@@ -476,8 +478,8 @@ final class ModelFabricGateway
                 return $deny('daily_cap_reached');
             }
             if (($current['cost_class'] ?? 'free') === 'credit-limited') {
-                $cap = (int) ($current['credit_daily_cap'] ?? 0);
-                if ($cap <= 0 || (clone $today)->where('model_id', $model)->count() >= $cap) {
+                $cap = $this->sharedCreditCap($organizationId, $providerId, (int) ($current['credit_daily_cap'] ?? 0));
+                if ($cap <= 0 || (clone $today)->count() >= $cap) {
                     return $deny('credit_cap_reached');
                 }
             }
@@ -495,6 +497,25 @@ final class ModelFabricGateway
 
             return ['provider' => $provider, 'attempt' => $attempt, 'error' => null];
         });
+    }
+
+    private function sharedCreditCap(string $organizationId, string $providerId, int $routeCap): int
+    {
+        if ($routeCap <= 0) {
+            return 0;
+        }
+
+        $cap = $routeCap;
+        foreach (AiModelEvidence::query()->where('organization_id', $organizationId)
+            ->where('ai_provider_id', $providerId)->where('cost_class', 'credit-limited')
+            ->whereNull('revoked_at')->where('expires_at', '>', now())->get() as $proof) {
+            if ($proof->credit_hard_cap_attested_at === null || $proof->credit_daily_cap === null || $proof->credit_daily_cap <= 0) {
+                return 0;
+            }
+            $cap = min($cap, $proof->credit_daily_cap);
+        }
+
+        return $cap;
     }
 
     /** @return array{used: int, limit: int, cooling: bool} */

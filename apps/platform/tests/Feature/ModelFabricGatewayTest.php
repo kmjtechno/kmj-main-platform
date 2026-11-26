@@ -304,6 +304,46 @@ final class ModelFabricGatewayTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_credit_models_share_the_lowest_daily_connection_cap(): void
+    {
+        $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        $provider->models_cache = ['model-a', 'model-b'];
+        $provider->save();
+        AiModelEvidence::query()->where('ai_provider_id', $provider->id)->update([
+            'cost_class' => 'credit-limited',
+            'credit_daily_cap' => 1,
+            'credit_hard_cap_attested_at' => now(),
+        ]);
+        AiModelEvidence::query()->create([
+            'organization_id' => $this->org,
+            'ai_provider_id' => $provider->id,
+            'model_id' => 'model-b',
+            'price_evidence_url' => 'https://example.com/pricing',
+            'price_evidence_note' => 'Hard no-overage protection independently attested.',
+            'verified_at' => now(),
+            'expires_at' => now()->addDays(10),
+            'data_handling' => 'unknown',
+            'capabilities' => ['chat'],
+            'cost_class' => 'credit-limited',
+            'credit_daily_cap' => 5,
+            'credit_hard_cap_attested_at' => now(),
+        ]);
+        AiModelRequest::query()->create([
+            'organization_id' => $this->org,
+            'ai_provider_id' => $provider->id,
+            'model_id' => 'model-a',
+            'outcome' => 'ok',
+            'latency_ms' => 0,
+        ]);
+
+        Http::fake();
+        $result = app(ModelFabricGateway::class)->complete($this->org, [['role' => 'user', 'content' => 'hi']]);
+
+        $this->assertFalse($result['ok']);
+        $this->assertSame('credit_cap_reached', $result['error_code']);
+        Http::assertNothingSent();
+    }
+
     private function provider(string $preset, string $name, string $baseUrl, string $model): AiProvider
     {
         $provider = AiProvider::query()->create($this->providerRow($preset, $name, $baseUrl, $model));

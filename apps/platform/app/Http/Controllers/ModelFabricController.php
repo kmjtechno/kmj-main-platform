@@ -201,7 +201,7 @@ final class ModelFabricController extends Controller
         ]);
 
         return back()->with('status', $creditLimited
-            ? 'Credit-limited approval saved. KMJ stops routing to it at its daily cap; it is routable until it expires or is revoked.'
+            ? 'Credit-limited approval saved. KMJ applies the lowest current credit cap across this connection. Provider hard no-overage protection is still required.'
             : 'Price evidence saved. The model is routable until it expires or is revoked.');
     }
 
