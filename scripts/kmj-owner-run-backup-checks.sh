@@ -14,7 +14,7 @@ umask 022
 
 REPO="${KMJ_REPO:-/srv/kmj-codebridge-projects/kmj-main-platform}"
 PIN_DRILL="${KMJ_PIN_DRILL:-0d812e0f947b83dd7d47084269683dcd6f64bff752d1388627fae3011ec0524f}"
-PIN_STORAGE="${KMJ_PIN_STORAGE:-5f2dc9179962a5d8886a8977034a7324e4f1d80bb380d83ce77ec7c9bb21ea1d}"
+PIN_STORAGE="${KMJ_PIN_STORAGE:-3f7370689b1a1f396fbe36d306dd5b97e894b8811727877a8f22dd66ef3c6e54}"
 ENV_FILE="${KMJ_ENV_FILE:-/home/kmjprod/current/apps/platform/.env}"
 OUT="$REPO/work/qa/kmj-receipts"
 
