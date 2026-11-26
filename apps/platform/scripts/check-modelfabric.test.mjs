@@ -170,8 +170,14 @@ void test('ModelFabric connects OpenRouter and Hugging Face itself and returns t
     const service = read('app/Services/AiProviders/HuggingFaceConnect.php');
     const providerPage = read('resources/js/pages/services/ai-providers.tsx');
     assert.match(page, /<AiProviders\s+embedded/);
-    assert.match(providerPage, /embedded \? \{ return_to: 'modelfabric' \} : \{\}/);
-    assert.match(providerPage, /free_account_confirmed: true, return_to: 'modelfabric'/);
+    assert.match(
+        providerPage,
+        /embedded \? \{ return_to: 'modelfabric' \} : \{\}/,
+    );
+    assert.match(
+        providerPage,
+        /free_account_confirmed: true, return_to: 'modelfabric'/,
+    );
     assert.match(hf, /modelfabric_provider_tab/);
     assert.match(or, /modelfabric_provider_tab/);
     assert.match(hf, /operator\.modelfabric\.index/);
@@ -384,6 +390,9 @@ void test('provider setup stays inside the native ModelFabric workspace', () => 
     assert.match(page, /presets=\{providerPresets\}/);
     assert.match(controller, /'providerPresets' => collect/);
     assert.match(controller, /modelfabric_provider_tab/);
-    assert.match(providerPage, /embedded \? 'provider-connections' : undefined/);
+    assert.match(
+        providerPage,
+        /embedded \? 'provider-connections' : undefined/,
+    );
     assert.match(providerPage, /!embedded && <Head/);
 });
