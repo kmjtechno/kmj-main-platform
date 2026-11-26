@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # KMJ vault cipher vs sidecar check (read-only, counts only).
 #
-# For every <stamp>.tar.age in the vault with a <stamp>.tar.age.sha256 sidecar, recompute
+# For every <stamp>.tar.age in the vault with a <stamp>.sha256 sidecar (V3 naming: "<sha256>  <stamp>.tar.age\n"), recompute
 # the cipher's SHA-256 and compare it with the sidecar. Never decrypts, never reads a
 # key, never prints names or hashes, deletes nothing. Closes only the gap
 # "cipherDigestComparedToSidecar"; it does not prove the cipher can be decrypted or restored.
@@ -22,11 +22,12 @@ for c in "$VAULT"/*.tar.age; do
   [[ -e "$c" ]] || continue
   [[ -f "$c" && ! -L "$c" ]] || { bad_format=$((bad_format+1)); continue; }
   total=$((total+1))
-  s="$c.sha256"
+  s="${c%.tar.age}.sha256"
   if [[ ! -f "$s" || -L "$s" ]]; then missing_sidecar=$((missing_sidecar+1)); continue; fi
   line="$(head -n1 "$s")"
   want="${line%% *}"
-  if [[ ! "$want" =~ ^[a-f0-9]{64}$ ]]; then bad_format=$((bad_format+1)); continue; fi
+  named="${line#*  }"
+  if [[ ! "$want" =~ ^[a-f0-9]{64}$ || "$named" != "$(basename "$c")" ]]; then bad_format=$((bad_format+1)); continue; fi
   have="$(sha256sum "$c" | cut -d' ' -f1)"
   if [[ "$have" == "$want" ]]; then ok=$((ok+1)); else mismatch=$((mismatch+1)); fi
 done
