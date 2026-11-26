@@ -1119,7 +1119,7 @@ export default function OperatorModelFabric({
                         tone="cyan"
                         label="Providers healthy"
                         value={`${healthy} / ${providers.length}`}
-                        detail={`${routingReady} routing-ready · health is not admission`}
+                        detail={`${routingReady} model-admitted · quota checked at request time`}
                     />
                     <StatTile
                         icon={ShieldCheck}

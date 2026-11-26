@@ -26,6 +26,9 @@ export type Provider = {
     health: string;
     health_checked_at: string | null;
     error_code: string | null;
+    used_today?: number;
+    daily_request_cap?: number | null;
+    shared_hourly_quota?: { used: number; limit: number; cooling: boolean };
     rate_limit: {
         status?: string;
         requests_remaining?: number | null;
@@ -55,6 +58,18 @@ function creditText(limit: Provider['rate_limit']): string {
     }
 
     return `Rate limit reported by provider: ${limit.requests_remaining ?? '–'} requests, ${limit.tokens_remaining ?? '–'} tokens left (not billing credits)`;
+}
+
+function quotaText(provider: Provider): string {
+    const hourly = provider.shared_hourly_quota;
+    if (hourly) {
+        const state = hourly.cooling ? ' · cooling down' : '';
+        return `Local shared quota: ${hourly.used}/${hourly.limit} attempts in the last hour${state}`;
+    }
+    if (provider.daily_request_cap != null) {
+        return `Local daily cap: ${provider.used_today ?? 0}/${provider.daily_request_cap} attempts (UTC)`;
+    }
+    return creditText(provider.rate_limit);
 }
 
 function ProviderCard({
@@ -135,6 +150,9 @@ function ProviderCard({
                     : ' · Free-only policy active'}
             </p>
 
+            <p className="text-muted-foreground text-xs">
+                {quotaText(provider)}
+            </p>
             <div className="flex flex-wrap items-center gap-2">
                 {canManage && provider.error_code !== 'provider_retired' && (
                     <button

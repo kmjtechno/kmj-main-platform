@@ -185,6 +185,10 @@ final class ProviderManager
             return [];
         }
 
+        if ($provider->preset === 'kilo-free' && ($provider->api_key !== ''
+            || $provider->base_url !== ($this->presets()['kilo-free']['base_url'] ?? null))) {
+            return [];
+        }
         $tier = $this->presets()[$provider->preset]['free_tier'] ?? 'none';
         $allowlist = $this->allowlist($provider, $tier);
 

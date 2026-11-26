@@ -80,6 +80,9 @@ final class ModelFabricController extends Controller
                 $presented['priority'] = (int) $provider->priority;
                 $presented['daily_request_cap'] = $provider->daily_request_cap === null ? null : (int) $provider->daily_request_cap;
                 $presented['used_today'] = (int) ($usedToday[$provider->id] ?? 0);
+                if ($provider->preset === 'kilo-free') {
+                    $presented['shared_hourly_quota'] = ModelFabricGateway::kiloQuotaSnapshot();
+                }
 
                 return $presented;
             })->values(),

@@ -23,6 +23,18 @@ type Guide = {
 
 const guides: Guide[] = [
     {
+        key: 'llm7',
+        title: 'LLM7',
+        url: 'https://dash.llm7.io/',
+        helper: 'Free token available; inference blocked until account quota and no-overage verification.',
+    },
+    {
+        key: 'pollinations',
+        title: 'Pollinations',
+        url: 'https://enter.pollinations.ai/keys',
+        helper: 'Wallet-based API and registered OAuth app. Inference remains blocked.',
+    },
+    {
         key: 'groq',
         title: 'Groq',
         url: 'https://console.groq.com/keys',

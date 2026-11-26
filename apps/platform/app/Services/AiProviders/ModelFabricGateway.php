@@ -185,7 +185,7 @@ final class ModelFabricGateway
                 'used' => (int) ($used[$provider->id] ?? 0),
                 // Groq publishes per-model rate limits; unknown providers remain account-scoped.
                 'model_scoped' => $provider->preset === 'groq',
-                'keyless_near' => $provider->preset === 'kilo-free' && $this->kiloHourlyUsage() >= 160,
+                'keyless_near' => $provider->preset === 'kilo-free' && self::kiloHourlyUsage() >= 160,
             ];
         }
 
@@ -443,7 +443,7 @@ final class ModelFabricGateway
                 } elseif ($driver !== 'sqlite') {
                     return $deny('shared_quota_unavailable');
                 }
-                if (Cache::has(self::KILO_COOLDOWN_KEY) || $this->kiloHourlyUsage() >= self::KILO_HOURLY_CAP) {
+                if (Cache::has(self::KILO_COOLDOWN_KEY) || self::kiloHourlyUsage() >= self::KILO_HOURLY_CAP) {
                     return $deny('keyless_hourly_quota_exhausted');
                 }
             }
@@ -497,7 +497,17 @@ final class ModelFabricGateway
         });
     }
 
-    private function kiloHourlyUsage(): int
+    /** @return array{used: int, limit: int, cooling: bool} */
+    public static function kiloQuotaSnapshot(): array
+    {
+        return [
+            'used' => self::kiloHourlyUsage(),
+            'limit' => self::KILO_HOURLY_CAP,
+            'cooling' => Cache::has(self::KILO_COOLDOWN_KEY),
+        ];
+    }
+
+    private static function kiloHourlyUsage(): int
     {
         return AiModelRequest::query()
             ->whereIn('ai_provider_id', AiProvider::query()->select('id')->where('preset', 'kilo-free'))

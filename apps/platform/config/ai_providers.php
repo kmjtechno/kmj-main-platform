@@ -31,6 +31,8 @@ return [
         'siliconflow' => ['label' => 'SiliconFlow (discovery only)', 'base_url' => 'https://api.siliconflow.com/v1', 'free_tier' => 'none'],
         'modelscope' => ['label' => 'ModelScope (discovery only)', 'base_url' => 'https://api-inference.modelscope.cn/v1', 'free_tier' => 'none'],
         'anyapi' => ['label' => 'AnyAPI (discovery only)', 'base_url' => 'https://api.anyapi.ai/v1', 'free_tier' => 'none'],
+        'llm7' => ['label' => 'LLM7 (discovery only)', 'base_url' => 'https://api.llm7.io/v1', 'free_tier' => 'none'],
+        'pollinations' => ['label' => 'Pollinations (discovery only)', 'base_url' => 'https://gen.pollinations.ai/v1', 'free_tier' => 'none'],
         // Connect-only presets never activate inference without explicit zero-cost admission.
         'cohere' => ['label' => 'Cohere (evaluation key)', 'base_url' => 'https://api.cohere.ai/compatibility/v1', 'free_tier' => 'allowlist'],
         'qwen-sg' => ['label' => 'Alibaba Qwen (Singapore)', 'base_url' => 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1', 'free_tier' => 'none'],

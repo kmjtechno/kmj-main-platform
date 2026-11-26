@@ -171,6 +171,12 @@ final class ModelFabricRoutingTest extends TestCase
             ->where('canManage', false));
     }
 
+    public function test_discovery_only_candidates_do_not_admit_inference(): void
+    {
+        $this->assertSame('none', config('ai_providers.presets.llm7.free_tier'));
+        $this->assertSame('none', config('ai_providers.presets.pollinations.free_tier'));
+    }
+
     public function test_owner_page_renders_plans_without_secrets(): void
     {
         $provider = $this->provider('groq', ['llama-free-1']);
