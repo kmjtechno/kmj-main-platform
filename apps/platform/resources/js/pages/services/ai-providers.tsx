@@ -645,9 +645,15 @@ export default function AiProviders({
                                     : 'Connect or reconnect a provider'}
                             </button>
                         )}
-                        {(!embedded || providers.length === 0 || showConnect) && (
+                        {(!embedded ||
+                            providers.length === 0 ||
+                            showConnect) && (
                             <div
-                                id={embedded ? 'modelfabric-connect-setup' : undefined}
+                                id={
+                                    embedded
+                                        ? 'modelfabric-connect-setup'
+                                        : undefined
+                                }
                                 className="flex flex-col gap-4"
                             >
                                 <AiProviderConnectHub
@@ -655,7 +661,9 @@ export default function AiProviders({
                                     oauthBusy={oauthBusy}
                                     onConnectOpenRouter={startOpenRouter}
                                     onConnectHuggingFace={startHuggingFace}
-                                    selectedPreset={preferredPreset?.key ?? null}
+                                    selectedPreset={
+                                        preferredPreset?.key ?? null
+                                    }
                                     onChooseKeyProvider={(key) => {
                                         setShowKeyForm(true);
                                         setPreferredPreset((prev) => ({
@@ -690,7 +698,8 @@ export default function AiProviders({
                                         onClick={() => setShowKeyForm(true)}
                                         className="kmj-ai-manual-launcher min-h-11 self-start rounded-xl border px-4 text-sm font-semibold"
                                     >
-                                        Connect another provider using an API key
+                                        Connect another provider using an API
+                                        key
                                     </button>
                                 )}
                             </div>
@@ -720,7 +729,9 @@ export default function AiProviders({
                             key={provider.id}
                             provider={provider}
                             canManage={canManage}
-                            routingControls={renderRoutingControls?.(provider.id)}
+                            routingControls={renderRoutingControls?.(
+                                provider.id,
+                            )}
                         />
                     ))}
                 </section>
