@@ -186,3 +186,14 @@ void test('owner navigation reaches the canonical CodeBridge workspace, not a se
     // Owner license settings stay reachable from the canonical page itself.
     assert.match(hub, /href="\/operator\/codebridge\/owner-plan"/);
 });
+
+void test('CodeBridge token manager uses the protected canonical ModelFabric surface', () => {
+    const modelFabric = read('resources/js/pages/operator-modelfabric.tsx');
+    assert.match(
+        service,
+        /canManageOwnerPlan && \([\s\S]{0,300}href="\/operator\/modelfabric\?tab=tokens"/,
+    );
+    assert.match(service, /Missing AI\s+credentials do not prevent/);
+    assert.match(modelFabric, /href="\/services\/kmj-codebridge#setup"/);
+    assert.doesNotMatch(service, /\/operator\/modelfabric\/tokens/);
+});
