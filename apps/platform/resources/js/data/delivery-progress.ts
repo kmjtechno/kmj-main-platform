@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-reconnect-verify-20261126',
+        title: 'ModelFabric: verify replacement credentials in one action',
+        state: 'active',
+        detail: 'Refresh the new connection without inference, clear stale health and expire old account-specific evidence and approval rules.',
+        evidence:
+            'Source and offline regressions; exact-head CI and authenticated live verification pending.',
+    },
+    {
         id: 'modelfabric-provider-discovery-automation-20261126',
         title: 'ModelFabric: provider expansion and automatic recheck',
         state: 'active',
