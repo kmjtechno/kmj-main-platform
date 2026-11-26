@@ -175,7 +175,7 @@ final class OpenAiCompatibleAdapter
         if ($target['host'] === 'api.groq.com') {
             $total = $response->header('x-ratelimit-limit-requests');
             $reset = $this->dailyResetSeconds($response->header('x-ratelimit-reset-requests'));
-            if (is_string($total) && preg_match('/\\A[1-9]\\d{0,8}\\z/', $total) === 1
+            if (preg_match('/\\A[1-9]\\d{0,8}\\z/', $total) === 1
                 && $reset !== null && is_int($rate['requests_remaining']) && $rate['requests_remaining'] <= (int) $total) {
                 $rate['daily_requests_limit'] = (int) $total;
                 $rate['daily_reset_seconds'] = $reset;
