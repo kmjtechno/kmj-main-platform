@@ -195,3 +195,14 @@ void test('embedded ModelFabric exposes a searchable discover-first directory an
     assert.match(page, /Model eligibility &amp; routing/);
     assert.match(hub, /Discovery does not prove free inference eligibility/);
 });
+
+void test('ModelFabric has one workspace and honest auth labels', () => {
+    const workspace = read('resources/js/pages/operator-modelfabric.tsx');
+    assert.match(workspace, /initialTab === 'start' \? 'providers'/);
+    assert.match(workspace, /key: 'providers', label: 'AI workspace'/);
+    assert.doesNotMatch(workspace, /key: 'start', label: 'Overview'/);
+    assert.match(workspace, /Setup checklist and advanced readiness/);
+    assert.match(hub, /new Set\(\['openrouter', 'huggingface'\]\)/);
+    assert.match(hub, /Use account authorization/);
+    assert.match(hub, /Other providers use official API\s+keys/);
+});

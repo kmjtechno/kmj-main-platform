@@ -121,6 +121,7 @@ export default function AiProviderConnectHub({
     const [hideConnected, setHideConnected] = useState(false);
     const [choice, setChoice] = useState('');
     const connected = new Set(connectedPresets);
+    const oauthKeys = new Set(['openrouter', 'huggingface']);
 
     if (compact) {
         const selected = presets.find((preset) => preset.key === choice);
@@ -148,8 +149,8 @@ export default function AiProviderConnectHub({
                             Add AI provider
                         </h2>
                         <p className="text-muted-foreground text-sm">
-                            {presets.length} supported provider types. Select
-                            one to connect and discover models.
+                            {presets.length} supported provider types. Choose a
+                            provider to see its real connection method.
                         </p>
                     </div>
                     <span className="kmj-ai-zero-spend inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold">
@@ -179,6 +180,9 @@ export default function AiProviderConnectHub({
                             {visible.map((preset) => (
                                 <option key={preset.key} value={preset.key}>
                                     {preset.label}
+                                    {oauthKeys.has(preset.key)
+                                        ? ' · OAuth'
+                                        : ' · API key'}
                                     {connected.has(preset.key)
                                         ? ' · Connected'
                                         : ''}
@@ -228,27 +232,40 @@ export default function AiProviderConnectHub({
                                     <ExternalLink className="h-3 w-3" />
                                 </a>
                             )}
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    onChooseKeyProvider(selected.key)
-                                }
-                                className="kmj-ai-primary-action min-h-11 rounded-lg px-4 text-sm font-bold"
-                            >
-                                Connect with API key
-                            </button>
+                            {oauthKeys.has(selected.key) ? (
+                                <a
+                                    href="#modelfabric-oauth-connect"
+                                    className="kmj-ai-primary-action inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-bold"
+                                >
+                                    Use account authorization
+                                </a>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        onChooseKeyProvider(selected.key)
+                                    }
+                                    className="kmj-ai-primary-action min-h-11 rounded-lg px-4 text-sm font-bold"
+                                >
+                                    Connect with API key
+                                </button>
+                            )}
                         </div>
                     </div>
                 )}
 
-                <div className="mt-5 border-t pt-4">
+                <div
+                    id="modelfabric-oauth-connect"
+                    className="mt-5 scroll-mt-4 border-t pt-4"
+                >
                     <h3 className="flex items-center gap-2 text-base font-bold">
                         <Zap className="h-4 w-4 text-red-400" />
                         One-click OAuth
                     </h3>
                     <p className="text-muted-foreground mt-1 text-sm">
-                        Sign in directly where the provider supports delegated
-                        API authorization.
+                        OpenRouter and Hugging Face support account
+                        authorization here. Other providers use official API
+                        keys.
                     </p>
                     <div className="mt-3 grid gap-3 md:grid-cols-2">
                         {supported.has('openrouter') && (

@@ -568,13 +568,15 @@ export default function OperatorModelFabric({
     const allowlistProviders = providers.filter(
         (provider) => provider.free_tier === 'allowlist',
     );
-    const [tab, setTab] = useState<Tab>(newToken ? 'tokens' : initialTab);
+    const [tab, setTab] = useState<Tab>(
+        newToken ? 'tokens' : initialTab === 'start' ? 'providers' : initialTab,
+    );
     const [tokenName, setTokenName] = useState('');
     const [tokenDays, setTokenDays] = useState('30');
     const privateReady =
         plans.privateSource.status !== 'NO_FREE_ROUTE_AVAILABLE';
     const [tokenPrivate, setTokenPrivate] = useState(privateReady);
-    const [workflow, setWorkflow] = useState<'chat' | 'coding'>('coding');
+    const [workflow, setWorkflow] = useState<'chat' | 'coding'>('chat');
     const [copied, setCopied] = useState(false);
     const [providerId, setProviderId] = useState(
         allowlistProviders[0]?.id ?? '',
@@ -1024,8 +1026,7 @@ export default function OperatorModelFabric({
     };
 
     const tabs: { key: Tab; label: string }[] = [
-        { key: 'start', label: 'Overview' },
-        { key: 'providers', label: 'Providers' },
+        { key: 'providers', label: 'AI workspace' },
         { key: 'models', label: 'Free models' },
         { key: 'tokens', label: 'API tokens' },
         { key: 'playground', label: 'Playground' },
@@ -1070,10 +1071,15 @@ export default function OperatorModelFabric({
                                     <ChevronRight size={16} />
                                 </button>
                             )}
-                            <a href="/operator/modelfabric?tab=providers">
-                                <Boxes size={16} />
-                                Connect providers
-                            </a>
+                            {tab !== 'providers' && (
+                                <button
+                                    type="button"
+                                    onClick={() => setTab('providers')}
+                                >
+                                    <Boxes size={16} />
+                                    AI workspace
+                                </button>
+                            )}
                         </div>
                     </div>
                     <aside>
@@ -1182,385 +1188,6 @@ export default function OperatorModelFabric({
                     </div>
                 </section>
 
-                {tab === 'start' ? (
-                    <>
-                        <section
-                            aria-label="Choose your AI workflow"
-                            data-testid="modelfabric-workflow-readiness"
-                            className="grid gap-3 lg:grid-cols-2"
-                        >
-                            <div
-                                className={`owner-panel space-y-4 ${workflow === 'chat' ? 'ring-1 ring-red-500/50' : ''}`}
-                            >
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <h2 className="flex items-center gap-2 text-base font-bold">
-                                        <Zap
-                                            size={18}
-                                            className="text-cyan-400"
-                                        />{' '}
-                                        General AI chat
-                                    </h2>
-                                    <StatusPill
-                                        tone={
-                                            generalReady && chatTokens > 0
-                                                ? 'ok'
-                                                : 'warn'
-                                        }
-                                    >
-                                        {generalReady && chatTokens > 0
-                                            ? 'Ready to test'
-                                            : 'Setup required'}
-                                    </StatusPill>
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="bg-muted/25 rounded-xl border p-3">
-                                        <div className="text-xl font-bold tabular-nums">
-                                            {plans.chat.routes.length}
-                                        </div>
-                                        <div className="text-muted-foreground text-xs">
-                                            Eligible chat routes
-                                        </div>
-                                    </div>
-                                    <div className="bg-muted/25 rounded-xl border p-3">
-                                        <div className="text-xl font-bold tabular-nums">
-                                            {chatTokens}
-                                        </div>
-                                        <div className="text-muted-foreground text-xs">
-                                            Active chat tokens
-                                        </div>
-                                    </div>
-                                </div>
-                                <p className="text-muted-foreground text-sm">
-                                    For non-confidential prompts only.
-                                </p>
-                                <button
-                                    type="button"
-                                    className={
-                                        workflow === 'chat'
-                                            ? primaryButton
-                                            : ghostButton
-                                    }
-                                    onClick={() => {
-                                        setWorkflow('chat');
-                                        setConfirmed(false);
-                                        setRuleConfirmed(false);
-                                        setCreditAttested(false);
-                                        if (generalReady && chatTokens === 0)
-                                            setTokenPrivate(false);
-                                        setTab(
-                                            !generalReady
-                                                ? 'models'
-                                                : chatTokens === 0
-                                                  ? 'tokens'
-                                                  : 'playground',
-                                        );
-                                    }}
-                                >
-                                    {!generalReady
-                                        ? 'Review free routes'
-                                        : chatTokens === 0
-                                          ? 'Create chat token'
-                                          : 'Test chat'}{' '}
-                                    <ArrowRight size={15} />
-                                </button>
-                            </div>
-                            <div
-                                className={`owner-panel space-y-4 ${workflow === 'coding' ? 'ring-1 ring-red-500/50' : ''}`}
-                            >
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <h2 className="flex items-center gap-2 text-base font-bold">
-                                        <LockKeyhole
-                                            size={18}
-                                            className="text-violet-400"
-                                        />{' '}
-                                        Secure coding
-                                    </h2>
-                                    <StatusPill
-                                        tone={
-                                            privateReady && codingTokens > 0
-                                                ? 'ok'
-                                                : 'warn'
-                                        }
-                                    >
-                                        {privateReady && codingTokens > 0
-                                            ? 'Route and token ready'
-                                            : 'Blocked'}
-                                    </StatusPill>
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="bg-muted/25 rounded-xl border p-3">
-                                        <div className="text-xl font-bold tabular-nums">
-                                            {plans.privateSource.routes.length}
-                                        </div>
-                                        <div className="text-muted-foreground text-xs">
-                                            Eligible coding routes
-                                        </div>
-                                    </div>
-                                    <div className="bg-muted/25 rounded-xl border p-3">
-                                        <div className="text-xl font-bold tabular-nums">
-                                            {codingTokens}
-                                        </div>
-                                        <div className="text-muted-foreground text-xs">
-                                            Active coding tokens
-                                        </div>
-                                    </div>
-                                </div>
-                                <p className="text-muted-foreground text-sm">
-                                    Separate source-transfer consent and worker
-                                    activation required.
-                                </p>
-                                {!privateReady ? (
-                                    <p className="text-sm leading-relaxed">
-                                        Review exact-model pricing, code
-                                        capability and no-training evidence. A
-                                        chat token cannot authorize private
-                                        source.
-                                    </p>
-                                ) : null}
-                                <button
-                                    type="button"
-                                    className={
-                                        workflow === 'coding'
-                                            ? primaryButton
-                                            : ghostButton
-                                    }
-                                    onClick={() => {
-                                        setWorkflow('coding');
-                                        if (!privateReady) {
-                                            setConfirmed(false);
-                                            setRuleConfirmed(false);
-                                            setCreditAttested(false);
-                                            setTab('models');
-                                        } else if (codingTokens === 0) {
-                                            setTokenPrivate(true);
-                                            setTab('tokens');
-                                        } else {
-                                            router.visit(
-                                                '/services/kmj-codebridge',
-                                            );
-                                        }
-                                    }}
-                                >
-                                    {!privateReady
-                                        ? 'Review coding evidence'
-                                        : codingTokens === 0
-                                          ? 'Create coding token'
-                                          : 'Open CodeBridge'}{' '}
-                                    <ArrowRight size={15} />
-                                </button>
-                            </div>
-                        </section>
-                        <section
-                            className="owner-panel"
-                            aria-label="ModelFabric setup journey"
-                            data-testid="modelfabric-setup-journey"
-                        >
-                            <div className="flex flex-wrap items-center justify-between gap-4">
-                                <div>
-                                    <h2 className="flex items-center gap-2 text-base font-bold">
-                                        <ShieldCheck
-                                            size={18}
-                                            className="text-red-500"
-                                        />{' '}
-                                        Guided setup
-                                    </h2>
-                                    <p className="text-muted-foreground mt-1 text-xs">
-                                        Complete one workflow at a time. No step
-                                        runs inference automatically.
-                                    </p>
-                                </div>
-                                <div
-                                    className="flex gap-1 rounded-xl border p-1"
-                                    aria-label="Choose setup workflow"
-                                >
-                                    {(['chat', 'coding'] as const).map(
-                                        (mode) => (
-                                            <button
-                                                key={mode}
-                                                type="button"
-                                                aria-pressed={workflow === mode}
-                                                className={`rounded-lg px-3 py-2 text-xs font-bold transition ${workflow === mode ? 'bg-red-600 text-white' : 'text-muted-foreground hover:bg-muted'}`}
-                                                onClick={() =>
-                                                    setWorkflow(mode)
-                                                }
-                                            >
-                                                {mode === 'chat'
-                                                    ? 'General chat'
-                                                    : 'Secure coding'}
-                                            </button>
-                                        ),
-                                    )}
-                                </div>
-                            </div>
-                            <div className="mt-4 flex items-center gap-3">
-                                <div
-                                    role="progressbar"
-                                    aria-label="Setup evidence"
-                                    aria-valuemin={0}
-                                    aria-valuemax={setupJourney.length}
-                                    aria-valuenow={completedSteps}
-                                    className="bg-muted h-2 flex-1 overflow-hidden rounded-full"
-                                >
-                                    <div
-                                        className="h-full rounded-full bg-red-600 transition-all"
-                                        style={{
-                                            width: `${(completedSteps / setupJourney.length) * 100}%`,
-                                        }}
-                                    />
-                                </div>
-                                <span className="text-muted-foreground text-xs tabular-nums">
-                                    {completedSteps} / {setupJourney.length}{' '}
-                                    evidenced
-                                </span>
-                            </div>
-                            <ol className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-                                {setupJourney.map((step, index) => (
-                                    <li
-                                        key={step.title}
-                                        className={`flex flex-col gap-3 rounded-xl border p-4 ${index === activeStep ? 'border-red-500/60 bg-red-500/5' : 'border-border'}`}
-                                    >
-                                        <div className="flex items-center justify-between gap-2">
-                                            <strong className="text-xs">
-                                                {index + 1}. {step.title}
-                                            </strong>
-                                            <StatusPill
-                                                tone={
-                                                    step.complete
-                                                        ? 'ok'
-                                                        : 'warn'
-                                                }
-                                            >
-                                                {step.complete
-                                                    ? 'Evidence found'
-                                                    : index === activeStep
-                                                      ? 'Next action'
-                                                      : 'Pending'}
-                                            </StatusPill>
-                                        </div>
-                                        <p className="text-muted-foreground flex-1 text-xs leading-5">
-                                            {step.detail}
-                                        </p>
-                                        {step.href ? (
-                                            <a
-                                                className={ghostButton}
-                                                href={step.href}
-                                            >
-                                                Open setup{' '}
-                                                <ChevronRight size={13} />
-                                            </a>
-                                        ) : (
-                                            <button
-                                                type="button"
-                                                className={ghostButton}
-                                                onClick={() =>
-                                                    openWorkflowStep(
-                                                        step.tab ?? 'start',
-                                                    )
-                                                }
-                                            >
-                                                {step.complete
-                                                    ? 'Review'
-                                                    : 'Open step'}{' '}
-                                                <ChevronRight size={13} />
-                                            </button>
-                                        )}
-                                    </li>
-                                ))}
-                            </ol>
-                        </section>
-                        <section
-                            className="owner-panel"
-                            aria-label="To do"
-                            data-testid="modelfabric-todo"
-                        >
-                            <p className="text-sm font-black">To do today</p>
-                            {todos.length === 0 ? (
-                                <p className="text-muted-foreground mt-1 text-sm">
-                                    Nothing needs your attention. Approvals,
-                                    providers and tokens are all current.
-                                </p>
-                            ) : (
-                                <ul className="mt-2 divide-y text-sm">
-                                    {todos.map((todo) => (
-                                        <li
-                                            key={todo.key}
-                                            className="flex flex-wrap items-center justify-between gap-2 py-2"
-                                        >
-                                            <span>
-                                                <StatusPill tone={todo.tone}>
-                                                    {todo.tone === 'bad'
-                                                        ? 'now'
-                                                        : 'soon'}
-                                                </StatusPill>{' '}
-                                                {todo.text}
-                                            </span>
-                                            {todo.href ? (
-                                                <a
-                                                    className={ghostButton}
-                                                    href={todo.href}
-                                                >
-                                                    {todo.action}
-                                                </a>
-                                            ) : (
-                                                <button
-                                                    type="button"
-                                                    className={ghostButton}
-                                                    onClick={() =>
-                                                        setTab(
-                                                            todo.tab ??
-                                                                'models',
-                                                        )
-                                                    }
-                                                >
-                                                    {todo.action}
-                                                </button>
-                                            )}
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </section>
-                        <details className="owner-panel" id="routes">
-                            <summary className="cursor-pointer text-sm font-bold">
-                                Routing diagnostics &amp; provider eligibility
-                            </summary>
-                            <section
-                                className="mt-4 grid gap-4 md:grid-cols-2"
-                                aria-label="Route plan"
-                            >
-                                <PlanCard
-                                    title="General chat"
-                                    note="Used by CodeBridge chat and Kristi guided features."
-                                    plan={plans.chat}
-                                />
-                                <PlanCard
-                                    title="Private source code"
-                                    note="Needs proof the provider does not train on submitted data. Your consent for source transfer is still separate."
-                                    plan={plans.privateSource}
-                                />
-                            </section>
-                        </details>
-                        <div className="owner-panel flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                                <h2 className="text-sm font-bold">
-                                    Provider management
-                                </h2>
-                                <p className="text-muted-foreground text-sm">
-                                    {healthy} of {providers.length} providers
-                                    healthy. Review connection errors, quotas
-                                    and model evidence in Providers.
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                className={ghostButton}
-                                onClick={() => setTab('providers')}
-                            >
-                                Manage providers <ArrowRight size={15} />
-                            </button>
-                        </div>
-                    </>
-                ) : null}
                 {tab === 'providers' ? (
                     <AiProviders
                         embedded
@@ -1608,6 +1235,405 @@ export default function OperatorModelFabric({
                             );
                         }}
                     />
+                ) : null}
+
+                {tab === 'providers' ? (
+                    <details className="owner-panel">
+                        <summary className="cursor-pointer text-base font-bold">
+                            Setup checklist and advanced readiness
+                        </summary>
+                        <div className="mt-4 grid gap-3">
+                            <section
+                                aria-label="Choose your AI workflow"
+                                data-testid="modelfabric-workflow-readiness"
+                                className="grid gap-3 lg:grid-cols-2"
+                            >
+                                <div
+                                    className={`owner-panel space-y-4 ${workflow === 'chat' ? 'ring-1 ring-red-500/50' : ''}`}
+                                >
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <h2 className="flex items-center gap-2 text-base font-bold">
+                                            <Zap
+                                                size={18}
+                                                className="text-cyan-400"
+                                            />{' '}
+                                            General AI chat
+                                        </h2>
+                                        <StatusPill
+                                            tone={
+                                                generalReady && chatTokens > 0
+                                                    ? 'ok'
+                                                    : 'warn'
+                                            }
+                                        >
+                                            {generalReady && chatTokens > 0
+                                                ? 'Ready to test'
+                                                : 'Setup required'}
+                                        </StatusPill>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-muted/25 rounded-xl border p-3">
+                                            <div className="text-xl font-bold tabular-nums">
+                                                {plans.chat.routes.length}
+                                            </div>
+                                            <div className="text-muted-foreground text-xs">
+                                                Eligible chat routes
+                                            </div>
+                                        </div>
+                                        <div className="bg-muted/25 rounded-xl border p-3">
+                                            <div className="text-xl font-bold tabular-nums">
+                                                {chatTokens}
+                                            </div>
+                                            <div className="text-muted-foreground text-xs">
+                                                Active chat tokens
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p className="text-muted-foreground text-sm">
+                                        For non-confidential prompts only.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        className={
+                                            workflow === 'chat'
+                                                ? primaryButton
+                                                : ghostButton
+                                        }
+                                        onClick={() => {
+                                            setWorkflow('chat');
+                                            setConfirmed(false);
+                                            setRuleConfirmed(false);
+                                            setCreditAttested(false);
+                                            if (
+                                                generalReady &&
+                                                chatTokens === 0
+                                            )
+                                                setTokenPrivate(false);
+                                            setTab(
+                                                !generalReady
+                                                    ? 'models'
+                                                    : chatTokens === 0
+                                                      ? 'tokens'
+                                                      : 'playground',
+                                            );
+                                        }}
+                                    >
+                                        {!generalReady
+                                            ? 'Review free routes'
+                                            : chatTokens === 0
+                                              ? 'Create chat token'
+                                              : 'Test chat'}{' '}
+                                        <ArrowRight size={15} />
+                                    </button>
+                                </div>
+                                <div
+                                    className={`owner-panel space-y-4 ${workflow === 'coding' ? 'ring-1 ring-red-500/50' : ''}`}
+                                >
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <h2 className="flex items-center gap-2 text-base font-bold">
+                                            <LockKeyhole
+                                                size={18}
+                                                className="text-violet-400"
+                                            />{' '}
+                                            Secure coding
+                                        </h2>
+                                        <StatusPill
+                                            tone={
+                                                privateReady && codingTokens > 0
+                                                    ? 'ok'
+                                                    : 'warn'
+                                            }
+                                        >
+                                            {privateReady && codingTokens > 0
+                                                ? 'Route and token ready'
+                                                : 'Blocked'}
+                                        </StatusPill>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-muted/25 rounded-xl border p-3">
+                                            <div className="text-xl font-bold tabular-nums">
+                                                {
+                                                    plans.privateSource.routes
+                                                        .length
+                                                }
+                                            </div>
+                                            <div className="text-muted-foreground text-xs">
+                                                Eligible coding routes
+                                            </div>
+                                        </div>
+                                        <div className="bg-muted/25 rounded-xl border p-3">
+                                            <div className="text-xl font-bold tabular-nums">
+                                                {codingTokens}
+                                            </div>
+                                            <div className="text-muted-foreground text-xs">
+                                                Active coding tokens
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p className="text-muted-foreground text-sm">
+                                        Separate source-transfer consent and
+                                        worker activation required.
+                                    </p>
+                                    {!privateReady ? (
+                                        <p className="text-sm leading-relaxed">
+                                            Review exact-model pricing, code
+                                            capability and no-training evidence.
+                                            A chat token cannot authorize
+                                            private source.
+                                        </p>
+                                    ) : null}
+                                    <button
+                                        type="button"
+                                        className={
+                                            workflow === 'coding'
+                                                ? primaryButton
+                                                : ghostButton
+                                        }
+                                        onClick={() => {
+                                            setWorkflow('coding');
+                                            if (!privateReady) {
+                                                setConfirmed(false);
+                                                setRuleConfirmed(false);
+                                                setCreditAttested(false);
+                                                setTab('models');
+                                            } else if (codingTokens === 0) {
+                                                setTokenPrivate(true);
+                                                setTab('tokens');
+                                            } else {
+                                                router.visit(
+                                                    '/services/kmj-codebridge',
+                                                );
+                                            }
+                                        }}
+                                    >
+                                        {!privateReady
+                                            ? 'Review coding evidence'
+                                            : codingTokens === 0
+                                              ? 'Create coding token'
+                                              : 'Open CodeBridge'}{' '}
+                                        <ArrowRight size={15} />
+                                    </button>
+                                </div>
+                            </section>
+                            <section
+                                className="owner-panel"
+                                aria-label="ModelFabric setup journey"
+                                data-testid="modelfabric-setup-journey"
+                            >
+                                <div className="flex flex-wrap items-center justify-between gap-4">
+                                    <div>
+                                        <h2 className="flex items-center gap-2 text-base font-bold">
+                                            <ShieldCheck
+                                                size={18}
+                                                className="text-red-500"
+                                            />{' '}
+                                            Guided setup
+                                        </h2>
+                                        <p className="text-muted-foreground mt-1 text-xs">
+                                            Complete one workflow at a time. No
+                                            step runs inference automatically.
+                                        </p>
+                                    </div>
+                                    <div
+                                        className="flex gap-1 rounded-xl border p-1"
+                                        aria-label="Choose setup workflow"
+                                    >
+                                        {(['chat', 'coding'] as const).map(
+                                            (mode) => (
+                                                <button
+                                                    key={mode}
+                                                    type="button"
+                                                    aria-pressed={
+                                                        workflow === mode
+                                                    }
+                                                    className={`rounded-lg px-3 py-2 text-xs font-bold transition ${workflow === mode ? 'bg-red-600 text-white' : 'text-muted-foreground hover:bg-muted'}`}
+                                                    onClick={() =>
+                                                        setWorkflow(mode)
+                                                    }
+                                                >
+                                                    {mode === 'chat'
+                                                        ? 'General chat'
+                                                        : 'Secure coding'}
+                                                </button>
+                                            ),
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="mt-4 flex items-center gap-3">
+                                    <div
+                                        role="progressbar"
+                                        aria-label="Setup evidence"
+                                        aria-valuemin={0}
+                                        aria-valuemax={setupJourney.length}
+                                        aria-valuenow={completedSteps}
+                                        className="bg-muted h-2 flex-1 overflow-hidden rounded-full"
+                                    >
+                                        <div
+                                            className="h-full rounded-full bg-red-600 transition-all"
+                                            style={{
+                                                width: `${(completedSteps / setupJourney.length) * 100}%`,
+                                            }}
+                                        />
+                                    </div>
+                                    <span className="text-muted-foreground text-xs tabular-nums">
+                                        {completedSteps} / {setupJourney.length}{' '}
+                                        evidenced
+                                    </span>
+                                </div>
+                                <ol className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                                    {setupJourney.map((step, index) => (
+                                        <li
+                                            key={step.title}
+                                            className={`flex flex-col gap-3 rounded-xl border p-4 ${index === activeStep ? 'border-red-500/60 bg-red-500/5' : 'border-border'}`}
+                                        >
+                                            <div className="flex items-center justify-between gap-2">
+                                                <strong className="text-xs">
+                                                    {index + 1}. {step.title}
+                                                </strong>
+                                                <StatusPill
+                                                    tone={
+                                                        step.complete
+                                                            ? 'ok'
+                                                            : 'warn'
+                                                    }
+                                                >
+                                                    {step.complete
+                                                        ? 'Evidence found'
+                                                        : index === activeStep
+                                                          ? 'Next action'
+                                                          : 'Pending'}
+                                                </StatusPill>
+                                            </div>
+                                            <p className="text-muted-foreground flex-1 text-xs leading-5">
+                                                {step.detail}
+                                            </p>
+                                            {step.href ? (
+                                                <a
+                                                    className={ghostButton}
+                                                    href={step.href}
+                                                >
+                                                    Open setup{' '}
+                                                    <ChevronRight size={13} />
+                                                </a>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className={ghostButton}
+                                                    onClick={() =>
+                                                        openWorkflowStep(
+                                                            step.tab ?? 'start',
+                                                        )
+                                                    }
+                                                >
+                                                    {step.complete
+                                                        ? 'Review'
+                                                        : 'Open step'}{' '}
+                                                    <ChevronRight size={13} />
+                                                </button>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ol>
+                            </section>
+                            <section
+                                className="owner-panel"
+                                aria-label="To do"
+                                data-testid="modelfabric-todo"
+                            >
+                                <p className="text-sm font-black">
+                                    To do today
+                                </p>
+                                {todos.length === 0 ? (
+                                    <p className="text-muted-foreground mt-1 text-sm">
+                                        Nothing needs your attention. Approvals,
+                                        providers and tokens are all current.
+                                    </p>
+                                ) : (
+                                    <ul className="mt-2 divide-y text-sm">
+                                        {todos.map((todo) => (
+                                            <li
+                                                key={todo.key}
+                                                className="flex flex-wrap items-center justify-between gap-2 py-2"
+                                            >
+                                                <span>
+                                                    <StatusPill
+                                                        tone={todo.tone}
+                                                    >
+                                                        {todo.tone === 'bad'
+                                                            ? 'now'
+                                                            : 'soon'}
+                                                    </StatusPill>{' '}
+                                                    {todo.text}
+                                                </span>
+                                                {todo.href ? (
+                                                    <a
+                                                        className={ghostButton}
+                                                        href={todo.href}
+                                                    >
+                                                        {todo.action}
+                                                    </a>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        className={ghostButton}
+                                                        onClick={() =>
+                                                            setTab(
+                                                                todo.tab ??
+                                                                    'models',
+                                                            )
+                                                        }
+                                                    >
+                                                        {todo.action}
+                                                    </button>
+                                                )}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </section>
+                            <details className="owner-panel" id="routes">
+                                <summary className="cursor-pointer text-sm font-bold">
+                                    Routing diagnostics &amp; provider
+                                    eligibility
+                                </summary>
+                                <section
+                                    className="mt-4 grid gap-4 md:grid-cols-2"
+                                    aria-label="Route plan"
+                                >
+                                    <PlanCard
+                                        title="General chat"
+                                        note="Used by CodeBridge chat and Kristi guided features."
+                                        plan={plans.chat}
+                                    />
+                                    <PlanCard
+                                        title="Private source code"
+                                        note="Needs proof the provider does not train on submitted data. Your consent for source transfer is still separate."
+                                        plan={plans.privateSource}
+                                    />
+                                </section>
+                            </details>
+                            <div className="owner-panel flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <h2 className="text-sm font-bold">
+                                        Provider management
+                                    </h2>
+                                    <p className="text-muted-foreground text-sm">
+                                        {healthy} of {providers.length}{' '}
+                                        providers healthy. Review connection
+                                        errors, quotas and model evidence in
+                                        Providers.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    className={ghostButton}
+                                    onClick={() => setTab('providers')}
+                                >
+                                    Manage providers <ArrowRight size={15} />
+                                </button>
+                            </div>
+                        </div>
+                    </details>
                 ) : null}
 
                 {tab === 'models' ? (
