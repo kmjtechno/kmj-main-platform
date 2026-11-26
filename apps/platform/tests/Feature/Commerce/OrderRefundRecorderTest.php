@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\Commerce\OrderRefundRecorder;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use KMJ\MainPlatform\Catalog\Models\Product;
 use KMJ\MainPlatform\Commerce\Services\CommercialOrderService;
 use KMJ\MainPlatform\Organizations\Services\OrganizationCreator;
@@ -18,7 +19,12 @@ final class OrderRefundRecorderTest extends TestCase
     /** @return array{0:User,1:string,2:string} owner, confirmed order id, other (requested) order id */
     private function fixture(): array
     {
-        $owner = User::factory()->create(['is_platform_owner' => true]);
+        $owner = User::factory()->create(['is_platform_owner' => true, 'email_verified_at' => now()]);
+        DB::table('passkeys')->insert([
+            'user_id' => $owner->id, 'name' => 'Owner passkey',
+            'credential_id' => 'refund-test-credential-'.$owner->id, 'credential' => '{}',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
         $requester = User::factory()->create();
         $organization = app(OrganizationCreator::class)->create('Refund Lab', $requester->id);
         $product = Product::query()->create(['slug' => 'refund-lab', 'name' => 'Refund Lab', 'status' => 'preview']);
@@ -75,11 +81,42 @@ final class OrderRefundRecorderTest extends TestCase
             $recorder->record($other->id, $orderId, 100, 'nope', 'refund-key-other1');
             self::fail('Non-owner must be rejected');
         } catch (DomainException $e) {
-            self::assertSame('REFUND_RECORD_OWNER_ONLY', $e->getMessage());
+            self::assertSame('REFUND_RECORD_NOT_AUTHORIZED', $e->getMessage());
         }
 
         $this->expectExceptionMessage('REFUND_RECORD_ORDER_NOT_CONFIRMED');
         $recorder->record($owner->id, $pendingId, 100, 'unpaid', 'refund-key-pend1');
+    }
+
+    public function test_owner_without_passkey_or_verified_email_is_refused(): void
+    {
+        [$owner, $orderId] = $this->fixture();
+        DB::table('passkeys')->where('user_id', $owner->id)->delete();
+
+        $this->expectExceptionMessage('REFUND_RECORD_NOT_AUTHORIZED');
+        app(OrderRefundRecorder::class)->record($owner->id, $orderId, 100, 'no passkey', 'refund-key-nopk1');
+    }
+
+    public function test_route_records_for_super_admin_only_and_maps_errors(): void
+    {
+        [$owner, $orderId] = $this->fixture();
+        $url = "/operator/orders/{$orderId}/refund-record";
+        $body = ['amount_minor' => 30000, 'reason' => 'customer request', 'request_key' => 'route-refund-0001'];
+
+        $this->postJson($url, $body)->assertUnauthorized();
+
+        $regular = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($regular)->withSession(['auth.password_confirmed_at' => time()])
+            ->postJson($url, $body)->assertForbidden();
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->postJson($url, $body)->assertCreated()
+            ->assertJsonPath('refunded_total_minor', 30000);
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->postJson($url, [...$body, 'amount_minor' => 99000, 'request_key' => 'route-refund-0002'])
+            ->assertStatus(422)->assertJsonPath('code', 'REFUND_RECORD_EXCEEDS_CONFIRMED_AMOUNT');
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->postJson($url, ['amount_minor' => 'abc'])->assertStatus(422);
     }
 
     public function test_recording_a_refund_changes_neither_order_status_nor_entitlements(): void
