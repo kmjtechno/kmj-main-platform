@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Source regression checks added; exact-head CI and authenticated live acceptance pending.',
     },
     {
+        id: 'codebridge-model-token-entry-20261126',
+        title: 'CodeBridge: protected AI token setup',
+        state: 'active',
+        detail: 'Owner dashboard opens the existing ModelFabric token manager directly. Ordinary device and development tools do not depend on AI credentials.',
+        evidence:
+            'Source and access-control regressions; exact-head CI and live acceptance pending. Automatic device credential binding is not claimed.',
+    },
+    {
         id: 'modelfabric-proactive-quota-rotation-20261126',
         title: 'ModelFabric: proactive quota rotation',
         state: 'active',

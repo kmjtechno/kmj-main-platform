@@ -61,7 +61,11 @@ final class ModelFabricController extends Controller
             'status' => session('status'),
             'canManage' => $scope['can_manage'],
             'maxEvidenceDays' => self::MAX_EVIDENCE_DAYS,
-            'initialTab' => $request->query('tab') === 'providers' || session('modelfabric_provider_tab') ? 'providers' : 'start',
+            'initialTab' => match (true) {
+                $request->query('tab') === 'tokens' => 'tokens',
+                $request->query('tab') === 'providers', (bool) session('modelfabric_provider_tab') => 'providers',
+                default => 'start',
+            },
             'providerPresets' => collect($this->manager->presets())
                 ->reject(fn (array $preset): bool => $preset['retired'] ?? false)
                 ->map(fn (array $preset, string $key): array => [

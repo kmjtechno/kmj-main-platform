@@ -284,6 +284,18 @@ export default function CodeBridgeService({
                                     />
                                     AI Providers
                                 </Link>
+                                {canManageOwnerPlan && (
+                                    <Link
+                                        href="/operator/modelfabric?tab=tokens"
+                                        className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:border-red-500/40 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none"
+                                    >
+                                        <KeyRound
+                                            className="h-4 w-4 shrink-0"
+                                            aria-hidden="true"
+                                        />
+                                        AI API tokens
+                                    </Link>
+                                )}
                                 <a
                                     href={vscodeInstallUrl(service.endpoint)}
                                     className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:border-red-500/40 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none"
@@ -385,7 +397,8 @@ export default function CodeBridgeService({
                                 </div>
                                 <p className="text-muted-foreground mt-1 text-xs">
                                     Use this endpoint when connecting KMJ
-                                    CodeBridge as an MCP service.
+                                    CodeBridge as an MCP service. Missing AI
+                                    credentials do not prevent core MCP access.
                                 </p>
 
                                 <div className="mt-5 rounded-xl border bg-black/5 p-4 dark:bg-white/[0.02]">
