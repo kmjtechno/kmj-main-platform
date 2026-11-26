@@ -41,6 +41,20 @@ class DirectPilotTest(unittest.TestCase):
             with self.subTest(status=status, receipt=receipt[:20]):
                 self.assertEqual(self.deliver(status, receipt)[0], pilot.TEMPFAIL)
 
+    def test_ambiguous_receipts_defer(self):
+        for status, receipt in [
+            (201, b'{"state":"duplicate","state":"quarantined"}'),
+            (200, b'{"state":"quarantined","state":"duplicate"}'),
+            (201, b'{"state":"quarantined","state":"quarantined"}'),
+            (201, b'{"state":"quarantined","unexpected":true}'),
+            (200, b'{"state":"duplicate","unexpected":null}'),
+            (201, b'{"state":["quarantined"]}'),
+            (201, b'{"state":"quarantined"}{}'),
+        ]:
+            with self.subTest(status=status, receipt=receipt):
+                self.assertEqual(self.deliver(status, receipt)[0], pilot.TEMPFAIL)
+        self.assertEqual(self.deliver(201, b' { "state" : "quarantined" } ')[0], pilot.OK)
+
     def test_recipient_fail_closed(self):
         for args in [[], ["sender=x@y", "recipient=sales@kmjtechno.com"],
                      ARGS + ["recipient=other@example.invalid"]]:

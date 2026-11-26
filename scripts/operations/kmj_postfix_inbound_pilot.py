@@ -67,6 +67,15 @@ def submit(raw, headers):
         conn.close()
 
 
+def unique_json_object(pairs):
+    obj = {}
+    for key, value in pairs:
+        if key in obj:
+            raise ValueError("duplicate receipt key")
+        obj[key] = value
+    return obj
+
+
 def deliver(args, stream, key_loader=load_key, receiver=submit):
     # Postfix supplies exactly two single argv values (no shell).
     # Null reverse-path is the literal empty value, not a fabricated sender.
@@ -90,13 +99,11 @@ def deliver(args, stream, key_loader=load_key, receiver=submit):
         status, receipt = receiver(raw, headers_for(raw, sender, key, recipient=recipient))
         if status not in (200, 201) or len(receipt) > MAX_RECEIPT:
             return TEMPFAIL
-        parsed = json.loads(receipt)
-        if not isinstance(parsed, dict):
-            return TEMPFAIL
-        if ((status == 201 and parsed.get("state") == "quarantined")
-                or (status == 200 and parsed.get("state") == "duplicate")):
-            return OK
-        return TEMPFAIL
+        # Acknowledge only the exact controller receipt. Duplicate JSON keys,
+        # extra fields or ambiguous responses must not remove queued mail.
+        parsed = json.loads(receipt, object_pairs_hook=unique_json_object)
+        expected = {"state": "quarantined" if status == 201 else "duplicate"}
+        return OK if isinstance(parsed, dict) and parsed == expected else TEMPFAIL
     except Exception:
         # Never emit MIME, sender, signature, secret, response or tracebacks.
         return TEMPFAIL
