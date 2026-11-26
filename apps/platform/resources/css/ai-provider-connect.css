@@ -149,7 +149,9 @@
     background: #0b141e;
     border-color: #34475b;
 }
-.owner-module-shell .kmj-ai-providers .kmj-ai-directory-item[data-selected='true'] {
+.owner-module-shell
+    .kmj-ai-providers
+    .kmj-ai-directory-item[data-selected='true'] {
     border-color: #f43e63;
 }
 .owner-module-shell .kmj-ai-providers .kmj-ai-provider-monogram {
@@ -167,13 +169,18 @@
     color: #fff;
     background: #69213a;
 }
-.owner-module-shell .kmj-ai-providers .kmj-ai-managed-provider[data-compact='true'] {
+.owner-module-shell
+    .kmj-ai-providers
+    .kmj-ai-managed-provider[data-compact='true'] {
     padding: 14px 16px;
     border-radius: 12px;
 }
 .owner-module-shell .kmj-ai-providers .kmj-ai-advanced {
     border-color: #34475b;
 }
-.owner-module-shell .kmj-ai-providers .kmj-ai-directory-item input[type='checkbox'] {
+.owner-module-shell
+    .kmj-ai-providers
+    .kmj-ai-directory-item
+    input[type='checkbox'] {
     min-height: 0;
 }
