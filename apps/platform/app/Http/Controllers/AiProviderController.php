@@ -144,6 +144,9 @@ final class AiProviderController extends Controller
         // Single use: a replayed or forged callback finds nothing to redeem.
         $pending = $request->session()->pull('ai_provider_oauth');
         $index = redirect()->route(is_array($pending) && ($pending['return_to'] ?? null) === 'modelfabric' ? 'operator.modelfabric.index' : 'ai-providers.index');
+        if (is_array($pending) && ($pending['return_to'] ?? null) === 'modelfabric') {
+            $index->with('modelfabric_provider_tab', true);
+        }
         if (! is_array($pending) || ($pending['expires'] ?? 0) < time()
             || ($pending['user'] ?? null) !== (int) $this->user($request)->id
             || ($pending['organization'] ?? null) !== $scope['organization_id']) {
