@@ -31,12 +31,18 @@ final class ModelFabricApiController extends Controller
         private readonly NativeCodingAdmissionTicket $nativeAdmission,
     ) {}
 
+    private function publicPromptsConfirmed(Request $request): bool
+    {
+        // General chat tokens do not by themselves authorize anonymous public-only inference.
+        return $request->header('X-ModelFabric-Public-Prompts') === 'confirmed';
+    }
+
     public function models(Request $request): JsonResponse
     {
         $token = $this->token($request);
         $strictFreeCloud = $this->strictFreeCloud($request, $token);
         $capability = $token->private_source ? 'code' : 'chat';
-        $plan = $this->router->plan($token->organization_id, $capability, $token->private_source, $strictFreeCloud);
+        $plan = $this->router->plan($token->organization_id, $capability, $token->private_source, $strictFreeCloud, $this->publicPromptsConfirmed($request));
         $digest = $request->header('X-ModelFabric-Request-Digest');
         $admission = null;
         if ($digest !== null) {
@@ -105,7 +111,7 @@ final class ModelFabricApiController extends Controller
 
         // The caller's "model" field is ignored on purpose: it cannot pick a paid or unverified model.
         $capability = $token->private_source ? 'code' : 'chat';
-        $result = $this->gateway->complete($token->organization_id, $messages, $capability, $token->private_source, $this->sessionKey($request), $strictFreeCloud, isset($data['max_tokens']) ? (int) $data['max_tokens'] : null, $nativeRoute);
+        $result = $this->gateway->complete($token->organization_id, $messages, $capability, $token->private_source, $this->sessionKey($request), $strictFreeCloud, isset($data['max_tokens']) ? (int) $data['max_tokens'] : null, $nativeRoute, $this->publicPromptsConfirmed($request));
         if (! $result['ok']) {
             $code = (string) $result['error_code'];
 

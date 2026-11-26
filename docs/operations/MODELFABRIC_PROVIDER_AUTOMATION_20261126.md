@@ -97,3 +97,7 @@ For credit-limited inference the gateway now counts all UTC-day attempts for a p
 ### Automatic refresh admission integrity
 
 The existing scheduled catalog refresh runs every six hours; current owner-scoped narrow model rules can admit newly discovered eligible IDs without a separate approval for every model. Explicit manual evidence (even expired) and credit-limited evidence cannot be rewritten into a free rule approval. On allowlist providers an explicit expired or revoked per-connection evidence row overrides a global environment allowlist default. Tests cover both precedence failures. This preserves the zero-cost guard when free-model catalogs change; new free provider rules still require accurate pricing and account eligibility evidence.
+
+### Explicit public-prompt scope
+
+Kilo anonymous routing requires per-request public-data confirmation. Ordinary API tokens are not sufficient. The OpenAI-compatible endpoint accepts `X-ModelFabric-Public-Prompts: confirmed` only as a caller assertion that the payload contains public, non-confidential data. Private-source and strict-coding scopes always exclude keyless routes even when the header is supplied. The safe playground sends this header for catalog preview and for its explicitly consented synthetic prompt; mail and other internal callers default to no keyless routing. Kilo's upstream anonymous and authenticated free traffic shares 200 requests/hour per IP (https://kilo.ai/docs/gateway/authentication; https://kilo.ai/docs/gateway/usage-and-billing). Live upstream inference still requires acceptance.

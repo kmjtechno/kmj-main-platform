@@ -115,6 +115,9 @@ export default function ModelFabricSafePlayground({
                     headers: {
                         Authorization: 'Bearer ' + apiKey.trim(),
                         Accept: 'application/json',
+                        ...(!sendPrompt || consent
+                            ? { 'X-ModelFabric-Public-Prompts': 'confirmed' }
+                            : {}),
                         ...(sendPrompt
                             ? { 'Content-Type': 'application/json' }
                             : {}),

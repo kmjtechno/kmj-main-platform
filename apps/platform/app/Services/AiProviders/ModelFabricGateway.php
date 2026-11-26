@@ -48,13 +48,13 @@ final class ModelFabricGateway
      * @param  array{provider_id: string, model: string}|null  $nativeRoute
      * @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string}
      */
-    public function complete(string $organizationId, array $messages, string $capability = 'chat', bool $privateSource = false, ?string $sessionKey = null, bool $strictFreeCloud = false, ?int $maxCodingTokens = null, ?array $nativeRoute = null): array
+    public function complete(string $organizationId, array $messages, string $capability = 'chat', bool $privateSource = false, ?string $sessionKey = null, bool $strictFreeCloud = false, ?int $maxCodingTokens = null, ?array $nativeRoute = null, bool $publicPromptsConfirmed = false): array
     {
         $profile = $this->profiler->classify($messages, $capability);
         if ($strictFreeCloud && ($capability !== 'code' || ! $privateSource || ($maxCodingTokens !== null && ($maxCodingTokens < 1 || $maxCodingTokens > 4096)))) {
             return $this->fail('invalid_coding_policy', 0, $profile);
         }
-        $plan = $this->router->plan($organizationId, $capability, $privateSource, $strictFreeCloud);
+        $plan = $this->router->plan($organizationId, $capability, $privateSource, $strictFreeCloud, $publicPromptsConfirmed);
         if ($plan['status'] === ModelFabricRouter::NO_ROUTE) {
             return $this->fail(ModelFabricRouter::NO_ROUTE, 0, $profile);
         }
@@ -120,7 +120,7 @@ final class ModelFabricGateway
             // Reserve the attempt BEFORE the outbound request. A short database
             // transaction serializes reservations for the same provider, including
             // across PHP workers. A crash consumes the reservation conservatively.
-            $reservation = $this->reserveAttempt($organizationId, $providerId, (string) $route['model'], $capability, $privateSource, $strictFreeCloud);
+            $reservation = $this->reserveAttempt($organizationId, $providerId, (string) $route['model'], $capability, $privateSource, $strictFreeCloud, $publicPromptsConfirmed);
             if ($reservation['error'] !== null) {
                 $last = $reservation['error'];
 
@@ -428,9 +428,9 @@ final class ModelFabricGateway
     /**
      * @return array{provider: ?AiProvider, attempt: ?AiModelRequest, error: ?string}
      */
-    private function reserveAttempt(string $organizationId, string $providerId, string $model, string $capability, bool $privateSource, bool $strictFreeCloud): array
+    private function reserveAttempt(string $organizationId, string $providerId, string $model, string $capability, bool $privateSource, bool $strictFreeCloud, bool $publicPromptsConfirmed): array
     {
-        return DB::transaction(function () use ($organizationId, $providerId, $model, $capability, $privateSource, $strictFreeCloud): array {
+        return DB::transaction(function () use ($organizationId, $providerId, $model, $capability, $privateSource, $strictFreeCloud, $publicPromptsConfirmed): array {
             $deny = static fn (string $code): array => ['provider' => null, 'attempt' => null, 'error' => $code];
             $provider = AiProvider::query()->where('organization_id', $organizationId)->whereKey($providerId)->lockForUpdate()->first();
             if ($provider === null) {
@@ -453,7 +453,7 @@ final class ModelFabricGateway
             // Re-evaluate the current plan under the reservation lock. Never
             // reserve a previously admitted but now revoked or expired route.
             $current = null;
-            foreach ($this->router->plan($organizationId, $capability, $privateSource, $strictFreeCloud)['routes'] as $candidate) {
+            foreach ($this->router->plan($organizationId, $capability, $privateSource, $strictFreeCloud, $publicPromptsConfirmed)['routes'] as $candidate) {
                 if ($candidate['provider_id'] === $providerId && $candidate['model'] === $model) {
                     $current = $candidate;
                     break;

@@ -297,11 +297,30 @@ final class ModelFabricGatewayTest extends TestCase
         }
 
         Http::fake();
-        $result = app(ModelFabricGateway::class)->complete($this->org, [['role' => 'user', 'content' => 'hi']]);
+        $result = app(ModelFabricGateway::class)->complete($this->org, [['role' => 'user', 'content' => 'hi']], publicPromptsConfirmed: true);
 
         $this->assertFalse($result['ok']);
         $this->assertSame('keyless_hourly_quota_exhausted', $result['error_code']);
         Http::assertNothingSent();
+    }
+
+    public function test_keyless_inference_requires_explicit_public_prompt_confirmation(): void
+    {
+        AiProvider::query()->create(array_replace(
+            $this->providerRow('kilo-free', 'Kilo', 'https://ai-gateway.kilo.ai/api/v1', 'sample/public:free'),
+            ['api_key' => '', 'key_last4' => ''],
+        ));
+        Http::fake(['ai-gateway.kilo.ai/*' => Http::response(['choices' => [['message' => ['content' => 'pong']]]], 200)]);
+        $gateway = app(ModelFabricGateway::class);
+        $messages = [['role' => 'user', 'content' => 'ping']];
+
+        $this->assertSame('NO_FREE_ROUTE_AVAILABLE', $gateway->complete($this->org, $messages)['error_code']);
+        $this->assertSame('NO_FREE_ROUTE_AVAILABLE', $gateway->complete($this->org, $messages, privateSource: true, publicPromptsConfirmed: true)['error_code']);
+        Http::assertNothingSent();
+
+        $this->assertTrue($gateway->complete($this->org, $messages, publicPromptsConfirmed: true)['ok']);
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request): bool => ! $request->hasHeader('Authorization'));
     }
 
     public function test_credit_models_share_the_lowest_daily_connection_cap(): void
