@@ -93,6 +93,11 @@ final class ModelFabricGateway
 
                 continue;
             }
+            if ($this->dailyQuotaExhausted($providerId, (string) $route['model'], (bool) ($limits[$providerId]['model_scoped'] ?? false))) {
+                $last = 'provider_daily_quota_exhausted';
+
+                continue;
+            }
             if (($route['cost_class'] ?? 'free') === 'credit-limited') {
                 $cap = (int) ($route['credit_daily_cap'] ?? 0);
                 if ($cap <= 0 || ($creditUsed[$providerId.'|'.(string) $route['model']] ?? 0) >= $cap) {
@@ -294,12 +299,24 @@ final class ModelFabricGateway
      * Pre-emptive shift: remember the provider's own remaining-quota headers for a short window so the
      * scorer moves work away BEFORE the limit is hit. Counts come only from what the provider reports.
      *
-     * @param  array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int}|null  $rate
+     * @param  array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int, daily_requests_limit?: int, daily_reset_seconds?: int}|null  $rate
      */
     private function learnLimits(string $providerId, string $model, bool $modelScoped, ?array $rate): void
     {
         if ($rate === null || ($rate['requests_remaining'] === null && $rate['tokens_remaining'] === null)) {
             return;
+        }
+        // Groq's documented RPD window is independent of the short-lived TPM signal.
+        // Never infer a daily reset for providers with undocumented header semantics.
+        $dailyLimit = $rate['daily_requests_limit'] ?? null;
+        $reset = $rate['daily_reset_seconds'] ?? null;
+        if ($modelScoped && is_int($dailyLimit) && $dailyLimit > 0
+            && is_int($reset) && $reset > 0 && $reset <= 86400
+            && is_int($rate['requests_remaining']) && $rate['requests_remaining'] >= 0 && $rate['requests_remaining'] <= $dailyLimit) {
+            Cache::put($this->dailyRateKey($providerId, $model), [
+                'remaining' => $rate['requests_remaining'],
+                'limit' => $dailyLimit,
+            ], $reset);
         }
         $key = $this->rateKey($providerId, $model, $modelScoped);
         $seen = Cache::get($key);
@@ -313,6 +330,10 @@ final class ModelFabricGateway
 
     private function nearLimit(string $providerId, string $model, bool $modelScoped): bool
     {
+        $daily = $modelScoped ? Cache::get($this->dailyRateKey($providerId, $model)) : null;
+        if (is_array($daily) && $daily['remaining'] * 5 <= $daily['limit']) {
+            return true;
+        }
         $seen = Cache::get($this->rateKey($providerId, $model, $modelScoped));
         if (! is_array($seen)) {
             return false;
@@ -325,7 +346,7 @@ final class ModelFabricGateway
         return $lowRequests || (is_int($tokens) && $tokens <= 2000);
     }
 
-    /** @param array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int}|null $rate */
+    /** @param array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int, daily_requests_limit?: int, daily_reset_seconds?: int}|null $rate */
     private function penalize(AiProvider $provider, string $model, string $code, ?array $rate = null): void
     {
         $retryAfter = $rate['retry_after'] ?? null;
@@ -358,6 +379,18 @@ final class ModelFabricGateway
     private function rateKey(string $providerId, string $model, bool $modelScoped): string
     {
         return 'modelfabric:rate:'.($modelScoped ? hash('sha256', $providerId.'|'.$model) : $providerId);
+    }
+
+    private function dailyRateKey(string $providerId, string $model): string
+    {
+        return 'modelfabric:daily-rate:'.hash('sha256', $providerId.'|'.$model);
+    }
+
+    private function dailyQuotaExhausted(string $providerId, string $model, bool $modelScoped): bool
+    {
+        $daily = $modelScoped ? Cache::get($this->dailyRateKey($providerId, $model)) : null;
+
+        return is_array($daily) && ($daily['remaining'] ?? null) === 0;
     }
 
     private function modelCooldownKey(string $providerId, string $model): string
@@ -406,6 +439,10 @@ final class ModelFabricGateway
             }
             if (self::coolingUntil($providerId) !== null || $this->modelCoolingUntil($providerId, $model) !== null) {
                 return $deny('all_routes_cooling_down');
+            }
+
+            if ($this->dailyQuotaExhausted($providerId, $model, $provider->preset === 'groq')) {
+                return $deny('provider_daily_quota_exhausted');
             }
 
             $today = AiModelRequest::query()
