@@ -174,12 +174,19 @@ void test('empty provider view remains cloud-only with strict zero-spend policy'
 });
 
 void test('embedded ModelFabric exposes a searchable discover-first directory and filtered connection list', () => {
-    assert.match(page, /const \[showConnect, setShowConnect\] = useState\(true\)/);
+    assert.match(
+        page,
+        /const \[showConnect, setShowConnect\] = useState\(true\)/,
+    );
     assert.match(page, /compact=\{embedded\}/);
     assert.match(hub, /Search provider directory/);
-    assert.match(hub, /Not connected/);
+    assert.match(hub, /Hide connected providers/);
+    assert.match(hub, /Select provider/);
+    assert.match(hub, /visible\.map\(\(preset\) =>/);
     assert.match(hub, /One-click OAuth/);
-    assert.match(hub, /onChooseKeyProvider\(preset.key\)/);
+    assert.match(hub, /onChooseKeyProvider\(selected\.key\)/);
+    assert.match(hub, /onClick=\{onConnectOpenRouter\}/);
+    assert.match(hub, /onClick=\{onConnectHuggingFace\}/);
     assert.match(page, /Search connected providers/);
     assert.match(page, /Needs attention/);
     assert.match(page, /Model eligibility &amp; routing/);
