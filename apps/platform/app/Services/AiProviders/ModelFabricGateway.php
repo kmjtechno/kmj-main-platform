@@ -331,7 +331,7 @@ final class ModelFabricGateway
     private function nearLimit(string $providerId, string $model, bool $modelScoped): bool
     {
         $daily = $modelScoped ? Cache::get($this->dailyRateKey($providerId, $model)) : null;
-        if (is_array($daily) && $daily['remaining'] * 5 <= $daily['limit']) {
+        if (is_array($daily) && $daily['limit'] >= $daily['remaining'] * 5) {
             return true;
         }
         $seen = Cache::get($this->rateKey($providerId, $model, $modelScoped));
