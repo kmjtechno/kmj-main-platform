@@ -29,3 +29,9 @@ void test('guidance never offers to enable live charging or asks for secrets in 
     assert.match(step, /Never share keys in chat/);
     assert.match(step, /role="progressbar"/);
 });
+
+void test('recent webhook events are shown without implying settlement', () => {
+    assert.match(step, /Recent webhook events/);
+    assert.match(step, /Received \(not settled\)/);
+    assert.match(step, /does not settle an\s+order or issue a license/);
+});

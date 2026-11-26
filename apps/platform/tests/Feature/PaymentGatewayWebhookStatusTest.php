@@ -90,4 +90,42 @@ final class PaymentGatewayWebhookStatusTest extends TestCase
 
         $this->assertFalse($this->razorpay()['webhook_verification_configured']);
     }
+
+    public function test_last_received_is_explicit_utc_and_recent_events_are_sanitized(): void
+    {
+        $this->storeSecret();
+        DB::table('payment_webhook_events')->insert([
+            'provider' => 'razorpay',
+            'event_id' => 'evt_secret_looking_id_123',
+            'event_type' => 'payment.captured',
+            'provider_order_id' => 'order_ABCDEFGHIJKLMN',
+            'provider_payment_id' => 'pay_ZYXWVUTSRQPONM',
+            'payload_sha256' => hash('sha256', 'x'),
+            'processing_status' => 'received',
+            'received_at' => '2026-11-21 08:30:00+00',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->event('conflict:zzz', 'conflict');
+
+        $razorpay = $this->razorpay();
+
+        $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/', $razorpay['webhook_last_received_at']);
+        $events = $razorpay['recent_events'];
+        $this->assertCount(1, $events, 'conflict rows are not shown as received events');
+        $this->assertSame('payment.captured', $events[0]['event_type']);
+        $this->assertSame('received', $events[0]['status']);
+        $this->assertSame('2026-11-21T08:30:00Z', $events[0]['received_at']);
+        $this->assertSame('…GHIJKLMN', $events[0]['order_ref']);
+        $this->assertSame('…TSRQPONM', $events[0]['payment_ref']);
+        $encoded = json_encode($events, JSON_THROW_ON_ERROR);
+        $this->assertStringNotContainsString('evt_secret_looking_id_123', $encoded);
+        $this->assertStringNotContainsString('order_ABCDEFGHIJKLMN', $encoded);
+        $this->assertStringNotContainsString(hash('sha256', 'x'), $encoded);
+    }
+
+    public function test_recent_events_are_empty_without_traffic(): void
+    {
+        $this->assertSame([], $this->razorpay()['recent_events']);
+    }
 }

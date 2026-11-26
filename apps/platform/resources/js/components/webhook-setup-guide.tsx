@@ -1,3 +1,4 @@
+import { formatIstStamp } from '@/lib/format-ist-date-time';
 import { router } from '@inertiajs/react';
 import { Check, Copy, KeyRound, Webhook } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -111,7 +112,7 @@ export default function WebhookSetupGuide({
     }
 
     const status = proven
-        ? `Delivery proven: ${gateway.webhook_events_received} signed event(s) received, last ${gateway.webhook_last_received_at ?? 'n/a'}.`
+        ? `Delivery proven: ${gateway.webhook_events_received} signed event(s) received, last ${formatIstStamp(gateway.webhook_last_received_at, 'n/a')}.`
         : gateway.webhook_events_received > 0
           ? `${gateway.webhook_events_received} signed event(s) received, but no webhook secret is stored here yet.`
           : 'No signed event received yet. This page checks again every few seconds.';

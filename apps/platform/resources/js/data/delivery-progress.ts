@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Model and provider quota regression tests added; exact-head CI and production verification pending.',
     },
     {
+        id: 'payments-recent-webhook-events-20261126',
+        title: 'Payments console: recent webhook events and IST times',
+        state: 'active',
+        detail: 'Owner console lists the last signed webhook events per provider (sanitized, IST) and shows the last delivery time in dd/mm/yyyy India time.',
+        evidence:
+            'Feature regression tests added; exact-head CI and live authenticated acceptance pending.',
+    },
+    {
         id: 'modelfabric-refresh-credential-isolation-20261126',
         title: 'ModelFabric: resilient automatic provider refresh',
         state: 'active',
