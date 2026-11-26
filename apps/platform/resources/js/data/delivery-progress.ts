@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-discover-first-workspace-20261126',
+        title: 'ModelFabric: discover-first provider directory',
+        state: 'active',
+        detail: 'Expose all eligible provider presets in a searchable directory, with OAuth filtering, direct guided connection and compact status-filtered account management.',
+        evidence:
+            'Native UI and source regression; exact-head CI and authenticated production acceptance pending.',
+    },
+    {
         id: 'payments-console-last-changed-utc-20261126',
         title: 'Payments console: gateway "Last changed" time',
         state: 'active',
