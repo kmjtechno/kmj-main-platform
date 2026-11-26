@@ -10,6 +10,30 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-refresh-credential-isolation-20261126',
+        title: 'ModelFabric: resilient automatic provider refresh',
+        state: 'active',
+        detail: 'Isolate unreadable credentials, clear stale discovery, and continue refreshing healthy providers with current owner rules.',
+        evidence:
+            'Offline credential isolation regression; exact-head CI and production verification pending.',
+    },
+    {
+        id: 'modelfabric-reconnect-verify-20261126',
+        title: 'ModelFabric: verify replacement credentials in one action',
+        state: 'active',
+        detail: 'Refresh the new connection without inference, clear stale health and expire old account-specific evidence and approval rules.',
+        evidence:
+            'Source and offline regressions; exact-head CI and authenticated live verification pending.',
+    },
+    {
+        id: 'modelfabric-discover-first-workspace-20261126',
+        title: 'ModelFabric: discover-first provider directory',
+        state: 'active',
+        detail: 'Expose all eligible provider presets in a searchable directory, with OAuth filtering, direct guided connection and compact status-filtered account management.',
+        evidence:
+            'Native UI and source regression; exact-head CI and authenticated production acceptance pending.',
+    },
+    {
         id: 'payments-console-last-changed-utc-20261126',
         title: 'Payments console: gateway "Last changed" time',
         state: 'active',

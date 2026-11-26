@@ -103,6 +103,8 @@ export default function AiProviderConnectHub({
     onConnectHuggingFace,
     onChooseKeyProvider,
     selectedPreset,
+    compact = false,
+    connectedPresets = [],
 }: {
     presets: Preset[];
     oauthBusy: boolean;
@@ -110,9 +112,199 @@ export default function AiProviderConnectHub({
     onConnectHuggingFace: () => void;
     onChooseKeyProvider: (preset: string) => void;
     selectedPreset: string | null;
+    compact?: boolean;
+    connectedPresets?: string[];
 }) {
     const supported = new Set(presets.map((preset) => preset.key));
     const [hfFree, setHfFree] = useState(false);
+    const [query, setQuery] = useState('');
+    const [hideConnected, setHideConnected] = useState(false);
+    const [choice, setChoice] = useState('');
+    const connected = new Set(connectedPresets);
+
+    if (compact) {
+        const selected = presets.find((preset) => preset.key === choice);
+        const guide = guides.find((item) => item.key === choice);
+        const visible = presets.filter(
+            (preset) =>
+                preset.key === choice ||
+                ((!hideConnected || !connected.has(preset.key)) &&
+                    (preset.label + ' ' + preset.key)
+                        .toLowerCase()
+                        .includes(query.trim().toLowerCase())),
+        );
+
+        return (
+            <section
+                aria-labelledby="modelfabric-discover-title"
+                className="kmj-ai-directory rounded-2xl border p-4 sm:p-5"
+            >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2
+                            id="modelfabric-discover-title"
+                            className="text-xl font-black"
+                        >
+                            Add AI provider
+                        </h2>
+                        <p className="text-muted-foreground text-sm">
+                            {presets.length} supported provider types. Select
+                            one to connect and discover models.
+                        </p>
+                    </div>
+                    <span className="kmj-ai-zero-spend inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold">
+                        <ShieldCheck aria-hidden="true" className="h-4 w-4" />
+                        Free-only routing
+                    </span>
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <label className="text-sm font-semibold">
+                        Search provider directory
+                        <input
+                            placeholder="Search providers…"
+                            className="mt-1 w-full rounded-xl border px-3 py-2"
+                            value={query}
+                            onChange={(event) => setQuery(event.target.value)}
+                        />
+                    </label>
+                    <label className="text-sm font-semibold">
+                        Select provider
+                        <select
+                            className="mt-1 w-full rounded-xl border px-3 py-2"
+                            value={choice}
+                            onChange={(event) => setChoice(event.target.value)}
+                        >
+                            <option value="">Choose a provider</option>
+                            {visible.map((preset) => (
+                                <option key={preset.key} value={preset.key}>
+                                    {preset.label}
+                                    {connected.has(preset.key)
+                                        ? ' · Connected'
+                                        : ''}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                    <label className="flex items-center gap-2 text-sm">
+                        <input
+                            type="checkbox"
+                            checked={hideConnected}
+                            onChange={(event) =>
+                                setHideConnected(event.target.checked)
+                            }
+                        />
+                        Hide connected providers
+                    </label>
+                    {visible.length === 0 && (
+                        <p
+                            role="status"
+                            className="text-muted-foreground text-sm"
+                        >
+                            No matching providers. Clear the search or show
+                            connected providers.
+                        </p>
+                    )}
+                </div>
+                {selected && (
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3">
+                        <div>
+                            <h3 className="font-bold">{selected.label}</h3>
+                            <p className="text-muted-foreground text-xs">
+                                {selected.free_tier === 'none'
+                                    ? 'Discovery only · inference blocked'
+                                    : 'Free-only policy · eligibility checked separately'}
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {guide && (
+                                <a
+                                    href={guide.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="kmj-ai-filter inline-flex items-center gap-1 rounded-lg border px-3 text-sm font-semibold"
+                                >
+                                    Get API key
+                                    <ExternalLink className="h-3 w-3" />
+                                </a>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    onChooseKeyProvider(selected.key)
+                                }
+                                className="kmj-ai-primary-action min-h-11 rounded-lg px-4 text-sm font-bold"
+                            >
+                                Connect with API key
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                <div className="mt-5 border-t pt-4">
+                    <h3 className="flex items-center gap-2 text-base font-bold">
+                        <Zap className="h-4 w-4 text-red-400" />
+                        One-click OAuth
+                    </h3>
+                    <p className="text-muted-foreground mt-1 text-sm">
+                        Sign in directly where the provider supports delegated
+                        API authorization.
+                    </p>
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                        {supported.has('openrouter') && (
+                            <article className="kmj-ai-directory-item rounded-xl border p-3">
+                                <h4 className="font-bold">OpenRouter</h4>
+                                <p className="text-muted-foreground mt-1 text-xs">
+                                    Account authorization · free model discovery
+                                </p>
+                                <button
+                                    type="button"
+                                    disabled={oauthBusy}
+                                    aria-busy={oauthBusy}
+                                    onClick={onConnectOpenRouter}
+                                    className="kmj-ai-primary-action mt-3 min-h-11 w-full rounded-lg px-3 text-sm font-bold"
+                                >
+                                    Connect OpenRouter
+                                </button>
+                            </article>
+                        )}
+                        {supported.has('huggingface') && (
+                            <article className="kmj-ai-directory-item rounded-xl border p-3">
+                                <h4 className="font-bold">Hugging Face</h4>
+                                <p className="text-muted-foreground mt-1 text-xs">
+                                    Account authorization · inference
+                                    eligibility not guaranteed
+                                </p>
+                                <label className="mt-2 flex items-start gap-2 text-xs">
+                                    <input
+                                        type="checkbox"
+                                        checked={hfFree}
+                                        onChange={(event) =>
+                                            setHfFree(event.target.checked)
+                                        }
+                                    />
+                                    Free account, no payment method
+                                </label>
+                                <button
+                                    type="button"
+                                    disabled={oauthBusy || !hfFree}
+                                    onClick={onConnectHuggingFace}
+                                    className="kmj-ai-primary-action mt-3 min-h-11 w-full rounded-lg px-3 text-sm font-bold disabled:opacity-50"
+                                >
+                                    {connected.has('huggingface')
+                                        ? 'Reconnect Hugging Face'
+                                        : 'Connect Hugging Face'}
+                                </button>
+                            </article>
+                        )}
+                    </div>
+                </div>
+                <p className="text-muted-foreground mt-3 text-xs">
+                    Discovery does not prove free inference eligibility.
+                </p>
+            </section>
+        );
+    }
 
     return (
         <section

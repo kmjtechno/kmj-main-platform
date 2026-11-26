@@ -134,7 +134,10 @@ void test('configured providers use honest summary and deliberate advanced contr
     assert.match(page, /window\.confirm/);
     assert.match(page, /data: \{ confirm: 'DELETE' \}/);
     assert.match(page, /fallback_models: next/);
-    assert.match(page, /\{ api_key: newKey \}/);
+    assert.match(
+        page,
+        /\{\s*api_key: newKey,\s*verify_connection: true,?\s*\}/,
+    );
     assert.match(page, /onSuccess:\s*\(\)\s*=>\s*\{\s*setNewKey\(''\);/);
     assert.match(page, /setReplaceVisible\(\s*false,\s*\);/);
 });
@@ -171,4 +174,24 @@ void test('empty provider view remains cloud-only with strict zero-spend policy'
     assert.match(page, /No cloud AI providers connected/);
     assert.match(page, /inference stays blocked/);
     assert.doesNotMatch(page, /Local Ollama|local LLM/i);
+});
+
+void test('embedded ModelFabric exposes a searchable discover-first directory and filtered connection list', () => {
+    assert.match(
+        page,
+        /const \[showConnect, setShowConnect\] = useState\(true\)/,
+    );
+    assert.match(page, /compact=\{embedded\}/);
+    assert.match(hub, /Search provider directory/);
+    assert.match(hub, /Hide connected providers/);
+    assert.match(hub, /Select provider/);
+    assert.match(hub, /visible\.map\(\(preset\) =>/);
+    assert.match(hub, /One-click OAuth/);
+    assert.match(hub, /onChooseKeyProvider\(selected\.key\)/);
+    assert.match(hub, /onClick=\{onConnectOpenRouter\}/);
+    assert.match(hub, /onClick=\{onConnectHuggingFace\}/);
+    assert.match(page, /Search connected providers/);
+    assert.match(page, /Needs attention/);
+    assert.match(page, /Model eligibility &amp; routing/);
+    assert.match(hub, /Discovery does not prove free inference eligibility/);
 });
