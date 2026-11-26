@@ -1,3 +1,4 @@
+import { formatIstDate, formatIstStamp } from '@/lib/format-ist-date-time';
 import { Head, Link, router } from '@inertiajs/react';
 import '../../../css/codebridge-premium.css';
 import { useEffect, useRef, useState } from 'react';
@@ -1005,24 +1006,10 @@ function clientSummary(client: ConnectedClient): string {
 
 function formatDateTime(value?: string | null): string {
     if (!value) return '—';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    return new Intl.DateTimeFormat('en', {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-    }).format(date);
+    return formatIstStamp(value, value);
 }
 
 function formatDate(value?: string | null): string {
     if (!value) return '—';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    return new Intl.DateTimeFormat('en', {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-    }).format(date);
+    return formatIstDate(value, value);
 }

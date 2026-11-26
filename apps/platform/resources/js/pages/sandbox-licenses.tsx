@@ -1,3 +1,4 @@
+import { formatIstStamp } from '@/lib/format-ist-date-time';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import {
     CheckCircle2,
@@ -482,9 +483,9 @@ export default function SandboxLicenses({
                                         >
                                             <td className="px-3 py-3 whitespace-nowrap">
                                                 {event.created_at
-                                                    ? new Date(
+                                                    ? formatIstStamp(
                                                           event.created_at,
-                                                      ).toLocaleString()
+                                                      )
                                                     : '—'}
                                             </td>
                                             <td className="px-3 py-3 font-medium">

@@ -1,3 +1,4 @@
+import { formatIstStamp } from '@/lib/format-ist-date-time';
 import { Link, router } from '@inertiajs/react';
 import { codeBridgeDeviceQuotaDisplay } from './device-policy-display';
 import { deviceRecoveryAction } from './device-recovery.mjs';
@@ -1157,11 +1158,5 @@ function QuickAction({
 }
 
 function formatRegisteredAt(value: string): string {
-    const date = new Date(value);
-    return Number.isNaN(date.getTime())
-        ? 'at an unknown time'
-        : date.toLocaleString(undefined, {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-          });
+    return formatIstStamp(value, 'at an unknown time');
 }

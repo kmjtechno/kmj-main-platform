@@ -1,3 +1,4 @@
+import { formatIstStamp } from '@/lib/format-ist-date-time';
 import { Head, router } from '@inertiajs/react';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
 import CodeBridgeStageControl from '@/components/codebridge/codebridge-stage-control';
@@ -635,7 +636,7 @@ export default function OperatorOps({
                     </div>
                     <p className="text-muted-foreground mt-3 text-[11px]">
                         {eliteRelease.captured_at_unix
-                            ? `Root snapshot: ${new Date(eliteRelease.captured_at_unix * 1000).toLocaleString()} · `
+                            ? `Root snapshot: ${formatIstStamp(eliteRelease.captured_at_unix * 1000)} · `
                             : 'No fresh root receipt · '}
                         Deployment not triggered. Independent disaster recovery
                         not verified. Google VPS is not a Main Platform
@@ -1022,9 +1023,9 @@ export default function OperatorOps({
                                         </p>
                                         {backup.completed_at ? (
                                             <p className="text-muted-foreground mt-1 text-[10px]">
-                                                {new Date(
+                                                {formatIstStamp(
                                                     backup.completed_at,
-                                                ).toLocaleString()}
+                                                )}
                                             </p>
                                         ) : null}
                                     </div>
@@ -1076,8 +1077,7 @@ export default function OperatorOps({
                             </div>
                         </div>
                         <div className="text-muted-foreground mt-4 text-[11px]">
-                            Snapshot{' '}
-                            {new Date(snapshot.captured_at).toLocaleString()} ·
+                            Snapshot {formatIstStamp(snapshot.captured_at)} ·
                             auto-refresh every 15 seconds
                         </div>
                     </div>
@@ -1177,9 +1177,7 @@ export default function OperatorOps({
                                     </div>
                                     <div className="text-muted-foreground">
                                         {event.created_at
-                                            ? new Date(
-                                                  event.created_at,
-                                              ).toLocaleString()
+                                            ? formatIstStamp(event.created_at)
                                             : 'Unknown time'}
                                     </div>
                                 </div>

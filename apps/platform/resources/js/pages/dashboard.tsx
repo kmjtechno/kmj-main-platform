@@ -1,3 +1,4 @@
+import { formatIstDate } from '@/lib/format-ist-date-time';
 import { Head, Link } from '@inertiajs/react';
 import {
     ArrowRight,
@@ -756,13 +757,7 @@ function titleCase(value: string): string {
 
 function formatDate(value?: string | null): string {
     if (!value) return '—';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    return new Intl.DateTimeFormat('en', {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-    }).format(date);
+    return formatIstDate(value, value);
 }
 
 Dashboard.layout = {

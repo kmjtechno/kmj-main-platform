@@ -1,3 +1,8 @@
+import {
+    formatIstClock,
+    formatIstDate,
+    formatIstStamp,
+} from '@/lib/format-ist-date-time';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     Activity,
@@ -2000,10 +2005,8 @@ export default function OperatorModelFabric({
                                         </StatusPill>{' '}
                                         <span className="text-muted-foreground text-xs">
                                             until{' '}
-                                            {new Date(
-                                                row.expires_at,
-                                            ).toLocaleDateString()}{' '}
-                                            · {row.data_handling} ·{' '}
+                                            {formatIstDate(row.expires_at)} ·{' '}
+                                            {row.data_handling} ·{' '}
                                             {row.capabilities.join(', ')} ·{' '}
                                             {row.cost_class === 'credit-limited'
                                                 ? `credit-limited, cap ${row.credit_daily_cap ?? 0}/day · `
@@ -2173,9 +2176,7 @@ export default function OperatorModelFabric({
                                         </StatusPill>{' '}
                                         <span className="text-muted-foreground text-xs">
                                             {rule.matches} match now · until{' '}
-                                            {new Date(
-                                                rule.expires_at,
-                                            ).toLocaleDateString()}
+                                            {formatIstDate(rule.expires_at)}
                                         </span>
                                     </span>
                                     {canManage && !rule.revoked ? (
@@ -2347,11 +2348,9 @@ export default function OperatorModelFabric({
                                                 ? 'private source'
                                                 : 'general'}{' '}
                                             · expires{' '}
-                                            {new Date(
-                                                token.expires_at,
-                                            ).toLocaleDateString()}
+                                            {formatIstDate(token.expires_at)}
                                             {token.last_used_at
-                                                ? ` · last used ${new Date(token.last_used_at).toLocaleString()}`
+                                                ? ` · last used ${formatIstStamp(token.last_used_at)}`
                                                 : ' · never used'}
                                         </span>
                                     </span>
@@ -2409,7 +2408,7 @@ export default function OperatorModelFabric({
                                         ? ` · last error ${row.last_error}`
                                         : ''}
                                     {row.cooling_until
-                                        ? ` · cooling down until ${new Date(row.cooling_until).toLocaleTimeString()}`
+                                        ? ` · cooling down until ${formatIstClock(row.cooling_until)} IST`
                                         : ''}
                                 </li>
                             ))}

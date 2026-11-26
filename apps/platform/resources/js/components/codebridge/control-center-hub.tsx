@@ -1,3 +1,4 @@
+import { formatIstDate } from '@/lib/format-ist-date-time';
 import { Link } from '@inertiajs/react';
 import type { PresenceSnapshot } from './device-control-center';
 import { codeBridgeDeviceQuotaDisplay } from './device-policy-display';
@@ -74,10 +75,7 @@ const navigation = [
 
 function validDate(value: string | null): string {
     if (!value) return 'Not reported';
-    const date = new Date(value);
-    return Number.isNaN(date.getTime())
-        ? 'Not reported'
-        : date.toLocaleDateString(undefined, { dateStyle: 'medium' });
+    return formatIstDate(value, 'Not reported');
 }
 
 function Metric({

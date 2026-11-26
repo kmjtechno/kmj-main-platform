@@ -1,3 +1,4 @@
+import { formatIstDate } from '@/lib/format-ist-date-time';
 import { Head, Link } from '@inertiajs/react';
 import {
     ArrowRight,
@@ -74,14 +75,7 @@ type Props = {
 
 function readableDate(value: string | null): string {
     if (!value) return 'Not specified';
-    const date = new Date(value);
-    return Number.isNaN(date.getTime())
-        ? 'Not available'
-        : date.toLocaleDateString(undefined, {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric',
-          });
+    return formatIstDate(value, 'Not available');
 }
 
 const stateLabels: Record<string, string> = {
