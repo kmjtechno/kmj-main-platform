@@ -26,6 +26,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Source regression coverage added; exact-head CI, authenticated browser acceptance and guarded Elite deployment remain pending.',
     },
     {
+        id: 'modelfabric-refresh-credential-isolation-20261126',
+        title: 'ModelFabric: resilient automatic provider refresh',
+        state: 'active',
+        detail: 'Isolate unreadable credentials, clear stale discovery, and continue refreshing healthy providers with current owner rules.',
+        evidence:
+            'Offline credential isolation regression; exact-head CI and production verification pending.',
+    },
+    {
         id: 'kmj-mail-native-info-envelope-20261125',
         title: 'KMJ Mail: exact native info mailbox identity',
         state: 'active',
