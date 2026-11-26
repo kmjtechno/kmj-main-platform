@@ -96,7 +96,7 @@ final class PaymentGatewayReadiness
      */
     private function recentEvents(Builder $inbox): array
     {
-        return $inbox
+        $rows = $inbox
             ->where('processing_status', '!=', 'conflict')
             ->orderByDesc('received_at')
             ->orderByDesc('id')
@@ -110,6 +110,8 @@ final class PaymentGatewayReadiness
                 'payment_ref' => $this->tail($row->provider_payment_id),
             ])
             ->all();
+
+        return array_values($rows);
     }
 
     /** Storage is UTC; send explicit Zulu so the console can show India time. */
