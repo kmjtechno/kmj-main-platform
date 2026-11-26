@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Services\AiProviders;
 
 use App\Models\AiModelEvidence;
+use App\Models\AiModelRule;
 use App\Models\AiProvider;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -72,12 +74,20 @@ final class ProviderManager
     /** @param array<string, mixed> $data */
     public function update(AiProvider $provider, array $data): AiProvider
     {
-        if (isset($data['api_key']) && is_string($data['api_key']) && $data['api_key'] !== '') {
+        $replacingKey = isset($data['api_key']) && is_string($data['api_key']) && $data['api_key'] !== '';
+        if ($replacingKey) {
+            if ($this->presets()[$provider->preset]['retired'] ?? false) {
+                throw new InvalidArgumentException('provider_retired');
+            }
             $provider->api_key = $data['api_key'];
             $provider->key_last4 = substr($data['api_key'], -4);
             // A replaced key invalidates earlier health and model evidence.
             $provider->health = 'unknown';
+            $provider->health_checked_at = null;
+            $provider->last_error_code = null;
+            $provider->rate_limit = null;
             $provider->models_cache = null;
+            $provider->models_checked_at = null;
             $provider->default_model = null;
             $provider->fallback_models = [];
         }
@@ -101,7 +111,22 @@ final class ProviderManager
             $provider->default_model = $default;
             $provider->fallback_models = $fallbacks;
         }
-        $provider->save();
+        DB::transaction(function () use ($provider, $replacingKey): void {
+            $provider->save();
+            if ($replacingKey) {
+                // A replacement may belong to a different billing account. Preserve
+                // historical evidence, but require fresh owner attestation before reuse.
+                $now = now();
+                AiModelRule::query()->where('ai_provider_id', $provider->id)
+                    ->where('organization_id', $provider->organization_id)
+                    ->whereNull('revoked_at')->where('expires_at', '>', $now)
+                    ->update(['expires_at' => $now]);
+                AiModelEvidence::query()->where('ai_provider_id', $provider->id)
+                    ->where('organization_id', $provider->organization_id)
+                    ->whereNull('revoked_at')->where('expires_at', '>', $now)
+                    ->update(['expires_at' => $now]);
+            }
+        });
 
         return $provider;
     }
