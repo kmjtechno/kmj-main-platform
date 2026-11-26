@@ -137,10 +137,10 @@ final class ModelFabricRoutingTest extends TestCase
     {
         $this->confirmed($this->owner)->get(self::BASE.'?tab=tokens')
             ->assertOk()->assertInertia(fn (Assert $page) => $page
-                ->component('operator-modelfabric')
-                ->where('initialTab', 'tokens')
-                ->where('canManage', true)
-                ->where('newToken', null));
+            ->component('operator-modelfabric')
+            ->where('initialTab', 'tokens')
+            ->where('canManage', true)
+            ->where('newToken', null));
 
         $this->confirmed($this->owner)->get(self::BASE.'?tab=unknown')
             ->assertOk()->assertInertia(fn (Assert $page) => $page->where('initialTab', 'start'));
@@ -150,8 +150,8 @@ final class ModelFabricRoutingTest extends TestCase
 
         $this->confirmed($this->member)->get(self::BASE.'?tab=tokens')
             ->assertOk()->assertInertia(fn (Assert $page) => $page
-                ->where('initialTab', 'tokens')
-                ->where('canManage', false));
+            ->where('initialTab', 'tokens')
+            ->where('canManage', false));
         $this->confirmed($this->member)->post(self::BASE.'/tokens', [
             'name' => 'denied-worker',
             'valid_days' => 1,
