@@ -119,7 +119,7 @@ final class OpenAiCompatibleAdapter
      *
      * @param  list<string>  $approvedHosts
      * @param  list<array{role: string, content: string}>  $messages
-     * @return array{ok: bool, content: ?string, error_code: ?string, rate?: array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int}}
+     * @return array{ok: bool, content: ?string, error_code: ?string, rate?: array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int, daily_requests_limit?: int, daily_reset_seconds?: int}}
      */
     public function complete(string $baseUrl, string $apiKey, array $approvedHosts, string $model, array $messages, ?int $strictCodingTokens = null): array
     {
@@ -171,6 +171,16 @@ final class OpenAiCompatibleAdapter
             'tokens_remaining' => $limit['tokens_remaining'] ?? null,
             'retry_after' => $this->retryAfter($response->header('Retry-After')),
         ];
+        // Only Groq's documented request headers are known to describe its daily window.
+        if ($target['host'] === 'api.groq.com') {
+            $total = $response->header('x-ratelimit-limit-requests');
+            $reset = $this->dailyResetSeconds($response->header('x-ratelimit-reset-requests'));
+            if (is_string($total) && preg_match('/\\A[1-9]\\d{0,8}\\z/', $total) === 1
+                && $reset !== null && is_int($rate['requests_remaining']) && $rate['requests_remaining'] <= (int) $total) {
+                $rate['daily_requests_limit'] = (int) $total;
+                $rate['daily_reset_seconds'] = $reset;
+            }
+        }
         $fail = static fn (string $code): array => ['ok' => false, 'content' => null, 'error_code' => $code, 'rate' => $rate];
 
         $status = $response->status();
@@ -225,6 +235,17 @@ final class OpenAiCompatibleAdapter
             'requests_remaining' => $requests,
             'tokens_remaining' => $tokens,
         ];
+    }
+
+    /** Parse Groq's documented duration, e.g. 2m59.56s; reject ambiguous or excessive windows. */
+    private function dailyResetSeconds(?string $value): ?int
+    {
+        if (! is_string($value) || preg_match('/\\A(?:(\\d{1,2})h)?(?:(\\d{1,2})m)?(?:(\\d{1,2}(?:\\.\\d{1,9})?)s)?\\z/', $value, $parts) !== 1 || $value === '') {
+            return null;
+        }
+        $seconds = (int) ceil((int) ($parts[1] ?? 0) * 3600 + (int) ($parts[2] ?? 0) * 60 + (float) ($parts[3] ?? 0));
+
+        return $seconds > 0 && $seconds <= 86400 ? $seconds : null;
     }
 
     private function retryAfter(?string $value): ?int
