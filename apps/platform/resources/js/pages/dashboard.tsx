@@ -184,9 +184,35 @@ export default function Dashboard({
                                 No authorized service yet
                             </div>
                             <p className="text-muted-foreground mx-auto mt-1 max-w-xl text-xs leading-5">
-                                When a KMJ service is assigned to your account
-                                it will appear here automatically.
+                                Getting started takes three steps. Your service
+                                appears here automatically once it is approved.
                             </p>
+                            <ol className="text-muted-foreground mx-auto mt-4 max-w-md space-y-1 text-left text-xs leading-5">
+                                <li>1. Pick a product from the catalog.</li>
+                                <li>
+                                    2. Send a purchase request for your
+                                    organization.
+                                </li>
+                                <li>
+                                    3. The KMJ team confirms payment and
+                                    activates your access.
+                                </li>
+                            </ol>
+                            <div className="mt-5 flex flex-wrap justify-center gap-3">
+                                <Link
+                                    href="/purchase"
+                                    className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-bold text-white"
+                                >
+                                    Request a product{' '}
+                                    <ArrowRight className="size-4" />
+                                </Link>
+                                <Link
+                                    href="/products"
+                                    className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-xs font-bold hover:border-red-500/40"
+                                >
+                                    Browse products
+                                </Link>
+                            </div>
                         </div>
                     ) : (
                         <div className="mt-5 grid gap-4">

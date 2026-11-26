@@ -65,3 +65,10 @@ void test('verified owner product authority is exposed only through the compact 
     assert.ok(dashboard.includes('{ownerProducts === null && ('));
     assert.ok(!dashboard.includes('href="/operator#product-manager"'));
 });
+
+void test('new customers see a clear next step instead of a dead-end empty state', () => {
+    assert.match(dashboard, /No authorized service yet/);
+    assert.match(dashboard, /href="\/purchase"/);
+    assert.match(dashboard, /Request a product/);
+    assert.match(dashboard, /Browse products/);
+});
