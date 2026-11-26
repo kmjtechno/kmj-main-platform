@@ -167,8 +167,8 @@ final class ModelFabricRoutingTest extends TestCase
             ->assertRedirect(self::BASE.'?tab=providers');
         $this->confirmed($this->member)->get(self::BASE.'?tab=providers')
             ->assertOk()->assertInertia(fn (Assert $page) => $page
-                ->component('operator-modelfabric')
-                ->where('canManage', false));
+            ->component('operator-modelfabric')
+            ->where('canManage', false));
     }
 
     public function test_owner_page_renders_plans_without_secrets(): void

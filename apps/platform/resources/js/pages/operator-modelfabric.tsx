@@ -121,12 +121,7 @@ type Props = {
 
 const BASE = '/operator/modelfabric';
 
-type Tab =
-    | 'providers'
-    | 'models'
-    | 'tokens'
-    | 'playground'
-    | 'activity';
+type Tab = 'providers' | 'models' | 'tokens' | 'playground' | 'activity';
 
 // Suggested places to read a provider's own free-tier terms. These are hints only: the owner must
 // open the page and confirm it names the exact model before saving evidence.
@@ -1520,7 +1515,8 @@ export default function OperatorModelFabric({
                                                     className={ghostButton}
                                                     onClick={() =>
                                                         openWorkflowStep(
-                                                            step.tab ?? 'providers',
+                                                            step.tab ??
+                                                                'providers',
                                                         )
                                                     }
                                                 >
