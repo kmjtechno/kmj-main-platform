@@ -18,7 +18,7 @@ final class FreePolicy
     public static function inferenceAllowed(string $freeTier, string $model, array $freeModels = []): bool
     {
         return match ($freeTier) {
-            'allowlist' => in_array($model, $freeModels, true),
+            'allowlist', 'catalog-free' => in_array($model, $freeModels, true),
             'model-suffix' => str_ends_with($model, ':free'),
             default => false,
         };

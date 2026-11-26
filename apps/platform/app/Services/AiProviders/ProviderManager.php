@@ -190,7 +190,8 @@ final class ProviderManager
             return [];
         }
         $tier = $this->presets()[$provider->preset]['free_tier'] ?? 'none';
-        $allowlist = $this->allowlist($provider, $tier);
+        $allowlist = $tier === 'catalog-free' && $provider->preset === 'kilo-free'
+            ? ($provider->models_cache ?? []) : $this->allowlist($provider, $tier);
 
         return array_values(array_filter(
             $provider->models_cache ?? [],
@@ -230,7 +231,9 @@ final class ProviderManager
             throw new InvalidArgumentException('zero_spend_blocked');
         }
         $tier = $this->presets()[$provider->preset]['free_tier'] ?? 'none';
-        FreePolicy::assertInferenceAllowed($tier, $model, $this->allowlist($provider, $tier));
+        $allowlist = $tier === 'catalog-free' && $provider->preset === 'kilo-free'
+            ? ($provider->models_cache ?? []) : $this->allowlist($provider, $tier);
+        FreePolicy::assertInferenceAllowed($tier, $model, $allowlist);
     }
 
     /**

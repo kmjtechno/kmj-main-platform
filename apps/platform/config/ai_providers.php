@@ -7,6 +7,7 @@ declare(strict_types=1);
  *   allowlist    - a free account does NOT make every model free. Inference is admitted only for
  *                  model ids the owner lists as verified-free in `free_models` (empty = blocked)
  *   model-suffix - only models whose id ends with ":free" are admitted
+ *   catalog-free - only fixed-endpoint Kilo catalog entries with explicit zero pricing and isFree
  *   none         - no free tier; blocked while the provider is "free only"
  * Custom endpoints must be on `approved_hosts` (owner-approved, HTTPS, public DNS only).
  */
@@ -17,7 +18,7 @@ return [
         'groq' => ['label' => 'Groq', 'base_url' => 'https://api.groq.com/openai/v1', 'free_tier' => 'allowlist'],
         'openrouter' => ['label' => 'OpenRouter', 'base_url' => 'https://openrouter.ai/api/v1', 'free_tier' => 'model-suffix'],
         // Anonymous gateway: no billable credential; public chat only, no NVIDIA trial models.
-        'kilo-free' => ['label' => 'Kilo Gateway (keyless)', 'base_url' => 'https://ai-gateway.kilo.ai/api/v1', 'free_tier' => 'model-suffix'],
+        'kilo-free' => ['label' => 'Kilo Gateway (keyless)', 'base_url' => 'https://ai-gateway.kilo.ai/api/v1', 'free_tier' => 'catalog-free'],
         'gemini' => ['label' => 'Google Gemini (OpenAI-compatible)', 'base_url' => 'https://generativelanguage.googleapis.com/v1beta/openai', 'free_tier' => 'allowlist'],
         'cerebras' => ['label' => 'Cerebras', 'base_url' => 'https://api.cerebras.ai/v1', 'free_tier' => 'allowlist'],
         'mistral' => ['label' => 'Mistral', 'base_url' => 'https://api.mistral.ai/v1', 'free_tier' => 'allowlist'],

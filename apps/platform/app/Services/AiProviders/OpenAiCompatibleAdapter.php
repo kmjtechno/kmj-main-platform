@@ -25,7 +25,35 @@ final class OpenAiCompatibleAdapter
     {
         $id = strtolower($model);
 
-        return str_ends_with($model, ':free') && ! str_starts_with($id, 'nvidia/') && ! str_contains($id, 'nemotron');
+        return (str_ends_with($model, ':free') || $model === 'reflection/beam-free')
+            && ! str_starts_with($id, 'nvidia/') && ! str_contains($id, 'nemotron')
+            && ! str_starts_with($id, 'kilo-auto/');
+    }
+
+    /** @param array<string, mixed> $entry */
+    private static function kiloCatalogFree(array $entry, string $id): bool
+    {
+        if (! self::kiloPublicModel($id) || ($entry['isFree'] ?? false) !== true
+            || ! is_array($entry['pricing'] ?? null)
+            || ! in_array('text', (array) ($entry['architecture']['input_modalities'] ?? []), true)
+            || ! in_array('text', (array) ($entry['architecture']['output_modalities'] ?? []), true)) {
+            return false;
+        }
+        $pricing = $entry['pricing'];
+        if (! isset($pricing['prompt'], $pricing['completion'])) {
+            return false;
+        }
+        foreach ($pricing as $price) {
+            if (! is_numeric($price) || (float) $price !== 0.0) {
+                return false;
+            }
+        }
+        $description = strtolower((string) ($entry['description'] ?? ''));
+        $providers = array_map('strtolower', array_filter((array) ($entry['inference_provider_ids'] ?? []), 'is_string'));
+
+        return ! str_contains($description, 'not suitable for production')
+            && ! str_contains($description, 'trial use only')
+            && ! in_array('nvidia', $providers, true);
     }
 
     private const MAX_BODY = 2_000_000;
@@ -114,10 +142,10 @@ final class OpenAiCompatibleAdapter
             if (! is_string($id) || preg_match('/\A[A-Za-z0-9._:\/-]{1,128}\z/', $id) !== 1) {
                 continue;
             }
-            if ($keyless && ! self::kiloPublicModel($id)) {
+            if ($keyless && ! self::kiloCatalogFree($entry, $id)) {
                 continue;
             }
-            if (($target['host'] === 'openrouter.ai' || $keyless) && str_ends_with($id, ':free')) {
+            if ($keyless || ($target['host'] === 'openrouter.ai' && str_ends_with($id, ':free'))) {
                 $free[$id] = true;
             } else {
                 $other[$id] = true;

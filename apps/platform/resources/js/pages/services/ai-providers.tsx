@@ -7,7 +7,7 @@ import '../../../css/ai-provider-connect.css';
 export type Preset = {
     key: string;
     label: string;
-    free_tier: 'allowlist' | 'model-suffix' | 'none';
+    free_tier: 'allowlist' | 'model-suffix' | 'catalog-free' | 'none';
     custom: boolean;
 };
 
@@ -49,6 +49,7 @@ const BASE = '/services/kmj-codebridge/ai-providers';
 const FREE_TIER_TEXT: Record<string, string> = {
     allowlist: 'Only models you list as verified-free are admitted',
     'model-suffix': 'Only ":free" models are free',
+    'catalog-free': 'Explicit zero-price public models from Kilo catalog',
     none: 'No free tier: inference is blocked',
 };
 

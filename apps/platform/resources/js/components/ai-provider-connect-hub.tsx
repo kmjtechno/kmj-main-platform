@@ -10,7 +10,7 @@ import {
 type Preset = {
     key: string;
     label: string;
-    free_tier: 'allowlist' | 'model-suffix' | 'none';
+    free_tier: 'allowlist' | 'model-suffix' | 'catalog-free' | 'none';
     custom: boolean;
 };
 
