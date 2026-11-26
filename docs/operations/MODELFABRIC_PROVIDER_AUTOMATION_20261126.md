@@ -30,6 +30,14 @@ Research snapshot: 26 November 2026. FreeLLMAPI is an architectural reference, n
 5. Keep a separate stricter private-source coding gate, including request-bound native admission, source consent and no paid/local fallback.
 6. Next: add an independent signed KMJ catalog with source URLs and expiry, automatic account-specific quota checks, bounded background rechecks, and a provider capability/terms review queue. Implement OAuth for additional providers only when official delegated API authorization and zero-charge proof are available. Credentials and account consent remain owner-only.
 
+## Proactive quota rotation (owner policy, 26 November 2026)
+
+- Prefer eligible routes with headroom over sticky sessions and owner priority; retain task fit inside each headroom group.
+- At 80% of a configured KMJ daily cap, prefer another admitted route. The existing cap remains a hard ceiling enforced by database reservations, including ambiguous failures.
+- Groq documents the request limit, remaining requests and request reset headers as RPD, distinct from minute-level token limits. For its exact API host, retain validated model-specific daily headroom until the reported reset, shift at 80% utilization and skip a reported zero balance until reset. Respect shared organization and project constraints; do not create or rotate accounts to evade provider limits.
+- Unknown or malformed reset data is not daily quota evidence. Other providers keep their existing conservative short-lived signals and owner caps until their account-specific quota semantics are independently verified.
+- No paid or unknown-cost route is admitted by this change. Cached provider observations are advisory except a verified zero quota; concurrent/external usage can change upstream availability. No actual account quota, live inference or authenticated production acceptance is claimed.
+
 ## Primary sources
 
 - https://github.com/tashfeenahmed/freellmapi
