@@ -32,12 +32,19 @@ out="$RECEIPT_DIR/backup-job-inventory.$(date -u +%Y%m%dT%H%M%SZ).txt"
       "$(systemctl show -p ExecMainStatus --value "$u" 2>/dev/null)" \
       "$(systemctl show -p ExecMainStartTimestamp --value "$u" 2>/dev/null)"
   done
+  echo "--- unit executables (which script each job runs) ---"
+  for u in kmj-elite-daily-backup.service kmj-v3-dual-local-health.service; do
+    exe=$(systemctl show -p ExecStart --value "$u" 2>/dev/null | sed -n 's/.*path=\([^ ;]*\).*/\1/p' | head -1 || true)
+    echo "$u exec=${exe:-unknown}"
+  done
   echo "--- newest daily snapshots (stamp, storage_files, schema) ---"
-  for s in $(ls -1 "$DAILY" | grep -E '^[0-9]{8}T[0-9]{6}Z$' | LC_ALL=C sort | tail -5); do
+  for s in $(ls -1 "$DAILY" | grep -E '^[0-9]{8}T[0-9]{6}Z$' | LC_ALL=C sort | tail -8); do
     d="$DAILY/$s"
     n=0; [[ -d "$d/platform-storage" ]] && n=$(find "$d/platform-storage" -type f | wc -l)
     schema=$(grep -rhm1 '^schema=' "$d" --include='*' 2>/dev/null | head -1 || true)
-    echo "$s storage_files=$n ${schema:-schema=unknown}"
+    top=$(find "$d" -mindepth 1 -maxdepth 1 | wc -l)
+    mt=$(date -u -r "$d" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)
+    echo "$s storage_files=$n top_entries=$top mtime=$mt ${schema:-schema=unknown}"
   done
 } > "$out"
 echo "BACKUP_INVENTORY=DONE RECEIPT=$out"
