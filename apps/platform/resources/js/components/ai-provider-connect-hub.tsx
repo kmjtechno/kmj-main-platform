@@ -103,6 +103,8 @@ export default function AiProviderConnectHub({
     onConnectHuggingFace,
     onChooseKeyProvider,
     selectedPreset,
+    compact = false,
+    connectedPresets = [],
 }: {
     presets: Preset[];
     oauthBusy: boolean;
@@ -110,9 +112,147 @@ export default function AiProviderConnectHub({
     onConnectHuggingFace: () => void;
     onChooseKeyProvider: (preset: string) => void;
     selectedPreset: string | null;
+    compact?: boolean;
+    connectedPresets?: string[];
 }) {
     const supported = new Set(presets.map((preset) => preset.key));
     const [hfFree, setHfFree] = useState(false);
+    const [query, setQuery] = useState('');
+    const [filter, setFilter] = useState<'available' | 'all' | 'oauth'>(
+        'available',
+    );
+    const connected = new Set(connectedPresets);
+
+    if (compact) {
+        const visible = presets.filter((preset) => {
+            const oauth =
+                preset.key === 'openrouter' || preset.key === 'huggingface';
+            return (
+                (filter !== 'available' || !connected.has(preset.key)) &&
+                (filter !== 'oauth' || oauth) &&
+                (preset.label + ' ' + preset.key)
+                    .toLowerCase()
+                    .includes(query.trim().toLowerCase())
+            );
+        });
+        return (
+            <section
+                aria-labelledby="modelfabric-discover-title"
+                className="kmj-ai-directory rounded-2xl border p-4 sm:p-5"
+            >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <p className="text-xs font-bold tracking-wider text-red-400 uppercase">
+                            Step 1 · Discover providers
+                        </p>
+                        <h2 id="modelfabric-discover-title" className="text-xl font-black">
+                            AI provider directory
+                        </h2>
+                        <p className="text-muted-foreground text-sm">
+                            {presets.filter((preset) => connected.has(preset.key)).length} of {presets.length} provider types connected. Choose a provider to start secure setup.
+                        </p>
+                    </div>
+                    <span className="kmj-ai-zero-spend inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold">
+                        <ShieldCheck aria-hidden="true" className="h-4 w-4" />
+                        Free-only routing
+                    </span>
+                </div>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <input
+                        aria-label="Search provider directory"
+                        placeholder="Search providers…"
+                        className="min-w-0 flex-1 rounded-xl border px-3 py-2"
+                        value={query}
+                        onChange={(event) => setQuery(event.target.value)}
+                    />
+                    <div className="flex flex-wrap gap-1" aria-label="Provider directory filters">
+                        {([
+                            ['available', 'Not connected'],
+                            ['all', 'All providers'],
+                            ['oauth', 'One-click OAuth'],
+                        ] as const).map(([value, label]) => (
+                            <button
+                                key={value}
+                                type="button"
+                                aria-pressed={filter === value}
+                                onClick={() => setFilter(value)}
+                                className="kmj-ai-filter rounded-lg border px-3 text-sm font-semibold"
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                    {visible.map((preset) => {
+                        const isConnected = connected.has(preset.key);
+                        const openRouter = preset.key === 'openrouter';
+                        const huggingFace = preset.key === 'huggingface';
+                        const guide = guides.find((item) => item.key === preset.key);
+                        return (
+                            <article
+                                key={preset.key}
+                                className="kmj-ai-directory-item flex min-w-0 flex-col gap-2 rounded-xl border p-3"
+                                data-selected={selectedPreset === preset.key ? 'true' : undefined}
+                            >
+                                <div className="flex min-w-0 items-start gap-3">
+                                    <span aria-hidden="true" className="kmj-ai-provider-monogram flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-sm font-black">
+                                        {preset.label.slice(0, 2).toUpperCase()}
+                                    </span>
+                                    <div className="min-w-0 flex-1">
+                                        <h3 className="font-bold break-words">{preset.label}</h3>
+                                        <p className="text-muted-foreground text-xs">
+                                            {isConnected ? 'Account added' : openRouter || huggingFace ? 'Account authorization' : 'API key setup'}
+                                            {' · '}
+                                            {preset.free_tier === 'none' ? 'Discovery only' : 'Free-only policy'}
+                                        </p>
+                                    </div>
+                                </div>
+                                {isConnected && !huggingFace ? (
+                                    <a href="#modelfabric-connected-providers" className="kmj-ai-filter inline-flex min-h-10 items-center justify-center rounded-lg border px-3 text-sm font-semibold">
+                                        Manage connection
+                                    </a>
+                                ) : openRouter ? (
+                                    <button type="button" disabled={oauthBusy} aria-busy={oauthBusy} onClick={onConnectOpenRouter} className="kmj-ai-primary-action min-h-11 rounded-lg px-3 text-sm font-bold">
+                                        Connect OpenRouter
+                                    </button>
+                                ) : huggingFace ? (
+                                    <>
+                                        <label className="flex items-start gap-2 text-xs">
+                                            <input type="checkbox" checked={hfFree} onChange={(event) => setHfFree(event.target.checked)} />
+                                            Free account, no payment method
+                                        </label>
+                                        <button type="button" disabled={oauthBusy || !hfFree} onClick={onConnectHuggingFace} className="kmj-ai-primary-action min-h-11 rounded-lg px-3 text-sm font-bold disabled:opacity-50">
+                                            {isConnected ? 'Reconnect Hugging Face' : 'Connect Hugging Face'}
+                                        </button>
+                                    </>
+                                ) : (
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <button type="button" onClick={() => onChooseKeyProvider(preset.key)} className="kmj-ai-filter min-h-10 flex-1 rounded-lg border px-3 text-sm font-semibold">
+                                            Connect
+                                        </button>
+                                        {guide && (
+                                            <a href={guide.url} target="_blank" rel="noopener noreferrer" aria-label={`Get ${preset.label} API key`} className="kmj-ai-filter inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-xs font-semibold">
+                                                Get key <ExternalLink className="h-3 w-3" />
+                                            </a>
+                                        )}
+                                    </div>
+                                )}
+                            </article>
+                        );
+                    })}
+                </div>
+                {visible.length === 0 && (
+                    <p role="status" className="text-muted-foreground mt-3 text-sm">
+                        No providers match this filter. Try All providers or clear the search.
+                    </p>
+                )}
+                <p className="text-muted-foreground mt-3 text-xs">
+                    OAuth is offered only where supported. Discovery does not prove free inference eligibility.
+                </p>
+            </section>
+        );
+    }
 
     return (
         <section
