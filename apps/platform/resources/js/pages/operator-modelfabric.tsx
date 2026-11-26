@@ -1008,6 +1008,10 @@ export default function OperatorModelFabric({
     const startEvidence = (id: string) => {
         setProviderId(id);
         setModel('');
+        setConfirmed(false);
+        setRuleConfirmed(false);
+        setCreditAttested(false);
+        setPicked([]);
         setUrl(
             PRICING_HINTS[providers.find((p) => p.id === id)?.preset ?? ''] ??
                 '',
@@ -1163,7 +1167,7 @@ export default function OperatorModelFabric({
                                     aria-current={
                                         tab === item.key ? 'page' : undefined
                                     }
-                                    onClick={() => setTab(item.key)}
+                                    onClick={() => openWorkflowStep(item.key)}
                                 >
                                     {item.label}
                                 </button>
@@ -1196,16 +1200,25 @@ export default function OperatorModelFabric({
                                             : 'Setup required'}
                                     </StatusPill>
                                 </div>
-                                <p className="text-muted-foreground text-sm">
-                                    {plans.chat.routes.length} eligible routes ·{' '}
-                                    {chatTokens} active chat tokens. Use
-                                    non-confidential prompts only.
-                                </p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-muted/25 rounded-xl border p-3">
+                                        <div className="text-xl font-bold tabular-nums">{plans.chat.routes.length}</div>
+                                        <div className="text-muted-foreground text-xs">Eligible chat routes</div>
+                                    </div>
+                                    <div className="bg-muted/25 rounded-xl border p-3">
+                                        <div className="text-xl font-bold tabular-nums">{chatTokens}</div>
+                                        <div className="text-muted-foreground text-xs">Active chat tokens</div>
+                                    </div>
+                                </div>
+                                <p className="text-muted-foreground text-sm">For non-confidential prompts only.</p>
                                 <button
                                     type="button"
-                                    className={primaryButton}
+                                    className={workflow === 'chat' ? primaryButton : ghostButton}
                                     onClick={() => {
                                         setWorkflow('chat');
+                                        setConfirmed(false);
+                                        setRuleConfirmed(false);
+                                        setCreditAttested(false);
                                         if (generalReady && chatTokens === 0)
                                             setTokenPrivate(false);
                                         setTab(
@@ -1242,12 +1255,17 @@ export default function OperatorModelFabric({
                                             : 'Blocked'}
                                     </StatusPill>
                                 </div>
-                                <p className="text-muted-foreground text-sm">
-                                    {plans.privateSource.routes.length} eligible
-                                    coding routes · {codingTokens} active coding
-                                    tokens. Separate source-transfer consent and
-                                    worker activation are required.
-                                </p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-muted/25 rounded-xl border p-3">
+                                        <div className="text-xl font-bold tabular-nums">{plans.privateSource.routes.length}</div>
+                                        <div className="text-muted-foreground text-xs">Eligible coding routes</div>
+                                    </div>
+                                    <div className="bg-muted/25 rounded-xl border p-3">
+                                        <div className="text-xl font-bold tabular-nums">{codingTokens}</div>
+                                        <div className="text-muted-foreground text-xs">Active coding tokens</div>
+                                    </div>
+                                </div>
+                                <p className="text-muted-foreground text-sm">Separate source-transfer consent and worker activation required.</p>
                                 {!privateReady ? (
                                     <p className="text-sm leading-relaxed">
                                         Review exact-model pricing, code
@@ -1258,7 +1276,7 @@ export default function OperatorModelFabric({
                                 ) : null}
                                 <button
                                     type="button"
-                                    className={ghostButton}
+                                    className={workflow === 'coding' ? primaryButton : ghostButton}
                                     onClick={() => {
                                         setWorkflow('coding');
                                         if (!privateReady) {
@@ -1425,11 +1443,9 @@ export default function OperatorModelFabric({
                                 </ul>
                             )}
                         </section>
-                        <section
-                            id="routes"
-                            className="grid gap-4 md:grid-cols-2"
-                            aria-label="Route plan"
-                        >
+                        <details className="owner-panel" id="routes">
+                            <summary className="cursor-pointer text-sm font-bold">Routing diagnostics &amp; provider eligibility</summary>
+                            <section className="mt-4 grid gap-4 md:grid-cols-2" aria-label="Route plan">
                             <PlanCard
                                 title="General chat"
                                 note="Used by CodeBridge chat and Kristi guided features."
@@ -1440,7 +1456,8 @@ export default function OperatorModelFabric({
                                 note="Needs proof the provider does not train on submitted data. Your consent for source transfer is still separate."
                                 plan={plans.privateSource}
                             />
-                        </section>
+                            </section>
+                        </details>
                         <div className="owner-panel flex flex-wrap items-center justify-between gap-3">
                             <div>
                                 <h2 className="text-sm font-bold">
@@ -1663,6 +1680,10 @@ export default function OperatorModelFabric({
                                         onChange={(e) => {
                                             setProviderId(e.target.value);
                                             setModel('');
+                                            setConfirmed(false);
+                                            setRuleConfirmed(false);
+                                            setCreditAttested(false);
+                                            setPicked([]);
                                         }}
                                     >
                                         {allowlistProviders.map((provider) => (
@@ -1686,9 +1707,11 @@ export default function OperatorModelFabric({
                                         className={fieldClass}
                                         list="modelfabric-models"
                                         value={model}
-                                        onChange={(e) =>
-                                            setModel(e.target.value)
-                                        }
+                                        onChange={(e) => {
+                                            setModel(e.target.value);
+                                            setConfirmed(false);
+                                            setCreditAttested(false);
+                                        }}
                                         placeholder="Start typing a model name"
                                         autoComplete="off"
                                     />
