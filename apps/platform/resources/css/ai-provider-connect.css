@@ -138,3 +138,42 @@
         width: 100%;
     }
 }
+
+/* Discovery-first workspace: compact, searchable provider directory and account list. */
+.owner-module-shell .kmj-ai-providers .kmj-ai-directory,
+.owner-module-shell .kmj-ai-providers .kmj-ai-connections-header {
+    background: #101923;
+    border-color: #33465b;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-directory-item {
+    background: #0b141e;
+    border-color: #34475b;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-directory-item[data-selected='true'] {
+    border-color: #f43e63;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-provider-monogram {
+    color: #ffd4dc;
+    border-color: #694051;
+    background: #251824;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-filter {
+    min-height: 40px;
+    border-color: #40556b;
+    background: #152332;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-filter[aria-pressed='true'] {
+    border-color: #f43e63;
+    color: #fff;
+    background: #69213a;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-managed-provider[data-compact='true'] {
+    padding: 14px 16px;
+    border-radius: 12px;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-advanced {
+    border-color: #34475b;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-directory-item input[type='checkbox'] {
+    min-height: 0;
+}
