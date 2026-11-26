@@ -2218,6 +2218,19 @@ export default function OperatorModelFabric({
                         label="API tokens"
                         help="The caller never chooses a provider or model: ModelFabric picks only from your approved free models and says NO_FREE_ROUTE_AVAILABLE when none qualifies. Private-source tokens reach only models with documented no-training handling. Tokens are stored as a hash and shown once."
                     >
+                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3">
+                            <p className="text-muted-foreground text-xs">
+                                Tokens are optional for ordinary CodeBridge
+                                tools. A coding token alone does not authorize
+                                source transfer or enable a device worker.
+                            </p>
+                            <a
+                                className={ghostButton}
+                                href="/services/kmj-codebridge#setup"
+                            >
+                                Back to CodeBridge setup
+                            </a>
+                        </div>
                         {newToken ? (
                             <div
                                 className="mb-4 rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-4"

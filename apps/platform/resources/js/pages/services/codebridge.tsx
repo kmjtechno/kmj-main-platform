@@ -284,6 +284,18 @@ export default function CodeBridgeService({
                                     />
                                     AI Providers
                                 </Link>
+                                {canManageOwnerPlan && (
+                                    <Link
+                                        href="/operator/modelfabric?tab=tokens"
+                                        className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:border-red-500/40 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none"
+                                    >
+                                        <KeyRound
+                                            className="h-4 w-4 shrink-0"
+                                            aria-hidden="true"
+                                        />
+                                        AI API tokens
+                                    </Link>
+                                )}
                                 <a
                                     href={vscodeInstallUrl(service.endpoint)}
                                     className="focus-visible:ring-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:border-red-500/40 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none"
@@ -373,6 +385,34 @@ export default function CodeBridgeService({
                                 value={formatDate(service.license_expires_at)}
                                 hint="Main Platform license authority"
                             />
+                        </section>
+                    )}
+
+                    {activeSection === 'setup' && canManageOwnerPlan && (
+                        <section className="bg-card rounded-2xl border p-5 sm:p-6">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <h2 className="font-black">
+                                        ModelFabric API tokens
+                                    </h2>
+                                    <p className="text-muted-foreground mt-2 text-sm">
+                                        Create, rotate or revoke scoped tokens in
+                                        the protected ModelFabric token manager.
+                                        Missing AI credentials do not prevent
+                                        ordinary CodeBridge device connections
+                                        or development tools. Autonomous coding
+                                        requires separately verified free-cloud
+                                        admission and source consent.
+                                    </p>
+                                </div>
+                                <Link
+                                    href="/operator/modelfabric?tab=tokens"
+                                    className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white hover:bg-red-500"
+                                >
+                                    <KeyRound className="h-4 w-4" />
+                                    Manage API tokens
+                                </Link>
+                            </div>
                         </section>
                     )}
 

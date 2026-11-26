@@ -133,6 +133,32 @@ final class ModelFabricRoutingTest extends TestCase
         $this->assertSame(0, AiModelEvidence::query()->count());
     }
 
+    public function test_codebridge_token_entry_is_owner_protected_and_whitelisted(): void
+    {
+        $this->confirmed($this->owner)->get(self::BASE.'?tab=tokens')
+            ->assertOk()->assertInertia(fn (Assert $page) => $page
+                ->component('operator-modelfabric')
+                ->where('initialTab', 'tokens')
+                ->where('canManage', true)
+                ->where('newToken', null));
+
+        $this->confirmed($this->owner)->get(self::BASE.'?tab=unknown')
+            ->assertOk()->assertInertia(fn (Assert $page) => $page->where('initialTab', 'start'));
+
+        $regular = User::factory()->create(['email_verified_at' => now()]);
+        $this->confirmed($regular)->get(self::BASE.'?tab=tokens')->assertForbidden();
+
+        $this->confirmed($this->member)->get(self::BASE.'?tab=tokens')
+            ->assertOk()->assertInertia(fn (Assert $page) => $page
+                ->where('initialTab', 'tokens')
+                ->where('canManage', false));
+        $this->confirmed($this->member)->post(self::BASE.'/tokens', [
+            'name' => 'denied-worker',
+            'valid_days' => 1,
+            'private_source' => true,
+        ])->assertForbidden();
+    }
+
     public function test_owner_page_renders_plans_without_secrets(): void
     {
         $provider = $this->provider('groq', ['llama-free-1']);
