@@ -3,6 +3,7 @@ import { useState } from 'react';
 import '../../css/owner-payments-premium.css';
 import OperatorModuleNavigation from '@/components/operator-module-navigation';
 import PaymentGatewayOnboarding from '@/components/payment-gateway-onboarding';
+import PaymentNextStep from '@/components/payment-next-step';
 import WebhookSetupGuide from '@/components/webhook-setup-guide';
 import OperatorPaymentSettings, {
     type OwnerGatewaySetting,
@@ -135,6 +136,11 @@ export default function OperatorPayments({
                     ))}
                 </section>
 
+                <PaymentNextStep
+                    gatewaySettings={gatewaySettings}
+                    readiness={visibleGateways}
+                    provider={selectedProvider}
+                />
                 <PaymentGatewayOnboarding
                     gatewaySettings={gatewaySettings}
                     provider={selectedProvider}
@@ -145,7 +151,7 @@ export default function OperatorPayments({
                     selectedProvider={selectedProvider}
                 />
                 {selectedGateway ? (
-                    <section aria-label="Webhook setup">
+                    <section aria-label="Webhook setup" id="webhook-setup">
                         <WebhookSetupGuide gateway={selectedGateway} />
                     </section>
                 ) : null}
