@@ -28,6 +28,13 @@ type Gateway = {
     webhook_receiver_url: string;
     webhook_events_received: number;
     webhook_last_received_at: string | null;
+    recent_events: {
+        event_type: string;
+        status: string;
+        received_at: string | null;
+        order_ref: string | null;
+        payment_ref: string | null;
+    }[];
     international_approval_recorded: boolean;
     live_transaction_verified: boolean;
     status: string;

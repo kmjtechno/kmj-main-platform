@@ -8,6 +8,13 @@ export type PaymentGatewayReadiness = {
     webhook_verification_configured: boolean;
     webhook_events_received: number;
     webhook_last_received_at: string | null;
+    recent_events: {
+        event_type: string;
+        status: string;
+        received_at: string | null;
+        order_ref: string | null;
+        payment_ref: string | null;
+    }[];
 };
 
 type Step = {
@@ -191,6 +198,72 @@ export default function PaymentNextStep({
                     </li>
                 ))}
             </ol>
+
+            <div className="mt-5 rounded-xl border border-white/10 bg-black/15 p-4">
+                <h3 className="text-sm font-bold text-white">
+                    Recent webhook events
+                </h3>
+                {gateway && gateway.recent_events.length > 0 ? (
+                    <div className="mt-3 overflow-x-auto">
+                        <table className="w-full text-left text-xs text-slate-300">
+                            <thead className="text-slate-400">
+                                <tr>
+                                    <th className="py-1 pr-4 font-semibold">
+                                        Received (IST)
+                                    </th>
+                                    <th className="py-1 pr-4 font-semibold">
+                                        Event
+                                    </th>
+                                    <th className="py-1 pr-4 font-semibold">
+                                        Order
+                                    </th>
+                                    <th className="py-1 pr-4 font-semibold">
+                                        Payment
+                                    </th>
+                                    <th className="py-1 font-semibold">
+                                        Status
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {gateway.recent_events.map((event, index) => (
+                                    <tr
+                                        key={`${event.received_at}-${index}`}
+                                        className="border-t border-white/5"
+                                    >
+                                        <td className="py-1.5 pr-4 whitespace-nowrap">
+                                            {formatIstStamp(event.received_at)}
+                                        </td>
+                                        <td className="py-1.5 pr-4">
+                                            {event.event_type}
+                                        </td>
+                                        <td className="py-1.5 pr-4">
+                                            {event.order_ref ?? '—'}
+                                        </td>
+                                        <td className="py-1.5 pr-4">
+                                            {event.payment_ref ?? '—'}
+                                        </td>
+                                        <td className="py-1.5">
+                                            {event.status === 'received'
+                                                ? 'Received (not settled)'
+                                                : event.status}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <p className="mt-2 text-xs text-slate-400">
+                        No signed events yet. Send a test event from the
+                        provider dashboard to see it here.
+                    </p>
+                )}
+                <p className="mt-3 text-[11px] text-slate-500">
+                    A received event proves delivery only. It does not settle an
+                    order or issue a license.
+                </p>
+            </div>
 
             <details className="mt-5 rounded-xl border border-white/10 bg-black/15 p-4">
                 <summary className="cursor-pointer text-sm font-bold text-white">
