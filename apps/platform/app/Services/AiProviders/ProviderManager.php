@@ -191,7 +191,7 @@ final class ProviderManager
         }
         $tier = $this->presets()[$provider->preset]['free_tier'] ?? 'none';
         $allowlist = $tier === 'catalog-free' && $provider->preset === 'kilo-free'
-            ? ($provider->models_cache ?? []) : $this->allowlist($provider, $tier);
+            ? array_values($provider->models_cache ?? []) : $this->allowlist($provider, $tier);
 
         return array_values(array_filter(
             $provider->models_cache ?? [],
@@ -232,7 +232,7 @@ final class ProviderManager
         }
         $tier = $this->presets()[$provider->preset]['free_tier'] ?? 'none';
         $allowlist = $tier === 'catalog-free' && $provider->preset === 'kilo-free'
-            ? ($provider->models_cache ?? []) : $this->allowlist($provider, $tier);
+            ? array_values($provider->models_cache ?? []) : $this->allowlist($provider, $tier);
         FreePolicy::assertInferenceAllowed($tier, $model, $allowlist);
     }
 
