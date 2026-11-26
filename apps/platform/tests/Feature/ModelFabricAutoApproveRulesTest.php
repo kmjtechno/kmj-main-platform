@@ -13,6 +13,7 @@ use App\Services\AiProviders\ModelFabricRuleApplier;
 use App\Services\AiProviders\ResolvesAiProviderScope;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Tests\Support\FakeAiProviderScope;
 use Tests\TestCase;
@@ -80,6 +81,36 @@ final class ModelFabricAutoApproveRulesTest extends TestCase
         $this->app->make(ModelFabricRuleApplier::class)->apply();
 
         $this->assertSame(2, AiModelEvidence::query()->where('ai_provider_id', $provider->id)->whereNull('revoked_at')->count());
+    }
+
+    public function test_recheck_immediately_applies_current_rules_without_inference(): void
+    {
+        $provider = $this->provider('gemini', ['models/gemini-2.5-flash']);
+        $this->confirmed($this->owner)->post('/operator/modelfabric/rules', $this->payload($provider))->assertSessionHasNoErrors();
+        Http::fake(['generativelanguage.googleapis.com/*' => Http::response(['data' => [
+            ['id' => 'models/gemini-2.5-flash'],
+            ['id' => 'models/gemini-2.5-flash-lite'],
+            ['id' => 'models/gemini-2.5-pro'],
+        ]])]);
+
+        $this->confirmed($this->owner)->post('/services/kmj-codebridge/ai-providers/'.$provider->id.'/test')->assertSessionHasNoErrors();
+
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request): bool => $request->method() === 'GET' && $request->body() === '');
+        $this->assertSame(2, AiModelEvidence::query()->where('ai_provider_id', $provider->id)->count());
+    }
+
+    public function test_stale_catalog_cannot_create_new_rule_evidence(): void
+    {
+        $provider = $this->provider('gemini', ['models/gemini-2.5-flash']);
+        $this->confirmed($this->owner)->post('/operator/modelfabric/rules', $this->payload($provider))->assertSessionHasNoErrors();
+        $provider->models_cache = ['models/gemini-2.5-flash', 'models/gemini-2.5-flash-lite'];
+        $provider->models_checked_at = now()->subHours(25);
+        $provider->save();
+
+        $this->app->make(ModelFabricRuleApplier::class)->apply($provider);
+
+        $this->assertSame(1, AiModelEvidence::query()->where('ai_provider_id', $provider->id)->count());
     }
 
     public function test_a_revoked_model_is_never_revived_by_a_rule(): void
