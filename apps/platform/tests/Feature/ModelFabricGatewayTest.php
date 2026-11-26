@@ -190,6 +190,58 @@ final class ModelFabricGatewayTest extends TestCase
         Http::assertSentCount(5);
     }
 
+    public function test_documented_groq_daily_quota_outlives_short_rate_signal(): void
+    {
+        $this->provider('groq', 'A Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        $this->provider('gemini', 'B Gemini', 'https://generativelanguage.googleapis.com/v1beta/openai', 'model-b');
+        Http::fake([
+            'api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'a']]]], 200, [
+                'x-ratelimit-limit-requests' => '100',
+                'x-ratelimit-remaining-requests' => '19',
+                'x-ratelimit-reset-requests' => '10m0.5s',
+            ]),
+            'generativelanguage.googleapis.com/*' => Http::response(['choices' => [['message' => ['content' => 'b']]]], 200),
+        ]);
+
+        $gateway = app(ModelFabricGateway::class);
+        $messages = [['role' => 'user', 'content' => 'hello']];
+        $first = $gateway->complete($this->org, $messages, sessionKey: 'conversation');
+        $this->assertSame('A Groq', $first['provider']);
+
+        $this->travel(3)->minutes();
+        $shifted = $gateway->complete($this->org, $messages, sessionKey: 'conversation');
+        $this->assertSame('B Gemini', $shifted['provider']);
+        $this->assertSame(1, $shifted['attempts']);
+        Http::assertSentCount(2);
+    }
+
+    public function test_reported_zero_daily_quota_blocks_until_documented_reset(): void
+    {
+        $this->provider('groq', 'A Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        Http::fake([
+            'api.groq.com/*' => Http::sequence()
+                ->push(['choices' => [['message' => ['content' => 'last']]]], 200, [
+                    'x-ratelimit-limit-requests' => '100',
+                    'x-ratelimit-remaining-requests' => '0',
+                    'x-ratelimit-reset-requests' => '10m0.5s',
+                ])
+                ->push(['choices' => [['message' => ['content' => 'renewed']]]], 200),
+        ]);
+
+        $gateway = app(ModelFabricGateway::class);
+        $messages = [['role' => 'user', 'content' => 'hello']];
+        $this->assertTrue($gateway->complete($this->org, $messages)['ok']);
+        $this->travel(3)->minutes();
+        $blocked = $gateway->complete($this->org, $messages);
+        $this->assertSame('provider_daily_quota_exhausted', $blocked['error_code']);
+        $this->assertSame(0, $blocked['attempts']);
+        Http::assertSentCount(1);
+
+        $this->travel(8)->minutes();
+        $this->assertTrue($gateway->complete($this->org, $messages)['ok']);
+        Http::assertSentCount(2);
+    }
+
     public function test_unevidenced_model_is_never_sent_even_when_a_provider_is_healthy(): void
     {
         Http::fake();
