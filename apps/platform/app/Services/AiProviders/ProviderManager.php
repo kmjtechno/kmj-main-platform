@@ -54,7 +54,8 @@ final class ProviderManager
         }
         $this->guard->validate($baseUrl, $this->approvedHosts());
         $apiKey = (string) ($data['api_key'] ?? '');
-        if ($presetKey === 'kilo-free' && $apiKey !== '') {
+        if (($presetKey === 'kilo-free' && $apiKey !== '')
+            || ($presetKey === 'horde-anonymous' && $apiKey !== '0000000000')) {
             throw new InvalidArgumentException('keyless_provider');
         }
 
@@ -79,7 +80,7 @@ final class ProviderManager
     {
         $replacingKey = isset($data['api_key']) && is_string($data['api_key']) && $data['api_key'] !== '';
         if ($replacingKey) {
-            if ($provider->preset === 'kilo-free') {
+            if (in_array($provider->preset, ['kilo-free', 'horde-anonymous'], true)) {
                 throw new InvalidArgumentException('keyless_provider');
             }
             if ($this->presets()[$provider->preset]['retired'] ?? false) {
@@ -293,7 +294,7 @@ final class ProviderManager
             'name' => $provider->name,
             'preset' => $provider->preset,
             'host' => (string) parse_url($provider->base_url, PHP_URL_HOST),
-            'key_mask' => $provider->preset === 'kilo-free' ? 'Not required' : '••••'.$provider->key_last4,
+            'key_mask' => in_array($provider->preset, ['kilo-free', 'horde-anonymous'], true) ? 'Not required' : '••••'.$provider->key_last4,
             'enabled' => $provider->enabled,
             'zero_spend' => true,
             'credit_balance' => 'unknown',

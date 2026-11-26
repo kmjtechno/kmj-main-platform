@@ -536,6 +536,26 @@ final class AiProviderManagerTest extends TestCase
         $this->assertSame([], app(ModelFabricRouter::class)->plan($this->orgA, 'code', true)['routes']);
     }
 
+    public function test_horde_anonymous_connect_discovers_only_and_never_admits_inference(): void
+    {
+        Http::fake(['oai.aihorde.net/*' => Http::response(['data' => [
+            ['id' => 'community/model'],
+        ]])]);
+        $url = '/services/kmj-codebridge/ai-providers/connect/horde-anonymous';
+        $this->confirmed($this->owner)->post($url)->assertSessionHasErrors('community_terms_confirmed');
+        $this->confirmed($this->member)->post($url, ['community_terms_confirmed' => true])->assertForbidden();
+        $this->confirmed($this->owner)->post($url, ['community_terms_confirmed' => true])->assertSessionHasNoErrors();
+        $this->confirmed($this->owner)->post($url, ['community_terms_confirmed' => true])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('ai_providers', 1);
+        $provider = AiProvider::query()->firstOrFail();
+        $this->assertSame('horde-anonymous', $provider->preset);
+        $this->assertSame(['community/model'], $provider->models_cache);
+        $this->assertSame([], app(ProviderManager::class)->admittedFreeModels($provider));
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request): bool => $request->method() === 'GET' && $request->hasHeader('Authorization', 'Bearer 0000000000'));
+    }
+
     private function confirmed(User $user): static
     {
         return $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()]);

@@ -88,6 +88,7 @@ function ProviderCard({
     const [newKey, setNewKey] = useState('');
     const [expanded, setExpanded] = useState(false);
     const [replaceVisible, setReplaceVisible] = useState(false);
+    const keyless = ['kilo-free', 'horde-anonymous'].includes(provider.preset);
     const act = (run: () => void) => {
         setBusy(true);
         run();
@@ -112,7 +113,7 @@ function ProviderCard({
                     <h2 className="text-base font-black">{provider.name}</h2>
                     <p className="text-muted-foreground text-xs">
                         {provider.host} ·{' '}
-                        {provider.preset === 'kilo-free'
+                        {keyless
                             ? 'No API key'
                             : `key ${provider.key_mask}`}
                     </p>
@@ -345,7 +346,7 @@ function ProviderCard({
                         </div>
                     )}
 
-                    {canManage && (
+                    {canManage && !keyless && (
                         <button
                             type="button"
                             onClick={() => {
@@ -361,7 +362,7 @@ function ProviderCard({
                                 : 'Replace API key'}
                         </button>
                     )}
-                    {canManage && replaceVisible && (
+                    {canManage && !keyless && replaceVisible && (
                         <div id={`ai-provider-replace-key-${provider.id}`}>
                             <form
                                 className="flex flex-wrap items-end gap-2"
@@ -659,6 +660,16 @@ export default function AiProviders({
         );
     };
 
+    const startHordeAnonymous = () => {
+        if (oauthBusy) return;
+        setOauthBusy(true);
+        router.post(
+            BASE + '/connect/horde-anonymous',
+            { community_terms_confirmed: true },
+            { preserveScroll: true, onFinish: () => setOauthBusy(false) },
+        );
+    };
+
     const startHuggingFace = () => {
         if (oauthBusy) return;
         setOauthBusy(true);
@@ -758,6 +769,7 @@ export default function AiProviders({
                                     onConnectOpenRouter={startOpenRouter}
                                     onConnectHuggingFace={startHuggingFace}
                                     onConnectKiloFree={startKiloFree}
+                                    onConnectHordeAnonymous={startHordeAnonymous}
                                     selectedPreset={
                                         preferredPreset?.key ?? null
                                     }
@@ -784,7 +796,10 @@ export default function AiProviders({
                                         <AddProvider
                                             presets={presets.filter(
                                                 (preset) =>
-                                                    preset.key !== 'kilo-free',
+                                                    ![
+                                                        'kilo-free',
+                                                        'horde-anonymous',
+                                                    ].includes(preset.key),
                                             )}
                                             preferredPreset={preferredPreset}
                                             onManualProviderChange={() =>

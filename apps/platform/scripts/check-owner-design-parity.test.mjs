@@ -64,7 +64,7 @@ void test('one canonical Licensing Hub is shown in the owner sidebar', () => {
     assert.doesNotMatch(groups, /label: 'Subscriptions & Plans'/);
     const hub = read('resources/js/pages/operator-kslp.tsx');
     assert.match(hub, /<DeveloperAppsWorkspace\s[\s\S]*?embedded/);
-    assert.match(hub, /Apps, Keys & SDK/);
+    assert.match(hub, /Applications, license keys &(?:amp;)? SDK/);
 });
 
 void test('products, payments, people and CodeBridge use one content width and metric scale', () => {
@@ -130,7 +130,8 @@ void test('KMJ Mail enterprise inbox controls operate on real mailbox records', 
         source,
         /Clear mail search and show all messages in this folder/,
     );
-    assert.match(source, /External inbound\s+is not active/);
+    assert.match(source, /Receiving not activated/);
+    assert.match(source, /Incoming routing requires owner activation/);
     assert.doesNotMatch(source, /Gmail inbox synced|External inbox connected/);
 });
 

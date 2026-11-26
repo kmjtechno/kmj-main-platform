@@ -114,6 +114,7 @@ export default function AiProviderConnectHub({
     onConnectOpenRouter,
     onConnectHuggingFace,
     onConnectKiloFree,
+    onConnectHordeAnonymous,
     onChooseKeyProvider,
     selectedPreset,
     compact = false,
@@ -124,6 +125,7 @@ export default function AiProviderConnectHub({
     onConnectOpenRouter: () => void;
     onConnectHuggingFace: () => void;
     onConnectKiloFree: () => void;
+    onConnectHordeAnonymous: () => void;
     onChooseKeyProvider: (preset: string) => void;
     selectedPreset: string | null;
     compact?: boolean;
@@ -132,12 +134,16 @@ export default function AiProviderConnectHub({
     const supported = new Set(presets.map((preset) => preset.key));
     const [hfFree, setHfFree] = useState(false);
     const [kiloPublic, setKiloPublic] = useState(false);
+    const [hordeTerms, setHordeTerms] = useState(false);
     const [query, setQuery] = useState('');
     const [hideConnected, setHideConnected] = useState(false);
     const [choice, setChoice] = useState('');
     const connected = new Set(connectedPresets);
     const oauthKeys = new Set(['openrouter', 'huggingface']);
+    const keylessKeys = new Set(['kilo-free', 'horde-anonymous']);
     const kiloDisabled = oauthBusy || !kiloPublic || connected.has('kilo-free');
+    const hordeDisabled =
+        oauthBusy || !hordeTerms || connected.has('horde-anonymous');
 
     if (compact) {
         const selected = presets.find((preset) => preset.key === choice);
@@ -196,7 +202,7 @@ export default function AiProviderConnectHub({
                             {visible.map((preset) => (
                                 <option key={preset.key} value={preset.key}>
                                     {preset.label}
-                                    {preset.key === 'kilo-free'
+                                    {keylessKeys.has(preset.key)
                                         ? ' · No key required'
                                         : oauthKeys.has(preset.key)
                                           ? ' · OAuth'
@@ -250,9 +256,13 @@ export default function AiProviderConnectHub({
                                     <ExternalLink className="h-3 w-3" />
                                 </a>
                             )}
-                            {selected.key === 'kilo-free' ? (
+                            {keylessKeys.has(selected.key) ? (
                                 <a
-                                    href="#modelfabric-keyless-connect"
+                                    href={
+                                        selected.key === 'horde-anonymous'
+                                            ? '#modelfabric-horde-connect'
+                                            : '#modelfabric-keyless-connect'
+                                    }
                                     className="kmj-ai-primary-action inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-bold"
                                 >
                                     Connect without a key
@@ -363,6 +373,14 @@ export default function AiProviderConnectHub({
                             />
                             Public prompts only; provider terms apply.
                         </label>
+                        <a
+                            href="https://kilo.ai/terms"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs underline"
+                        >
+                            Kilo terms of service
+                        </a>
                         <button
                             type="button"
                             disabled={kiloDisabled}
@@ -372,6 +390,46 @@ export default function AiProviderConnectHub({
                             {connected.has('kilo-free')
                                 ? 'Connected'
                                 : 'Connect Kilo Free'}
+                        </button>
+                    </article>
+                )}
+                {supported.has('horde-anonymous') && (
+                    <article
+                        id="modelfabric-horde-connect"
+                        className="kmj-ai-directory-item mt-4 rounded-xl border p-3"
+                    >
+                        <h4 className="font-bold">AI Horde</h4>
+                        <p className="text-muted-foreground text-xs">
+                            Anonymous community catalog. Inference blocked
+                            pending live qualification.
+                        </p>
+                        <label className="mt-2 flex items-start gap-2 text-xs">
+                            <input
+                                type="checkbox"
+                                checked={hordeTerms}
+                                onChange={(event) =>
+                                    setHordeTerms(event.target.checked)
+                                }
+                            />
+                            I accept community service terms.
+                        </label>
+                        <a
+                            href="https://aihorde.net/terms/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs underline"
+                        >
+                            AI Horde terms of service
+                        </a>
+                        <button
+                            type="button"
+                            disabled={hordeDisabled}
+                            onClick={onConnectHordeAnonymous}
+                            className="kmj-ai-primary-action mt-3 min-h-11 rounded-lg px-4 text-sm font-bold disabled:opacity-50"
+                        >
+                            {connected.has('horde-anonymous')
+                                ? 'Connected'
+                                : 'Discover AI Horde'}
                         </button>
                     </article>
                 )}
