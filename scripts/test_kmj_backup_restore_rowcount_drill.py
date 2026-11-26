@@ -75,6 +75,20 @@ class DrillTest(unittest.TestCase):
         self.assertIn("RESTORE_DRILL=FAIL", r.stdout)
         self.assertIn("SHRUNK", next(self.receipts.glob("*.txt")).read_text())
 
+    def test_volatile_table_shrink_is_reported_not_failed(self):
+        self.tables("scratch", {"users": 5, "sessions": 125})
+        self.tables("livedb", {"users": 5, "sessions": 103})
+        r = self.run_drill()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        text = next(self.receipts.glob("*.txt")).read_text()
+        self.assertIn("shrunk=0 shrunk_volatile=1", text)
+        self.assertIn("SHRUNK_VOLATILE_EXPECTED", text)
+
+    def test_non_volatile_shrink_still_fails_even_with_volatile_shrink(self):
+        self.tables("scratch", {"users": 5, "sessions": 125})
+        self.tables("livedb", {"users": 4, "sessions": 103})
+        self.assertNotEqual(self.run_drill().returncode, 0)
+
     def test_fail_on_table_set_difference(self):
         self.tables("livedb", {"users": 5, "orders": 3, "extra": 1})
         self.assertNotEqual(self.run_drill().returncode, 0)

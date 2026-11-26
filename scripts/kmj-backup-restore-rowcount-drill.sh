@@ -23,6 +23,10 @@ PG_RESTORE="${KMJ_DRILL_PG_RESTORE:-/usr/lib/postgresql/18/bin/pg_restore}"
 LIVE_DB="${KMJ_DRILL_LIVE_DB:-}"
 RECEIPT_DIR="${KMJ_DRILL_RECEIPT_DIR:-/var/lib/kmj-restore-drill}"
 TOL="${KMJ_DRILL_SHRINK_TOLERANCE:-0}"
+# Tables whose rows expire by design (Laravel sessions/cache/queue). A smaller
+# live count there is expected and is reported, not failed. Every other table
+# stays strict.
+VOLATILE="${KMJ_DRILL_VOLATILE_TABLES:-sessions cache cache_locks jobs job_batches}"
 RUNAS_PG="${KMJ_DRILL_PG_USER:-postgres}"
 
 fail() { echo "RESTORE_DRILL=FAIL:$1" >&2; exit "${2:-1}"; }
@@ -59,7 +63,7 @@ mapfile -t snap_tables < <(list_tables "$scratch")
 mapfile -t live_tables < <(list_tables "$LIVE_DB")
 [[ "${#snap_tables[@]}" -gt 0 ]] || fail NO_TABLES_RESTORED 9
 
-verdict=PASS; missing_in_live=0; extra_in_live=0; shrunk=0; drift_up=0; equal=0
+verdict=PASS; missing_in_live=0; extra_in_live=0; shrunk=0; shrunk_volatile=0; drift_up=0; equal=0
 rows=""
 declare -A live_set=()
 for t in "${live_tables[@]}"; do live_set["$t"]=1; done
@@ -71,7 +75,9 @@ for t in "${snap_tables[@]}"; do
   s="$(count_rows "$scratch" "$t")"
   if [[ -z "${live_set[$t]:-}" ]]; then missing_in_live=$((missing_in_live+1)); rows+="$t snapshot=$s live=MISSING"$'\n'; continue; fi
   l="$(count_rows "$LIVE_DB" "$t")"
-  if (( s > l + TOL )); then shrunk=$((shrunk+1)); rows+="$t snapshot=$s live=$l SHRUNK"$'\n'
+  if (( s > l + TOL )); then
+    if [[ " $VOLATILE " == *" $t "* ]]; then shrunk_volatile=$((shrunk_volatile+1)); rows+="$t snapshot=$s live=$l SHRUNK_VOLATILE_EXPECTED"$'\n'
+    else shrunk=$((shrunk+1)); rows+="$t snapshot=$s live=$l SHRUNK"$'\n'; fi
   elif (( s == l )); then equal=$((equal+1))
   else drift_up=$((drift_up+1)); rows+="$t snapshot=$s live=$l drift=+$((l-s))"$'\n'; fi
 done
@@ -90,7 +96,7 @@ receipt="$RECEIPT_DIR/$stamp.$(date -u +%Y%m%dT%H%M%SZ).txt"
   echo "snapshot_stamp=$stamp"
   echo "verdict=$verdict"
   echo "tables_snapshot=${#snap_tables[@]} tables_live=${#live_tables[@]}"
-  echo "equal=$equal drift_up=$drift_up shrunk=$shrunk missing_in_live=$missing_in_live extra_in_live=$extra_in_live"
+  echo "equal=$equal drift_up=$drift_up shrunk=$shrunk shrunk_volatile=$shrunk_volatile missing_in_live=$missing_in_live extra_in_live=$extra_in_live"
   echo "restore_on_error_stop=yes scratch_dropped=yes row_level_equality_claimed=no"
   printf '%s' "$rows"
 } > "$receipt"
