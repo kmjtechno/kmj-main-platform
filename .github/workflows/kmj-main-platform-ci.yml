@@ -49,6 +49,11 @@ jobs:
           DB_CONNECTION: sqlite
           DB_DATABASE: ${{ github.workspace }}/apps/platform/database/database.sqlite
         run: bash "$GITHUB_WORKSPACE/ops/self-hosted-runner/verify-platform.sh"
+      - name: Source tests (known-failing list is explicit, new failures block)
+        working-directory: apps/platform
+        run: |
+          node --test scripts/check-run-source-tests.test.mjs
+          node scripts/run-source-tests.mjs
       - name: Render six real Blade email themes and check browser images
         env:
           APP_ENV: testing
