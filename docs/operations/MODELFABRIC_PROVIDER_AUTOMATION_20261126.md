@@ -93,3 +93,7 @@ No live account or inference verification is claimed by this research or source 
 ### Shared credit-limited connection cap
 
 For credit-limited inference the gateway now counts all UTC-day attempts for a provider connection and applies the lowest current credit-limited evidence cap across its models. Near-cap prioritization and reservation-time recheck use the same conservative cap; missing/invalid hard-cap attestation fails closed. This is a local request ceiling, not a monetary ledger or a verified account-wide balance across multiple keys or external clients. A provider-enforced hard no-overage policy and account-specific verification remain mandatory. Do not add more credit-based routes merely because their catalog is readable.
+
+### Automatic refresh admission integrity
+
+The existing scheduled catalog refresh runs every six hours; current owner-scoped narrow model rules can admit newly discovered eligible IDs without a separate approval for every model. Explicit manual evidence (even expired) and credit-limited evidence cannot be rewritten into a free rule approval. On allowlist providers an explicit expired or revoked per-connection evidence row overrides a global environment allowlist default. Tests cover both precedence failures. This preserves the zero-cost guard when free-model catalogs change; new free provider rules still require accurate pricing and account eligibility evidence.

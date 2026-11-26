@@ -252,12 +252,14 @@ final class ProviderManager
 
         $evidence = AiModelEvidence::query()
             ->where('ai_provider_id', $provider->id)
-            ->whereNull('revoked_at')
-            ->where('expires_at', '>', now())
-            ->pluck('model_id')
-            ->all();
+            ->where('organization_id', $provider->organization_id)
+            ->get(['model_id', 'revoked_at', 'expires_at']);
+        // Explicit per-connection evidence wins over a global environment default,
+        // including revoked or expired evidence. Do not silently restore that route.
+        $ids = array_diff($ids, $evidence->pluck('model_id')->all());
+        $current = $evidence->filter(fn (AiModelEvidence $row): bool => $row->isCurrent())->pluck('model_id')->all();
 
-        return array_values(array_unique([...$ids, ...array_filter($evidence, 'is_string')]));
+        return array_values(array_unique([...$ids, ...array_filter($current, 'is_string')]));
     }
 
     /**
