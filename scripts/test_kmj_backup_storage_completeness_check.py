@@ -1,6 +1,7 @@
 """Fixture tests for scripts/kmj-backup-storage-completeness-check.sh (no root, no real data)."""
 from __future__ import annotations
 
+import calendar
 import hashlib
 import os
 import shutil
@@ -25,10 +26,14 @@ class StorageCheckTest(unittest.TestCase):
         self.live.mkdir(parents=True)
         self.receipts = self.tmp / "receipts"
 
-    def put(self, root, rel, data):
+    SNAP_EPOCH = calendar.timegm((2026, 11, 26, 2, 35, 21))
+
+    def put(self, root, rel, data, after_snapshot=False):
         p = Path(root) / rel
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes(data)
+        t = self.SNAP_EPOCH + (3600 if after_snapshot else -3600)
+        os.utime(p, (t, t))
 
     def run_check(self):
         env = {**os.environ, "KMJ_ALLOW_NONROOT_FOR_TESTS": "1", "KMJ_DAILY_DIR": str(self.daily),
@@ -39,16 +44,25 @@ class StorageCheckTest(unittest.TestCase):
         s = self.snap / "platform-storage"
         self.put(s, "a.txt", b"one"); self.put(self.live, "a.txt", b"one")
         self.put(s, "b.txt", b"old"); self.put(self.live, "b.txt", b"new")
-        self.put(self.live, "c.txt", b"fresh")
+        self.put(self.live, "c.txt", b"fresh", after_snapshot=True)
         r = self.run_check()
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("COUNTS snapshot=2 live=3 identical=1 changed=1 live_only=1 snapshot_only=0", r.stdout)
+        self.assertIn("COUNTS snapshot=2 live=3 identical=1 changed=1 live_only=1 missing_predating_snapshot=0 snapshot_only=0", r.stdout)
         text = next(self.receipts.glob("storage-*.txt")).read_text()
         self.assertIn("names_recorded=no", text)
         self.assertNotIn("a.txt", text + r.stdout)
 
+    def test_live_file_older_than_snapshot_but_absent_from_it_fails(self):
+        self.put(self.snap / "platform-storage", "a.txt", b"one"); self.put(self.live, "a.txt", b"one")
+        self.put(self.live, "old-unbacked.txt", b"x")  # mtime before the snapshot
+        r = self.run_check()
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("missing_predating_snapshot=1", r.stdout)
+        self.assertIn("STORAGE_CHECK=FAIL", r.stdout)
+
     def test_snapshot_only_file_is_reported_not_failed(self):
-        self.put(self.snap / "platform-storage", "gone.txt", b"x"); self.put(self.live, "keep.txt", b"y")
+        self.put(self.snap / "platform-storage", "gone.txt", b"x")
+        self.put(self.snap / "platform-storage", "keep.txt", b"y"); self.put(self.live, "keep.txt", b"y")
         r = self.run_check()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("snapshot_only=1", r.stdout)

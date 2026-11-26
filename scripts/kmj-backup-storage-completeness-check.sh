@@ -10,10 +10,12 @@
 #   PASS = every snapshot file exists live with the same content OR was
 #          changed live after the snapshot (reported), and no live file that
 #          existed at snapshot time is missing from the snapshot dir.
-# Because the snapshot is older than live, files created after the snapshot are
-# reported as live_only and are NOT a failure. Files in the snapshot that are
-# gone live are reported as snapshot_only (informational). A snapshot with ZERO
-# files while live has files FAILS. Equality is not claimed.
+# Files created after the snapshot are reported as live_only and are not a
+# failure ONLY if their mtime is newer than the snapshot stamp. A live file whose
+# mtime is OLDER than the snapshot but which is absent from the snapshot is a
+# real coverage gap (missing_predating_snapshot) and FAILS the check. Files in
+# the snapshot that are gone live are snapshot_only (informational). A snapshot
+# with ZERO files while live has files FAILS. Equality is not claimed.
 #
 # Env: KMJ_DAILY_DIR, KMJ_LIVE_STORAGE, KMJ_STORAGE_RECEIPT_DIR, KMJ_STORAGE_MAX_BYTES
 set -Eeuo pipefail
@@ -64,8 +66,17 @@ snap_only="$(LC_ALL=C comm -23 "$tmp/snap.paths" "$tmp/live.paths" | wc -l)"
 same="$(LC_ALL=C sort "$tmp/snap.txt" "$tmp/live.txt" | uniq -d | wc -l)"
 changed=$(( both - same ))
 
+# Snapshot instant (UTC) from its stamp, e.g. 20261126T023521Z.
+snap_epoch="$(date -u -d "${stamp:0:4}-${stamp:4:2}-${stamp:6:2} ${stamp:9:2}:${stamp:11:2}:${stamp:13:2}" +%s)"
+predating=0
+while IFS= read -r rel; do
+  m="$(stat -c %Y -- "$live_root/$rel" 2>/dev/null || echo 9999999999)"
+  (( m < snap_epoch )) && predating=$((predating+1))
+done < <(LC_ALL=C comm -13 "$tmp/snap.paths" "$tmp/live.paths")
+
 verdict=PASS
 if (( snap_n == 0 && live_n > 0 )); then verdict=FAIL; fi
+if (( predating > 0 )); then verdict=FAIL; fi
 
 mkdir -p "$RECEIPT_DIR"; chmod 755 "$RECEIPT_DIR"
 receipt="$RECEIPT_DIR/storage-$stamp.$(date -u +%Y%m%dT%H%M%SZ).txt"
@@ -74,12 +85,12 @@ receipt="$RECEIPT_DIR/storage-$stamp.$(date -u +%Y%m%dT%H%M%SZ).txt"
   echo "snapshot_stamp=$stamp layout=$layout"
   echo "verdict=$verdict"
   echo "snapshot_files=$snap_n live_files=$live_n"
-  echo "identical=$same changed_since_snapshot=$changed live_only=$live_only snapshot_only=$snap_only"
+  echo "identical=$same changed_since_snapshot=$changed live_only=$live_only missing_predating_snapshot=$predating snapshot_only=$snap_only"
   echo "names_recorded=no content_recorded=no equality_claimed=no"
 } > "$receipt"
 chmod 644 "$receipt"
 echo "STORAGE_CHECK=$verdict"
 echo "STAMP=$stamp"
-echo "COUNTS snapshot=$snap_n live=$live_n identical=$same changed=$changed live_only=$live_only snapshot_only=$snap_only"
+echo "COUNTS snapshot=$snap_n live=$live_n identical=$same changed=$changed live_only=$live_only missing_predating_snapshot=$predating snapshot_only=$snap_only"
 echo "RECEIPT=$receipt"
 [[ "$verdict" == PASS ]]
