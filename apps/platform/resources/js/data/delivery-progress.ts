@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-canonical-provider-entry-20261126',
+        title: 'ModelFabric: canonical owner provider entry',
+        state: 'active',
+        detail: 'Redirect the legacy owner provider page to the unified AI workspace without changing organization permissions or token access.',
+        evidence:
+            'Owner and read-only scope regression added; exact-head CI and authenticated acceptance pending.',
+    },
+    {
         id: 'modelfabric-unified-workspace-20261126',
         title: 'ModelFabric: unified AI workspace',
         state: 'active',
