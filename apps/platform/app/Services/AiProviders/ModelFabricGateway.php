@@ -21,6 +21,10 @@ final class ModelFabricGateway
 
     private const RATE_LIMIT_COOLDOWN = 60;
 
+    private const KILO_HOURLY_CAP = 200;
+
+    private const KILO_COOLDOWN_KEY = 'modelfabric:kilo-free:shared-cooldown';
+
     private const SOFT_FAIL_COOLDOWN = 30;
 
     private const CIRCUIT_COOLDOWN = 300;
@@ -162,7 +166,7 @@ final class ModelFabricGateway
     /**
      * Owner priority/cap plus today's routed attempts (UTC day) per provider of this organization.
      *
-     * @return array<string, array{priority: int, cap: ?int, used: int, model_scoped: bool}>
+     * @return array<string, array{priority: int, cap: ?int, used: int, model_scoped: bool, keyless_near: bool}>
      */
     private function providerLimits(string $organizationId): array
     {
@@ -181,6 +185,7 @@ final class ModelFabricGateway
                 'used' => (int) ($used[$provider->id] ?? 0),
                 // Groq publishes per-model rate limits; unknown providers remain account-scoped.
                 'model_scoped' => $provider->preset === 'groq',
+                'keyless_near' => $provider->preset === 'kilo-free' && $this->kiloHourlyUsage() >= 160,
             ];
         }
 
@@ -226,7 +231,7 @@ final class ModelFabricGateway
      *
      * @param  list<array<string, mixed>>  $routes
      * @param  array<string, int>  $creditUsed
-     * @param  array<string, array{priority: int, cap: ?int, used: int, model_scoped: bool}>  $limits
+     * @param  array<string, array{priority: int, cap: ?int, used: int, model_scoped: bool, keyless_near: bool}>  $limits
      * @return list<array<string, mixed>>
      */
     private function sinkNearQuota(array $routes, array $creditUsed, array $limits): array
@@ -239,7 +244,7 @@ final class ModelFabricGateway
             $providerId = (string) $route['provider_id'];
             $limit = $limits[$providerId] ?? null;
             $nearCreditCap = ($route['cost_class'] ?? 'free') === 'credit-limited' && $cap > 0 && $used * 10 >= $cap * 8;
-            if ($nearCreditCap || $this->nearDailyCap($limit)
+            if ($nearCreditCap || ($limit['keyless_near'] ?? false) || $this->nearDailyCap($limit)
                 || $this->nearLimit($providerId, (string) $route['model'], (bool) ($limit['model_scoped'] ?? false))) {
                 $near[] = $route;
             } else {
@@ -350,6 +355,11 @@ final class ModelFabricGateway
     private function penalize(AiProvider $provider, string $model, string $code, ?array $rate = null): void
     {
         $retryAfter = $rate['retry_after'] ?? null;
+        if ($code === 'rate_limited' && $provider->preset === 'kilo-free') {
+            // All anonymous Kilo requests share the same Elite egress-IP quota.
+            $seconds = max(60, min(3600, $retryAfter ?? 3600));
+            Cache::put(self::KILO_COOLDOWN_KEY, true, $seconds);
+        }
         // A verified Groq model's exhausted quota must not cool the entire provider.
         // Without a typed remaining=0 report, conservatively use provider-wide cooldown.
         if ($code === 'rate_limited' && $provider->preset === 'groq' && ($rate['requests_remaining'] ?? null) === 0) {
@@ -425,6 +435,19 @@ final class ModelFabricGateway
                 return $deny('provider_unavailable');
             }
 
+            if ($provider->preset === 'kilo-free') {
+                // Serialize all Kilo reservations across organizations on the production PostgreSQL database.
+                $driver = DB::connection()->getDriverName();
+                if ($driver === 'pgsql') {
+                    DB::select('SELECT pg_advisory_xact_lock(1263356999)');
+                } elseif ($driver !== 'sqlite') {
+                    return $deny('shared_quota_unavailable');
+                }
+                if (Cache::has(self::KILO_COOLDOWN_KEY) || $this->kiloHourlyUsage() >= self::KILO_HOURLY_CAP) {
+                    return $deny('keyless_hourly_quota_exhausted');
+                }
+            }
+
             // Re-evaluate the current plan under the reservation lock. Never
             // reserve a previously admitted but now revoked or expired route.
             $current = null;
@@ -472,6 +495,14 @@ final class ModelFabricGateway
 
             return ['provider' => $provider, 'attempt' => $attempt, 'error' => null];
         });
+    }
+
+    private function kiloHourlyUsage(): int
+    {
+        return AiModelRequest::query()
+            ->whereIn('ai_provider_id', AiProvider::query()->select('id')->where('preset', 'kilo-free'))
+            ->where('created_at', '>=', now()->subHour())
+            ->count();
     }
 
     private function failKey(string $providerId): string

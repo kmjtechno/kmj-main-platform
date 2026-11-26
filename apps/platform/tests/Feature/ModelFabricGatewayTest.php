@@ -279,6 +279,31 @@ final class ModelFabricGatewayTest extends TestCase
         $this->assertStringNotContainsString('sk-test', $row);
     }
 
+    public function test_kilo_shared_hourly_cap_skips_route_without_sending_a_request(): void
+    {
+        $kilo = AiProvider::query()->create(array_replace(
+            $this->providerRow('kilo-free', 'Kilo', 'https://ai-gateway.kilo.ai/api/v1', 'sample/public:free'),
+            ['api_key' => '', 'key_last4' => ''],
+        ));
+        for ($i = 0; $i < 200; $i++) {
+            AiModelRequest::query()->create([
+                'organization_id' => $this->org,
+                'ai_provider_id' => $kilo->id,
+                'model_id' => 'sample/public:free',
+                'outcome' => 'failed',
+                'error_code' => 'attempt_reserved',
+                'latency_ms' => 0,
+            ]);
+        }
+
+        Http::fake();
+        $result = app(ModelFabricGateway::class)->complete($this->org, [['role' => 'user', 'content' => 'hi']]);
+
+        $this->assertFalse($result['ok']);
+        $this->assertSame('keyless_hourly_quota_exhausted', $result['error_code']);
+        Http::assertNothingSent();
+    }
+
     private function provider(string $preset, string $name, string $baseUrl, string $model): AiProvider
     {
         $provider = AiProvider::query()->create($this->providerRow($preset, $name, $baseUrl, $model));

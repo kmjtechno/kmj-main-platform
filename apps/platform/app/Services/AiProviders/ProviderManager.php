@@ -220,7 +220,9 @@ final class ProviderManager
         if (! in_array($model, $provider->models_cache ?? [], true)) {
             throw new InvalidArgumentException('model_not_discovered');
         }
-        if ($provider->preset === 'kilo-free' && ! OpenAiCompatibleAdapter::kiloPublicModel($model)) {
+        if ($provider->preset === 'kilo-free' && ($provider->api_key !== ''
+            || $provider->base_url !== ($this->presets()['kilo-free']['base_url'] ?? null)
+            || ! OpenAiCompatibleAdapter::kiloPublicModel($model))) {
             throw new InvalidArgumentException('zero_spend_blocked');
         }
         $tier = $this->presets()[$provider->preset]['free_tier'] ?? 'none';

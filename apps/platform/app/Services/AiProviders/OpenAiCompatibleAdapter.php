@@ -23,7 +23,9 @@ final class OpenAiCompatibleAdapter
 
     public static function kiloPublicModel(string $model): bool
     {
-        return str_ends_with($model, ':free') && ! str_starts_with(strtolower($model), 'nvidia/');
+        $id = strtolower($model);
+
+        return str_ends_with($model, ':free') && ! str_starts_with($id, 'nvidia/') && ! str_contains($id, 'nemotron');
     }
 
     private const MAX_BODY = 2_000_000;
