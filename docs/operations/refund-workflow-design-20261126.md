@@ -1,6 +1,6 @@
 # Refund workflow: design and open decisions (26 Nov 2026)
 
-Status: `PLANNED`. Nothing is implemented. Verified in code on main: there is no refund
+Status: `PARTIAL`. Slice 1 (service `OrderRefundRecorder` + append-only `commerce_order_refund_records`, owner-only, partial refunds allowed, manual recording, licenses untouched) is on a PR; no route/UI, no provider call, no license revocation yet. Defaults chosen by Claude on owner's "best judgment" instruction, reversible: owner-only, partial allowed, manual first, no auto-revoke. Verified in code on main: there is no refund
 workflow; `RazorpayPaymentAdapter` only reads `amount_refunded` to refuse settling an
 already refunded payment; the customer cancellation mail says refunds are handled
 separately and is not a refund confirmation. Order statuses are `requested|confirmed|cancelled`.
