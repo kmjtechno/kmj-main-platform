@@ -198,11 +198,17 @@ void test('embedded ModelFabric exposes a searchable discover-first directory an
 
 void test('ModelFabric has one provider workspace with truthful connection methods', () => {
     const workspace = read('resources/js/pages/operator-modelfabric.tsx');
-    assert.match(workspace, /initialTab === 'start' \? 'providers' : initialTab/);
+    assert.match(
+        workspace,
+        /initialTab === 'start' \? 'providers' : initialTab/,
+    );
     assert.match(workspace, /key: 'providers', label: 'AI workspace'/);
     assert.doesNotMatch(workspace, /key: 'start', label: 'Overview'/);
     assert.match(workspace, /Setup checklist and advanced readiness/);
-    assert.match(hub, /oauthKeys = new Set\(\['openrouter', 'huggingface'\]\)/);
+    assert.match(
+        hub,
+        /oauthKeys = new Set\(\['openrouter', 'huggingface'\]\)/,
+    );
     assert.match(hub, /Use account authorization/);
     assert.match(hub, /Other providers use official API keys/);
 });

@@ -656,7 +656,9 @@ export default function AiProviders({
                 )}
                 <div>
                     {embedded ? (
-                        <h2 className="text-2xl font-black">Connect and manage AI</h2>
+                        <h2 className="text-2xl font-black">
+                            Connect and manage AI
+                        </h2>
                     ) : (
                         <h1 className="text-2xl font-black">AI Providers</h1>
                     )}

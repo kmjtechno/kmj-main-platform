@@ -263,8 +263,9 @@ export default function AiProviderConnectHub({
                         One-click OAuth
                     </h3>
                     <p className="text-muted-foreground mt-1 text-sm">
-                        OpenRouter and Hugging Face support account authorization
-                        here. Other providers use official API keys.
+                        OpenRouter and Hugging Face support account
+                        authorization here. Other providers use official API
+                        keys.
                     </p>
                     <div className="mt-3 grid gap-3 md:grid-cols-2">
                         {supported.has('openrouter') && (

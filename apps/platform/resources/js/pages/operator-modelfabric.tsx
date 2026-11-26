@@ -1304,7 +1304,10 @@ export default function OperatorModelFabric({
                                             setConfirmed(false);
                                             setRuleConfirmed(false);
                                             setCreditAttested(false);
-                                            if (generalReady && chatTokens === 0)
+                                            if (
+                                                generalReady &&
+                                                chatTokens === 0
+                                            )
                                                 setTokenPrivate(false);
                                             setTab(
                                                 !generalReady
@@ -1349,7 +1352,10 @@ export default function OperatorModelFabric({
                                     <div className="grid grid-cols-2 gap-3">
                                         <div className="bg-muted/25 rounded-xl border p-3">
                                             <div className="text-xl font-bold tabular-nums">
-                                                {plans.privateSource.routes.length}
+                                                {
+                                                    plans.privateSource.routes
+                                                        .length
+                                                }
                                             </div>
                                             <div className="text-muted-foreground text-xs">
                                                 Eligible coding routes
@@ -1365,15 +1371,15 @@ export default function OperatorModelFabric({
                                         </div>
                                     </div>
                                     <p className="text-muted-foreground text-sm">
-                                        Separate source-transfer consent and worker
-                                        activation required.
+                                        Separate source-transfer consent and
+                                        worker activation required.
                                     </p>
                                     {!privateReady ? (
                                         <p className="text-sm leading-relaxed">
                                             Review exact-model pricing, code
-                                            capability and no-training evidence. A
-                                            chat token cannot authorize private
-                                            source.
+                                            capability and no-training evidence.
+                                            A chat token cannot authorize
+                                            private source.
                                         </p>
                                     ) : null}
                                     <button
@@ -1424,8 +1430,8 @@ export default function OperatorModelFabric({
                                             Guided setup
                                         </h2>
                                         <p className="text-muted-foreground mt-1 text-xs">
-                                            Complete one workflow at a time. No step
-                                            runs inference automatically.
+                                            Complete one workflow at a time. No
+                                            step runs inference automatically.
                                         </p>
                                     </div>
                                     <div
@@ -1437,7 +1443,9 @@ export default function OperatorModelFabric({
                                                 <button
                                                     key={mode}
                                                     type="button"
-                                                    aria-pressed={workflow === mode}
+                                                    aria-pressed={
+                                                        workflow === mode
+                                                    }
                                                     className={`rounded-lg px-3 py-2 text-xs font-bold transition ${workflow === mode ? 'bg-red-600 text-white' : 'text-muted-foreground hover:bg-muted'}`}
                                                     onClick={() =>
                                                         setWorkflow(mode)
@@ -1532,7 +1540,9 @@ export default function OperatorModelFabric({
                                 aria-label="To do"
                                 data-testid="modelfabric-todo"
                             >
-                                <p className="text-sm font-black">To do today</p>
+                                <p className="text-sm font-black">
+                                    To do today
+                                </p>
                                 {todos.length === 0 ? (
                                     <p className="text-muted-foreground mt-1 text-sm">
                                         Nothing needs your attention. Approvals,
@@ -1546,7 +1556,9 @@ export default function OperatorModelFabric({
                                                 className="flex flex-wrap items-center justify-between gap-2 py-2"
                                             >
                                                 <span>
-                                                    <StatusPill tone={todo.tone}>
+                                                    <StatusPill
+                                                        tone={todo.tone}
+                                                    >
                                                         {todo.tone === 'bad'
                                                             ? 'now'
                                                             : 'soon'}
@@ -1581,7 +1593,8 @@ export default function OperatorModelFabric({
                             </section>
                             <details className="owner-panel" id="routes">
                                 <summary className="cursor-pointer text-sm font-bold">
-                                    Routing diagnostics &amp; provider eligibility
+                                    Routing diagnostics &amp; provider
+                                    eligibility
                                 </summary>
                                 <section
                                     className="mt-4 grid gap-4 md:grid-cols-2"
@@ -1605,9 +1618,10 @@ export default function OperatorModelFabric({
                                         Provider management
                                     </h2>
                                     <p className="text-muted-foreground text-sm">
-                                        {healthy} of {providers.length} providers
-                                        healthy. Review connection errors, quotas
-                                        and model evidence in Providers.
+                                        {healthy} of {providers.length}{' '}
+                                        providers healthy. Review connection
+                                        errors, quotas and model evidence in
+                                        Providers.
                                     </p>
                                 </div>
                                 <button
