@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'payments-console-last-changed-utc-20261126',
+        title: 'Payments console: gateway "Last changed" time',
+        state: 'active',
+        detail: 'Gateway settings now send an explicit UTC timestamp so the console can show the change time in IST instead of "Time unavailable".',
+        evidence:
+            'Feature regression test added; exact-head CI and live authenticated acceptance pending.',
+    },
+    {
         id: 'modelfabric-single-provider-card-20261126',
         title: 'ModelFabric: single provider management card',
         state: 'active',
