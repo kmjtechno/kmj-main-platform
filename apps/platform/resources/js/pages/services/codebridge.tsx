@@ -388,34 +388,6 @@ export default function CodeBridgeService({
                         </section>
                     )}
 
-                    {activeSection === 'setup' && canManageOwnerPlan && (
-                        <section className="bg-card rounded-2xl border p-5 sm:p-6">
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                                <div>
-                                    <h2 className="font-black">
-                                        ModelFabric API tokens
-                                    </h2>
-                                    <p className="text-muted-foreground mt-2 text-sm">
-                                        Create, rotate or revoke scoped tokens in
-                                        the protected ModelFabric token manager.
-                                        Missing AI credentials do not prevent
-                                        ordinary CodeBridge device connections
-                                        or development tools. Autonomous coding
-                                        requires separately verified free-cloud
-                                        admission and source consent.
-                                    </p>
-                                </div>
-                                <Link
-                                    href="/operator/modelfabric?tab=tokens"
-                                    className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white hover:bg-red-500"
-                                >
-                                    <KeyRound className="h-4 w-4" />
-                                    Manage API tokens
-                                </Link>
-                            </div>
-                        </section>
-                    )}
-
                     {activeSection === 'setup' && (
                         <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
                             <div className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
@@ -425,7 +397,8 @@ export default function CodeBridgeService({
                                 </div>
                                 <p className="text-muted-foreground mt-1 text-xs">
                                     Use this endpoint when connecting KMJ
-                                    CodeBridge as an MCP service.
+                                    CodeBridge as an MCP service. Missing AI
+                                    credentials do not prevent core MCP access.
                                 </p>
 
                                 <div className="mt-5 rounded-xl border bg-black/5 p-4 dark:bg-white/[0.02]">

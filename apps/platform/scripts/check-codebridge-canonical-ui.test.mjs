@@ -193,7 +193,7 @@ void test('CodeBridge token manager uses the protected canonical ModelFabric sur
         service,
         /canManageOwnerPlan && \([\s\S]{0,300}href="\/operator\/modelfabric\?tab=tokens"/,
     );
-    assert.match(service, /Missing AI credentials do not prevent/);
+    assert.match(service, /Missing AI\s+credentials do not prevent/);
     assert.match(modelFabric, /href="\/services\/kmj-codebridge#setup"/);
     assert.doesNotMatch(service, /\/operator\/modelfabric\/tokens/);
 });
