@@ -22,7 +22,13 @@ return [
         'sambanova' => ['label' => 'SambaNova', 'base_url' => 'https://api.sambanova.ai/v1', 'free_tier' => 'allowlist'],
         'huggingface' => ['label' => 'Hugging Face router', 'base_url' => 'https://router.huggingface.co/v1', 'free_tier' => 'allowlist'],
         'nvidia' => ['label' => 'NVIDIA NIM', 'base_url' => 'https://integrate.api.nvidia.com/v1', 'free_tier' => 'allowlist'],
-        'github' => ['label' => 'GitHub Models', 'base_url' => 'https://models.github.ai/inference', 'free_tier' => 'allowlist'],
+        // GitHub Models retired 2026-07-30. Keep the identifier for historical rows only.
+        'github' => ['label' => 'GitHub Models (retired)', 'base_url' => 'https://models.github.ai/inference', 'free_tier' => 'none', 'retired' => true],
+        // Discovery-only candidates: upstream account, quota and pricing admission are not yet qualified.
+        'zai' => ['label' => 'Z.ai GLM (discovery only)', 'base_url' => 'https://api.z.ai/api/paas/v4', 'free_tier' => 'none'],
+        'siliconflow' => ['label' => 'SiliconFlow (discovery only)', 'base_url' => 'https://api.siliconflow.com/v1', 'free_tier' => 'none'],
+        'modelscope' => ['label' => 'ModelScope (discovery only)', 'base_url' => 'https://api-inference.modelscope.cn/v1', 'free_tier' => 'none'],
+        'anyapi' => ['label' => 'AnyAPI (discovery only)', 'base_url' => 'https://api.anyapi.ai/v1', 'free_tier' => 'none'],
         // Connect-only presets never activate inference without explicit zero-cost admission.
         'cohere' => ['label' => 'Cohere (evaluation key)', 'base_url' => 'https://api.cohere.ai/compatibility/v1', 'free_tier' => 'allowlist'],
         'qwen-sg' => ['label' => 'Alibaba Qwen (Singapore)', 'base_url' => 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1', 'free_tier' => 'none'],
@@ -42,7 +48,6 @@ return [
         'sambanova' => $csv('AI_PROVIDER_FREE_MODELS_SAMBANOVA'),
         'huggingface' => $csv('AI_PROVIDER_FREE_MODELS_HUGGINGFACE'),
         'nvidia' => $csv('AI_PROVIDER_FREE_MODELS_NVIDIA'),
-        'github' => $csv('AI_PROVIDER_FREE_MODELS_GITHUB'),
         'cohere' => $csv('AI_PROVIDER_FREE_MODELS_COHERE'),
     ],
 ];

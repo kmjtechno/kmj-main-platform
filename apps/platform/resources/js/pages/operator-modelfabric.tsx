@@ -149,9 +149,11 @@ const reasonText = (reason: string) =>
 /** Plain-language meaning and next step for a provider's last error code. */
 const errorHelp = (code: string): string => {
     if (code.startsWith('invalid_catalog')) {
-        return 'The provider answered with something that is not a model list. This is usually a token permission problem (for GitHub Models the token needs the models:read permission) or a provider-side outage. Other providers keep working; fix the key and run Test connection.';
+        return 'The provider answered with something that is not a model list. Check token permissions and the provider status page before retrying.';
     }
     switch (code) {
+        case 'provider_retired':
+            return 'GitHub Models retired on July 30, 2026. No new connection or inference is available. Keep the historical record or remove it in Manage settings.';
         case 'auth_failed':
             return 'The provider rejected the key. Create a new key, reconnect the provider and run Test connection. It is not used until then.';
         case 'rate_limited':
