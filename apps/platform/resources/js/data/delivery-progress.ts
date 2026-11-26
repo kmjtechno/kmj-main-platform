@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-unified-workspace-20261126',
+        title: 'ModelFabric: unified AI workspace',
+        state: 'active',
+        detail: 'One provider workspace with advanced readiness folded away and explicit OAuth or API-key connection methods.',
+        evidence:
+            'Source regression checks added; exact-head CI and authenticated live acceptance pending.',
+    },
+    {
         id: 'modelfabric-proactive-quota-rotation-20261126',
         title: 'ModelFabric: proactive quota rotation',
         state: 'active',

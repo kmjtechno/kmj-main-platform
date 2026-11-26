@@ -656,7 +656,7 @@ export default function AiProviders({
                 )}
                 <div>
                     {embedded ? (
-                        <h2 className="text-2xl font-black">AI connections</h2>
+                        <h2 className="text-2xl font-black">Connect and manage AI</h2>
                     ) : (
                         <h1 className="text-2xl font-black">AI Providers</h1>
                     )}
@@ -775,7 +775,7 @@ export default function AiProviders({
                     >
                         <div>
                             <p className="text-xs font-bold tracking-wider text-red-400 uppercase">
-                                Step 2 · Connections
+                                Connected accounts
                             </p>
                             <h2 className="text-xl font-black">
                                 Your connected providers
