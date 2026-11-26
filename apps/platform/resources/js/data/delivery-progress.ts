@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-keyless-quota-20261126',
+        title: 'ModelFabric: legitimate keyless free routes',
+        state: 'active',
+        detail: 'Qualify keyless, OAuth and free API-key providers with exact model admission, account quota controls and public/private data separation.',
+        evidence:
+            'P0 issue #1233 and keyless gateway regression; consolidated release only after acceptance.',
+    },
+    {
         id: 'modelfabric-canonical-provider-entry-20261126',
         title: 'ModelFabric: canonical owner provider entry',
         state: 'active',

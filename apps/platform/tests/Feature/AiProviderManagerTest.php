@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\AiProvider;
 use App\Models\User;
 use App\Services\AiProviders\EndpointGuard;
+use App\Services\AiProviders\ModelFabricRouter;
 use App\Services\AiProviders\ProviderManager;
 use App\Services\AiProviders\ResolvesAiProviderScope;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -523,7 +524,7 @@ final class AiProviderManagerTest extends TestCase
         $this->assertSame(['sample/public:free'], app(ProviderManager::class)->admittedFreeModels($provider));
         Http::assertSentCount(1);
         Http::assertSent(fn ($request): bool => $request->method() === 'GET' && ! $request->hasHeader('Authorization'));
-        $this->assertSame([], app(\App\Services\AiProviders\ModelFabricRouter::class)->plan($this->orgA, 'code', true)['routes']);
+        $this->assertSame([], app(ModelFabricRouter::class)->plan($this->orgA, 'code', true)['routes']);
     }
 
     private function confirmed(User $user): static

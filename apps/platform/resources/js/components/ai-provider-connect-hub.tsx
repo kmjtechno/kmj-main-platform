@@ -338,7 +338,8 @@ export default function AiProviderConnectHub({
                         <h3 className="font-bold">One-click without API key</h3>
                         <h4 className="mt-2 font-bold">Kilo Gateway</h4>
                         <p className="text-muted-foreground text-xs">
-                            Free public chat · 200 requests/hour per IP shared across models.
+                            Free public chat · 200 requests/hour per IP shared
+                            across models.
                         </p>
                         <label className="mt-2 flex items-start gap-2 text-xs">
                             <input
@@ -348,11 +349,16 @@ export default function AiProviderConnectHub({
                                     setKiloPublic(event.target.checked)
                                 }
                             />
-                            Public, non-confidential prompts only; provider terms apply.
+                            Public, non-confidential prompts only; provider terms
+                            apply.
                         </label>
                         <button
                             type="button"
-                            disabled={oauthBusy || !kiloPublic || connected.has('kilo-free')}
+                            disabled={
+                                oauthBusy ||
+                                !kiloPublic ||
+                                connected.has('kilo-free')
+                            }
                             onClick={onConnectKiloFree}
                             className="kmj-ai-primary-action mt-3 min-h-11 rounded-lg px-4 text-sm font-bold disabled:opacity-50"
                         >

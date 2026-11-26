@@ -95,7 +95,8 @@ function ProviderCard({
                 <div>
                     <h2 className="text-base font-black">{provider.name}</h2>
                     <p className="text-muted-foreground text-xs">
-                        {provider.host} · {provider.preset === 'kilo-free'
+                        {provider.host} ·{' '}
+                        {provider.preset === 'kilo-free'
                             ? 'No API key'
                             : `key ${provider.key_mask}`}
                     </p>
@@ -763,7 +764,8 @@ export default function AiProviders({
                                         </button>
                                         <AddProvider
                                             presets={presets.filter(
-                                                (preset) => preset.key !== 'kilo-free',
+                                                (preset) =>
+                                                    preset.key !== 'kilo-free',
                                             )}
                                             preferredPreset={preferredPreset}
                                             onManualProviderChange={() =>
