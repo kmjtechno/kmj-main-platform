@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Payments;
 
+use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -12,7 +14,7 @@ final class PaymentGatewayReadiness
     /**
      * Sanitized owner-only status: no API secrets, key IDs, or merchant details.
      *
-     * @return array{live_charging_enabled: bool, providers: list<array<string, bool|int|string|null>>}
+     * @return array{live_charging_enabled: bool, providers: list<array<string, mixed>>}
      */
     public function snapshot(): array
     {
@@ -28,7 +30,8 @@ final class PaymentGatewayReadiness
                 : null;
             // Count only; payloads and secrets never reach the browser.
             $eventsReceived = $inbox === null ? 0 : (clone $inbox)->where('processing_status', '!=', 'conflict')->count();
-            $lastReceived = $inbox === null ? null : (clone $inbox)->max('received_at');
+            $lastReceived = $inbox === null ? null : (clone $inbox)->where('processing_status', '!=', 'conflict')->max('received_at');
+            $recentEvents = $inbox === null ? [] : $this->recentEvents(clone $inbox);
             $settings = (array) config('payment-providers.providers.'.$provider, []);
             $record = $ownerSettings->get($provider);
             // The owner-only sandbox order probe reads its test keys from
@@ -53,7 +56,8 @@ final class PaymentGatewayReadiness
                 'webhook_verification_configured' => $webhookSecretStored && $eventsReceived > 0,
                 'webhook_receiver_url' => url('/webhooks/payments/'.$provider),
                 'webhook_events_received' => $eventsReceived,
-                'webhook_last_received_at' => is_string($lastReceived) ? $lastReceived : null,
+                'webhook_last_received_at' => $this->iso($lastReceived),
+                'recent_events' => $recentEvents,
                 'international_approval_recorded' => ($settings['international_approved'] ?? false) === true,
                 'live_transaction_verified' => false,
                 'status' => $keysPresent ? 'sandbox_validation_required' : 'credentials_required',
@@ -82,5 +86,44 @@ final class PaymentGatewayReadiness
             'live_charging_enabled' => false,
             'providers' => $providers,
         ];
+    }
+
+    /**
+     * Last few received events, sanitized for the owner console. No payload, hash,
+     * event id or full provider reference leaves the server.
+     *
+     * @return list<array{event_type: string, status: string, received_at: string|null, order_ref: string|null, payment_ref: string|null}>
+     */
+    private function recentEvents(Builder $inbox): array
+    {
+        return $inbox
+            ->where('processing_status', '!=', 'conflict')
+            ->orderByDesc('received_at')
+            ->orderByDesc('id')
+            ->limit(10)
+            ->get(['event_type', 'processing_status', 'received_at', 'provider_order_id', 'provider_payment_id'])
+            ->map(fn (object $row): array => [
+                'event_type' => is_string($row->event_type) && $row->event_type !== '' ? $row->event_type : 'unknown',
+                'status' => (string) $row->processing_status,
+                'received_at' => $this->iso($row->received_at),
+                'order_ref' => $this->tail($row->provider_order_id),
+                'payment_ref' => $this->tail($row->provider_payment_id),
+            ])
+            ->all();
+    }
+
+    /** Storage is UTC; send explicit Zulu so the console can show India time. */
+    private function iso(mixed $value): ?string
+    {
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+
+        return Carbon::parse($value, 'UTC')->utc()->toIso8601ZuluString();
+    }
+
+    private function tail(mixed $id): ?string
+    {
+        return is_string($id) && $id !== '' ? '…'.substr($id, -8) : null;
     }
 }
