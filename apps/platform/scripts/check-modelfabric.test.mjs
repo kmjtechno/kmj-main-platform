@@ -388,7 +388,10 @@ void test('provider setup stays inside the native ModelFabric workspace', () => 
     assert.match(page, /\/operator\/modelfabric\?tab=providers/);
     assert.match(page, /renderRoutingControls=\{\(id\) =>/);
     assert.doesNotMatch(page, /title="Routing controls"/);
-    assert.match(providerPage, /routingControls=\{renderRoutingControls\?\.\(provider\.id\)\}/);
+    assert.match(
+        providerPage,
+        /routingControls=\{renderRoutingControls\?\.\(\s*provider\.id,?\s*\)\}/,
+    );
     assert.match(providerPage, /\{routingControls\}/);
     assert.match(providerPage, /Connect or reconnect a provider/);
     assert.match(page, /presets=\{providerPresets\}/);
