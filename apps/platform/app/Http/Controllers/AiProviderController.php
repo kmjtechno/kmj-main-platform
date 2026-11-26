@@ -102,6 +102,7 @@ final class AiProviderController extends Controller
                 Rule::unique('ai_providers', 'name')->where('organization_id', $model->organization_id)->ignore($model->id)],
             'api_key' => ['sometimes', 'nullable', 'string', 'min:8', 'max:512', 'regex:/\A\S+\z/'],
             'enabled' => ['sometimes', 'boolean'],
+            'verify_connection' => ['sometimes', 'boolean'],
             'free_only' => ['prohibited'],
             'default_model' => ['sometimes', 'nullable', 'string', 'max:128'],
             'fallback_models' => ['sometimes', 'array', 'max:5'],
@@ -112,6 +113,15 @@ final class AiProviderController extends Controller
             $this->manager->update($model, $data);
         } catch (InvalidArgumentException $exception) {
             return back()->withErrors(['provider' => 'Not saved: '.$exception->getMessage()]);
+        }
+
+        if (($data['verify_connection'] ?? false) && filled($data['api_key'] ?? null)) {
+            $tested = $this->manager->test($model);
+            if ($tested->health !== 'ok') {
+                return back()->with('status', 'Key replaced; connection not verified: '.$tested->health.'. No inference enabled.');
+            }
+
+            return back()->with('status', 'Key replaced and connection verified; '.count($tested->models_cache ?? []).' models discovered. Account-specific approvals require fresh evidence.');
         }
 
         return back()->with('status', 'Provider updated.');
