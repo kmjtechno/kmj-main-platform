@@ -1,6 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, KeyRound, Plug, RefreshCw, Trash2 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import AiProviderConnectHub from '@/components/ai-provider-connect-hub';
 import '../../../css/ai-provider-connect.css';
 
@@ -35,6 +35,7 @@ export type Provider = {
 
 type Props = {
     embedded?: boolean;
+    renderRoutingControls?: (id: string) => ReactNode;
     status?: string | null;
     canManage: boolean;
     presets: Preset[];
@@ -59,9 +60,11 @@ function creditText(limit: Provider['rate_limit']): string {
 function ProviderCard({
     provider,
     canManage,
+    routingControls,
 }: {
     provider: Provider;
     canManage: boolean;
+    routingControls?: ReactNode;
 }) {
     const [busy, setBusy] = useState(false);
     const [newKey, setNewKey] = useState('');
@@ -143,9 +146,17 @@ function ProviderCard({
                     }}
                     className="inline-flex min-h-10 items-center rounded-xl border px-4 text-sm font-semibold"
                 >
-                    {expanded ? 'Hide settings' : 'Manage settings'}
+                    {expanded
+                        ? 'Hide settings'
+                        : canManage &&
+                            provider.enabled &&
+                            provider.health !== 'ok'
+                          ? 'Repair connection'
+                          : 'Manage settings'}
                 </button>
             </div>
+
+            {routingControls}
 
             {expanded && (
                 <div
@@ -526,6 +537,7 @@ function AddProvider({
 
 export default function AiProviders({
     embedded = false,
+    renderRoutingControls,
     status,
     canManage,
     presets,
@@ -538,6 +550,9 @@ export default function AiProviders({
     } | null>(null);
     const [oauthBusy, setOauthBusy] = useState(false);
     const [showKeyForm, setShowKeyForm] = useState(false);
+    const [showConnect, setShowConnect] = useState(
+        !embedded || providers.length === 0,
+    );
     const startOpenRouter = () => {
         if (oauthBusy) return;
         setOauthBusy(true);
@@ -615,48 +630,70 @@ export default function AiProviders({
                 )}
                 {canManage ? (
                     <>
-                        <AiProviderConnectHub
-                            presets={presets}
-                            oauthBusy={oauthBusy}
-                            onConnectOpenRouter={startOpenRouter}
-                            onConnectHuggingFace={startHuggingFace}
-                            selectedPreset={preferredPreset?.key ?? null}
-                            onChooseKeyProvider={(key) => {
-                                setShowKeyForm(true);
-                                setPreferredPreset((prev) => ({
-                                    key,
-                                    token: (prev?.token ?? 0) + 1,
-                                }));
-                            }}
-                        />
-                        {showKeyForm ? (
-                            <div className="space-y-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setShowKeyForm(false);
-                                        setPreferredPreset(null);
-                                    }}
-                                    className="min-h-10 rounded-xl border px-3 text-sm font-semibold"
-                                >
-                                    Close key setup
-                                </button>
-                                <AddProvider
-                                    presets={presets}
-                                    preferredPreset={preferredPreset}
-                                    onManualProviderChange={() =>
-                                        setPreferredPreset(null)
-                                    }
-                                />
-                            </div>
-                        ) : (
+                        {embedded && providers.length > 0 && (
                             <button
                                 type="button"
-                                onClick={() => setShowKeyForm(true)}
-                                className="kmj-ai-manual-launcher min-h-11 self-start rounded-xl border px-4 text-sm font-semibold"
+                                aria-expanded={showConnect}
+                                aria-controls="modelfabric-connect-setup"
+                                onClick={() =>
+                                    setShowConnect((current) => !current)
+                                }
+                                className="min-h-11 self-start rounded-xl border px-4 text-sm font-semibold"
                             >
-                                Connect another provider using an API key
+                                {showConnect
+                                    ? 'Hide provider setup'
+                                    : 'Connect or reconnect a provider'}
                             </button>
+                        )}
+                        {(!embedded || providers.length === 0 || showConnect) && (
+                            <div
+                                id={embedded ? 'modelfabric-connect-setup' : undefined}
+                                className="flex flex-col gap-4"
+                            >
+                                <AiProviderConnectHub
+                                    presets={presets}
+                                    oauthBusy={oauthBusy}
+                                    onConnectOpenRouter={startOpenRouter}
+                                    onConnectHuggingFace={startHuggingFace}
+                                    selectedPreset={preferredPreset?.key ?? null}
+                                    onChooseKeyProvider={(key) => {
+                                        setShowKeyForm(true);
+                                        setPreferredPreset((prev) => ({
+                                            key,
+                                            token: (prev?.token ?? 0) + 1,
+                                        }));
+                                    }}
+                                />
+                                {showKeyForm ? (
+                                    <div className="space-y-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setShowKeyForm(false);
+                                                setPreferredPreset(null);
+                                            }}
+                                            className="min-h-10 rounded-xl border px-3 text-sm font-semibold"
+                                        >
+                                            Close key setup
+                                        </button>
+                                        <AddProvider
+                                            presets={presets}
+                                            preferredPreset={preferredPreset}
+                                            onManualProviderChange={() =>
+                                                setPreferredPreset(null)
+                                            }
+                                        />
+                                    </div>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowKeyForm(true)}
+                                        className="kmj-ai-manual-launcher min-h-11 self-start rounded-xl border px-4 text-sm font-semibold"
+                                    >
+                                        Connect another provider using an API key
+                                    </button>
+                                )}
+                            </div>
                         )}
                     </>
                 ) : (
@@ -665,7 +702,9 @@ export default function AiProviders({
                     </p>
                 )}
                 <section
-                    className="grid gap-4"
+                    className={
+                        embedded ? 'grid gap-4 xl:grid-cols-2' : 'grid gap-4'
+                    }
                     aria-label="Configured providers"
                 >
                     {providers.length === 0 && (
@@ -681,6 +720,7 @@ export default function AiProviders({
                             key={provider.id}
                             provider={provider}
                             canManage={canManage}
+                            routingControls={renderRoutingControls?.(provider.id)}
                         />
                     ))}
                 </section>
