@@ -13,6 +13,8 @@ on:
       - 'scripts/test_kmj_backup_restore_rowcount_drill.py'
       - 'scripts/kmj-backup-storage-completeness-check.sh'
       - 'scripts/test_kmj_backup_storage_completeness_check.py'
+      - 'scripts/kmj-owner-run-backup-checks.sh'
+      - 'scripts/test_kmj_owner_run_backup_checks.py'
       - '.github/workflows/backup-archive-contract.yml'
   push:
     branches: [main]
@@ -27,6 +29,8 @@ on:
       - 'scripts/test_kmj_backup_restore_rowcount_drill.py'
       - 'scripts/kmj-backup-storage-completeness-check.sh'
       - 'scripts/test_kmj_backup_storage_completeness_check.py'
+      - 'scripts/kmj-owner-run-backup-checks.sh'
+      - 'scripts/test_kmj_owner_run_backup_checks.py'
       - '.github/workflows/backup-archive-contract.yml'
   workflow_dispatch:
 
@@ -74,5 +78,7 @@ jobs:
           python3 -B scripts/test_kmj_backup_restore_rowcount_drill.py -v
           bash -n scripts/kmj-backup-storage-completeness-check.sh
           python3 -B scripts/test_kmj_backup_storage_completeness_check.py -v
+          bash -n scripts/kmj-owner-run-backup-checks.sh
+          python3 -B scripts/test_kmj_owner_run_backup_checks.py -v
           echo 'OWNER_KEY_VAULT_FIXTURES=PASS'
           echo 'REAL_OWNER_DECRYPT=NOT_VERIFIED'
