@@ -139,6 +139,90 @@ final class JmapReadOnlyTransportTest extends TestCase
         self::assertCount(3, $history);
     }
 
+    public function test_non_json_content_type_is_rejected(): void
+    {
+        $stack = HandlerStack::create(new MockHandler([
+            new Response(200, ['Content-Type' => 'text/html'], '{"username":"owner@example.test"}'),
+        ]));
+        $transport = new JmapReadOnlyTransport(new Client(['handler' => $stack]));
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('KMJ mail transport unavailable.');
+        $transport->mailboxes('owner@example.test', 'test-token');
+    }
+
+    public function test_unauthorized_status_is_rejected(): void
+    {
+        $stack = HandlerStack::create(new MockHandler([
+            new Response(401, ['Content-Type' => 'application/json'], '{"username":"owner@example.test"}'),
+        ]));
+        $transport = new JmapReadOnlyTransport(new Client(['handler' => $stack]));
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('KMJ mail transport unavailable.');
+        $transport->mailboxes('owner@example.test', 'test-token');
+    }
+
+    public function test_malformed_token_never_makes_a_request(): void
+    {
+        $history = [];
+        $stack = HandlerStack::create(new MockHandler([]));
+        $stack->push(Middleware::history($history));
+        $transport = new JmapReadOnlyTransport(new Client(['handler' => $stack]));
+
+        foreach (['bad token', "bad\ntoken", ''] as $token) {
+            try {
+                $transport->mailboxes('owner@example.test', $token);
+                self::fail('Malformed token must be rejected.');
+            } catch (UnexpectedValueException $e) {
+                self::assertSame('Invalid KMJ mailbox credential binding.', $e->getMessage());
+            }
+        }
+        self::assertCount(0, $history);
+    }
+
+    public function test_foreign_api_url_in_session_is_never_requested(): void
+    {
+        $mail = 'urn:ietf:params:jmap:mail';
+        $history = [];
+        $stack = HandlerStack::create(new MockHandler([
+            new Response(200, ['Content-Type' => 'application/json'], json_encode([
+                'username' => 'owner@example.test',
+                'apiUrl' => 'https://evil.example.invalid/jmap/',
+                'capabilities' => ['urn:ietf:params:jmap:core' => new \stdClass, $mail => new \stdClass],
+                'primaryAccounts' => [$mail => 'a1'],
+                'accounts' => ['a1' => ['isPersonal' => true, 'accountCapabilities' => [$mail => new \stdClass]]],
+            ], JSON_THROW_ON_ERROR)),
+        ]));
+        $stack->push(Middleware::history($history));
+        $transport = new JmapReadOnlyTransport(new Client(['handler' => $stack]));
+
+        try {
+            $transport->mailboxes('owner@example.test', 'test-token');
+            self::fail('A foreign apiUrl must be rejected.');
+        } catch (\Throwable) {
+            // Expected: the contract rejects the session.
+        }
+        self::assertCount(1, $history);
+        self::assertSame('mail.kmjtechno.com', $history[0]['request']->getUri()->getHost());
+    }
+
+    public function test_failure_message_never_contains_the_token(): void
+    {
+        $stack = HandlerStack::create(new MockHandler([
+            new Response(500, ['Content-Type' => 'application/json'], '{}'),
+        ]));
+        $transport = new JmapReadOnlyTransport(new Client(['handler' => $stack]));
+
+        try {
+            $transport->mailboxes('owner@example.test', 'secret-token-value');
+            self::fail('Expected failure.');
+        } catch (RuntimeException $e) {
+            self::assertStringNotContainsString('secret-token-value', $e->getMessage());
+            self::assertStringNotContainsString('secret-token-value', (string) $e->getPrevious()?->getMessage());
+        }
+    }
+
     private function session(): Response
     {
         $mail = 'urn:ietf:params:jmap:mail';
