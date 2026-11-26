@@ -1,5 +1,8 @@
+import { formatIstDate } from '@/lib/format-ist-date-time';
+import { minorDigits } from '@/lib/money-minor';
+import { orderProgress } from '@/lib/order-progress';
 import type { FormEvent } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import {
     BadgeIndianRupee,
     Building2,
@@ -40,6 +43,12 @@ type PurchaseProps = {
     requestKey: string;
 };
 
+const purchaseSteps = [
+    'Request',
+    'KMJ confirms payment',
+    'Access activated',
+] as const;
+
 function StatusBadge({ status }: { status: string }) {
     const confirmed = status === 'confirmed';
 
@@ -56,7 +65,7 @@ function StatusBadge({ status }: { status: string }) {
             ) : (
                 <Clock3 className="h-3 w-3" />
             )}
-            {status}
+            {orderProgress(status).label}
         </span>
     );
 }
@@ -97,7 +106,7 @@ export default function Purchase({
                         <div className="max-w-2xl">
                             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                                 <BadgeIndianRupee className="h-3.5 w-3.5" />
-                                Revenue lane · Governed manual sales
+                                Purchase requests
                             </div>
                             <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">
                                 KMJ Purchase Center
@@ -127,6 +136,19 @@ export default function Purchase({
                             product. Price/payment facts are confirmed
                             separately by the operator.
                         </p>
+                        <ol className="mt-4 grid gap-2 text-xs sm:grid-cols-3">
+                            {purchaseSteps.map((step, index) => (
+                                <li
+                                    key={step}
+                                    className="bg-muted/30 rounded-lg border px-3 py-2"
+                                >
+                                    <span className="font-bold">
+                                        {index + 1}.
+                                    </span>{' '}
+                                    {step}
+                                </li>
+                            ))}
+                        </ol>
 
                         <form onSubmit={submit} className="mt-6 space-y-4">
                             <label className="block space-y-2 text-xs font-semibold">
@@ -161,6 +183,19 @@ export default function Purchase({
                                         ))
                                     )}
                                 </select>
+                                {organizations.length === 0 && (
+                                    <span className="text-muted-foreground block text-xs font-normal">
+                                        Your account has no organization that
+                                        can purchase yet. Contact{' '}
+                                        <a
+                                            className="underline"
+                                            href="mailto:info@kmjtechno.com"
+                                        >
+                                            info@kmjtechno.com
+                                        </a>{' '}
+                                        and we will help.
+                                    </span>
+                                )}
                             </label>
 
                             <label className="block space-y-2 text-xs font-semibold">
@@ -194,6 +229,18 @@ export default function Purchase({
                                         ))
                                     )}
                                 </select>
+                                {products.length === 0 && (
+                                    <span className="text-muted-foreground block text-xs font-normal">
+                                        No product is open for purchase yet.{' '}
+                                        <Link
+                                            className="underline"
+                                            href="/products"
+                                        >
+                                            Browse the catalog
+                                        </Link>
+                                        .
+                                    </span>
+                                )}
                             </label>
 
                             {(form.errors.organization_id ||
@@ -222,8 +269,12 @@ export default function Purchase({
                     <section className="bg-card rounded-2xl border p-5 sm:p-6">
                         <h2 className="font-bold">Your commercial requests</h2>
                         <p className="text-muted-foreground mt-1 text-xs">
-                            Requested → payment confirmed → entitlement
-                            fulfilled → governed license handoff.
+                            Requested → payment confirmed → access activated.
+                            Activated products appear on your{' '}
+                            <Link className="underline" href="/dashboard">
+                                dashboard
+                            </Link>
+                            .
                         </p>
 
                         {recentOrders.length === 0 ? (
@@ -250,14 +301,26 @@ export default function Purchase({
                                                 status={order.status}
                                             />
                                         </div>
+                                        <p className="text-muted-foreground mt-3 text-xs leading-5">
+                                            {
+                                                orderProgress(order.status)
+                                                    .message
+                                            }
+                                        </p>
                                         <div className="text-muted-foreground mt-4 flex flex-wrap gap-x-5 gap-y-2 text-[11px]">
                                             <span>
                                                 Order {order.id.slice(0, 8)}…
                                             </span>
                                             <span>
+                                                Requested{' '}
+                                                {formatIstDate(
+                                                    order.created_at,
+                                                )}
+                                            </span>
+                                            <span>
                                                 {order.amount_minor !== null &&
                                                 order.currency
-                                                    ? `${order.currency} ${(order.amount_minor / 100).toFixed(2)}`
+                                                    ? `${order.currency} ${(order.amount_minor / 10 ** minorDigits(order.currency)).toFixed(minorDigits(order.currency))}`
                                                     : 'Amount pending operator confirmation'}
                                             </span>
                                         </div>
