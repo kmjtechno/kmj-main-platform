@@ -116,9 +116,9 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
         $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
             ->get('/operator/payments')
             ->assertOk()->assertInertia(fn (Assert $page) => $page
-                ->where('gatewaySettings.1.last_updated', fn ($value): bool => is_string($value)
-                    && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/', $value) === 1)
-                ->where('gatewaySettings.0.last_updated', null));
+            ->where('gatewaySettings.1.last_updated', fn ($value): bool => is_string($value)
+                && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/', $value) === 1)
+            ->where('gatewaySettings.0.last_updated', null));
     }
 
     public function test_empty_fields_preserve_secrets_and_revocation_removes_them(): void
