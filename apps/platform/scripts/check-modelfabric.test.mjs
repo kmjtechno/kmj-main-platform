@@ -82,7 +82,7 @@ void test('sticky sessions only reorder routes the plan already admitted', () =>
     const gateway = read('app/Services/AiProviders/ModelFabricGateway.php');
     const api = read('app/Http/Controllers/ModelFabricApiController.php');
     assert.match(gateway, /preferSticky\(\$plan\['routes'\]/);
-    assert.match(gateway, /never admits anything/);
+    assert.match(gateway, /Sticky sessions are a preference only/);
     assert.match(api, /X-ModelFabric-Session/);
     assert.match(api, /\[A-Za-z0-9\._:-\]\{1,64\}/);
 });
@@ -115,7 +115,7 @@ void test('token form warns when a private-source token could not route anything
 void test('provider errors are explained in plain language with a next step', () => {
     const page = read('resources/js/pages/operator-modelfabric.tsx');
     assert.match(page, /const errorHelp/);
-    assert.match(page, /models:read permission/);
+    assert.match(page, /Check token permissions/);
     assert.match(page, /modelfabric-error-help/);
     assert.match(page, /startsWith\('invalid_catalog'\)/);
 });
@@ -326,7 +326,7 @@ void test('guided readiness separates general chat from secure coding and gates 
     assert.match(page, /if \(!generalReady\)/);
     assert.match(page, /if \(chatTokens === 0\)/);
     assert.match(page, /complete: okRequests24h > 0/);
-    assert.match(page, /A\s+chat token cannot authorize private\s+source/);
+    assert.match(page, /A chat token cannot authorize\s+private\s+source/);
     assert.match(
         page,
         /disabled=\{\s*tokenPrivate\s*\?\s*!privateReady\s*:\s*!generalReady\s*\}/,
@@ -339,29 +339,27 @@ void test('guided readiness separates general chat from secure coding and gates 
 });
 
 void test('provider management has a dedicated tab, repair action and progressive disclosure', () => {
-    assert.match(page, /\{ key: 'providers', label: 'Providers' \}/);
+    assert.match(page, /\{ key: 'providers', label: 'AI workspace' \}/);
     assert.match(page, /tab === 'providers'/);
-    assert.match(page, /Repair connection/);
+    assert.match(page, /reconnect the provider and run Test connection/);
     assert.match(
         page,
         /<summary[^>]*>\s*Usage and routing limits\s*<\/summary>/,
     );
     assert.match(page, /p.models.length === 0/);
-    assert.match(
-        page,
-        /provider.enabled\s*\?\s*provider.health\s*:\s*'disabled'/,
-    );
+    // A disabled provider can never count as healthy: readiness only counts enabled + ok.
+    assert.match(page, /\(p\) => p\.enabled && p\.health === 'ok'/);
 });
 
 void test('premium guided setup keeps chat and coding journeys separate', () => {
     assert.match(page, /const codingJourney: typeof chatJourney/);
     assert.match(page, /workflow === 'coding' \? codingJourney : chatJourney/);
     assert.match(page, /setTokenPrivate\(workflow === 'coding'\)/);
-    assert.match(page, /aria-pressed=\{workflow === mode\}/);
+    assert.match(page, /aria-pressed=\{\s*workflow === mode\s*\}/);
     assert.match(page, /aria-valuenow=\{completedSteps\}/);
     assert.match(page, /index === activeStep/);
-    assert.match(page, /Routing diagnostics &amp; provider eligibility/);
-    assert.match(page, /Secure coding eligibility/);
+    assert.match(page, /Routing diagnostics &amp;\s+provider\s+eligibility/);
+    assert.match(page, /Secure coding · next step/);
 });
 
 void test('worker verification remains pending without device evidence', () => {
