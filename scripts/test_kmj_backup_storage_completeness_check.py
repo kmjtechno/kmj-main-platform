@@ -81,6 +81,20 @@ class StorageCheckTest(unittest.TestCase):
         self.assertIn("identical=1", r.stdout)
         self.assertIn("layout=storage_root", next(self.receipts.glob("storage-*.txt")).read_text())
 
+    def test_regenerable_views_and_logs_are_not_a_gap_but_other_framework_files_are(self):
+        s = self.snap / "platform-storage"
+        root = self.live.parent
+        self.put(s, "app/a.txt", b"one"); self.put(self.live, "a.txt", b"one")
+        self.put(root, "framework/views/x.php", b"compiled")
+        self.put(root, "logs/laravel.log", b"log")
+        r = self.run_check()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("missing_predating_snapshot=0", r.stdout)
+        self.put(root, "framework/sessions/sess1", b"s")
+        r = self.run_check()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("missing_predating_snapshot=1", r.stdout)
+
     def test_checksum_mismatch_blocks(self):
         (self.snap / "platform.dump").write_bytes(b"tampered")
         r = self.run_check()
