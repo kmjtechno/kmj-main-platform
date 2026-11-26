@@ -116,7 +116,7 @@ function ProviderCard({
             </p>
 
             <div className="flex flex-wrap items-center gap-2">
-                {canManage && (
+                {canManage && provider.error_code !== 'provider_retired' && (
                     <button
                         type="button"
                         disabled={busy}
@@ -150,6 +150,7 @@ function ProviderCard({
                         ? 'Hide settings'
                         : canManage &&
                             provider.enabled &&
+                            provider.error_code !== 'provider_retired' &&
                             provider.health !== 'ok'
                           ? 'Repair connection'
                           : 'Manage settings'}
