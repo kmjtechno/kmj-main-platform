@@ -359,8 +359,14 @@ void test('worker verification remains pending without device evidence', () => {
         page,
         /title: 'Connect and verify the worker',[\s\S]*?complete: false/,
     );
-    assert.match(page, /Source consent and real worker execution still need separate verification/);
+    assert.match(
+        page,
+        /Source consent and real worker execution still need separate verification/,
+    );
     assert.match(page, /href: '\/services\/kmj-codebridge'/);
-    assert.match(page, /Changing the purpose never carries forward another attestation/);
+    assert.match(
+        page,
+        /Changing the purpose never carries forward another attestation/,
+    );
     assert.match(page, /setConfirmed\(false\)/);
 });
