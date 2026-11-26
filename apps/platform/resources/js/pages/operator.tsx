@@ -1,3 +1,4 @@
+import { minorDigits, toMinorUnits } from '@/lib/money-minor';
 import { type FormEvent, useState } from 'react';
 import {
     Dialog,
@@ -151,9 +152,15 @@ function ManualPaymentConfirmation({ order }: { order: RecentOrder }) {
         amount_minor: '',
         confirmation_reference: '',
     });
+    // The person types the normal amount (e.g. 1499.50); the server contract
+    // still receives integer minor units, converted without floating point.
+    const minor = toMinorUnits(form.data.amount_minor, form.data.currency);
+    const digits = minorDigits(form.data.currency);
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        if (minor === null) return;
+        form.transform((data) => ({ ...data, amount_minor: String(minor) }));
         form.post(`/operator/orders/${order.id}/confirm`, {
             preserveScroll: true,
         });
@@ -176,19 +183,32 @@ function ManualPaymentConfirmation({ order }: { order: RecentOrder }) {
                     required
                 />
                 <input
-                    type="number"
-                    min="1"
-                    step="1"
+                    type="text"
+                    inputMode="decimal"
                     value={form.data.amount_minor}
                     onChange={(event) =>
                         form.setData('amount_minor', event.target.value)
                     }
-                    placeholder="Amount in paise/cents"
+                    placeholder={`Amount received (e.g. ${digits === 0 ? '1499' : '1499.00'})`}
                     className="h-9 rounded-lg border border-white/10 bg-black/20 px-2 text-xs text-white"
-                    aria-label="Amount in minor currency units"
+                    aria-label="Amount received in normal currency units"
                     required
                 />
             </div>
+            {form.data.amount_minor !== '' && (
+                <div
+                    className={
+                        minor === null
+                            ? 'text-[10px] text-red-500'
+                            : 'text-[10px] text-slate-400'
+                    }
+                    role="status"
+                >
+                    {minor === null
+                        ? `Enter a valid amount with at most ${digits} decimal place(s).`
+                        : `Will record ${form.data.currency} ${(minor / 10 ** digits).toFixed(digits)} (${minor} minor units).`}
+                </div>
+            )}
             <input
                 value={form.data.confirmation_reference}
                 onChange={(event) =>
@@ -201,7 +221,7 @@ function ManualPaymentConfirmation({ order }: { order: RecentOrder }) {
             />
             <button
                 type="submit"
-                disabled={form.processing}
+                disabled={form.processing || minor === null}
                 className="inline-flex h-9 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 text-[10px] font-bold text-amber-600 transition hover:bg-amber-500/15 disabled:opacity-50 dark:text-amber-400"
             >
                 Confirm payment evidence
