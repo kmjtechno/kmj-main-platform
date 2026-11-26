@@ -4,14 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import AiProviderConnectHub from '@/components/ai-provider-connect-hub';
 import '../../../css/ai-provider-connect.css';
 
-type Preset = {
+export type Preset = {
     key: string;
     label: string;
     free_tier: 'allowlist' | 'model-suffix' | 'none';
     custom: boolean;
 };
 
-type Provider = {
+export type Provider = {
     id: string;
     name: string;
     preset: string;
@@ -34,6 +34,7 @@ type Provider = {
 };
 
 type Props = {
+    embedded?: boolean;
     status?: string | null;
     canManage: boolean;
     presets: Preset[];
@@ -524,6 +525,7 @@ function AddProvider({
 }
 
 export default function AiProviders({
+    embedded = false,
     status,
     canManage,
     presets,
@@ -541,7 +543,7 @@ export default function AiProviders({
         setOauthBusy(true);
         router.post(
             BASE + '/connect/openrouter',
-            {},
+            embedded ? { return_to: 'modelfabric' } : {},
             {
                 preserveScroll: true,
                 onFinish: () => setOauthBusy(false),
@@ -554,7 +556,9 @@ export default function AiProviders({
         setOauthBusy(true);
         router.post(
             BASE + '/connect/huggingface',
-            { free_account_confirmed: true },
+            embedded
+                ? { free_account_confirmed: true, return_to: 'modelfabric' }
+                : { free_account_confirmed: true },
             {
                 preserveScroll: true,
                 onFinish: () => setOauthBusy(false),
@@ -564,17 +568,28 @@ export default function AiProviders({
 
     return (
         <>
-            <Head title="AI Providers" />
-            <div className="kmj-ai-providers owner-admin-surface flex h-full min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6">
-                <Link
-                    href="/services/kmj-codebridge"
-                    className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-xs font-bold"
-                >
-                    <ArrowLeft className="h-3.5 w-3.5" />
-                    Back to CodeBridge
-                </Link>
+            {!embedded && <Head title="AI Providers" />}
+            <div
+                id={embedded ? 'provider-connections' : undefined}
+                className="kmj-ai-providers owner-admin-surface flex h-full min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6"
+            >
+                {!embedded && (
+                    <Link
+                        href="/services/kmj-codebridge"
+                        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-xs font-bold"
+                    >
+                        <ArrowLeft className="h-3.5 w-3.5" />
+                        Back to CodeBridge
+                    </Link>
+                )}
                 <div>
-                    <h1 className="text-2xl font-black">AI Providers</h1>
+                    {embedded ? (
+                        <h2 className="text-2xl font-black">
+                            Provider connections
+                        </h2>
+                    ) : (
+                        <h1 className="text-2xl font-black">AI Providers</h1>
+                    )}
                     <p className="text-muted-foreground text-sm">
                         Keys stay on the server, encrypted. Connection tests
                         only list models and never send a prompt. Credit status

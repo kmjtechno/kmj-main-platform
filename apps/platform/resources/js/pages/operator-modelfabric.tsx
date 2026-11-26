@@ -16,8 +16,12 @@ import {
 } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import ModelFabricSafePlayground from '@/components/modelfabric-safe-playground';
+import AiProviders, {
+    type Preset,
+    type Provider as ManagedProvider,
+} from '@/pages/services/ai-providers';
 
-type Provider = {
+type Provider = ManagedProvider & {
     id: string;
     name: string;
     preset: string;
@@ -101,6 +105,8 @@ type Props = {
     status?: string | null;
     canManage: boolean;
     maxEvidenceDays: number;
+    providerPresets: Preset[];
+    initialTab: 'start' | 'providers';
     providers: Provider[];
     evidence: Evidence[];
     rules: Rule[];
@@ -543,6 +549,8 @@ export default function OperatorModelFabric({
     status,
     canManage,
     maxEvidenceDays,
+    providerPresets,
+    initialTab,
     providers,
     evidence,
     rules,
@@ -553,7 +561,7 @@ export default function OperatorModelFabric({
     const allowlistProviders = providers.filter(
         (provider) => provider.free_tier === 'allowlist',
     );
-    const [tab, setTab] = useState<Tab>(newToken ? 'tokens' : 'start');
+    const [tab, setTab] = useState<Tab>(newToken ? 'tokens' : initialTab);
     const [tokenName, setTokenName] = useState('');
     const [tokenDays, setTokenDays] = useState('30');
     const privateReady =
@@ -577,7 +585,6 @@ export default function OperatorModelFabric({
     const [creditCap, setCreditCap] = useState('');
     const [creditAttested, setCreditAttested] = useState(false);
     const [picked, setPicked] = useState<string[]>([]);
-    const [hfFree, setHfFree] = useState(false);
     const selected = providers.find((provider) => provider.id === providerId);
     const [rulePattern, setRulePattern] = useState('');
     const [ruleUrl, setRuleUrl] = useState('');
@@ -652,13 +659,13 @@ export default function OperatorModelFabric({
             title: 'Connect a provider',
             detail: 'Use OAuth where supported, or add an API key securely.',
             complete: providers.some((provider) => provider.enabled),
-            href: '/services/kmj-codebridge/ai-providers',
+            href: '/operator/modelfabric?tab=providers',
         },
         {
             title: 'Test and discover models',
             detail: 'Read provider health and catalog; no inference is sent.',
             complete: healthy > 0,
-            href: '/services/kmj-codebridge/ai-providers',
+            href: '/operator/modelfabric?tab=providers',
         },
         {
             title: 'Approve verified-free routes',
@@ -719,14 +726,14 @@ export default function OperatorModelFabric({
             return {
                 text: 'Connect your first AI provider (Gemini, Groq or OpenRouter).',
                 action: 'Open provider connect page',
-                href: '/services/kmj-codebridge/ai-providers',
+                href: '/operator/modelfabric?tab=providers',
             };
         }
         if (healthy === 0) {
             return {
                 text: 'No provider is healthy. Run Test connection on the provider page.',
                 action: 'Open provider connect page',
-                href: '/services/kmj-codebridge/ai-providers',
+                href: '/operator/modelfabric?tab=providers',
             };
         }
         if (!generalReady) {
@@ -764,7 +771,7 @@ export default function OperatorModelFabric({
             return {
                 text: 'Connect and test a free provider before reviewing coding eligibility.',
                 action: 'Connect providers',
-                href: '/services/kmj-codebridge/ai-providers',
+                href: '/operator/modelfabric?tab=providers',
             };
         }
         if (!privateReady) {
@@ -837,7 +844,7 @@ export default function OperatorModelFabric({
             tone: 'warn',
             text: `${unhealthy} provider(s) are not healthy. Run Test connection.`,
             action: 'Open providers',
-            href: '/services/kmj-codebridge/ai-providers',
+            href: '/operator/modelfabric?tab=providers',
         });
     }
     const unapproved = providers.filter(
@@ -922,16 +929,6 @@ export default function OperatorModelFabric({
                     setPicked([]);
                 },
             },
-        );
-    };
-
-    const connectOAuth = (kind: 'openrouter' | 'huggingface') => {
-        router.post(
-            `/services/kmj-codebridge/ai-providers/connect/${kind}`,
-            kind === 'huggingface'
-                ? { free_account_confirmed: true, return_to: 'modelfabric' }
-                : { return_to: 'modelfabric' },
-            { preserveScroll: true },
         );
     };
 
@@ -1066,7 +1063,7 @@ export default function OperatorModelFabric({
                                     <ChevronRight size={16} />
                                 </button>
                             )}
-                            <a href="/services/kmj-codebridge/ai-providers">
+                            <a href="/operator/modelfabric?tab=providers">
                                 <Boxes size={16} />
                                 Connect providers
                             </a>
@@ -1559,11 +1556,17 @@ export default function OperatorModelFabric({
                 ) : null}
                 {tab === 'providers' ? (
                     <>
+                        <AiProviders
+                            embedded
+                            canManage={canManage}
+                            presets={providerPresets}
+                            providers={providers}
+                        />
                         <Card
                             id="providers"
-                            title="Providers"
+                            title="Routing controls"
                             label="Providers"
-                            help="Add keys or connect OpenRouter on the provider connect page. Gemini and Groq need your price evidence per model; OpenRouter admits only models ending in :free."
+                            help="Review model eligibility and routing limits for connected providers. Connection alone never authorizes inference."
                         >
                             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                                 {providers.length === 0 ? (
@@ -1627,7 +1630,7 @@ export default function OperatorModelFabric({
                                         provider.health !== 'ok' ? (
                                             <a
                                                 className={`${ghostButton} mt-3`}
-                                                href="/services/kmj-codebridge/ai-providers"
+                                                href="#provider-connections"
                                             >
                                                 Repair connection
                                             </a>
@@ -1656,71 +1659,6 @@ export default function OperatorModelFabric({
                                     </div>
                                 ))}
                             </div>
-                            {canManage ? (
-                                <div className="mt-4 rounded-xl border p-4 text-sm">
-                                    <h3 className="font-black">
-                                        Connect a provider with one click
-                                    </h3>
-                                    <p className="text-muted-foreground mt-1 text-xs">
-                                        You come back to this page afterwards.
-                                        Connecting never approves a model: each
-                                        model still needs your price evidence.
-                                    </p>
-                                    <div className="mt-3 flex flex-wrap items-start gap-4">
-                                        <button
-                                            type="button"
-                                            className={primaryButton}
-                                            onClick={() =>
-                                                connectOAuth('openrouter')
-                                            }
-                                        >
-                                            Connect OpenRouter
-                                        </button>
-                                        <div className="max-w-md">
-                                            <label className="flex items-start gap-2 text-xs">
-                                                <input
-                                                    type="checkbox"
-                                                    className="mt-0.5"
-                                                    checked={hfFree}
-                                                    onChange={(e) =>
-                                                        setHfFree(
-                                                            e.target.checked,
-                                                        )
-                                                    }
-                                                />
-                                                My Hugging Face account is a
-                                                Free account with no payment
-                                                method.
-                                            </label>
-                                            <button
-                                                type="button"
-                                                className={`${primaryButton} mt-2`}
-                                                disabled={!hfFree}
-                                                onClick={() =>
-                                                    connectOAuth('huggingface')
-                                                }
-                                            >
-                                                Connect Hugging Face
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {errors?.provider ? (
-                                        <p
-                                            role="alert"
-                                            className="mt-3 text-xs text-red-500"
-                                        >
-                                            {errors.provider}
-                                        </p>
-                                    ) : null}
-                                </div>
-                            ) : null}
-                            <a
-                                className="mt-4 inline-block text-xs font-bold underline"
-                                href="/services/kmj-codebridge/ai-providers"
-                            >
-                                Add a provider with an API key (Gemini, Groq,
-                                Mistral…)
-                            </a>
                         </Card>
                     </>
                 ) : null}

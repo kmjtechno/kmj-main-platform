@@ -168,8 +168,18 @@ void test('ModelFabric connects OpenRouter and Hugging Face itself and returns t
     const hf = read('app/Http/Controllers/HuggingFaceConnectController.php');
     const or = read('app/Http/Controllers/AiProviderController.php');
     const service = read('app/Services/AiProviders/HuggingFaceConnect.php');
-    assert.match(page, /return_to: 'modelfabric'/);
-    assert.match(page, /connectOAuth\('huggingface'\)/);
+    const providerPage = read('resources/js/pages/services/ai-providers.tsx');
+    assert.match(page, /<AiProviders\s+embedded/);
+    assert.match(
+        providerPage,
+        /embedded \? \{ return_to: 'modelfabric' \} : \{\}/,
+    );
+    assert.match(
+        providerPage,
+        /free_account_confirmed: true, return_to: 'modelfabric'/,
+    );
+    assert.match(hf, /modelfabric_provider_tab/);
+    assert.match(or, /modelfabric_provider_tab/);
     assert.match(hf, /operator\.modelfabric\.index/);
     assert.match(or, /operator\.modelfabric\.index/);
     assert.match(service, /oauth_exchange_failed \(http/);
@@ -369,4 +379,20 @@ void test('worker verification remains pending without device evidence', () => {
         /Changing the purpose never carries forward another attestation/,
     );
     assert.match(page, /setConfirmed\(false\)/);
+});
+
+void test('provider setup stays inside the native ModelFabric workspace', () => {
+    const controller = read('app/Http/Controllers/ModelFabricController.php');
+    const providerPage = read('resources/js/pages/services/ai-providers.tsx');
+    assert.doesNotMatch(page, /\/services\/kmj-codebridge\/ai-providers/);
+    assert.match(page, /\/operator\/modelfabric\?tab=providers/);
+    assert.match(page, /href="#provider-connections"/);
+    assert.match(page, /presets=\{providerPresets\}/);
+    assert.match(controller, /'providerPresets' => collect/);
+    assert.match(controller, /modelfabric_provider_tab/);
+    assert.match(
+        providerPage,
+        /embedded \? 'provider-connections' : undefined/,
+    );
+    assert.match(providerPage, /!embedded && <Head/);
 });

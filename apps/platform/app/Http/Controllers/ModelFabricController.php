@@ -61,6 +61,14 @@ final class ModelFabricController extends Controller
             'status' => session('status'),
             'canManage' => $scope['can_manage'],
             'maxEvidenceDays' => self::MAX_EVIDENCE_DAYS,
+            'initialTab' => $request->query('tab') === 'providers' || session('modelfabric_provider_tab') ? 'providers' : 'start',
+            'providerPresets' => collect($this->manager->presets())
+                ->map(fn (array $preset, string $key): array => [
+                    'key' => $key,
+                    'label' => $preset['label'],
+                    'free_tier' => $preset['free_tier'],
+                    'custom' => $preset['base_url'] === null,
+                ])->values(),
             'providers' => $providers->map(function (AiProvider $provider) use ($usedToday): array {
                 $presented = $this->manager->present($provider);
                 $presented['discovered_models'] = array_slice($provider->models_cache ?? [], 0, 200);

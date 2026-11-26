@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-unified-provider-workspace-20261126',
+        title: 'ModelFabric: unified provider connection workspace',
+        state: 'active',
+        detail: 'Provider setup, repair, API-key entry and OAuth returns stay inside the native ModelFabric Providers tab while existing authorization and free-only controls remain intact.',
+        evidence:
+            'Source regression coverage added; exact-head CI, authenticated browser acceptance and guarded Elite deployment remain pending.',
+    },
+    {
         id: 'kmj-mail-native-info-envelope-20261125',
         title: 'KMJ Mail: exact native info mailbox identity',
         state: 'active',
