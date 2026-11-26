@@ -173,9 +173,7 @@ export default function AiProviderConnectHub({
                         <select
                             className="mt-1 w-full rounded-xl border px-3 py-2"
                             value={choice}
-                            onChange={(event) =>
-                                setChoice(event.target.value)
-                            }
+                            onChange={(event) => setChoice(event.target.value)}
                         >
                             <option value="">Choose a provider</option>
                             {visible.map((preset) => (
@@ -199,7 +197,10 @@ export default function AiProviderConnectHub({
                         Hide connected providers
                     </label>
                     {visible.length === 0 && (
-                        <p role="status" className="text-muted-foreground text-sm">
+                        <p
+                            role="status"
+                            className="text-muted-foreground text-sm"
+                        >
                             No matching providers. Clear the search or show
                             connected providers.
                         </p>
@@ -229,7 +230,9 @@ export default function AiProviderConnectHub({
                             )}
                             <button
                                 type="button"
-                                onClick={() => onChooseKeyProvider(selected.key)}
+                                onClick={() =>
+                                    onChooseKeyProvider(selected.key)
+                                }
                                 className="kmj-ai-primary-action min-h-11 rounded-lg px-4 text-sm font-bold"
                             >
                                 Connect with API key
@@ -269,8 +272,8 @@ export default function AiProviderConnectHub({
                             <article className="kmj-ai-directory-item rounded-xl border p-3">
                                 <h4 className="font-bold">Hugging Face</h4>
                                 <p className="text-muted-foreground mt-1 text-xs">
-                                    Account authorization · inference eligibility
-                                    not guaranteed
+                                    Account authorization · inference
+                                    eligibility not guaranteed
                                 </p>
                                 <label className="mt-2 flex items-start gap-2 text-xs">
                                     <input
