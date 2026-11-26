@@ -559,6 +559,7 @@ export default function OperatorModelFabric({
     const privateReady =
         plans.privateSource.status !== 'NO_FREE_ROUTE_AVAILABLE';
     const [tokenPrivate, setTokenPrivate] = useState(privateReady);
+    const [workflow, setWorkflow] = useState<'chat' | 'coding'>('coding');
     const [copied, setCopied] = useState(false);
     const [providerId, setProviderId] = useState(
         allowlistProviders[0]?.id ?? '',
@@ -640,7 +641,7 @@ export default function OperatorModelFabric({
 
     // A read-only, evidence-backed setup journey. API requests are never
     // started by rendering this page; each stage still requires user action.
-    const setupJourney: {
+    const chatJourney: {
         title: string;
         detail: string;
         complete: boolean;
@@ -650,7 +651,7 @@ export default function OperatorModelFabric({
         {
             title: 'Connect a provider',
             detail: 'Use OAuth where supported, or add an API key securely.',
-            complete: providers.length > 0,
+            complete: providers.some((provider) => provider.enabled),
             href: '/services/kmj-codebridge/ai-providers',
         },
         {
@@ -679,7 +680,41 @@ export default function OperatorModelFabric({
         },
     ];
 
-    const next = (() => {
+    const codingJourney: typeof chatJourney = [
+        ...chatJourney.slice(0, 2),
+        {
+            title: 'Verify secure coding routes',
+            detail: 'Review exact-model zero-cost, coding capability and documented no-training evidence.',
+            complete: privateReady,
+            tab: 'models',
+        },
+        {
+            title: 'Create a coding token',
+            detail: 'Issue a dedicated private-source token. A chat token is not sufficient.',
+            complete: codingTokens > 0,
+            tab: 'tokens',
+        },
+        {
+            title: 'Connect and verify the worker',
+            detail: 'Consent to the exact source scope, configure the enrolled device, and verify a real coding task. Worker evidence is not available on this page.',
+            complete: false,
+            href: '/services/kmj-codebridge',
+        },
+    ];
+    const setupJourney = workflow === 'coding' ? codingJourney : chatJourney;
+    const openWorkflowStep = (destination: Tab) => {
+        if (destination === 'tokens') {
+            setTokenPrivate(workflow === 'coding');
+        }
+        if (destination === 'models') {
+            // Changing the purpose never carries forward another attestation.
+            setConfirmed(false);
+            setRuleConfirmed(false);
+            setCreditAttested(false);
+        }
+        setTab(destination);
+    };
+    const chatNext = (() => {
         if (providers.length === 0) {
             return {
                 text: 'Connect your first AI provider (Gemini, Groq or OpenRouter).',
@@ -723,6 +758,38 @@ export default function OperatorModelFabric({
             tab: 'activity' as Tab,
         };
     })();
+
+    const codingNext = (() => {
+        if (healthy === 0) {
+            return {
+                text: 'Connect and test a free provider before reviewing coding eligibility.',
+                action: 'Connect providers',
+                href: '/services/kmj-codebridge/ai-providers',
+            };
+        }
+        if (!privateReady) {
+            return {
+                text: 'Secure coding is blocked: verify an exact coding model, zero cost and documented no-training handling.',
+                action: 'Review coding evidence',
+                tab: 'models' as Tab,
+            };
+        }
+        if (codingTokens === 0) {
+            return {
+                text: 'Eligible coding routes found. Issue a dedicated private-source token.',
+                action: 'Create coding token',
+                tab: 'tokens' as Tab,
+            };
+        }
+        return {
+            text: 'Routes and token available. Source consent and real worker execution still need separate verification.',
+            action: 'Open CodeBridge',
+            href: '/services/kmj-codebridge',
+        };
+    })();
+    const next = workflow === 'coding' ? codingNext : chatNext;
+    const completedSteps = setupJourney.filter((step) => step.complete).length;
+    const activeStep = setupJourney.findIndex((step) => !step.complete);
 
     const DAY = 86_400_000;
     const now = Date.now();
@@ -987,9 +1054,7 @@ export default function OperatorModelFabric({
                                     type="button"
                                     className="owner-primary"
                                     onClick={() => {
-                                        if (next.tab === 'tokens')
-                                            setTokenPrivate(false);
-                                        setTab(next.tab as Tab);
+                                        openWorkflowStep(next.tab as Tab);
                                     }}
                                 >
                                     <Zap size={16} />
@@ -1081,7 +1146,7 @@ export default function OperatorModelFabric({
                             <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
                             <span>
                                 <strong className="block text-[10px] tracking-wide text-red-500 uppercase">
-                                    Next step
+                                    {workflow === 'coding' ? 'Secure coding · next step' : 'General chat · next step'}
                                 </strong>
                                 {next.text}
                             </span>
@@ -1114,10 +1179,10 @@ export default function OperatorModelFabric({
                             data-testid="modelfabric-workflow-readiness"
                             className="grid gap-3 lg:grid-cols-2"
                         >
-                            <div className="owner-panel space-y-3">
+                            <div className={`owner-panel space-y-4 ${workflow === 'chat' ? 'ring-1 ring-red-500/50' : ''}`}>
                                 <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <h2 className="text-base font-bold">
-                                        General AI chat
+                                    <h2 className="flex items-center gap-2 text-base font-bold">
+                                        <Zap size={18} className="text-cyan-400" /> General AI chat
                                     </h2>
                                     <StatusPill
                                         tone={
@@ -1140,6 +1205,7 @@ export default function OperatorModelFabric({
                                     type="button"
                                     className={primaryButton}
                                     onClick={() => {
+                                        setWorkflow('chat');
                                         if (generalReady && chatTokens === 0)
                                             setTokenPrivate(false);
                                         setTab(
@@ -1159,10 +1225,10 @@ export default function OperatorModelFabric({
                                     <ArrowRight size={15} />
                                 </button>
                             </div>
-                            <div className="owner-panel space-y-3">
+                            <div className={`owner-panel space-y-4 ${workflow === 'coding' ? 'ring-1 ring-red-500/50' : ''}`}>
                                 <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <h2 className="text-base font-bold">
-                                        Secure coding
+                                    <h2 className="flex items-center gap-2 text-base font-bold">
+                                        <LockKeyhole size={18} className="text-violet-400" /> Secure coding
                                     </h2>
                                     <StatusPill
                                         tone={
@@ -1183,7 +1249,7 @@ export default function OperatorModelFabric({
                                     worker activation are required.
                                 </p>
                                 {!privateReady ? (
-                                    <p className="text-sm">
+                                    <p className="text-sm leading-relaxed">
                                         Review exact-model pricing, code
                                         capability and no-training evidence. A
                                         chat token cannot authorize private
@@ -1194,13 +1260,17 @@ export default function OperatorModelFabric({
                                     type="button"
                                     className={ghostButton}
                                     onClick={() => {
+                                        setWorkflow('coding');
                                         if (!privateReady) {
+                                            setConfirmed(false);
+                                            setRuleConfirmed(false);
+                                            setCreditAttested(false);
                                             setTab('models');
                                         } else if (codingTokens === 0) {
                                             setTokenPrivate(true);
                                             setTab('tokens');
                                         } else {
-                                            setTab('activity');
+                                            router.visit('/services/kmj-codebridge');
                                         }
                                     }}
                                 >
@@ -1208,7 +1278,7 @@ export default function OperatorModelFabric({
                                         ? 'Review coding evidence'
                                         : codingTokens === 0
                                           ? 'Create coding token'
-                                          : 'View activity'}{' '}
+                                          : 'Open CodeBridge'}{' '}
                                     <ArrowRight size={15} />
                                 </button>
                             </div>
@@ -1218,30 +1288,47 @@ export default function OperatorModelFabric({
                             aria-label="ModelFabric setup journey"
                             data-testid="modelfabric-setup-journey"
                         >
-                            <div className="owner-panel-title">
-                                <h2>
-                                    <ShieldCheck size={17} /> Set up ModelFabric
-                                </h2>
-                                <span className="text-muted-foreground text-xs">
-                                    {
-                                        setupJourney.filter(
-                                            (step) => step.complete,
-                                        ).length
-                                    }{' '}
-                                    / {setupJourney.length} evidenced
-                                </span>
+                            <div className="flex flex-wrap items-center justify-between gap-4">
+                                <div>
+                                    <h2 className="flex items-center gap-2 text-base font-bold">
+                                        <ShieldCheck size={18} className="text-red-500" /> Guided setup
+                                    </h2>
+                                    <p className="text-muted-foreground mt-1 text-xs">
+                                        Complete one workflow at a time. No step runs inference automatically.
+                                    </p>
+                                </div>
+                                <div className="flex gap-1 rounded-xl border p-1" aria-label="Choose setup workflow">
+                                    {(['chat', 'coding'] as const).map((mode) => (
+                                        <button
+                                            key={mode}
+                                            type="button"
+                                            aria-pressed={workflow === mode}
+                                            className={`rounded-lg px-3 py-2 text-xs font-bold transition ${workflow === mode ? 'bg-red-600 text-white' : 'text-muted-foreground hover:bg-muted'}`}
+                                            onClick={() => setWorkflow(mode)}
+                                        >
+                                            {mode === 'chat' ? 'General chat' : 'Secure coding'}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                            <p className="text-muted-foreground mt-1 text-xs">
-                                Based on the FreeLLMAPI connection journey, with
-                                KMJ owner-controlled pricing evidence, one token
-                                and zero paid fallback. A step is never marked
-                                complete from a simulated request.
-                            </p>
+                            <div className="mt-4 flex items-center gap-3">
+                                <div
+                                    role="progressbar"
+                                    aria-label="Setup evidence"
+                                    aria-valuemin={0}
+                                    aria-valuemax={setupJourney.length}
+                                    aria-valuenow={completedSteps}
+                                    className="bg-muted h-2 flex-1 overflow-hidden rounded-full"
+                                >
+                                    <div className="h-full rounded-full bg-red-600 transition-all" style={{ width: `${completedSteps / setupJourney.length * 100}%` }} />
+                                </div>
+                                <span className="text-muted-foreground text-xs tabular-nums">{completedSteps} / {setupJourney.length} evidenced</span>
+                            </div>
                             <ol className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
                                 {setupJourney.map((step, index) => (
                                     <li
                                         key={step.title}
-                                        className="flex flex-col gap-2 rounded-xl border p-3"
+                                        className={`flex flex-col gap-3 rounded-xl border p-4 ${index === activeStep ? 'border-red-500/60 bg-red-500/5' : 'border-border'}`}
                                     >
                                         <div className="flex items-center justify-between gap-2">
                                             <strong className="text-xs">
@@ -1256,7 +1343,7 @@ export default function OperatorModelFabric({
                                             >
                                                 {step.complete
                                                     ? 'Evidence found'
-                                                    : 'Next action'}
+                                                    : index === activeStep ? 'Next action' : 'Pending'}
                                             </StatusPill>
                                         </div>
                                         <p className="text-muted-foreground flex-1 text-xs leading-5">
@@ -1275,10 +1362,10 @@ export default function OperatorModelFabric({
                                                 type="button"
                                                 className={ghostButton}
                                                 onClick={() =>
-                                                    setTab(step.tab ?? 'start')
+                                                    openWorkflowStep(step.tab ?? 'start')
                                                 }
                                             >
-                                                Open {step.title}{' '}
+                                                {step.complete ? 'Review' : 'Open step'}{' '}
                                                 <ChevronRight size={13} />
                                             </button>
                                         )}
@@ -1550,6 +1637,14 @@ export default function OperatorModelFabric({
                         label="Price evidence"
                         help={`Open the provider's own page, confirm this exact model is free, then record it. Approval expires after at most ${maxEvidenceDays} days and can be revoked at any time. A free account does not make every model free.`}
                     >
+                        {workflow === 'coding' ? (
+                            <div className="mb-4 rounded-xl border border-violet-500/25 bg-violet-500/5 p-4 text-sm">
+                                <h3 className="flex items-center gap-2 font-bold"><LockKeyhole size={16} /> Secure coding eligibility</h3>
+                                <p className="text-muted-foreground mt-2 leading-relaxed">
+                                    Select the exact discovered model. Verify zero-cost pricing, select Code capability, and select documented no-training handling only when supported by the provider. Source-transfer consent and device activation are separate.
+                                </p>
+                            </div>
+                        ) : null}
                         {canManage && allowlistProviders.length > 0 ? (
                             <form
                                 className="grid gap-4 md:grid-cols-2"
