@@ -1,5 +1,5 @@
 // Components
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, usePage } from '@inertiajs/react';
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
@@ -13,9 +13,18 @@ type Props = {
 };
 
 export default function VerifyEmail({ status, mailDeliveryAvailable }: Props) {
+    const { auth } = usePage<{ auth?: { user?: { email?: string } } }>().props;
+    const email = auth?.user?.email;
+
     return (
         <>
             <Head title="Email verification" />
+
+            {email ? (
+                <p className="text-foreground mb-4 text-center text-sm">
+                    We sent the link to <strong>{email}</strong>.
+                </p>
+            ) : null}
 
             {!mailDeliveryAvailable ? (
                 <div
@@ -54,6 +63,14 @@ export default function VerifyEmail({ status, mailDeliveryAvailable }: Props) {
                             Resend verification email
                         </Button>
 
+                        <p className="text-muted-foreground text-xs leading-5">
+                            Wrong email address? Log out and register again with
+                            the correct one, or contact{' '}
+                            <TextLink href="mailto:info@kmjtechno.com">
+                                info@kmjtechno.com
+                            </TextLink>
+                            . Never send passwords or verification codes.
+                        </p>
                         <TextLink
                             href={logout()}
                             className="mx-auto block text-sm"

@@ -35,3 +35,13 @@ void test('register page shows live requirements and what happens next', () => {
     assert.match(page, /What happens next/);
     assert.match(page, /country code/);
 });
+
+void test('verify-email page names the address and offers a wrong-email path', () => {
+    const page = readFileSync(
+        new URL('../resources/js/pages/auth/verify-email.tsx', import.meta.url),
+        'utf8',
+    );
+    assert.match(page, /We sent the link to/);
+    assert.match(page, /Wrong email address\?/);
+    assert.match(page, /href=\{logout\(\)\}/);
+});
