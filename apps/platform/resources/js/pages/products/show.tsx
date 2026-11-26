@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     Activity,
     ArrowRight,
@@ -210,6 +210,8 @@ function ProductVisual({ product }: { product: Product }) {
 }
 
 export default function ProductShow({ product }: { product: Product }) {
+    const { auth } = usePage<{ auth?: { user?: unknown } }>().props;
+    const signedIn = Boolean(auth?.user);
     const Demo =
         product.demo.kind === 'cloudos'
             ? CloudOSDemo
@@ -397,6 +399,14 @@ export default function ProductShow({ product }: { product: Product }) {
                                     </span>
                                 )}
                             </div>
+
+                            {product.purchase_enabled && !signedIn ? (
+                                <p className="mt-3 max-w-xl text-xs leading-5 text-white/55">
+                                    Requesting access needs a KMJ account. You
+                                    will be asked to log in or create one first.
+                                    No payment is taken at this step.
+                                </p>
+                            ) : null}
 
                             <ProductShare
                                 name={product.name}

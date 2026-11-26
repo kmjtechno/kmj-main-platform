@@ -23,3 +23,13 @@ void test('purchase page explains the path and no longer uses internal jargon', 
     assert.match(page, /orderProgress\(order\.status\)/);
     assert.match(page, /minorDigits\(order\.currency\)/);
 });
+
+void test('guests are told an account is needed before requesting access', () => {
+    const page = readFileSync(
+        new URL('../resources/js/pages/products/show.tsx', import.meta.url),
+        'utf8',
+    );
+    assert.match(page, /Requesting access needs a KMJ account/);
+    assert.match(page, /No\s+payment is taken at this step/);
+    assert.match(page, /!signedIn/);
+});
