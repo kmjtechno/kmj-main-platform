@@ -170,7 +170,7 @@ final class JmapReadOnlyTransportTest extends TestCase
         $stack->push(Middleware::history($history));
         $transport = new JmapReadOnlyTransport(new Client(['handler' => $stack]));
 
-        foreach (["bad token", "bad\ntoken", ''] as $token) {
+        foreach (['bad token', "bad\ntoken", ''] as $token) {
             try {
                 $transport->mailboxes('owner@example.test', $token);
                 self::fail('Malformed token must be rejected.');
