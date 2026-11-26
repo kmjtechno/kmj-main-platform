@@ -41,13 +41,11 @@ void test('Admin inventory reports missing registrations, not fake entitlements'
 });
 
 void test('Owner, developer and sandbox navigation all remain visible', () => {
-    for (const path of [
-        '/operator/kslp',
-        '/operator/payments',
-        '/developer/apps',
-    ]) {
+    for (const path of ['/operator/kslp', '/operator/payments']) {
         assert.ok(sidebar.includes(path));
     }
+    // /developer/apps is embedded in the one canonical Licensing Hub, not a sidebar entry.
+    assert.ok(!sidebar.includes("href: '/developer/apps'"));
     assert.ok(!sidebar.includes("href: '/sandbox-licenses'"));
     assert.ok(sidebar.includes("title: 'Licensing Hub'"));
     assert.ok(sandbox.includes('Sandbox Token Lab'));
