@@ -1,3 +1,4 @@
+import { formatIstClock } from '@/lib/format-ist-date-time';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     AlertTriangle,
@@ -175,11 +176,7 @@ const EVENT_LABEL: Record<string, string> = {
 };
 
 function clock(iso: string): string {
-    const date = new Date(iso);
-
-    return Number.isNaN(date.getTime())
-        ? ''
-        : date.toLocaleTimeString([], { hour12: false });
+    return formatIstClock(iso);
 }
 
 export default function CodeBridgeWorkspace(props: Props) {

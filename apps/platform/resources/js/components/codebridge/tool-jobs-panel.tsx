@@ -1,3 +1,4 @@
+import { formatIstClock } from '@/lib/format-ist-date-time';
 import { router } from '@inertiajs/react';
 import { Ban, Loader2, Play } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -295,9 +296,7 @@ export function ToolJobsPanel({
                                                 {event.kind}
                                             </span>{' '}
                                             <time className="text-slate-500">
-                                                {new Date(
-                                                    event.at,
-                                                ).toLocaleTimeString()}
+                                                {formatIstClock(event.at)} IST
                                             </time>
                                             {event.detail && (
                                                 <span className="block text-slate-400">

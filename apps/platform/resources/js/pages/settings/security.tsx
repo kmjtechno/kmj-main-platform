@@ -1,3 +1,4 @@
+import { formatIstStamp } from '@/lib/format-ist-date-time';
 import { Form, Head, router } from '@inertiajs/react';
 import { useRef } from 'react';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
@@ -184,9 +185,7 @@ export default function Security(props: Props) {
                                 </p>
                                 <p className="text-muted-foreground mt-1 text-xs">
                                     Last active{' '}
-                                    {new Date(
-                                        session.last_active_at,
-                                    ).toLocaleString()}
+                                    {formatIstStamp(session.last_active_at)}
                                 </p>
                             </div>
                         ))

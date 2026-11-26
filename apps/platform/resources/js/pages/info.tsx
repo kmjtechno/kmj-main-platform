@@ -1,3 +1,4 @@
+import { formatIstClock } from '@/lib/format-ist-date-time';
 import { Head, Link } from '@inertiajs/react';
 import {
     Activity,
@@ -515,16 +516,7 @@ export default function Info({ pollIntervalMs }: { pollIntervalMs: number }) {
                                     </span>
                                     <span className="font-bold text-white/75">
                                         {status?.timestamp
-                                            ? new Intl.DateTimeFormat(
-                                                  undefined,
-                                                  {
-                                                      hour: '2-digit',
-                                                      minute: '2-digit',
-                                                      second: '2-digit',
-                                                  },
-                                              ).format(
-                                                  new Date(status.timestamp),
-                                              )
+                                            ? `${formatIstClock(status.timestamp)} IST`
                                             : 'Connecting'}
                                     </span>
                                 </div>
