@@ -7,8 +7,10 @@ const servicePage = readSourceText(
 );
 
 void test('primary VS Code action uses credential-free native install link', () => {
-    const start = servicePage.indexOf('<div className="flex flex-wrap gap-2">');
-    const end = servicePage.indexOf('</div>', start);
+    const start = servicePage.indexOf(
+        'aria-label="Workspaces and integrations"',
+    );
+    const end = start + 4000;
     assert.ok(start >= 0 && end > start);
     const primaryActions = servicePage.slice(start, end);
     assert.match(

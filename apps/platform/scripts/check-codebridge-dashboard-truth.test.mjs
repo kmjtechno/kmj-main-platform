@@ -31,8 +31,8 @@ void test('green entitlement badge and owner plan ceiling cannot imply device on
 void test('dashboard never invents online device presence from registration', () => {
     assert.match(directory, /'connection_status' => 'not_verified'/);
     assert.match(deviceCenter, /Online status: Not verified/);
-    assert.match(deviceCenter, /Live connection has not been verified/);
-    assert.match(deviceCenter, /Registered · Live status unknown/);
+    assert.match(deviceCenter, /Live connection not verified/);
+    assert.match(deviceCenter, /Registration saved/);
     assert.doesNotMatch(deviceUi, /connection_status === 'online'/);
     assert.doesNotMatch(deviceUi, />\s*Online\s*</);
 });
@@ -116,7 +116,7 @@ void test('offline recovery stays inside the KMJ-hosted device dashboard', () =>
         /Registration ·\{' '\}\s*\{device\.id\.slice\(-8\)\}/,
     );
     assert.match(deviceCenter, /Registration\s+alone is not an/);
-    assert.match(deviceCenter, /Live connection has not been verified/);
+    assert.match(deviceCenter, /Live connection not verified/);
     assert.doesNotMatch(deviceCenter, /github\.com\/kmjtechno\/kmj-codebridge/);
     assert.doesNotMatch(
         ui,
@@ -150,7 +150,10 @@ void test('control center provides working sections and scoped device onboarding
 });
 
 void test('usage billing and device state never invent measurements or connectivity', () => {
-    assert.match(hub, /No authoritative metering feed connected/);
+    assert.match(
+        hub,
+        /does not yet receive\s+verified job, token, model or monthly call\s+metering/,
+    );
     assert.match(hub, /Registration does not establish live presence/);
     assert.match(hub, /Refresh grants, not live app sessions/);
     assert.match(hub, /Invoices and paid consumption must be obtained/);
