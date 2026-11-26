@@ -72,11 +72,10 @@ final class ModelFabricGateway
         // ADR-004 rev 2: a credit-limited route is skipped at its owner-set daily cap and sinks at 80%, so
         // a mis-stated provider limit can never spend the owner's money. A missing or zero cap fails closed.
         $creditUsed = $this->creditUsage($organizationId, $plan['routes']);
-        $plan['routes'] = $this->sinkNearCreditCap($plan['routes'], $creditUsed);
-
-        // Sticky session: prefer the route that last answered this conversation, but only among routes the plan
-        // already admitted; cooldowns, caps and evidence are still checked below, so stickiness never admits anything.
+        // Sticky sessions are a preference only. Apply quota partitioning AFTER stickiness so
+        // continuity and owner priority cannot keep sending work to a nearly exhausted route.
         $plan['routes'] = $this->preferSticky($plan['routes'], $organizationId, $sessionKey);
+        $plan['routes'] = $this->sinkNearQuota($plan['routes'], $creditUsed, $limits);
 
         $attempts = 0;
         $last = 'all_routes_cooling_down';
@@ -218,20 +217,25 @@ final class ModelFabricGateway
     }
 
     /**
-     * Stable partition: credit-limited routes at or above 80% of their cap go last.
+     * Stable partition: prefer healthy quota headroom, including owner daily caps and provider-reported model/account limits.
      *
      * @param  list<array<string, mixed>>  $routes
      * @param  array<string, int>  $creditUsed
+     * @param  array<string, array{priority: int, cap: ?int, used: int, model_scoped: bool}>  $limits
      * @return list<array<string, mixed>>
      */
-    private function sinkNearCreditCap(array $routes, array $creditUsed): array
+    private function sinkNearQuota(array $routes, array $creditUsed, array $limits): array
     {
         $normal = [];
         $near = [];
         foreach ($routes as $route) {
             $cap = (int) ($route['credit_daily_cap'] ?? 0);
             $used = $creditUsed[(string) $route['provider_id'].'|'.(string) $route['model']] ?? 0;
-            if (($route['cost_class'] ?? 'free') === 'credit-limited' && $cap > 0 && $used * 10 >= $cap * 8) {
+            $providerId = (string) $route['provider_id'];
+            $limit = $limits[$providerId] ?? null;
+            $nearCreditCap = ($route['cost_class'] ?? 'free') === 'credit-limited' && $cap > 0 && $used * 10 >= $cap * 8;
+            if ($nearCreditCap || $this->nearDailyCap($limit)
+                || $this->nearLimit($providerId, (string) $route['model'], (bool) ($limit['model_scoped'] ?? false))) {
                 $near[] = $route;
             } else {
                 $normal[] = $route;
