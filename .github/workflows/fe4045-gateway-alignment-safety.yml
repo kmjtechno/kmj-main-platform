@@ -1,0 +1,23 @@
+name: KMJ FE4045 Guarded Gateway Config Source Safety
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/inspect-or-guard-fix-fe4045-main-platform-gateway-20261027.py'
+      - 'scripts/test_fe4045_gateway_alignment_contract.py'
+      - '.github/workflows/fe4045-gateway-alignment-safety.yml'
+permissions:
+  contents: read
+jobs:
+  gateway-script-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Validate guarded gateway inspect/explicit config-only apply source
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m unittest discover -s scripts -p test_fe4045_gateway_alignment_contract.py -v
+          echo 'STATIC_GATEWAY_SAFETY=PASS'
+          echo 'LIVE_ENV_CHANGES=NOT_RUN_BY_CI'

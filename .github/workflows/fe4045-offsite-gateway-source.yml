@@ -1,0 +1,23 @@
+name: KMJ FE4045 Google Offsite and Gateway Source Safety
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/*fe4045*'
+      - 'scripts/test_fe4045_offsite_gateway_source_contract.py'
+      - '.github/workflows/fe4045-offsite-gateway-source.yml'
+permissions:
+  contents: read
+jobs:
+  source-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify SHA-pinned SFTP, independent recovery, read-only endpoint doctor
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m unittest discover -s scripts -p test_fe4045_offsite_gateway_source_contract.py -v
+          echo 'SOURCE_ONLY=PASS'
+          echo 'REAL_GOOGLE_RESTORE_AND_GATEWAY_FIX=NOT_PERFORMED_BY_CI'
