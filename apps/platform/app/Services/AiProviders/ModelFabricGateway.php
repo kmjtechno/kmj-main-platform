@@ -368,7 +368,7 @@ final class ModelFabricGateway
      * Actual recent provider response headers only, not account billing credits or predicted quota.
      * Unknown, expired and unobserved values must stay unknown in the UI.
      *
-     * @param list<string> $models
+     * @param  list<string>  $models
      * @return list<array<string, mixed>>
      */
     public function quotaObservations(AiProvider $provider, array $models): array
