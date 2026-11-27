@@ -551,6 +551,34 @@ final class ModelFabricGatewayTest extends TestCase
         $this->assertDatabaseCount('ai_model_requests', 1);
     }
 
+    public function test_consented_private_mail_to_openrouter_enforces_zero_retention_and_zero_price(): void
+    {
+        $provider = $this->provider('openrouter', 'OpenRouter', 'https://openrouter.ai/api/v1', 'vendor/model:free');
+        AiModelEvidence::query()->where('ai_provider_id', $provider->id)
+            ->update(['data_handling' => 'no-training-documented']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => 'Editable private mail response']]],
+        ], 200)]);
+        $gateway = app(ModelFabricGateway::class);
+        $messages = [['role' => 'user', 'content' => 'Sensitive customer correspondence']];
+
+        $result = $gateway->complete(
+            $this->org, $messages, capability: 'chat',
+            privateSource: true, privateMailConsent: true,
+        );
+        $this->assertTrue($result['ok']);
+        $this->assertSame('Editable private mail response', $result['content']);
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request): bool =>
+            $request->method() === 'POST'
+            && $request['provider']['data_collection'] === 'deny'
+            && $request['provider']['zdr'] === true
+            && $request['provider']['allow_fallbacks'] === false
+            && $request['provider']['max_price']['prompt'] === 0
+            && $request['provider']['max_price']['completion'] === 0);
+        $this->assertDatabaseCount('ai_model_requests', 1);
+    }
+
     public function test_consent_does_not_unlock_mail_content_when_no_training_evidence_is_missing(): void
     {
         $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-a');
