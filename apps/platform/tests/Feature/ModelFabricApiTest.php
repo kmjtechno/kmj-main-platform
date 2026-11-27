@@ -283,8 +283,7 @@ final class ModelFabricApiTest extends TestCase
             ->assertOk()->assertJsonPath('choices.0.message.content', 'public reply');
 
         Http::assertSentCount(1);
-        Http::assertSent(fn ($request): bool =>
-            (string) $request['model'] === 'vendor/model:free'
+        Http::assertSent(fn ($request): bool => (string) $request['model'] === 'vendor/model:free'
             && $request['provider']['allow_fallbacks'] === false
             && $request['provider']['max_price'] === [
                 'prompt' => 0, 'completion' => 0, 'request' => 0, 'image' => 0,
@@ -321,8 +320,7 @@ final class ModelFabricApiTest extends TestCase
             ->assertJsonPath('modelfabric.attempts', 2)
             ->assertJsonPath('modelfabric.provider', 'B Gemini');
         Http::assertSentCount(2);
-        Http::assertNotSent(fn ($request): bool =>
-            ! str_contains((string) $request->url(), 'api.groq.com')
+        Http::assertNotSent(fn ($request): bool => ! str_contains((string) $request->url(), 'api.groq.com')
             && ! str_contains((string) $request->url(), 'generativelanguage.googleapis.com'));
     }
 
