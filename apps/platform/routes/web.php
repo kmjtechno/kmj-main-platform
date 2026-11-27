@@ -12,6 +12,7 @@ use App\Services\CodeBridge\HostedPilotUsageSnapshot;
 use App\Services\CodeBridge\HostedUsagePreview;
 use App\Services\CodeBridge\OAuth\OAuthServer;
 use App\Services\Commerce\KmjProductCatalog;
+use App\Services\Commerce\ProductSignups;
 use App\Services\Commerce\PublicProductCatalog;
 use App\Services\Commerce\PublishedPriceList;
 use App\Services\Licensing\CodeBridge\CodeBridgeCustomerDeviceDirectory;
@@ -394,6 +395,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         CustomerReleaseAccess $releaseAccess,
         PublicProductCatalog $publicProducts,
         KslpCustomerWorkspaceQuery $licensing,
+        ProductSignups $signups,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -508,6 +510,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('dashboard', [
             'licenses' => $licenseRecords['licenses'],
             'licenseCount' => $licenseRecords['total'],
+            'signupsAvailable' => $signups->available(),
+            'productSignups' => (object) $signups->forUser((int) $user->id),
+            'trialEnabled' => (bool) config('services.kmj_signup_trial.enabled'),
             'discoverableProducts' => $discoverableProducts,
             'organizations' => $items,
             'hasPasskey' => $user->passkeys()->exists(),
@@ -745,6 +750,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->where('organization_id', $organizationId)
                     ->where('product_id', $productId)
                     ->where('status', 'active')
+                    // Time-limited trial access is not paid fulfilment.
+                    ->whereNull('ends_at')
                     ->oldest('created_at')
                     ->oldest('id')
                     ->first();
@@ -890,6 +897,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->where('organization_id', $organizationId)
                 ->where('product_id', $productId)
                 ->where('status', 'active')
+                // A trial must never block the paid activation.
+                ->whereNull('ends_at')
                 ->exists(),
             409,
             'An active entitlement already exists for this organization and product.',
@@ -937,6 +946,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->where('organization_id', $organizationId)
             ->where('product_id', $productId)
             ->where('status', 'active')
+            ->whereNull('ends_at')
             ->oldest('created_at')
             ->oldest('id')
             ->firstOrFail();
@@ -1174,3 +1184,4 @@ require __DIR__.'/payments-console.php';
 require __DIR__.'/workforce-mail.php';
 require __DIR__.'/settings.php';
 require __DIR__.'/google-auth.php';
+require __DIR__.'/product-signups.php';

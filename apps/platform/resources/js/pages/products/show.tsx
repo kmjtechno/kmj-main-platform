@@ -408,6 +408,23 @@ export default function ProductShow({
                                 )}
                             </div>
 
+                            {(product.slug === 'kmj-cloudos' ||
+                                !product.purchase_enabled) && (
+                                <Link
+                                    href={
+                                        signedIn
+                                            ? '/dashboard'
+                                            : `/register?product=${encodeURIComponent(product.slug)}`
+                                    }
+                                    className="mt-4 inline-flex min-h-12 items-center rounded-xl bg-[#c1121f] px-6 text-sm font-black text-white"
+                                >
+                                    {product.slug === 'kmj-cloudos' &&
+                                    product.purchase_enabled
+                                        ? '30-day free trial'
+                                        : 'Pre-register'}
+                                </Link>
+                            )}
+
                             {product.purchase_enabled && !signedIn ? (
                                 <p className="mt-3 max-w-xl text-xs leading-5 text-white/55">
                                     Requesting access needs a KMJ account. You

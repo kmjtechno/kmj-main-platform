@@ -47,6 +47,7 @@ type Entitlement = {
     capability: string;
     status: string;
     starts_at: string;
+    ends_at?: string | null;
     service?: CodeBridgeService | null;
     release: {
         id: string;
@@ -98,6 +99,9 @@ type LicenseRecord = {
 type DashboardProps = {
     licenses: LicenseRecord[];
     licenseCount: number;
+    signupsAvailable: boolean;
+    productSignups: Record<string, string>;
+    trialEnabled: boolean;
     organizations: Organization[];
     discoverableProducts: DiscoverableProduct[];
     hasPasskey: boolean;
@@ -124,6 +128,9 @@ const productImages: Record<string, string> = {
 export default function Dashboard({
     licenses,
     licenseCount,
+    signupsAvailable,
+    productSignups,
+    trialEnabled,
     organizations,
     discoverableProducts,
     hasPasskey,
@@ -176,6 +183,20 @@ export default function Dashboard({
                     {product.summary}
                 </p>
                 <div className="mt-auto flex flex-wrap gap-x-5 pt-2">
+                    {signupsAvailable && (
+                        <SignupAction
+                            product={product}
+                            state={productSignups[product.slug]}
+                            canTrial={
+                                trialEnabled &&
+                                product.slug === 'kmj-cloudos' &&
+                                !licenses.some(
+                                    (license) =>
+                                        license.product === 'KMJ_CLOUDOS',
+                                )
+                            }
+                        />
+                    )}
                     {product.purchase_enabled && (
                         <Link
                             href="/purchase"
@@ -484,6 +505,43 @@ export default function Dashboard({
     );
 }
 
+function SignupAction({
+    product,
+    state,
+    canTrial,
+}: {
+    product: DiscoverableProduct;
+    state?: string;
+    canTrial: boolean;
+}) {
+    // Trial only where the server can grant one; pre-register only where the
+    // product cannot be bought yet.
+    if (!canTrial && product.purchase_enabled) {
+        return null;
+    }
+
+    if (!canTrial && state) {
+        return (
+            <p className="inline-flex min-h-11 items-center text-sm font-bold">
+                You are pre-registered. This product is not ready yet.
+            </p>
+        );
+    }
+
+    return (
+        <Link
+            href="/product-signups"
+            method="post"
+            data={{ product: product.slug }}
+            as="button"
+            preserveScroll
+            className="inline-flex min-h-11 items-center rounded-xl bg-red-600 px-4 text-sm font-bold text-white hover:bg-red-500"
+        >
+            {canTrial ? 'Start 30-day free trial' : 'Pre-register'}
+        </Link>
+    );
+}
+
 function CodeBridgeCard({
     service,
     canManageOwnerPlan,
@@ -702,6 +760,12 @@ function GenericServiceCard({
                                 ? 'Switched on for your organization. The product may run its own checks.'
                                 : 'Not active: this gives no feature access.'}
                         </p>
+                        {service.ends_at && (
+                            <p className="mt-1 font-semibold">
+                                {service.status === 'active' ? 'Ends' : 'Ended'}{' '}
+                                {formatDate(service.ends_at)}
+                            </p>
+                        )}
                     </div>
                     <div className="mt-4 flex flex-wrap gap-3">
                         <Link

@@ -16,12 +16,17 @@ type Props = {
     passwordRules: string;
     registrationAvailable: boolean;
     formToken: string;
+    signupProduct?: {
+        name: string;
+        kind: 'trial' | 'request' | 'preregister';
+    } | null;
 };
 
 export default function Register({
     passwordRules,
     registrationAvailable,
     formToken,
+    signupProduct,
 }: Props) {
     const [accountType, setAccountType] = useState<'individual' | 'business'>(
         'individual',
@@ -32,6 +37,19 @@ export default function Register({
     return (
         <>
             <Head title="Register" />
+            {signupProduct && (
+                <p
+                    className="rounded-lg border p-3 text-sm"
+                    data-testid="signup-product"
+                >
+                    {signupProduct.kind === 'trial' &&
+                        `Signing up for ${signupProduct.name}: a 30-day free trial starts after your email is verified. No payment.`}
+                    {signupProduct.kind === 'preregister' &&
+                        `Pre-registering for ${signupProduct.name}. The product is not ready yet, so no access is switched on now.`}
+                    {signupProduct.kind === 'request' &&
+                        `Signing up for ${signupProduct.name}: after verifying your email, send a request from the Purchase Center.`}
+                </p>
+            )}
             <GoogleSignInButton label="Sign up with Google" />
             <Form
                 {...store.form()}

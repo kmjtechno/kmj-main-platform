@@ -2,6 +2,7 @@
 
 namespace KMJ\MainPlatform\Entitlements\Services;
 
+use DateTimeInterface;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -18,6 +19,7 @@ final class EntitlementIssuer
         string $organizationId,
         EntitlementPolicy $policy,
         string $idempotencyKey,
+        ?DateTimeInterface $endsAt = null,
     ): Entitlement {
         $idempotencyKey = trim($idempotencyKey);
 
@@ -29,7 +31,7 @@ final class EntitlementIssuer
             throw new DomainException('Only an active entitlement policy can issue an entitlement.');
         }
 
-        return DB::transaction(function () use ($organizationId, $policy, $idempotencyKey): Entitlement {
+        return DB::transaction(function () use ($organizationId, $policy, $idempotencyKey, $endsAt): Entitlement {
             $entitlement = Entitlement::query()->firstOrCreate(
                 ['idempotency_key' => $idempotencyKey],
                 [
@@ -39,7 +41,7 @@ final class EntitlementIssuer
                     'capability' => $policy->capability,
                     'status' => 'active',
                     'starts_at' => now(),
-                    'ends_at' => null,
+                    'ends_at' => $endsAt,
                 ],
             );
 

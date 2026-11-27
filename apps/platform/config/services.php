@@ -95,6 +95,11 @@ return [
         'client_secret' => env('GOOGLE_OAUTH_CLIENT_SECRET', ''),
     ],
 
+    // Owner-approved on 27 Nov 2026; set to false to stop new signup trials.
+    'kmj_signup_trial' => [
+        'enabled' => (bool) env('KMJ_CLOUDOS_SIGNUP_TRIAL', true),
+    ],
+
     'codebridge_gateway' => [
         // Private upstream is operator-approved (usually same-host loopback).
         // An unconfigured upstream must fail closed, never send device/MCP
