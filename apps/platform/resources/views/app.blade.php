@@ -79,6 +79,25 @@
         </x-inertia::head>
     </head>
     <body class="font-sans antialiased">
+        @if ($initialSeo && $initialSeo['fallback'])
+            <noscript>
+                <article>
+                    <h1>{{ $initialSeo['fallback']['heading'] }}</h1>
+                    @if ($initialSeo['fallback']['summary'] !== '')
+                        <p>{{ $initialSeo['fallback']['summary'] }}</p>
+                    @endif
+                    @foreach ($initialSeo['fallback']['answers'] as $item)
+                        <h2>{{ $item['question'] }}</h2>
+                        <p>{{ $item['answer'] }}</p>
+                    @endforeach
+                    <ul>
+                        @foreach ($initialSeo['fallback']['links'] as $link)
+                            <li><a href="{{ $link['href'] }}">{{ $link['label'] }}</a> {{ $link['text'] }}</li>
+                        @endforeach
+                    </ul>
+                </article>
+            </noscript>
+        @endif
         <x-inertia::app />
     </body>
 </html>

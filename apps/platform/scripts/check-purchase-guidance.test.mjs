@@ -32,7 +32,7 @@ void test('guests are told an account is needed before requesting access', () =>
         new URL('../resources/js/pages/products/show.tsx', import.meta.url),
         'utf8',
     );
-    assert.match(page, /Requesting access needs a KMJ account/);
-    assert.match(page, /No\s+payment is taken at this step/);
+    assert.match(page, /Requesting access needs a KMJ\s+account/);
+    assert.match(page, /No\s+payment\s+is\s+taken\s+at\s+this\s+step/);
     assert.match(page, /!signedIn/);
 });

@@ -12,7 +12,7 @@ final class PublicInitialMetadata
 {
     /**
      * @param  array<string, mixed>  $page
-     * @return array<string, string>|null
+     * @return array<string, mixed>|null
      */
     public function forPage(array $page, string $origin): ?array
     {
@@ -119,18 +119,31 @@ final class PublicInitialMetadata
                 $schema['provider'] = ['@type' => 'Organization', 'name' => 'KMJ TECHNO'];
             }
             $questions = [];
-            $faqs = $product['content']['faqs'] ?? [];
+            // The route's visible answers win; they already include owner FAQs.
+            $faqs = $page['props']['answers'] ?? $product['content']['faqs'] ?? [];
             if (is_array($faqs)) {
-                foreach (array_slice($faqs, 0, 8) as $faq) {
+                foreach (array_slice($faqs, 0, 12) as $faq) {
                     if (is_array($faq) && is_string($faq['question'] ?? null) && is_string($faq['answer'] ?? null)
                         && trim($faq['question']) !== '' && trim($faq['answer']) !== '') {
                         $questions[] = ['@type' => 'Question', 'name' => $faq['question'], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $faq['answer']]];
                     }
                 }
             }
+            $nodes = [$schema];
             if ($questions !== []) {
-                $schema = [$schema, ['@context' => 'https://schema.org', '@type' => 'FAQPage', 'url' => $canonical, 'mainEntity' => $questions]];
+                $nodes[] = ['@context' => 'https://schema.org', '@type' => 'FAQPage', 'url' => $canonical, 'mainEntity' => $questions];
             }
+            $crumbs = [['Home', $base.'/'], ['Products', $base.'/products'], [$name, $canonical]];
+            $nodes[] = [
+                '@context' => 'https://schema.org',
+                '@type' => 'BreadcrumbList',
+                'itemListElement' => array_map(
+                    fn (int $index, array $crumb): array => ['@type' => 'ListItem', 'position' => $index + 1, 'name' => $crumb[0], 'item' => $crumb[1]],
+                    array_keys($crumbs),
+                    $crumbs,
+                ),
+            ];
+            $schema = $nodes;
         }
 
         $json = json_encode(
@@ -143,6 +156,7 @@ final class PublicInitialMetadata
         }
 
         return [
+            'fallback' => $this->fallback($component, $page['props'] ?? []),
             'json_ld' => $json,
             'title' => $title,
             'description' => $description,
@@ -151,5 +165,44 @@ final class PublicInitialMetadata
             'type' => str_starts_with($component, 'legal/') || str_starts_with($component, 'products/codebridge/')
                 ? 'article' : 'website',
         ];
+    }
+
+    /**
+     * Readable copy of facts already visible on the page, for crawlers that do
+     * not run JavaScript.
+     *
+     * @return array{heading: string, summary: string, answers: array<mixed>, links: list<array{href: string, label: string, text: string}>}|null
+     */
+    private function fallback(string $component, mixed $props): ?array
+    {
+        if (! is_array($props)) {
+            return null;
+        }
+
+        if ($component === 'products/show') {
+            return [
+                'heading' => (string) $props['product']['name'],
+                'summary' => (string) $props['product']['summary'],
+                'answers' => array_values(is_array($props['answers'] ?? null) ? $props['answers'] : []),
+                'links' => [['href' => '/products', 'label' => 'All products', 'text' => '']],
+            ];
+        }
+
+        if ($component !== 'products/index' || ! is_array($props['products'] ?? null)) {
+            return null;
+        }
+
+        $links = [];
+        foreach ($props['products'] as $product) {
+            if (is_array($product) && is_string($product['slug'] ?? null) && is_string($product['name'] ?? null)) {
+                $links[] = [
+                    'href' => '/products/'.rawurlencode($product['slug']),
+                    'label' => $product['name'],
+                    'text' => trim(($product['lifecycle_label'] ?? '').'. '.($product['summary'] ?? '')),
+                ];
+            }
+        }
+
+        return ['heading' => 'KMJ TECHNO products', 'summary' => '', 'answers' => [], 'links' => $links];
     }
 }

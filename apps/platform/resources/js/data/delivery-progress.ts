@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'product-page-seo-geo-20261127',
+        title: 'Premium product pages with crawlable answers',
+        state: 'active',
+        detail: 'SOURCE ONLY: product pages use one clear action, price cards, plain words and visible common questions. The same facts feed server FAQ and breadcrumb structured data, a no-script copy and llms.txt. Locale URLs, hreflang and full server rendering are not done.',
+        evidence:
+            'Local render at four widths and source tests; no live, Search Console or answer-engine evidence yet.',
+    },
+    {
         id: 'signup-trial-preregister-20261127',
         title: 'Sign up for a product: CloudOS trial or pre-registration',
         state: 'active',
