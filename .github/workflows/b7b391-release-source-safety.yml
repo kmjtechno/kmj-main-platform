@@ -1,0 +1,23 @@
+name: KMJ B7B391 Immutable P0 Release Source Safety
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/*b7b391*'
+      - 'scripts/test_b7b391_release_contract.py'
+      - '.github/workflows/b7b391-release-source-safety.yml'
+permissions:
+  contents: read
+jobs:
+  source-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Test immutable preflight and non-deploy rollback scripts
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m unittest discover -s scripts -p test_b7b391_release_contract.py -v
+          echo 'SOURCE_GATE=PASS'
+          echo 'LIVE_BACKUP_ROLLBACK_AND_AUTH_QA=NOT_ATTESTED_BY_SOURCE_CI'
