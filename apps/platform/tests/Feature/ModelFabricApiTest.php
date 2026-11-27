@@ -330,7 +330,7 @@ final class ModelFabricApiTest extends TestCase
         $this->evidenced('llama-free');
         Http::fake([
             'api.groq.com/*' => Http::response([
-                'choices' => [['message' => ['content' => str_repeat('x', 8001), 'finish_reason' => 'stop']],
+                'choices' => [['message' => ['content' => str_repeat('x', 8001)], 'finish_reason' => 'stop']],
             ], 200),
         ]);
 
