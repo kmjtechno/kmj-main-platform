@@ -490,6 +490,30 @@ final class ModelFabricGatewayTest extends TestCase
         Http::assertSentCount(2);
     }
 
+    public function test_internal_private_source_invocation_requires_native_ticket_route_before_any_ledger_or_http(): void
+    {
+        $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        Http::fake(['api.groq.com/*' => Http::response([
+            'choices' => [['message' => ['content' => 'should never be dispatched']]],
+        ], 200)]);
+        $gateway = app(ModelFabricGateway::class);
+        $messages = [['role' => 'user', 'content' => 'confidential code']];
+
+        $this->assertSame('native_admission_required', $gateway->complete(
+            $this->org, $messages, capability: 'code', privateSource: true,
+        )['error_code']);
+        $this->assertSame('native_admission_required', $gateway->complete(
+            $this->org, $messages, capability: 'code', privateSource: true, strictFreeCloud: true,
+        )['error_code']);
+        $this->assertSame('native_admission_required', $gateway->complete(
+            $this->org, $messages, capability: 'code', privateSource: true,
+            nativeRoute: ['provider_id' => $provider->id, 'model' => 'model-a'],
+        )['error_code']);
+
+        Http::assertNothingSent();
+        $this->assertSame(0, AiModelRequest::query()->count());
+    }
+
     public function test_keyless_inference_requires_explicit_public_prompt_confirmation(): void
     {
         AiProvider::query()->create(array_replace(
@@ -501,7 +525,7 @@ final class ModelFabricGatewayTest extends TestCase
         $messages = [['role' => 'user', 'content' => 'ping']];
 
         $this->assertSame('NO_FREE_ROUTE_AVAILABLE', $gateway->complete($this->org, $messages)['error_code']);
-        $this->assertSame('NO_FREE_ROUTE_AVAILABLE', $gateway->complete($this->org, $messages, privateSource: true, publicPromptsConfirmed: true)['error_code']);
+        $this->assertSame('native_admission_required', $gateway->complete($this->org, $messages, privateSource: true, publicPromptsConfirmed: true)['error_code']);
         Http::assertNothingSent();
 
         $this->assertTrue($gateway->complete($this->org, $messages, publicPromptsConfirmed: true)['ok']);
