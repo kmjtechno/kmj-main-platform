@@ -191,6 +191,15 @@ final class OpenAiCompatibleAdapter
             'max_tokens' => $strictCodingTokens ?? self::MAX_COMPLETION_TOKENS,
             'stream' => false,
         ];
+        // For ALL OpenRouter requests, not only private-source coding, constrain the
+        // upstream provider selector to zero-priced inference. A stale :free listing
+        // or provider price change must fail closed instead of spending credits.
+        if ($target['host'] === 'openrouter.ai') {
+            $body['provider'] = [
+                'allow_fallbacks' => false,
+                'max_price' => ['prompt' => 0, 'completion' => 0, 'request' => 0, 'image' => 0],
+            ];
+        }
         if ($strictCodingTokens !== null) {
             // Independently verify this exact account and model before sending source.
             // Do not route unsupported providers through the general chat path.
