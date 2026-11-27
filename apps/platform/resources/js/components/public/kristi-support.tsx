@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
-import { Bot, ChevronRight, MessageCircle, X } from 'lucide-react';
+import { ChevronRight, X } from 'lucide-react';
 import { useState } from 'react';
+import KristiLauncher from '@/components/public/kristi-launcher';
 
 const options = [
     {
@@ -47,14 +48,18 @@ export default function KristiSupport() {
                 >
                     <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3.5">
                         <div className="flex items-center gap-3">
-                            <span className="grid h-9 w-9 place-items-center rounded-xl border border-[#e21b23]/20 bg-[#e21b23]/10 text-[#ff4c55]">
-                                <Bot className="h-4 w-4" />
-                            </span>
+                            <img
+                                src="/assets/locked/kristi-public.webp"
+                                alt=""
+                                width="40"
+                                height="40"
+                                className="h-10 w-10 rounded-full border-2 border-[#ff2c48] object-cover object-[50%_12%]"
+                            />
                             <div>
                                 <div className="text-sm font-black">
                                     Kristi Support
                                 </div>
-                                <div className="mt-0.5 text-[10px] font-bold tracking-[0.12em] text-white/36 uppercase">
+                                <div className="mt-0.5 text-[10px] font-bold tracking-[0.12em] text-white/65 uppercase">
                                     Verified product guidance
                                 </div>
                             </div>
@@ -117,18 +122,16 @@ export default function KristiSupport() {
                 </section>
             )}
 
-            <button
-                type="button"
-                onClick={() => setOpen((value) => !value)}
-                aria-expanded={open}
-                aria-label={
-                    open ? 'Close Kristi support' : 'Open Kristi support'
-                }
-                className="ml-auto flex h-12 items-center gap-2 rounded-full border border-[#e21b23]/35 bg-[#e21b23] px-4 text-sm font-black text-white shadow-xl shadow-[#e21b23]/20 transition hover:-translate-y-0.5 hover:bg-[#f22b34]"
-            >
-                <MessageCircle className="h-4 w-4" />
-                Kristi Support
-            </button>
+            <div className="flex justify-end">
+                <KristiLauncher
+                    label="Kristi Support"
+                    open={open}
+                    accessibleName={
+                        open ? 'Close Kristi support' : 'Open Kristi support'
+                    }
+                    onClick={() => setOpen((value) => !value)}
+                />
+            </div>
         </div>
     );
 }

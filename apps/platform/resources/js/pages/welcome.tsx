@@ -19,12 +19,38 @@ import {
     X,
     Send,
     ChevronRight,
+    Bot,
+    Boxes,
+    CircleCheck,
+    CodeXml,
+    DraftingCompass,
+    FlaskConical,
+    GraduationCap,
+    Hammer,
+    HeartPulse,
+    KeyRound,
+    Landmark,
+    LifeBuoy,
+    Lightbulb,
+    Map,
+    MessagesSquare,
+    MonitorSmartphone,
+    Network,
+    Palette,
+    Projector,
+    ScanLine,
+    Sparkles,
+    SquareTerminal,
+    Tag,
+    Telescope,
+    Ticket,
 } from 'lucide-react';
 import LockedBrand from '@/components/locked-brand';
 import PublicSiteHeader from '@/components/public-site-header';
 import PublicSiteFooter from '@/components/public-site-footer';
 import ProductArtwork from '@/components/product-artwork';
 import PublicSeo from '@/components/public-seo';
+import KristiLauncher from '@/components/public/kristi-launcher';
 import { productImageForSlug } from '@/lib/product-image-identity';
 import '../../css/locked-landing.css';
 import '../../css/public-theme.css';
@@ -150,12 +176,33 @@ const guidance = [
         '#contact',
     ],
 ];
+const industryIcons: Record<string, typeof Cloud> = {
+    entertainment: Ticket,
+    education: GraduationCap,
+    museums: Landmark,
+    industry: Factory,
+    research: FlaskConical,
+    architecture: DraftingCompass,
+    healthcare: HeartPulse,
+    corporate: Building2,
+};
+// One icon per guidance topic, in the same order as the topics.
+const guidanceIcons = [
+    Boxes,
+    Tag,
+    Lightbulb,
+    Smartphone,
+    LifeBuoy,
+    MessagesSquare,
+];
 function SectionHeading({
+    icon: Icon,
     title,
     subtitle,
     href,
     label = 'Explore more',
 }: {
+    icon: typeof Cloud;
     title: string;
     subtitle: string;
     href?: string;
@@ -163,6 +210,9 @@ function SectionHeading({
 }) {
     return (
         <div className="lock-heading">
+            <span className="lock-heading-icon">
+                <Icon aria-hidden="true" />
+            </span>
             <div>
                 <h2>{title}</h2>
                 <p>{subtitle}</p>
@@ -201,11 +251,6 @@ function PublicKristi() {
         >
             {open ? (
                 <>
-                    <img
-                        src="/assets/locked/kristi-public.webp"
-                        className="lock-kristi-person"
-                        alt="Kristi, KMJ product guide"
-                    />
                     <div className="lock-kristi-box">
                         <button
                             className="lock-close"
@@ -214,24 +259,43 @@ function PublicKristi() {
                         >
                             <X size={14} />
                         </button>
-                        <h3>
-                            Hi, I'm Kristi <span>✦</span>
-                        </h3>
-                        <p>
-                            Your product guide.
-                            <br />
-                            How can I help you today?
-                        </p>
-                        {guidance.map(([label], i) => (
-                            <button
-                                className="lock-kristi-option"
-                                key={label}
-                                onClick={() => setAnswer(i)}
-                            >
-                                {label}
-                                <ChevronRight size={11} />
-                            </button>
-                        ))}
+                        <div className="lock-kristi-head">
+                            <img
+                                src="/assets/locked/kristi-public.webp"
+                                className="lock-kristi-person"
+                                alt="Kristi, KMJ product guide"
+                                width="64"
+                                height="96"
+                            />
+                            <div>
+                                <h3>
+                                    Hi, I'm Kristi{' '}
+                                    <Sparkles aria-hidden="true" size={14} />
+                                </h3>
+                                <p>
+                                    Your product guide. How can I help you
+                                    today?
+                                </p>
+                            </div>
+                        </div>
+                        {guidance.map(([label], i) => {
+                            const Icon = guidanceIcons[i] ?? Bot;
+
+                            return (
+                                <button
+                                    className="lock-kristi-option"
+                                    key={label}
+                                    onClick={() => setAnswer(i)}
+                                >
+                                    <Icon aria-hidden="true" size={15} />
+                                    <span>{label}</span>
+                                    <ChevronRight
+                                        aria-hidden="true"
+                                        size={13}
+                                    />
+                                </button>
+                            );
+                        })}
                         {answer !== null && (
                             <div className="lock-kristi-answer" role="status">
                                 {guidance[answer][1]}{' '}
@@ -260,13 +324,10 @@ function PublicKristi() {
                     </div>
                 </>
             ) : (
-                <button
-                    className="lock-primary"
-                    aria-expanded={false}
+                <KristiLauncher
+                    label="Ask Kristi"
                     onClick={() => setOpen(true)}
-                >
-                    Ask Kristi
-                </button>
+                />
             )}
         </aside>
     );
@@ -359,7 +420,7 @@ export default function Welcome({
                                 >
                                     <DialogPrimitive.Trigger asChild>
                                         <button className="lock-outline">
-                                            <Building2 size={20} /> Company
+                                            <Building2 size={15} /> Company
                                             overview
                                         </button>
                                     </DialogPrimitive.Trigger>
@@ -461,6 +522,7 @@ export default function Welcome({
                     </div>
                     <section className="lock-section" id="flagship">
                         <SectionHeading
+                            icon={Boxes}
                             title="Our Flagship Products"
                             subtitle="Powerful solutions for immersive experiences, intelligent operations and real-world impact."
                             href="/products"
@@ -511,6 +573,7 @@ export default function Welcome({
                         aria-labelledby="what-we-build-heading"
                     >
                         <SectionHeading
+                            icon={CodeXml}
                             title="What We Build"
                             subtitle="From idea to global deployment — we build any kind of software, system or immersive experience."
                             href="/capabilities"
@@ -530,6 +593,7 @@ export default function Welcome({
                     </section>
                     <section className="lock-ecosystem">
                         <SectionHeading
+                            icon={Network}
                             title="A Complete and Connected Ecosystem"
                             subtitle="Our products work together to create a unified platform for creation, control, deployment and growth."
                             href="/products"
@@ -552,69 +616,93 @@ export default function Welcome({
                                         'CloudOS',
                                         'Core Platform',
                                         '/products/kmj-cloudos',
+
+                                        Cloud,
                                     ],
                                     [
                                         'CodeBridge',
                                         'Build Apps',
                                         '/products/kmj-codebridge',
+
+                                        CodeXml,
                                     ],
                                     [
                                         'Cloud Nexus',
                                         'Engineering IDE',
                                         '/products/kmj-cloud-nexus',
+
+                                        SquareTerminal,
                                     ],
                                     [
                                         'Agent',
                                         'AI Automation',
                                         '/products/kmj-agent',
+
+                                        Bot,
                                     ],
                                     [
                                         'Calibration Pro',
                                         'Precision Tools',
                                         '/products/kmj-calibration-pro',
+
+                                        ScanLine,
                                     ],
                                     [
                                         'Cinema Platform',
                                         'Immersive Media',
                                         '/products/kmj-cinema-platform',
+
+                                        Projector,
                                     ],
                                     [
                                         'Forge',
                                         'Engineering Systems',
                                         '/products/kmj-forge',
+
+                                        Hammer,
                                     ],
                                     [
                                         'Licensing Hub',
                                         'Access & Control',
                                         '/products/kmj-licensing-hub',
+
+                                        KeyRound,
                                     ],
                                     [
                                         'OmniDesk',
                                         'Remote Access',
                                         '/products/kmj-omnidesk',
+
+                                        MonitorSmartphone,
                                     ],
                                     [
                                         'Creative Studio',
                                         'Content & Media',
                                         '/products/kmj-creative-studio',
+
+                                        Palette,
                                     ],
-                                ].map(([name, detail, href], i) => (
-                                    <Link
-                                        key={name}
-                                        href={href}
-                                        style={
-                                            {
-                                                '--orbit-index': i,
-                                            } as React.CSSProperties
-                                        }
-                                    >
-                                        <Layers3 />
-                                        <span>
-                                            <strong>{name}</strong>
-                                            <small>{detail}</small>
-                                        </span>
-                                    </Link>
-                                ))}
+                                ].map(([name, detail, href, icon], i) => {
+                                    const Icon = icon as typeof Cloud;
+
+                                    return (
+                                        <Link
+                                            key={String(name)}
+                                            href={String(href)}
+                                            style={
+                                                {
+                                                    '--orbit-index': i,
+                                                } as React.CSSProperties
+                                            }
+                                        >
+                                            <Icon aria-hidden="true" />
+                                            <span>
+                                                <strong>{String(name)}</strong>
+                                                <small>{String(detail)}</small>
+                                            </span>
+                                        </Link>
+                                    );
+                                })}
                             </div>
                             <p className="lock-ecosystem-left">
                                 ONE
@@ -642,32 +730,41 @@ export default function Welcome({
                     </section>
                     <section className="lock-section" id="industries">
                         <SectionHeading
+                            icon={Factory}
                             title="Industries We Serve"
                             subtitle="Real solutions for real-world challenges."
                             href="/capabilities"
                             label="View All Industries"
                         />
                         <div className="lock-industries">
-                            {industries.map(([key, label]) => (
-                                <Link href="/capabilities" key={key}>
-                                    <img
-                                        src={
-                                            '/assets/locked/industry-' +
-                                            key +
-                                            '.webp'
-                                        }
-                                        alt=""
-                                        loading="lazy"
-                                        width="320"
-                                        height="180"
-                                    />
-                                    <h3>{label}</h3>
-                                </Link>
-                            ))}
+                            {industries.map(([key, label]) => {
+                                const Icon = industryIcons[key];
+
+                                return (
+                                    <Link href="/capabilities" key={key}>
+                                        <img
+                                            src={
+                                                '/assets/locked/industry-' +
+                                                key +
+                                                '.webp'
+                                            }
+                                            alt=""
+                                            loading="lazy"
+                                            width="320"
+                                            height="180"
+                                        />
+                                        <span className="lock-industry-icon">
+                                            <Icon aria-hidden="true" />
+                                        </span>
+                                        <h3>{label}</h3>
+                                    </Link>
+                                );
+                            })}
                         </div>
                     </section>
                     <section id="roadmap" className="lock-roadmap">
                         <SectionHeading
+                            icon={Map}
                             title="Our Roadmap"
                             subtitle="Building a future-ready ecosystem."
                             href="/products"
@@ -679,32 +776,44 @@ export default function Welcome({
                                     'Now',
                                     'Available Products',
                                     'Review platform and product availability.',
+                                    CircleCheck,
                                 ],
                                 [
                                     'Next',
                                     'Enhanced Features',
                                     'Advanced capabilities and new integrations.',
+                                    Sparkles,
                                 ],
                                 [
                                     'In Development',
                                     'New Products',
                                     'Ongoing development and testing.',
+                                    Hammer,
                                 ],
                                 [
                                     'Future',
                                     'Ecosystem Expansion',
                                     'More industries, more tools and global reach.',
+                                    Telescope,
                                 ],
-                            ].map(([title, sub, text], i) => (
-                                <div key={title}>
-                                    <span>0{i + 1}</span>
-                                    <section>
-                                        <h3>{title}</h3>
-                                        <strong>{sub}</strong>
-                                        <p>{text}</p>
-                                    </section>
-                                </div>
-                            ))}
+                            ].map(([title, sub, text, icon], i) => {
+                                const Icon = icon as typeof Cloud;
+
+                                return (
+                                    <div key={String(title)}>
+                                        <span>
+                                            <Icon aria-hidden="true" />
+                                        </span>
+                                        <section>
+                                            <h3>
+                                                0{i + 1} · {String(title)}
+                                            </h3>
+                                            <strong>{String(sub)}</strong>
+                                            <p>{String(text)}</p>
+                                        </section>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </section>
                 </main>

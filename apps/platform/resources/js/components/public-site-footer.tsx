@@ -1,5 +1,16 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ArrowRight } from 'lucide-react';
+import {
+    ArrowRight,
+    BookOpen,
+    Boxes,
+    Building2,
+    Globe2,
+    LayoutDashboard,
+    Linkedin,
+    LogIn,
+    Scale,
+    Send,
+} from 'lucide-react';
 import LockedBrand from '@/components/locked-brand';
 import KristiSupport from '@/components/public/kristi-support';
 import '../../css/locked-landing.css';
@@ -36,6 +47,12 @@ const sections = [
     ],
 ] as const;
 
+const sectionIcons = {
+    Company: Building2,
+    Resources: BookOpen,
+    Legal: Scale,
+};
+
 export default function PublicSiteFooter({
     products = [],
     support = true,
@@ -61,7 +78,10 @@ export default function PublicSiteFooter({
                         </Link>
                     </div>
                     <div>
-                        <h3>Products</h3>
+                        <h3>
+                            <Boxes aria-hidden="true" size={15} />
+                            Products
+                        </h3>
                         {products.slice(0, 10).map((product) => (
                             <Link
                                 key={product.slug}
@@ -74,18 +94,28 @@ export default function PublicSiteFooter({
                             Explore all products <ArrowRight size={12} />
                         </Link>
                     </div>
-                    {sections.map(([title, links]) => (
-                        <div key={title}>
-                            <h3>{title}</h3>
-                            {links.map(([label, href]) => (
-                                <Link key={label} href={href}>
-                                    {label}
-                                </Link>
-                            ))}
-                        </div>
-                    ))}
+                    {sections.map(([title, links]) => {
+                        const Icon = sectionIcons[title];
+
+                        return (
+                            <div key={title}>
+                                <h3>
+                                    <Icon aria-hidden="true" size={15} />
+                                    {title}
+                                </h3>
+                                {links.map(([label, href]) => (
+                                    <Link key={label} href={href}>
+                                        {label}
+                                    </Link>
+                                ))}
+                            </div>
+                        );
+                    })}
                     <div>
-                        <h3 id="contact">Stay Connected</h3>
+                        <h3 id="contact">
+                            <Send aria-hidden="true" size={15} />
+                            Stay Connected
+                        </h3>
                         <p>Discuss your project with KMJ TECHNO.</p>
                         <a
                             className="lock-outline"
@@ -93,6 +123,7 @@ export default function PublicSiteFooter({
                             target="_blank"
                             rel="noopener noreferrer"
                         >
+                            <Linkedin aria-hidden="true" size={15} />
                             Contact our team <ArrowRight size={12} />
                         </a>
                         <a
@@ -100,6 +131,7 @@ export default function PublicSiteFooter({
                             target="_blank"
                             rel="noopener noreferrer"
                         >
+                            <Globe2 aria-hidden="true" size={14} />
                             International B2B enquiries <ArrowRight size={12} />
                         </a>
                         {auth.user ? (
@@ -108,10 +140,14 @@ export default function PublicSiteFooter({
                                     ownerEnabled ? '/super-admin' : '/dashboard'
                                 }
                             >
+                                <LayoutDashboard aria-hidden="true" size={14} />
                                 Dashboard
                             </Link>
                         ) : (
-                            <Link href="/login">Sign in</Link>
+                            <Link href="/login">
+                                <LogIn aria-hidden="true" size={14} />
+                                Sign in
+                            </Link>
                         )}
                     </div>
                 </div>

@@ -1,0 +1,525 @@
+/* Professional layout, readable sizes and icons for the public pages. */
+
+/* Floating buttons */
+.kmj-to-top {
+    position: fixed;
+    right: 26px;
+    bottom: 108px;
+    z-index: 55;
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    background: rgba(10, 15, 22, 0.9);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 12px 30px -10px #000;
+    visibility: hidden;
+    opacity: 0;
+    translate: 0 14px;
+}
+.kmj-to-top[data-visible] {
+    visibility: visible;
+    opacity: 1;
+    translate: 0 0;
+}
+.kmj-to-top:hover,
+.kmj-to-top:focus-visible {
+    border-color: #ff3a4c;
+    background: #c1121f;
+}
+.kmj-kristi-launcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #fff;
+    cursor: pointer;
+}
+.kmj-kristi-label {
+    padding: 9px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    background: rgba(9, 13, 19, 0.94);
+    font-size: 12.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: 0 10px 26px -12px #000;
+}
+.kmj-kristi-face {
+    position: relative;
+    display: block;
+    width: 64px;
+    height: 64px;
+    border: 2px solid #ff2c48;
+    border-radius: 999px;
+    background: #12070a;
+    box-shadow:
+        0 0 0 5px rgba(255, 44, 72, 0.16),
+        0 14px 30px -10px rgba(255, 20, 50, 0.7);
+}
+.kmj-kristi-face img {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+    object-position: 50% 12%;
+}
+.kmj-kristi-badge {
+    position: absolute;
+    right: -3px;
+    bottom: -3px;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #05090d;
+    border-radius: 999px;
+    background: #c1121f;
+}
+.locked-landing .lock-kristi {
+    right: 24px;
+    bottom: 24px;
+    z-index: 56;
+}
+.locked-landing .lock-kristi.is-open {
+    display: block;
+    width: min(340px, calc(100vw - 32px));
+    transform: none;
+}
+.locked-landing .lock-kristi-box {
+    width: 100%;
+    max-height: calc(100dvh - 110px);
+    overflow-y: auto;
+    padding: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 20px;
+    background: rgba(9, 13, 19, 0.97);
+    color: #f4f6fa;
+    box-shadow:
+        0 30px 70px -20px #000,
+        0 0 0 1px rgba(255, 44, 72, 0.18);
+}
+.locked-landing .lock-kristi-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 28px 14px 0;
+}
+.locked-landing .lock-kristi-person {
+    position: static;
+    flex-shrink: 0;
+    width: 52px;
+    height: 52px;
+    border: 2px solid #ff2c48;
+    border-radius: 999px;
+    object-fit: cover;
+    object-position: 50% 12%;
+    mask-image: none;
+}
+.locked-landing .lock-kristi-box h3 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 2px;
+    font-size: 15px;
+    font-weight: 700;
+}
+.locked-landing .lock-kristi-box h3 svg {
+    color: #ff6a72;
+}
+.locked-landing .lock-kristi-head p {
+    margin: 0;
+    color: #b9c4d0;
+    font-size: 12px;
+    line-height: 1.45;
+}
+.locked-landing .lock-close {
+    color: #c5d0db;
+    padding: 4px;
+}
+.locked-landing .lock-kristi-option {
+    justify-content: flex-start;
+    gap: 10px;
+    margin-bottom: 6px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    color: #f4f6fa;
+    font-size: 12.5px;
+    font-weight: 600;
+}
+.locked-landing .lock-kristi-option span {
+    flex: 1;
+}
+.locked-landing .lock-kristi-option > svg:first-child {
+    color: #ff6a72;
+}
+.locked-landing .lock-kristi-option:hover {
+    border-color: rgba(255, 58, 76, 0.7);
+    background: rgba(255, 44, 72, 0.12);
+}
+.locked-landing .lock-kristi-answer {
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 58, 76, 0.35);
+    border-radius: 10px;
+    background: rgba(255, 44, 72, 0.1);
+    color: #f4f6fa;
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+.locked-landing .lock-kristi-answer a {
+    align-items: center;
+    gap: 5px;
+    color: #ff8a93;
+}
+.locked-landing .lock-kristi-box input {
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 10px;
+    background: #05090d;
+    color: #fff;
+    font-size: 12.5px;
+}
+.locked-landing .lock-kristi-box form button {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #c1121f;
+}
+
+/* Header, footer and menu icons */
+.lock-header.kmj-public-header .lock-auth-login,
+.lock-header.kmj-public-header .lock-auth-register {
+    gap: 7px;
+}
+.lock-header.kmj-public-header .kmj-nav-icon {
+    display: none;
+}
+@media (max-width: 1050px) {
+    .lock-header.kmj-public-header .kmj-nav-icon {
+        display: block;
+        margin-right: 12px;
+        color: #ff6a72;
+    }
+    .lock-header.kmj-public-header nav.is-open a {
+        justify-content: flex-start;
+    }
+}
+@media (max-width: 560px) {
+    .lock-header.kmj-public-header .lock-auth svg {
+        display: none;
+    }
+}
+.kmj-public-footer .lock-footer-main {
+    max-width: 1440px;
+    gap: 28px;
+    padding: 56px clamp(16px, 4vw, 48px) 44px;
+}
+.kmj-public-footer .lock-footer-main h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    font-weight: 700;
+}
+.kmj-public-footer .lock-footer-main h3 svg {
+    color: #ff4a5c;
+}
+.kmj-public-footer .lock-footer-main p,
+.kmj-public-footer .lock-footer-main a {
+    font-size: 12.5px;
+}
+.kmj-public-footer .lock-footer-main a {
+    gap: 7px;
+    margin-top: 8px;
+    color: #c5d0db;
+}
+.kmj-public-footer .lock-copyright {
+    padding-block: 20px 24px;
+    font-size: 12px;
+}
+@media (max-width: 900px) {
+    .kmj-public-footer .lock-footer-main {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        padding-bottom: 110px;
+    }
+}
+@media (max-width: 560px) {
+    .kmj-public-footer .lock-footer-main {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .kmj-public-footer .lock-footer-main > div {
+        border: 0;
+    }
+    .kmj-public-footer .lock-footer-main > div:last-child {
+        grid-column: 1 / -1;
+    }
+    .kmj-public-footer .lock-copyright {
+        flex-direction: column;
+        gap: 6px;
+    }
+    .kmj-kristi-label {
+        display: none;
+    }
+    .kmj-to-top {
+        right: 20px;
+        bottom: 98px;
+    }
+}
+
+/* Home page rhythm */
+.locked-landing .lock-trust {
+    padding-block: 24px;
+}
+.locked-landing .lock-trust strong {
+    font-size: 13px;
+}
+.locked-landing .lock-trust small {
+    margin-top: 2px;
+    font-size: 11.5px;
+}
+.locked-landing .lock-section {
+    max-width: 1440px;
+    padding: 72px clamp(16px, 4vw, 48px) 0;
+}
+.locked-landing .lock-heading {
+    justify-content: flex-start;
+    gap: 16px;
+    margin-bottom: 28px;
+}
+.locked-landing .lock-heading > div {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+}
+.locked-landing .lock-heading-icon {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border: 1px solid rgba(255, 58, 76, 0.4);
+    border-radius: 14px;
+    background: linear-gradient(150deg, rgba(255, 44, 72, 0.22), transparent);
+    color: #ff5a6a;
+}
+.locked-landing .lock-heading h2 {
+    font-size: clamp(23px, 2.5vw, 34px);
+    letter-spacing: -0.025em;
+}
+.locked-landing .lock-heading p {
+    margin-top: 7px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+.locked-landing .lock-heading .lock-outline {
+    min-height: 40px;
+    padding: 9px 18px;
+    border-radius: 999px;
+    font-size: 12.5px;
+}
+.locked-landing .lock-product h3 {
+    font-size: 17px;
+}
+.locked-landing .lock-product p {
+    font-size: 13px;
+    line-height: 1.55;
+}
+.locked-landing .lock-product > a > div {
+    padding: 18px;
+}
+.locked-landing .lock-product img,
+.locked-landing .lock-product-art-unavailable {
+    aspect-ratio: 16 / 10;
+}
+.locked-landing .lock-product-cta {
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+}
+.locked-landing .lock-catalog-note {
+    margin-top: 18px;
+    text-align: center;
+    font-size: 12px;
+}
+.locked-landing .lock-capabilities {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+.locked-landing .lock-capabilities > a {
+    padding: 26px 20px;
+    border-radius: 16px;
+    text-align: left;
+}
+.locked-landing .lock-capabilities svg {
+    box-sizing: content-box;
+    width: 26px;
+    height: 26px;
+    margin: 0 0 16px;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(255, 44, 72, 0.14);
+}
+.locked-landing .lock-capabilities h3 {
+    margin-bottom: 8px;
+    font-size: 15px;
+}
+.locked-landing .lock-capabilities p {
+    font-size: 13px;
+    line-height: 1.55;
+}
+.locked-landing .lock-ecosystem,
+.locked-landing .lock-roadmap {
+    padding-top: 64px;
+}
+.locked-landing .lock-ecosystem > .lock-heading,
+.locked-landing .lock-roadmap > .lock-heading {
+    max-width: 1440px;
+    padding-inline: clamp(16px, 4vw, 48px);
+}
+.locked-landing .lock-ecosystem-left,
+.locked-landing .lock-ecosystem-right {
+    display: none;
+}
+.locked-landing .lock-industries {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+.locked-landing .lock-industries > a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-radius: 16px;
+}
+.locked-landing .lock-industries img {
+    aspect-ratio: 16 / 9;
+}
+.locked-landing .lock-industry-icon {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    margin-top: -23px;
+    border: 1px solid rgba(255, 58, 76, 0.55);
+    border-radius: 13px;
+    background: #0b1017;
+    color: #ff5a6a;
+}
+.locked-landing .lock-industries h3 {
+    margin: 10px 12px 18px;
+    font-size: 13.5px;
+}
+.locked-landing .lock-roadmap {
+    margin-top: 72px;
+    padding-bottom: 64px;
+}
+.locked-landing .lock-roadmap-steps {
+    max-width: 1440px;
+    gap: 16px;
+    padding-inline: clamp(16px, 4vw, 48px);
+}
+.locked-landing .lock-roadmap-steps > div {
+    gap: 14px;
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 2px solid #ff3150;
+    border-radius: 16px;
+    background: rgba(5, 9, 14, 0.82);
+}
+.locked-landing .lock-roadmap-steps > div::before {
+    display: none;
+}
+.locked-landing .lock-roadmap-steps > div > span {
+    width: 44px;
+    height: 44px;
+}
+.locked-landing .lock-roadmap-steps > div > span svg {
+    width: 20px;
+    height: 20px;
+}
+.locked-landing .lock-roadmap-steps h3 {
+    font-size: 14px;
+}
+.locked-landing .lock-roadmap-steps strong,
+.locked-landing .lock-roadmap-steps p {
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+@media (max-width: 900px) {
+    .locked-landing .lock-capabilities,
+    .locked-landing .lock-industries,
+    .locked-landing .lock-roadmap-steps {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .locked-landing .lock-section {
+        padding-top: 52px;
+    }
+}
+@media (max-width: 560px) {
+    .locked-landing .lock-heading {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .locked-landing .lock-heading-icon {
+        width: 42px;
+        height: 42px;
+    }
+    .locked-landing .lock-roadmap-steps {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .locked-landing .lock-capabilities > a {
+        padding: 18px 14px;
+    }
+    .locked-landing .lock-trust {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .locked-landing .lock-trust > div {
+        justify-content: flex-start;
+        border: 0;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .kmj-to-top {
+        transition:
+            opacity 0.3s ease,
+            translate 0.3s ease,
+            visibility 0.3s,
+            background-color 0.25s ease;
+    }
+    .kmj-kristi-face {
+        animation: kmj-halo 2.8s ease-in-out infinite;
+        transition: scale 0.3s ease;
+    }
+    .kmj-kristi-launcher:hover .kmj-kristi-face {
+        scale: 1.08;
+    }
+    .locked-landing .lock-kristi-option {
+        transition:
+            translate 0.2s ease,
+            border-color 0.2s ease,
+            background-color 0.2s ease;
+    }
+    .locked-landing .lock-kristi-option:hover {
+        translate: 3px 0;
+    }
+    .locked-landing .lock-kristi-box {
+        animation: kmj-enter 0.4s ease backwards;
+    }
+}
+@keyframes kmj-halo {
+    50% {
+        box-shadow:
+            0 0 0 10px rgba(255, 44, 72, 0.05),
+            0 14px 30px -10px rgba(255, 20, 50, 0.7);
+    }
+}
