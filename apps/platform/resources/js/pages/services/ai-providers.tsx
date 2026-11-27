@@ -191,7 +191,7 @@ function ProviderCard({
                         ))}
                     </div>
                 </details>
-            )
+            )}
             <p className="text-muted-foreground text-xs">
                 {provider.last_successful_inference_at
                     ? `Last successful inference: ${new Date(provider.last_successful_inference_at).toLocaleString()}`
