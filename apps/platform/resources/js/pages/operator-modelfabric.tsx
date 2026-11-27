@@ -703,7 +703,7 @@ export default function OperatorModelFabric({
         },
         {
             title: 'Create a coding token',
-            detail: 'Issue a dedicated private-source token. A chat token is not sufficient.',
+            detail: 'Issue a private-source token. Live account admission, request-bound ticket and source consent remain separate gates.',
             complete: codingTokens > 0,
             tab: 'tokens',
         },
@@ -1334,15 +1334,9 @@ export default function OperatorModelFabric({
                                             />{' '}
                                             Secure coding
                                         </h2>
-                                        <StatusPill
-                                            tone={
-                                                privateReady && codingTokens > 0
-                                                    ? 'ok'
-                                                    : 'warn'
-                                            }
-                                        >
+                                        <StatusPill tone="warn">
                                             {privateReady && codingTokens > 0
-                                                ? 'Route and token ready'
+                                                ? 'Activation pending'
                                                 : 'Blocked'}
                                         </StatusPill>
                                     </div>
@@ -1368,8 +1362,13 @@ export default function OperatorModelFabric({
                                         </div>
                                     </div>
                                     <p className="text-muted-foreground text-sm">
-                                        Separate source-transfer consent and
-                                        worker activation required.
+                                        Model evidence and a token are not
+                                        account billing proof. Private-source
+                                        requests require strict-free-cloud,
+                                        a fresh single-use admission ticket and
+                                        explicit source-transfer consent.
+                                        Worker activation is independently
+                                        verified in CodeBridge.
                                     </p>
                                     {!privateReady ? (
                                         <p className="text-sm leading-relaxed">
@@ -2240,7 +2239,7 @@ export default function OperatorModelFabric({
                         id="tokens"
                         title="ModelFabric API tokens (OpenAI-compatible)"
                         label="API tokens"
-                        help="The caller never chooses a provider or model: ModelFabric picks only from your approved free models and says NO_FREE_ROUTE_AVAILABLE when none qualifies. Private-source tokens reach only models with documented no-training handling. Tokens are stored as a hash and shown once."
+                        help="The caller cannot pick a paid or unverified model. ModelFabric returns NO_FREE_ROUTE_AVAILABLE when none qualifies. Private-source tokens cannot send code without strict-free-cloud, a fresh request-bound single-use admission ticket and explicit source consent. Eligible route listings are not billing proof or worker readiness. Tokens are hashed at rest and shown once."
                     >
                         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3">
                             <p className="text-muted-foreground text-xs">
