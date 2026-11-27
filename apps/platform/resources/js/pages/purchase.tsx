@@ -44,9 +44,18 @@ type PurchaseProps = {
 };
 
 const purchaseSteps = [
-    'Request',
-    'KMJ confirms payment',
-    'Access activated',
+    {
+        title: 'Request',
+        detail: 'You send this request. No payment is taken on this page.',
+    },
+    {
+        title: 'KMJ confirms payment',
+        detail: 'A KMJ operator agrees price and payment with you, then confirms it.',
+    },
+    {
+        title: 'Access activated',
+        detail: 'After confirmation, access appears on your dashboard.',
+    },
 ] as const;
 
 function StatusBadge({ status }: { status: string }) {
@@ -139,13 +148,15 @@ export default function Purchase({
                         <ol className="mt-4 grid gap-2 text-xs sm:grid-cols-3">
                             {purchaseSteps.map((step, index) => (
                                 <li
-                                    key={step}
+                                    key={step.title}
                                     className="bg-muted/30 rounded-lg border px-3 py-2"
                                 >
                                     <span className="font-bold">
-                                        {index + 1}.
-                                    </span>{' '}
-                                    {step}
+                                        {index + 1}. {step.title}
+                                    </span>
+                                    <span className="text-muted-foreground mt-1 block leading-5">
+                                        {step.detail}
+                                    </span>
                                 </li>
                             ))}
                         </ol>

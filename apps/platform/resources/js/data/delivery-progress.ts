@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'P0 issue #1233 and keyless gateway regression; consolidated release only after acceptance.',
     },
     {
+        id: 'purchase-center-step-explanations-20261127',
+        title: 'Purchase Center: each step says who acts and what happens',
+        state: 'active',
+        detail: 'SOURCE ONLY: the three purchase steps now each explain what happens and who acts, including that no payment is taken on the request page. The page still shows no price or plan; that remains an open finding in the customer UX audit.',
+        evidence:
+            'Existing purchase-guidance source test passes; no live or mobile check yet.',
+    },
+    {
         id: 'customer-dashboard-product-wall-20261127',
         title: 'Customer dashboard: purchasable products first',
         state: 'active',
