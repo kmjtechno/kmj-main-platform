@@ -273,7 +273,19 @@ final class OpenAiCompatibleAdapter
             return ['ok' => true, 'content' => $content, 'error_code' => null, 'rate' => $rate];
         }
 
-        return ['ok' => true, 'content' => mb_substr($content, 0, 8000), 'error_code' => null, 'rate' => $rate];
+        // Never turn a provider's explicit token-limit interruption into a successful
+        // completed chat, and never silently truncate the answer returned to KMJ clients.
+        // Some OpenAI-compatible providers omit finish_reason on older API versions;
+        // reject any explicitly non-final reason while preserving those integrations.
+        $finishReason = $response->json('choices.0.finish_reason');
+        if (($finishReason !== null && $finishReason !== 'stop') || str_contains($content, "\0")) {
+            return $fail('incomplete_response');
+        }
+        if (mb_strlen($content) > 8000) {
+            return $fail('response_too_large');
+        }
+
+        return ['ok' => true, 'content' => $content, 'error_code' => null, 'rate' => $rate];
     }
 
     /**
