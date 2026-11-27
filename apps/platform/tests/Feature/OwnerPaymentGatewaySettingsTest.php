@@ -547,6 +547,9 @@ final class OwnerPaymentGatewaySettingsTest extends TestCase
             ->where('action', 'payment_gateway.sandbox_order_probe')
             ->firstOrFail()->outcome);
         self::assertFalse((bool) app(PaymentGatewayReadiness::class)->snapshot()['live_charging_enabled']);
+        $providers = collect(app(PaymentGatewayReadiness::class)->snapshot()['providers'])->keyBy('id');
+        self::assertNotNull($providers['razorpay']['sandbox_order_probe_at']);
+        self::assertNull($providers['cashfree']['sandbox_order_probe_at']);
     }
 
     public function test_owner_cashfree_probe_requires_authorized_phone_and_never_creates_a_live_payment(): void

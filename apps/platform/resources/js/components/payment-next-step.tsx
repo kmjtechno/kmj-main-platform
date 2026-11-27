@@ -8,6 +8,7 @@ export type PaymentGatewayReadiness = {
     webhook_verification_configured: boolean;
     webhook_events_received: number;
     webhook_last_received_at: string | null;
+    sandbox_order_probe_at?: string | null;
     recent_events: {
         event_type: string;
         status: string;
@@ -82,7 +83,7 @@ export function paymentSetupSteps(
             id: 'sandbox-order',
             title: 'Run the sandbox test order',
             why: 'Creates a ₹1 TEST order on the provider sandbox. No card is charged and no license is issued.',
-            done: false,
+            done: Boolean(readiness?.sandbox_order_probe_at),
             action: {
                 label: 'Go to Test Connection',
                 href: '#gateway-onboarding',
@@ -168,6 +169,14 @@ export default function PaymentNextStep({
                         <ArrowRight className="size-4" />
                     </a>
                 </div>
+            ) : null}
+
+            {gateway?.sandbox_order_probe_at ? (
+                <p className="mt-3 text-xs text-slate-400">
+                    Sandbox test order accepted by the provider:{' '}
+                    {formatIstStamp(gateway.sandbox_order_probe_at)}. This is
+                    not a payment, a webhook match or a license.
+                </p>
             ) : null}
 
             {gateway?.webhook_last_received_at ? (
