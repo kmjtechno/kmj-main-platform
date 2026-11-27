@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'P0 issue #1233 and keyless gateway regression; consolidated release only after acceptance.',
     },
     {
+        id: 'commerce-refund-revoke-access-20261127',
+        title: 'Commerce: explicit revoke-access step after a refund',
+        state: 'active',
+        detail: 'SOURCE ONLY: after the owner has recorded a refund for an order, a separate Super Admin Revoke access button ends the active entitlements of the same organization and product. It is never automatic, needs a recorded refund, is refused while another paid unrefunded order for the same product exists, and is audited. It revokes the entitlement only: individual signed license ids (jti) and an offline client that has not synced are not covered, and no money moves.',
+        evidence:
+            'Source regression and PostgreSQL feature tests on the PR; live acceptance pending.',
+    },
+    {
         id: 'release-center-migration-status-20261127',
         title: 'Release Center: read-only pending-migration status',
         state: 'active',
