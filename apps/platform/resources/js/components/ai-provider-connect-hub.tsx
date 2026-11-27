@@ -414,7 +414,9 @@ export default function AiProviderConnectHub({
                             <label className="mt-2 flex items-start gap-2 text-xs">
                                 <input
                                     type="checkbox"
-                                    checked={kiloPublic || connected.has('kilo-free')}
+                                    checked={
+                                        kiloPublic || connected.has('kilo-free')
+                                    }
                                     disabled={connected.has('kilo-free')}
                                     onChange={(event) =>
                                         setKiloPublic(event.target.checked)
@@ -455,7 +457,10 @@ export default function AiProviderConnectHub({
                             <label className="mt-2 flex items-start gap-2 text-xs">
                                 <input
                                     type="checkbox"
-                                    checked={hordeTerms || connected.has('horde-anonymous')}
+                                    checked={
+                                        hordeTerms ||
+                                        connected.has('horde-anonymous')
+                                    }
                                     disabled={connected.has('horde-anonymous')}
                                     onChange={(event) =>
                                         setHordeTerms(event.target.checked)
