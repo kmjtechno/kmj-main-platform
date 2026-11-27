@@ -11,6 +11,7 @@ use App\Services\AiProviders\ResolvesAiProviderScope;
 use DateTimeInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -148,6 +149,8 @@ final class CodeBridgeWorkspaceChatTest extends TestCase
         self::assertSame('', $failed->content);
         self::assertSame(['inference_started', 'inference_failed'], DB::table('codebridge_workspace_events')->orderBy('id')->pluck('kind')->all());
 
+        // Simulate expiry of the real gateway cooldown before retrying.
+        Cache::forget('modelfabric:cooldown:'.$this->providerA);
         $this->retry($this->alice, $id, $failed->id)->assertRedirect();
         $this->assertDatabaseHas('codebridge_workspace_messages', ['role' => 'assistant', 'content' => 'Recovered', 'status' => 'complete', 'retry_of' => $failed->id]);
         // The user message was not duplicated, and the failed attempt stays on record.

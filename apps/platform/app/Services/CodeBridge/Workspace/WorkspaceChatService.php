@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Services\CodeBridge\Workspace;
 
 use App\Models\AiProvider;
-use App\Services\AiProviders\ProviderManager;
+use App\Services\AiProviders\ModelFabricGateway;
 use App\Services\Licensing\CodeBridge\CodeBridgeCustomerDeviceDirectory;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -33,7 +33,7 @@ final class WorkspaceChatService
         .'You cannot run commands, read files or start jobs from this chat; say so if asked.';
 
     public function __construct(
-        private readonly ProviderManager $providers,
+        private readonly ModelFabricGateway $gateway,
         private readonly CodeBridgeCustomerDeviceDirectory $devices,
         private readonly WorkspaceToolProposalService $proposals,
     ) {}
@@ -212,7 +212,7 @@ final class WorkspaceChatService
     private function execute(WorkspaceConversation $conversation, AiProvider $provider, string $model, string $messageId): void
     {
         try {
-            $result = $this->providers->complete($provider, $model, $this->history($conversation->id, $messageId));
+            $result = $this->gateway->completeSelected($provider, $model, $this->history($conversation->id, $messageId));
         } catch (Throwable) {
             $result = ['ok' => false, 'content' => null, 'error_code' => 'internal_error'];
         }

@@ -9,6 +9,7 @@ use App\Models\AiModelRequest;
 use App\Models\AiProvider;
 use App\Services\AiProviders\EndpointGuard;
 use App\Services\AiProviders\ModelFabricGateway;
+use App\Services\AiProviders\ProviderManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -277,6 +278,22 @@ final class ModelFabricGatewayTest extends TestCase
         $this->assertStringNotContainsString('secret-prompt', $row);
         $this->assertStringNotContainsString('secret-answer', $row);
         $this->assertStringNotContainsString('sk-test', $row);
+    }
+
+    public function test_direct_provider_call_requires_single_use_gateway_reservation(): void
+    {
+        $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        $messages = [['role' => 'user', 'content' => 'hi']];
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'ok']]]])]);
+        $manager = app(ProviderManager::class);
+
+        $this->assertSame('gateway_reservation_required', $manager->complete($provider, 'model-a', $messages)['error_code']);
+        Http::assertNothingSent();
+
+        $this->assertTrue(app(ModelFabricGateway::class)->completeSelected($provider, 'model-a', $messages)['ok']);
+        $attempt = AiModelRequest::query()->firstOrFail();
+        $this->assertSame('gateway_reservation_required', $manager->complete($provider, 'model-a', $messages, attempt: $attempt)['error_code']);
+        Http::assertSentCount(1);
     }
 
     public function test_kilo_shared_hourly_cap_skips_route_without_sending_a_request(): void

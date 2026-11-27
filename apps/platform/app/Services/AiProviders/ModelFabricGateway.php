@@ -9,6 +9,8 @@ use App\Models\AiModelRequest;
 use App\Models\AiProvider;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
+use RuntimeException;
 
 /**
  * Failover over verified-zero routes only (design ideas adopted from the MIT-licensed FreeLLMAPI
@@ -44,11 +46,30 @@ final class ModelFabricGateway
     ) {}
 
     /**
+     * Preserve the workspace's explicit provider/model choice without bypassing
+     * the shared gateway's admission, quota reservation and cooldown checks.
+     *
      * @param  list<array{role: string, content: string}>  $messages
+     * @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string}
+     */
+    public function completeSelected(AiProvider $provider, string $model, array $messages): array
+    {
+        try {
+            $this->manager->assertInferenceAllowed($provider, $model);
+        } catch (InvalidArgumentException|RuntimeException $exception) {
+            return $this->fail($exception->getMessage(), 0, $this->profiler->classify($messages, 'chat'));
+        }
+
+        return $this->complete($provider->organization_id, $messages, selectedRoute: ['provider_id' => $provider->id, 'model' => $model]);
+    }
+
+    /**
+     * @param  list<array{role: string, content: string}>  $messages
+     * @param  array{provider_id: string, model: string}|null  $selectedRoute
      * @param  array{provider_id: string, model: string}|null  $nativeRoute
      * @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string}
      */
-    public function complete(string $organizationId, array $messages, string $capability = 'chat', bool $privateSource = false, ?string $sessionKey = null, bool $strictFreeCloud = false, ?int $maxCodingTokens = null, ?array $nativeRoute = null, bool $publicPromptsConfirmed = false): array
+    public function complete(string $organizationId, array $messages, string $capability = 'chat', bool $privateSource = false, ?string $sessionKey = null, bool $strictFreeCloud = false, ?int $maxCodingTokens = null, ?array $nativeRoute = null, bool $publicPromptsConfirmed = false, ?array $selectedRoute = null): array
     {
         $profile = $this->profiler->classify($messages, $capability);
         if ($strictFreeCloud && ($capability !== 'code' || ! $privateSource || ($maxCodingTokens !== null && ($maxCodingTokens < 1 || $maxCodingTokens > 4096)))) {
@@ -63,6 +84,12 @@ final class ModelFabricGateway
                 return $this->fail('invalid_coding_policy', 0, $profile);
             }
             $plan['routes'] = array_values(array_filter($plan['routes'], static fn (array $route): bool => $route['provider_id'] === $nativeRoute['provider_id'] && $route['model'] === $nativeRoute['model']));
+            if ($plan['routes'] === []) {
+                return $this->fail(ModelFabricRouter::NO_ROUTE, 0, $profile);
+            }
+        }
+        if ($selectedRoute !== null) {
+            $plan['routes'] = array_values(array_filter($plan['routes'], static fn (array $route): bool => $route['provider_id'] === $selectedRoute['provider_id'] && $route['model'] === $selectedRoute['model']));
             if ($plan['routes'] === []) {
                 return $this->fail(ModelFabricRouter::NO_ROUTE, 0, $profile);
             }
@@ -131,7 +158,7 @@ final class ModelFabricGateway
 
             $attempts++;
             $started = hrtime(true);
-            $result = $this->manager->complete($provider, (string) $route['model'], $messages, $strictFreeCloud ? ($maxCodingTokens ?? 1024) : null);
+            $result = $this->manager->complete($provider, (string) $route['model'], $messages, $strictFreeCloud ? ($maxCodingTokens ?? 1024) : null, $attempt, $publicPromptsConfirmed);
             $latency = (int) ((hrtime(true) - $started) / 1_000_000);
 
             $attempt->update([

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\AiProviders;
 
 use App\Models\AiModelEvidence;
+use App\Models\AiModelRequest;
 use App\Models\AiModelRule;
 use App\Models\AiProvider;
 use Illuminate\Support\Facades\Config;
@@ -273,12 +274,28 @@ final class ProviderManager
      * @param  list<array{role: string, content: string}>  $messages
      * @return array{ok: bool, content: ?string, error_code: ?string, rate?: array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int, daily_requests_limit?: int, daily_reset_seconds?: int}}
      */
-    public function complete(AiProvider $provider, string $model, array $messages, ?int $strictCodingTokens = null): array
+    public function complete(AiProvider $provider, string $model, array $messages, ?int $strictCodingTokens = null, ?AiModelRequest $attempt = null, bool $publicPromptsConfirmed = false): array
     {
         try {
             $this->assertInferenceAllowed($provider, $model);
         } catch (InvalidArgumentException|RuntimeException $exception) {
             return ['ok' => false, 'content' => null, 'error_code' => $exception->getMessage()];
+        }
+
+        if ($provider->preset === 'kilo-free' && (! $publicPromptsConfirmed || $strictCodingTokens !== null)) {
+            return ['ok' => false, 'content' => null, 'error_code' => 'public_chat_only'];
+        }
+        // Every outbound call must consume a recent, matching, single-use gateway reservation.
+        // Interrupted or duplicate dispatches never reclaim capacity.
+        if ($attempt === null || AiModelRequest::query()->whereKey($attempt->id)
+            ->where('organization_id', $provider->organization_id)
+            ->where('ai_provider_id', $provider->id)
+            ->where('model_id', $model)
+            ->where('outcome', 'failed')
+            ->where('error_code', 'attempt_reserved')
+            ->where('created_at', '>=', now()->subMinutes(5))
+            ->update(['error_code' => 'attempt_dispatched']) !== 1) {
+            return ['ok' => false, 'content' => null, 'error_code' => 'gateway_reservation_required'];
         }
 
         return $this->adapter->complete($provider->base_url, $provider->api_key, $this->approvedHosts(), $model, $messages, $strictCodingTokens);
