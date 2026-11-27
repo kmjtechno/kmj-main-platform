@@ -19,6 +19,7 @@ Status: `PLANNED`. Nothing here is installed or proven. Roadmap section 17.3 for
 2. Copy one vault snapshot to the target (owner-run, checksum-guarded one-liner), decrypt there, `pg_restore` into an empty PostgreSQL 18, run a row-count and schema comparison, record a receipt without data contents.
 3. Record measured restore time. Only then may documents state an RTO for that scenario.
 4. PITR: evaluate WAL archiving with pgBackRest, WAL-G or Barman. Tool maintenance status MUST be verified from the project's own repository and releases before choosing; a single blog claim about one tool's sponsorship is not evidence. Needs a server install, so owner approval first.
+   Checked 2026-11-27 from the GitHub releases pages only: pgBackRest latest shown v2.60.0 (year not visible on the page), no archive notice; WAL-G v3.0.9 (Aug 2026), no archive notice. The blog claim that pgBackRest had stopped is NOT supported by its own releases page, but a releases page is not a full maintenance audit: confirm recent commit activity and the PostgreSQL 18 support statement before installing.
 5. Retention (16 candidate daily snapshots): no deletion until step 2 passes and the owner approves a count.
 
 ## Hard rules
