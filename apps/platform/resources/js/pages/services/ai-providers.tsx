@@ -2,6 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, KeyRound, Plug, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import AiProviderConnectHub from '@/components/ai-provider-connect-hub';
+import { formatIstStamp } from '@/lib/format-ist-date-time';
 import '../../../css/ai-provider-connect.css';
 
 export type Preset = {
@@ -191,7 +192,7 @@ function ProviderCard({
                                     observation.daily_remaining != null &&
                                     ` · daily ${observation.daily_remaining}/${observation.daily_limit}`}
                                 {observation.daily_reset_at &&
-                                    ` · daily reset ${new Date(observation.daily_reset_at).toLocaleString()}`}
+                                    ` · daily reset ${formatIstStamp(observation.daily_reset_at)}`}
                                 {' · provider headers, not billing credits'}
                             </p>
                         ))}
@@ -200,7 +201,7 @@ function ProviderCard({
             )}
             <p className="text-muted-foreground text-xs">
                 {provider.last_successful_inference_at
-                    ? `Last successful inference: ${new Date(provider.last_successful_inference_at).toLocaleString()}`
+                    ? `Last successful inference: ${formatIstStamp(provider.last_successful_inference_at)}`
                     : 'No successful inference recorded'}
             </p>
             <div className="flex flex-wrap items-center gap-2">
