@@ -453,19 +453,19 @@ final class ModelFabricGateway
         $retryAfter = $rate['retry_after'] ?? null;
         if ($code === 'rate_limited' && $provider->preset === 'kilo-free') {
             // All anonymous Kilo requests share the same Elite egress-IP quota.
-            $seconds = max(60, min(3600, $retryAfter ?? 3600));
+            $seconds = max(60, $retryAfter ?? 3600);
             Cache::put(self::KILO_COOLDOWN_KEY, true, $seconds);
         }
         // A verified Groq model's exhausted quota must not cool the entire provider.
         // Without a typed remaining=0 report, conservatively use provider-wide cooldown.
         if ($code === 'rate_limited' && $provider->preset === 'groq' && ($rate['requests_remaining'] ?? null) === 0) {
-            $seconds = $retryAfter !== null ? max(5, min(3600, $retryAfter)) : self::RATE_LIMIT_COOLDOWN;
+            $seconds = $retryAfter !== null ? max(5, $retryAfter) : self::RATE_LIMIT_COOLDOWN;
             Cache::put($this->modelCooldownKey($provider->id, $model), now()->getTimestamp() + $seconds, $seconds);
 
             return;
         }
         $seconds = match ($code) {
-            'rate_limited' => $retryAfter !== null ? max(5, min(3600, $retryAfter)) : self::RATE_LIMIT_COOLDOWN,
+            'rate_limited' => $retryAfter !== null ? max(5, $retryAfter) : self::RATE_LIMIT_COOLDOWN,
             'auth_failed' => self::AUTH_COOLDOWN,
             'provider_unavailable', 'connection_failed', 'empty_response', 'incomplete_response', 'unexpected_status', 'response_too_large' => $this->softFailure($provider->id),
             // Admission refusals (zero_spend_blocked, model_not_discovered, ...) are not provider faults.
