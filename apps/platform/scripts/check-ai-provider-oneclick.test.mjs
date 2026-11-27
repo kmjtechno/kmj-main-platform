@@ -220,3 +220,12 @@ void test('anonymous provider setup requires explicit consent and no pasted key'
     assert.match(page, /community_terms_confirmed: true/);
     assert.match(page, /\{canManage && !keyless && replaceVisible && \(/);
 });
+
+void test('connection method filters and inference receipts distinguish eligibility from usage', () => {
+    assert.match(hub, /Connection methods/);
+    assert.match(hub, /methodOf\(preset.key\) === method/);
+    assert.match(page, /No successful inference recorded/);
+    assert.match(page, /last_successful_inference_at/);
+    assert.match(manager, /where\('outcome', 'ok'\)/);
+    assert.match(css, /grid-template-columns: repeat\(auto-fit/);
+});

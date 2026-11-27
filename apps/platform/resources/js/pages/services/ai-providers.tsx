@@ -26,6 +26,7 @@ export type Provider = {
     health: string;
     health_checked_at: string | null;
     error_code: string | null;
+    last_successful_inference_at?: string | null;
     used_today?: number;
     daily_request_cap?: number | null;
     shared_hourly_quota?: { used: number; limit: number; cooling: boolean };
@@ -122,8 +123,10 @@ function ProviderCard({
                             ? 'Retired'
                             : provider.health === 'ok'
                               ? provider.models.length > 0
-                                  ? 'Ready'
-                                  : 'Needs free-model evidence'
+                                  ? 'Eligible'
+                                  : provider.free_tier === 'none'
+                                    ? 'Discovery only'
+                                    : 'Needs free-model evidence'
                               : provider.health === 'auth_failed'
                                 ? 'Reconnect required'
                                 : `Health: ${provider.health}`}
@@ -152,6 +155,11 @@ function ProviderCard({
 
             <p className="text-muted-foreground text-xs">
                 {quotaText(provider)}
+            </p>
+            <p className="text-muted-foreground text-xs">
+                {provider.last_successful_inference_at
+                    ? `Last successful inference: ${new Date(provider.last_successful_inference_at).toLocaleString()}`
+                    : 'No successful inference recorded'}
             </p>
             <div className="flex flex-wrap items-center gap-2">
                 {canManage && provider.error_code !== 'provider_retired' && (
@@ -838,7 +846,7 @@ export default function AiProviders({
                                 Your connected providers
                             </h2>
                             <p className="text-muted-foreground text-sm">
-                                {providers.filter(ready).length} ready ·{' '}
+                                {providers.filter(ready).length} eligible ·{' '}
                                 {
                                     providers.filter(
                                         (provider) =>
@@ -867,7 +875,7 @@ export default function AiProviders({
                                 {(
                                     [
                                         ['all', 'All'],
-                                        ['ready', 'Ready'],
+                                        ['ready', 'Eligible'],
                                         ['attention', 'Needs attention'],
                                         ['inactive', 'Inactive'],
                                     ] as const
@@ -893,7 +901,7 @@ export default function AiProviders({
                 <section
                     className={
                         embedded
-                            ? 'kmj-ai-connection-list grid gap-2'
+                            ? 'kmj-ai-connection-list grid gap-3'
                             : 'grid gap-4'
                     }
                     aria-label="Configured providers"
