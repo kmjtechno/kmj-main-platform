@@ -9,6 +9,7 @@ use App\Models\AiModelRequest;
 use App\Models\AiModelToken;
 use App\Models\AiProvider;
 use App\Services\AiProviders\EndpointGuard;
+use App\Services\AiProviders\NativeCodingAdmissionTicket;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -524,6 +525,46 @@ final class ModelFabricApiTest extends TestCase
         Http::assertSentCount(5);
         $this->postJson('/api/modelfabric/v1/chat/completions', $body, $ticketHeaders)->assertStatus(403);
         Http::assertSentCount(5);
+    }
+
+    public function test_owner_revocation_after_ticket_issue_rejects_stale_token_before_dispatch(): void
+    {
+        $this->evidenced('vendor/model:free', 'no-training-documented', [
+            'name' => 'OpenRouter', 'preset' => 'openrouter',
+            'base_url' => 'https://openrouter.ai/api/v1',
+            'models_cache' => ['vendor/model:free'],
+        ]);
+        $this->fakeNativeOpenRouter('must never be returned');
+        $plain = $this->token();
+        $body = [
+            'model' => 'modelfabric-auto',
+            'messages' => [['role' => 'user', 'content' => 'private synthetic code']],
+            'max_tokens' => 1024,
+            'stream' => false,
+        ];
+        $stale = AiModelToken::query()->firstOrFail();
+        $digest = hash('sha256', "https://kmjtechno.com/api/modelfabric/v1/chat/completions\n".$plain."\n".json_encode($body, JSON_THROW_ON_ERROR));
+        $response = $this->getJson('/api/modelfabric/v1/models', [
+            'Authorization' => 'Bearer '.$plain,
+            'X-ModelFabric-Policy' => 'strict-free-cloud',
+            'X-ModelFabric-Request-Digest' => $digest,
+        ])->assertOk()->assertJsonPath('modelfabric.native_admission.request_digest', $digest);
+        $ticket = $response->json('modelfabric.native_admission.ticket');
+        $this->assertIsString($ticket);
+        Http::assertSentCount(2);
+
+        AiModelToken::query()->whereKey($stale->id)->update(['revoked_at' => now()]);
+        // The in-memory object remains pre-revocation. Ticket consumption must
+        // fetch the new persisted state and deny without provider dispatch.
+        $this->assertNull($stale->revoked_at);
+        $this->assertNull(app(NativeCodingAdmissionTicket::class)->consume($stale, $ticket, $digest));
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, [
+            'Authorization' => 'Bearer '.$plain,
+            'X-ModelFabric-Policy' => 'strict-free-cloud',
+            'X-ModelFabric-Admission-Ticket' => $ticket,
+        ])->assertStatus(401);
+        Http::assertSentCount(2);
+        Http::assertNotSent(fn ($request): bool => $request->method() === 'POST');
     }
 
     public function test_native_admission_does_not_probe_a_cooling_provider_or_model(): void
