@@ -53,24 +53,62 @@ function priceTeaser(product: Product, pricing?: ProductPrices | null) {
     return `${label}${plan.name} · ${priceLines(plan)[0]}`;
 }
 
+const flagshipSlugs = [
+    'kmj-cloudos',
+    'kmj-calibration-pro',
+    'kmj-cinema-platform',
+    'kmj-360-dome',
+];
+
+/* Fill every row on wide screens, so a category never ends in an empty gap. */
+function cardSpan(index: number, total: number) {
+    if (total === 1) {
+        return 'md:col-span-2 lg:col-span-6 lg:flex-row';
+    }
+
+    const halves = total === 4 || total % 3 === 1 ? 4 : total % 3 === 2 ? 2 : 0;
+    const oddLast = total % 2 === 1 && index === total - 1;
+
+    return (
+        (index >= total - halves ? 'lg:col-span-3' : 'lg:col-span-2') +
+        (oddLast ? ' md:col-span-2' : '')
+    );
+}
+
 function ProductCard({
     product,
     pricing,
+    span = '',
+    wide = false,
 }: {
     product: Product;
     pricing?: ProductPrices | null;
+    span?: string;
+    wide?: boolean;
 }) {
     const price = priceTeaser(product, pricing);
 
     return (
-        <li className="relative flex min-w-0 flex-col overflow-hidden rounded-3xl border border-white/[0.1] bg-gradient-to-b from-white/[0.05] to-white/[0.012] transition hover:border-[#ef3340]/50">
-            <ProductVisual
-                slug={product.slug}
-                name={product.name}
-                imagePath={product.image_path}
-                compact
-                className="aspect-[4/3] w-full rounded-none border-x-0 border-t-0"
-            />
+        <li
+            className={
+                'kmj-card group relative flex min-w-0 flex-col overflow-hidden rounded-[1.75rem] ' +
+                span
+            }
+        >
+            <div
+                className={
+                    'overflow-hidden ' +
+                    (wide ? 'lg:w-[56%] lg:shrink-0' : 'w-full')
+                }
+            >
+                <ProductVisual
+                    slug={product.slug}
+                    name={product.name}
+                    imagePath={product.image_path}
+                    compact
+                    className="aspect-[4/3] w-full rounded-none border-0"
+                />
+            </div>
             <div className="flex flex-1 flex-col p-6 sm:p-8">
                 <p className="inline-flex items-center gap-2 text-[11px] font-black tracking-[0.14em] text-white/72 uppercase">
                     <span
@@ -84,7 +122,7 @@ function ProductCard({
                     />
                     {product.lifecycle_label}
                 </p>
-                <h3 className="mt-3 text-2xl font-black tracking-[-0.03em]">
+                <h3 className="mt-3 text-2xl font-black tracking-[-0.03em] sm:text-[1.75rem]">
                     {product.name}
                 </h3>
                 <p className="mt-3 text-sm leading-6 text-white/72">
@@ -131,11 +169,17 @@ export default function ProductsIndex({
     const lifecycleOptions = [
         ...new Set(products.map((product) => product.lifecycle_label)),
     ];
+    const browsing = query.trim() === '' && lifecycle === 'all';
+    const flagships = flagshipSlugs.flatMap((slug) =>
+        products.filter((product) => product.slug === slug),
+    );
+    const areaCount = new Set(products.map((product) => product.category)).size;
     const categories = useMemo(() => {
         const normalizedQuery = query.trim().toLowerCase();
         const matches = products
             .filter(
                 (product) =>
+                    !(browsing && flagshipSlugs.includes(product.slug)) &&
                     (lifecycle === 'all' ||
                         product.lifecycle_label === lifecycle) &&
                     [
@@ -160,7 +204,8 @@ export default function ProductsIndex({
                 ),
             }),
         );
-    }, [lifecycle, products, query]);
+    }, [browsing, lifecycle, products, query]);
+    const noMatches = !browsing && categories.length === 0;
 
     return (
         <>
@@ -211,37 +256,58 @@ export default function ProductsIndex({
                 <PublicSiteHeader />
 
                 <main id="main-content">
-                    <section className="relative isolate">
-                        <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_70%_80%_at_80%_0%,rgba(193,18,31,0.18),transparent_70%)]" />
-                        <div className="mx-auto w-full max-w-[1280px] px-5 pt-8 pb-8 sm:px-8">
-                            <p className="text-[11px] font-black tracking-[0.22em] text-[#ff6a72] uppercase">
+                    <section className="kmj-hero relative isolate">
+                        <div
+                            aria-hidden="true"
+                            className="kmj-hero-glow pointer-events-none absolute inset-0 -z-10"
+                        />
+                        <div className="kmj-rise mx-auto w-full max-w-[1440px] px-5 pt-16 pb-12 text-center sm:px-8 sm:pt-24">
+                            <p className="text-[11px] font-black tracking-[0.34em] text-[#ff6a72] uppercase">
                                 KMJ TECHNO products
                             </p>
-                            <h1 className="mt-4 max-w-4xl font-black text-balance">
+                            <h1 className="mx-auto mt-6 max-w-6xl font-black text-balance">
                                 Technology for modern{' '}
-                                <span className="text-white/72">
+                                <span className="kmj-shine">
                                     business and engineering.
                                 </span>
                             </h1>
-                            <p className="mt-5 max-w-2xl text-base leading-7 text-white/72">
-                                {products.length} products across cloud,
-                                software engineering, secure access, calibration
-                                and immersive cinema. {availableCount} available
-                                now; every page shows its current status.
+                            <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-white/75 sm:text-lg sm:leading-8">
+                                Cloud, software engineering, secure access,
+                                calibration and immersive cinema. Every product
+                                shows its current status.
                             </p>
+                            <dl className="mx-auto mt-10 grid max-w-2xl grid-cols-3 divide-x divide-white/10 rounded-2xl border border-white/10 bg-white/[0.03]">
+                                {[
+                                    ['Products', products.length],
+                                    ['Technology areas', areaCount],
+                                    ['Available now', availableCount],
+                                ].map(([label, value]) => (
+                                    <div
+                                        key={label}
+                                        className="flex flex-col-reverse gap-1 px-2 py-5"
+                                    >
+                                        <dt className="text-[11px] font-bold text-white/65 sm:text-xs">
+                                            {label}
+                                        </dt>
+                                        <dd className="text-3xl font-black tracking-[-0.04em] sm:text-4xl">
+                                            {value}
+                                        </dd>
+                                    </div>
+                                ))}
+                            </dl>
 
                             <div
                                 id="product-search"
                                 role="search"
-                                className="mt-10 grid scroll-mt-28 gap-4 lg:grid-cols-[minmax(0,26rem)_1fr] lg:items-center"
+                                className="mt-10 flex scroll-mt-28 flex-col items-center gap-5"
                             >
-                                <label className="relative block">
+                                <label className="relative block w-full max-w-xl">
                                     <span className="sr-only">
                                         Search KMJ products
                                     </span>
                                     <Search
                                         aria-hidden="true"
-                                        className="pointer-events-none absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-white/65"
+                                        className="pointer-events-none absolute top-1/2 left-5 h-5 w-5 -translate-y-1/2 text-white/65"
                                     />
                                     <input
                                         type="search"
@@ -250,10 +316,10 @@ export default function ProductsIndex({
                                             setQuery(event.target.value)
                                         }
                                         placeholder="Search products"
-                                        className="h-12 w-full rounded-xl border border-white/15 bg-white/[0.04] pr-4 pl-11 text-sm text-white placeholder:text-white/60 focus:border-[#ef3340]"
+                                        className="h-14 w-full rounded-2xl border border-white/15 bg-black/40 pr-4 pl-14 text-base text-white placeholder:text-white/60 focus:border-[#ef3340]"
                                     />
                                 </label>
-                                <div className="flex flex-wrap gap-2 lg:justify-end">
+                                <div className="flex flex-wrap justify-center gap-2">
                                     {['all', ...lifecycleOptions].map(
                                         (option) => (
                                             <button
@@ -266,10 +332,10 @@ export default function ProductsIndex({
                                                     setLifecycle(option)
                                                 }
                                                 className={
-                                                    'min-h-11 rounded-full border px-4 text-xs font-bold ' +
+                                                    'min-h-11 rounded-full border px-5 text-xs font-bold transition-colors ' +
                                                     (lifecycle === option
                                                         ? 'border-[#c1121f] bg-[#c1121f] text-white'
-                                                        : 'border-white/15 bg-white/[0.03] text-white/72 hover:border-white/30 hover:text-white')
+                                                        : 'border-white/15 bg-white/[0.03] text-white/75 hover:border-white/30 hover:text-white')
                                                 }
                                             >
                                                 {option === 'all'
@@ -283,26 +349,52 @@ export default function ProductsIndex({
                         </div>
                     </section>
 
+                    {browsing && flagships.length > 0 && (
+                        <section>
+                            <div className="mx-auto w-full max-w-[1440px] px-5 pt-6 pb-16 sm:px-8">
+                                <h2 className="text-3xl font-black tracking-[-0.035em] sm:text-5xl">
+                                    Flagship products
+                                </h2>
+                                <ul className="mt-9 grid gap-6 md:grid-cols-2">
+                                    {flagships.map((product) => (
+                                        <ProductCard
+                                            key={product.slug}
+                                            product={product}
+                                            pricing={pricing[product.slug]}
+                                        />
+                                    ))}
+                                </ul>
+                            </div>
+                        </section>
+                    )}
+
                     {categories.map((category) => (
                         <section
                             key={category.name}
                             className="border-t border-white/[0.07]"
                         >
-                            <div className="mx-auto w-full max-w-[1280px] px-5 py-12 sm:px-8">
-                                <h2 className="text-2xl font-black tracking-[-0.03em] sm:text-3xl">
+                            <div className="mx-auto w-full max-w-[1440px] px-5 py-16 sm:px-8">
+                                <h2 className="text-3xl font-black tracking-[-0.035em] sm:text-4xl">
                                     {category.name}
                                 </h2>
                                 {categoryDescriptions[category.name] && (
-                                    <p className="mt-2 text-sm leading-6 text-white/72">
+                                    <p className="mt-3 text-base leading-7 text-white/72">
                                         {categoryDescriptions[category.name]}
                                     </p>
                                 )}
-                                <ul className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-                                    {category.products.map((product) => (
+                                <ul className="mt-9 grid gap-6 md:grid-cols-2 lg:grid-cols-6">
+                                    {category.products.map((product, index) => (
                                         <ProductCard
                                             key={product.slug}
                                             product={product}
                                             pricing={pricing[product.slug]}
+                                            span={cardSpan(
+                                                index,
+                                                category.products.length,
+                                            )}
+                                            wide={
+                                                category.products.length === 1
+                                            }
                                         />
                                     ))}
                                 </ul>
@@ -313,18 +405,18 @@ export default function ProductsIndex({
                     <p
                         role="status"
                         className={
-                            categories.length === 0
+                            noMatches
                                 ? 'px-5 py-16 text-center text-white/72'
                                 : 'sr-only'
                         }
                     >
-                        {categories.length === 0
+                        {noMatches
                             ? 'No matching product found. Clear the search or choose another status.'
                             : ''}
                     </p>
 
                     <section className="border-t border-white/[0.07]">
-                        <div className="mx-auto w-full max-w-[1280px] px-5 py-16 sm:px-8">
+                        <div className="mx-auto w-full max-w-[1440px] px-5 py-16 sm:px-8">
                             <p className="mb-6 text-xs leading-5 text-white/65">
                                 Prices exclude GST. Nothing is charged
                                 automatically. Product pictures are concept

@@ -180,8 +180,8 @@ assert.ok(
     'product cards must keep content padded away from the edges',
 );
 assert.ok(
-    productPage.includes('md:grid-cols-2 lg:grid-cols-3'),
-    'product cards must reflow from one to three columns',
+    productPage.includes('md:grid-cols-2 lg:grid-cols-6'),
+    'product cards must reflow from one column to filled rows',
 );
 
 // Readability regression: body copy, status labels, and microcopy must not

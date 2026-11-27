@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'products-premium-visual-20261127',
+        title: 'Premium product list, centred wide screens and cleaner artwork',
+        state: 'active',
+        detail: 'SOURCE ONLY: the product list leads with flagship products, fills every row and adds restrained motion. Public sections stay centred above 1680px. Unmeasured figures in three product pictures are blurred and three plain title cards have new concept artwork. Home, product detail and signed-in pages are not redesigned in this change.',
+        evidence:
+            'Local render and source tests; owner visual acceptance and live evidence pending.',
+    },
+    {
         id: 'all-products-copy-listing-seo-20261127',
         title: 'All product pages and the product list in plain words',
         state: 'active',
