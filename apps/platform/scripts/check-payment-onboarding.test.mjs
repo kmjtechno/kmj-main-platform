@@ -130,3 +130,13 @@ void test('server-only sandbox errors are safely narrowed without modifying test
     assert.match(wizard, /sandbox_probe\?: string \}>/);
     assert.match(wizard, /test_phone: ''/);
 });
+
+void test('guided setup links the owner to the webhook secret generator', () => {
+    const guide = read(
+        '../resources/js/components/payment-gateway-onboarding.tsx',
+    );
+    const page = read('../resources/js/pages/operator-payments.tsx');
+    assert.match(guide, /href="#webhook-setup"/);
+    assert.match(guide, /Generate webhook secret/);
+    assert.match(page, /id="webhook-setup"/);
+});
