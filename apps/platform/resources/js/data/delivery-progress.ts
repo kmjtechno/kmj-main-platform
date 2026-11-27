@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'signup-trial-preregister-20261127',
+        title: 'Sign up for a product: CloudOS trial or pre-registration',
+        state: 'active',
+        detail: 'SOURCE ONLY: a verified customer who signs up for CloudOS gets one 30-day trial license and matching time-limited product access; other products record a pre-registration with no access. Needs the owner post-activation migration step.',
+        evidence:
+            'Feature tests on the PR; no live or real-customer check yet.',
+    },
+    {
         id: 'published-prices-20261127',
         title: 'Owner-approved prices on product and purchase pages',
         state: 'active',

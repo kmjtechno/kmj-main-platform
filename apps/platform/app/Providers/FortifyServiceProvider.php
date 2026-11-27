@@ -9,6 +9,9 @@ use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Http\Responses\ConfirmedPasskeyLoginResponse;
 use App\Services\Auth\RegistrationBotGuard;
+use App\Services\Commerce\CloudOSProductCatalog;
+use App\Services\Commerce\ProductSignupEvents;
+use App\Services\Commerce\PublicProductCatalog;
 use App\Services\Mail\RegistrationMailReadiness;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -83,6 +86,7 @@ class FortifyServiceProvider extends ServiceProvider
 
         /* @chisel-registration */
         Fortify::registerView(fn () => Inertia::render('auth/register', [
+            'signupProduct' => $this->rememberSignupProduct(),
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
             'registrationAvailable' => ! app()->isProduction()
                 || app(RegistrationMailReadiness::class)->canAttemptDelivery(),
@@ -148,5 +152,38 @@ class FortifyServiceProvider extends ServiceProvider
             );
         });
         /* @end-chisel-passkeys */
+    }
+
+    /**
+     * Keep the product from /register?product=… through password or Google
+     * sign-up. Only a public product is remembered.
+     *
+     * @return array{name: string, kind: string}|null
+     */
+    private function rememberSignupProduct(): ?array
+    {
+        $slug = request()->query('product');
+
+        if (! is_string($slug) || strlen($slug) > 96) {
+            return null;
+        }
+
+        $product = app(PublicProductCatalog::class)->find($slug);
+
+        if ($product === null) {
+            return null;
+        }
+
+        request()->session()->put(ProductSignupEvents::SESSION_KEY, $slug);
+
+        $purchasable = ($product['purchase_enabled'] ?? false) === true;
+        $trial = $slug === CloudOSProductCatalog::SLUG
+            && $purchasable
+            && config('services.kmj_signup_trial.enabled');
+
+        return [
+            'name' => (string) $product['name'],
+            'kind' => $trial ? 'trial' : ($purchasable ? 'request' : 'preregister'),
+        ];
     }
 }

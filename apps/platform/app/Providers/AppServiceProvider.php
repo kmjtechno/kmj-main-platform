@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Contracts\Events\OutboxPublisher;
 use App\Services\AiProviders\DashboardAiProviderScope;
 use App\Services\AiProviders\ResolvesAiProviderScope;
+use App\Services\Commerce\ProductSignupEvents;
 use App\Services\Events\LaravelEventOutboxPublisher;
 use App\Services\Events\TransactionalOutbox;
 use App\Services\Licensing\LicenseRevoker;
@@ -80,6 +81,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureCodeBridgeEnrollmentLimiter();
         BrandedAuthNotifications::register();
         BrandedCustomerEvents::register();
+        ProductSignupEvents::register();
     }
 
     /**

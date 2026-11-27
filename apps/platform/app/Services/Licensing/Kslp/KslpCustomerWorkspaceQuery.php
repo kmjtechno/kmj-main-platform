@@ -49,7 +49,9 @@ final class KslpCustomerWorkspaceQuery
                         'product_name' => (string) $entitlement->product_name,
                         'product_slug' => (string) $entitlement->product_slug,
                         'capability' => (string) $entitlement->capability,
-                        'status' => (string) $entitlement->status,
+                        'status' => $entitlement->status === 'active' && $entitlement->ends_at !== null && Carbon::parse($entitlement->ends_at)->isPast()
+                            ? 'expired'
+                            : (string) $entitlement->status,
                         'starts_at' => $entitlement->starts_at,
                         'ends_at' => $entitlement->ends_at,
                         'signed_license_issued' => false,

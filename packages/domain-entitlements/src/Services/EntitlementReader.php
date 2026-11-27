@@ -8,7 +8,7 @@ use KMJ\MainPlatform\Entitlements\Models\Entitlement;
 final class EntitlementReader
 {
     /**
-     * @return list<array{id: string, product_id: string, product_name: string, product_slug: string, capability: string, status: string, starts_at: string}>
+     * @return list<array{id: string, product_id: string, product_name: string, product_slug: string, capability: string, status: string, starts_at: string, ends_at: string|null}>
      */
     public function forOrganization(string $organizationId): array
     {
@@ -33,8 +33,12 @@ final class EntitlementReader
                     'product_name' => $product instanceof Product ? (string) $product->name : 'Unknown product',
                     'product_slug' => $product instanceof Product ? (string) $product->slug : $productId,
                     'capability' => (string) $entitlement->capability,
-                    'status' => (string) $entitlement->status,
+                    // A time-limited grant stops counting once it ends.
+                    'status' => $entitlement->status === 'active' && $entitlement->ends_at?->isPast() === true
+                        ? 'expired'
+                        : (string) $entitlement->status,
                     'starts_at' => $entitlement->starts_at->toIso8601String(),
+                    'ends_at' => $entitlement->ends_at?->toIso8601String(),
                 ];
             })
             ->values()
