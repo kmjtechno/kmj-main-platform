@@ -569,8 +569,7 @@ final class ModelFabricGatewayTest extends TestCase
         $this->assertTrue($result['ok']);
         $this->assertSame('Editable private mail response', $result['content']);
         Http::assertSentCount(1);
-        Http::assertSent(fn ($request): bool =>
-            $request->method() === 'POST'
+        Http::assertSent(fn ($request): bool => $request->method() === 'POST'
             && $request['provider']['data_collection'] === 'deny'
             && $request['provider']['zdr'] === true
             && $request['provider']['allow_fallbacks'] === false
