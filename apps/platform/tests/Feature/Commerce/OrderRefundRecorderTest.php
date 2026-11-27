@@ -119,6 +119,27 @@ final class OrderRefundRecorderTest extends TestCase
             ->postJson($url, ['amount_minor' => 'abc'])->assertStatus(422);
     }
 
+    public function test_browser_form_post_redirects_with_status_or_error_and_owner_page_shows_refunded_total(): void
+    {
+        [$owner, $orderId] = $this->fixture();
+        $url = "/operator/orders/{$orderId}/refund-record";
+        $body = ['amount_minor' => 10000, 'reason' => 'customer request', 'request_key' => 'form-refund-0001'];
+        $this->withoutVite();
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->from('/operator')->post($url, $body)
+            ->assertRedirect('/operator')->assertSessionHas('status', 'refund-recorded');
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->from('/operator')->post($url, [...$body, 'amount_minor' => 999999, 'request_key' => 'form-refund-0002'])
+            ->assertRedirect('/operator')->assertSessionHasErrors(['refund' => 'REFUND_RECORD_EXCEEDS_CONFIRMED_AMOUNT']);
+
+        $this->actingAs($owner)->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator')
+            ->assertInertia(fn ($page) => $page->where('recentOrders', fn ($orders) => collect($orders)
+                ->contains(fn ($o) => $o['id'] === $orderId && $o['refunded_minor'] === 10000)));
+    }
+
     public function test_recording_a_refund_changes_neither_order_status_nor_entitlements(): void
     {
         [$owner, $orderId] = $this->fixture();
