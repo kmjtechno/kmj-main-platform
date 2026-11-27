@@ -2,6 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, KeyRound, Plug, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import AiProviderConnectHub from '@/components/ai-provider-connect-hub';
+import { formatIstStamp } from '@/lib/format-ist-date-time';
 import '../../../css/ai-provider-connect.css';
 
 export type Preset = {
@@ -26,6 +27,19 @@ export type Provider = {
     health: string;
     health_checked_at: string | null;
     error_code: string | null;
+    last_successful_inference_at?: string | null;
+    quota_observations?: {
+        model: string;
+        scope: 'model' | 'provider';
+        requests_remaining: number | null;
+        tokens_remaining: number | null;
+        observed_at: string | null;
+        daily_remaining: number | null;
+        daily_limit: number | null;
+        daily_reset_at: string | null;
+        cooling_until: string | null;
+        cooldown_scope: 'model' | 'provider' | null;
+    }[];
     used_today?: number;
     daily_request_cap?: number | null;
     shared_hourly_quota?: { used: number; limit: number; cooling: boolean };
@@ -88,6 +102,7 @@ function ProviderCard({
     const [newKey, setNewKey] = useState('');
     const [expanded, setExpanded] = useState(false);
     const [replaceVisible, setReplaceVisible] = useState(false);
+    const [probeConsent, setProbeConsent] = useState(false);
     const keyless = ['kilo-free', 'horde-anonymous'].includes(provider.preset);
     const act = (run: () => void) => {
         setBusy(true);
@@ -122,8 +137,10 @@ function ProviderCard({
                             ? 'Retired'
                             : provider.health === 'ok'
                               ? provider.models.length > 0
-                                  ? 'Ready'
-                                  : 'Needs free-model evidence'
+                                  ? 'Eligible'
+                                  : provider.free_tier === 'none'
+                                    ? 'Discovery only'
+                                    : 'Needs free-model evidence'
                               : provider.health === 'auth_failed'
                                 ? 'Reconnect required'
                                 : `Health: ${provider.health}`}
@@ -153,6 +170,90 @@ function ProviderCard({
             <p className="text-muted-foreground text-xs">
                 {quotaText(provider)}
             </p>
+            {(provider.quota_observations ?? []).length > 0 && (
+                <details className="rounded-lg border p-2 text-xs">
+                    <summary className="cursor-pointer font-semibold">
+                        Quota headers and local retry cooldowns
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                        {provider.quota_observations?.map((observation) => (
+                            <p
+                                key={observation.model}
+                                className="text-muted-foreground"
+                            >
+                                {observation.scope === 'model'
+                                    ? observation.model
+                                    : 'Shared connection'}
+                                {' · '}
+                                {observation.requests_remaining ??
+                                    'Unknown'}{' '}
+                                requests left
+                                {' · '}
+                                {observation.tokens_remaining ?? 'Unknown'}{' '}
+                                tokens left
+                                {observation.daily_limit != null &&
+                                    observation.daily_remaining != null &&
+                                    ` · daily ${observation.daily_remaining}/${observation.daily_limit}`}
+                                {observation.daily_reset_at &&
+                                    ` · daily reset ${formatIstStamp(observation.daily_reset_at)}`}
+                                {observation.cooling_until &&
+                                    ` · ${observation.cooldown_scope === 'model' ? 'model' : 'provider'} retry after ${formatIstStamp(observation.cooling_until)}`}
+                                {observation.observed_at
+                                    ? ' · provider headers, not billing credits'
+                                    : ' · local cooldown only; quota unknown'}
+                            </p>
+                        ))}
+                    </div>
+                </details>
+            )}
+            <p className="text-muted-foreground text-xs">
+                {provider.last_successful_inference_at
+                    ? `Last successful inference: ${formatIstStamp(provider.last_successful_inference_at)}`
+                    : 'No successful inference recorded'}
+            </p>
+            {canManage &&
+                provider.enabled &&
+                provider.models.length > 0 &&
+                provider.error_code !== 'provider_retired' && (
+                    <details className="rounded-lg border px-3 py-2 text-xs">
+                        <summary className="cursor-pointer font-semibold">
+                            Verify real free inference
+                        </summary>
+                        <label className="mt-2 flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                checked={probeConsent}
+                                onChange={(event) =>
+                                    setProbeConsent(event.target.checked)
+                                }
+                            />
+                            Send one fixed public synthetic prompt. No private
+                            data.
+                        </label>
+                        <button
+                            type="button"
+                            disabled={busy || !probeConsent}
+                            onClick={() =>
+                                act(() =>
+                                    router.post(
+                                        `/operator/modelfabric/providers/${provider.id}/inference-check`,
+                                        { public_prompts_confirmed: true },
+                                        {
+                                            ...options,
+                                            onFinish: () => {
+                                                setBusy(false);
+                                                setProbeConsent(false);
+                                            },
+                                        },
+                                    ),
+                                )
+                            }
+                            className="mt-2 min-h-10 rounded-xl border px-3 font-semibold disabled:opacity-50"
+                        >
+                            Run one bounded synthetic inference
+                        </button>
+                    </details>
+                )}
             <div className="flex flex-wrap items-center gap-2">
                 {canManage && provider.error_code !== 'provider_retired' && (
                     <button
@@ -838,7 +939,7 @@ export default function AiProviders({
                                 Your connected providers
                             </h2>
                             <p className="text-muted-foreground text-sm">
-                                {providers.filter(ready).length} ready ·{' '}
+                                {providers.filter(ready).length} eligible ·{' '}
                                 {
                                     providers.filter(
                                         (provider) =>
@@ -867,7 +968,7 @@ export default function AiProviders({
                                 {(
                                     [
                                         ['all', 'All'],
-                                        ['ready', 'Ready'],
+                                        ['ready', 'Eligible'],
                                         ['attention', 'Needs attention'],
                                         ['inactive', 'Inactive'],
                                     ] as const
@@ -893,7 +994,7 @@ export default function AiProviders({
                 <section
                     className={
                         embedded
-                            ? 'kmj-ai-connection-list grid gap-2'
+                            ? 'kmj-ai-connection-list grid gap-3'
                             : 'grid gap-4'
                     }
                     aria-label="Configured providers"

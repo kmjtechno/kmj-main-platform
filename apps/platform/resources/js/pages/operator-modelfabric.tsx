@@ -488,9 +488,11 @@ function CopyRow({ label, value }: { label: string; value: string }) {
 function ConnectGuide({
     origin,
     token,
+    coding,
 }: {
     origin: string;
     token: string | null | undefined;
+    coding: boolean;
 }) {
     const baseUrl = `${origin}/api/modelfabric/v1`;
     const protocolHelp =
@@ -498,18 +500,26 @@ function ConnectGuide({
     const tokenHelp =
         'Set KMJ_MODELFABRIC_TOKEN in a private credential store. Samples never contain your token. Run the read-only model check first. Never paste credentials into source or shell history.';
     // Keep the one-time bearer in the explicit copy row, never in code samples.
-    const snippets: { id: string; label: string; code: string }[] = [
-        {
-            id: 'sdk',
-            label: 'Python (OpenAI SDK)',
-            code: `import os\nfrom openai import OpenAI\n\nclient = OpenAI(base_url="${baseUrl}", api_key=os.environ["KMJ_MODELFABRIC_TOKEN"])\nreply = client.chat.completions.create(\n    model="modelfabric-auto",\n    messages=[{"role": "user", "content": "ping"}],\n)\nprint(reply.choices[0].message.content)`,
-        },
-        {
-            id: 'curl',
-            label: 'curl (read-only model check)',
-            code: `curl --fail-with-body "${baseUrl}/models" \\\n  -H "Authorization: Bearer $KMJ_MODELFABRIC_TOKEN"`,
-        },
-    ];
+    const snippets: { id: string; label: string; code: string }[] = coding
+        ? [
+              {
+                  id: 'coding-preflight',
+                  label: 'Secure coding: read-only admission check',
+                  code: `curl --fail-with-body "${baseUrl}/models" \\\n  -H "Authorization: Bearer $KMJ_MODELFABRIC_TOKEN" \\\n  -H "X-ModelFabric-Policy: strict-free-cloud"`,
+              },
+          ]
+        : [
+              {
+                  id: 'sdk',
+                  label: 'Python (OpenAI SDK)',
+                  code: `import os\nfrom openai import OpenAI\n\nclient = OpenAI(base_url="${baseUrl}", api_key=os.environ["KMJ_MODELFABRIC_TOKEN"])\nreply = client.chat.completions.create(\n    model="modelfabric-auto",\n    messages=[{"role": "user", "content": "ping"}],\n)\nprint(reply.choices[0].message.content)`,
+              },
+              {
+                  id: 'curl',
+                  label: 'curl (read-only model check)',
+                  code: `curl --fail-with-body "${baseUrl}/models" \\\n  -H "Authorization: Bearer $KMJ_MODELFABRIC_TOKEN"`,
+              },
+          ];
 
     return (
         <div className="mt-4 space-y-3" data-testid="modelfabric-connect-guide">
@@ -526,6 +536,19 @@ function ConnectGuide({
                 />
             </div>
             <p className="text-muted-foreground text-xs">{tokenHelp}</p>
+            {coding ? (
+                <p
+                    className="text-sm text-amber-700 dark:text-amber-300"
+                    data-testid="modelfabric-coding-connect-warning"
+                >
+                    Secure coding tokens cannot use a bare OpenAI SDK
+                    completion. An enrolled CodeBridge worker must request a
+                    fresh request-bound single-use native admission ticket
+                    before each private source transfer. Source-transfer
+                    consent, provider billing proof and worker activation are
+                    separate gates; a read-only model check sends no source.
+                </p>
+            ) : null}
             {snippets.map((snippet) => (
                 <details key={snippet.id} className="rounded-xl border p-2">
                     <summary className="cursor-pointer text-xs font-bold">
@@ -536,10 +559,18 @@ function ConnectGuide({
                     </pre>
                 </details>
             ))}
-            <p className="text-muted-foreground text-xs">
-                Optional: send an X-ModelFabric-Session header (any short id) to
-                keep one conversation on the same route.
-            </p>
+            {coding ? (
+                <p className="text-muted-foreground text-xs">
+                    Do not send private code from a generic curl or SDK sample.
+                    Complete enrolled CodeBridge source consent and the native
+                    ticket handshake first.
+                </p>
+            ) : (
+                <p className="text-muted-foreground text-xs">
+                    Optional: send an X-ModelFabric-Session header (any short
+                    id) to keep one conversation on the same route.
+                </p>
+            )}
         </div>
     );
 }
@@ -703,7 +734,7 @@ export default function OperatorModelFabric({
         },
         {
             title: 'Create a coding token',
-            detail: 'Issue a dedicated private-source token. A chat token is not sufficient.',
+            detail: 'Issue a private-source token. Live account admission, request-bound ticket and source consent remain separate gates.',
             complete: codingTokens > 0,
             tab: 'tokens',
         },
@@ -1334,15 +1365,9 @@ export default function OperatorModelFabric({
                                             />{' '}
                                             Secure coding
                                         </h2>
-                                        <StatusPill
-                                            tone={
-                                                privateReady && codingTokens > 0
-                                                    ? 'ok'
-                                                    : 'warn'
-                                            }
-                                        >
+                                        <StatusPill tone="warn">
                                             {privateReady && codingTokens > 0
-                                                ? 'Route and token ready'
+                                                ? 'Activation pending'
                                                 : 'Blocked'}
                                         </StatusPill>
                                     </div>
@@ -1368,8 +1393,13 @@ export default function OperatorModelFabric({
                                         </div>
                                     </div>
                                     <p className="text-muted-foreground text-sm">
-                                        Separate source-transfer consent and
-                                        worker activation required.
+                                        Model evidence and a token are not
+                                        account billing proof. Private-source
+                                        requests require strict-free-cloud, a
+                                        fresh single-use admission ticket and
+                                        explicit source-transfer consent. Worker
+                                        activation is independently verified in
+                                        CodeBridge.
                                     </p>
                                     {!privateReady ? (
                                         <p className="text-sm leading-relaxed">
@@ -2240,7 +2270,7 @@ export default function OperatorModelFabric({
                         id="tokens"
                         title="ModelFabric API tokens (OpenAI-compatible)"
                         label="API tokens"
-                        help="The caller never chooses a provider or model: ModelFabric picks only from your approved free models and says NO_FREE_ROUTE_AVAILABLE when none qualifies. Private-source tokens reach only models with documented no-training handling. Tokens are stored as a hash and shown once."
+                        help="The caller cannot pick a paid or unverified model. ModelFabric returns NO_FREE_ROUTE_AVAILABLE when none qualifies. Private-source tokens cannot send code without strict-free-cloud, a fresh request-bound single-use admission ticket and explicit source consent. Eligible route listings are not billing proof or worker readiness. Tokens are hashed at rest and shown once."
                     >
                         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3">
                             <p className="text-muted-foreground text-xs">
@@ -2360,7 +2390,16 @@ export default function OperatorModelFabric({
                                 ) : null}
                             </form>
                         ) : null}
-                        <ConnectGuide origin={origin} token={newToken} />
+                        <ConnectGuide
+                            origin={origin}
+                            token={newToken}
+                            coding={
+                                workflow === 'coding' ||
+                                tokenPrivate ||
+                                (Boolean(newToken) &&
+                                    tokens[0]?.private_source === true)
+                            }
+                        />
                         <ul className="mt-3 divide-y text-sm">
                             {tokens.length === 0 ? (
                                 <li className="py-2">No token created yet.</li>

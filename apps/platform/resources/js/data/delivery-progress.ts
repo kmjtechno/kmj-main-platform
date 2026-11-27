@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Feature tests on the PR; no live or real-customer check yet.',
     },
     {
+        id: 'modelfabric-ux-verified-inference-20261127',
+        title: 'ModelFabric: provider directory and verified inference status',
+        state: 'active',
+        detail: 'Compact method-filtered provider directory, truthful eligibility versus successful inference, and responsive management cards. Live synthetic inference and full qualification still pending.',
+        evidence:
+            'Draft PR #1253; exact-head CI required. No partial production release authorized.',
+    },
+    {
         id: 'published-prices-20261127',
         title: 'Owner-approved prices on product and purchase pages',
         state: 'active',

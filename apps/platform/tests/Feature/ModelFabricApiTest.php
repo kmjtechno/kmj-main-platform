@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\AiModelEvidence;
+use App\Models\AiModelRequest;
 use App\Models\AiModelToken;
 use App\Models\AiProvider;
 use App\Services\AiProviders\EndpointGuard;
+use App\Services\AiProviders\NativeCodingAdmissionTicket;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -54,7 +56,7 @@ final class ModelFabricApiTest extends TestCase
     public function test_no_evidence_means_503_no_free_route_and_no_provider_call(): void
     {
         Http::fake();
-        $plain = $this->token();
+        $plain = $this->token(['private_source' => false]);
         AiProvider::query()->create($this->providerRow());
 
         $this->postJson('/api/modelfabric/v1/chat/completions', ['messages' => [['role' => 'user', 'content' => 'hi']]], ['Authorization' => 'Bearer '.$plain])
@@ -87,8 +89,29 @@ final class ModelFabricApiTest extends TestCase
         $this->evidenced('llama-free', 'unknown');
         Http::fake();
 
+        $this->getJson('/api/modelfabric/v1/models', [
+            'Authorization' => 'Bearer '.$plain, 'X-ModelFabric-Policy' => 'strict-free-cloud',
+        ])->assertOk()->assertJsonPath('modelfabric.status', 'NO_FREE_ROUTE_AVAILABLE');
         $this->postJson('/api/modelfabric/v1/chat/completions', ['messages' => [['role' => 'user', 'content' => 'secret code']]], ['Authorization' => 'Bearer '.$plain])
-            ->assertStatus(503);
+            ->assertStatus(403)->assertJsonPath('error.code', 'native_admission_required');
+        Http::assertNothingSent();
+    }
+
+    public function test_private_source_never_posts_even_to_evidenced_provider_without_request_bound_ticket(): void
+    {
+        $this->evidenced('vendor/model:free', 'no-training-documented', [
+            'name' => 'OpenRouter', 'preset' => 'openrouter', 'base_url' => 'https://openrouter.ai/api/v1', 'models_cache' => ['vendor/model:free'],
+        ]);
+        $plain = $this->token();
+        $body = ['messages' => [['role' => 'user', 'content' => 'confidential source code']]];
+        Http::fake();
+
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, [
+            'Authorization' => 'Bearer '.$plain,
+        ])->assertStatus(403)->assertJsonPath('error.code', 'native_admission_required');
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, [
+            'Authorization' => 'Bearer '.$plain, 'X-ModelFabric-Policy' => 'strict-free-cloud',
+        ])->assertStatus(403)->assertJsonPath('error.code', 'native_admission_required');
         Http::assertNothingSent();
     }
 
@@ -193,7 +216,7 @@ final class ModelFabricApiTest extends TestCase
             ->assertJsonPath('modelfabric.policy', 'strict-free-cloud')
             ->assertJsonPath('modelfabric.routes', 0);
         $this->postJson('/api/modelfabric/v1/chat/completions', ['messages' => [['role' => 'user', 'content' => 'ping']]], $headers)
-            ->assertStatus(503)->assertJsonPath('error.code', 'NO_FREE_ROUTE_AVAILABLE');
+            ->assertStatus(403)->assertJsonPath('error.code', 'native_admission_required');
         Http::assertNothingSent();
     }
 
@@ -204,7 +227,8 @@ final class ModelFabricApiTest extends TestCase
         ]);
         $this->fakeNativeOpenRouter('pong');
         $body = ['messages' => [['role' => 'user', 'content' => 'ping']]];
-        $headers = ['Authorization' => 'Bearer '.$this->token(), 'X-ModelFabric-Policy' => 'strict-free-cloud'];
+        $plain = $this->token();
+        $headers = ['Authorization' => 'Bearer '.$plain, 'X-ModelFabric-Policy' => 'strict-free-cloud'];
 
         $this->getJson('/api/modelfabric/v1/models', $headers)->assertOk()
             ->assertJsonPath('modelfabric.free_routes', 1);
@@ -212,11 +236,14 @@ final class ModelFabricApiTest extends TestCase
             ->assertStatus(403);
         $this->postJson('/api/modelfabric/v1/chat/completions', $body, [...$headers, 'X-ModelFabric-Policy' => 'unknown'])
             ->assertStatus(400);
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)
+            ->assertStatus(403)->assertJsonPath('error.code', 'native_admission_required');
         Http::assertNothingSent();
-        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)->assertOk()
+        $ticket = $this->nativeTicket($plain, $body);
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, [...$headers, 'X-ModelFabric-Admission-Ticket' => $ticket])->assertOk()
             ->assertJsonPath('modelfabric.policy', 'strict-free-cloud')
             ->assertJsonPath('choices.0.message.content', 'pong');
-        Http::assertSentCount(3);
+        Http::assertSentCount(5);
         Http::assertSent(fn ($request): bool => $request->method() === 'POST'
             && $request['provider']['max_price']['prompt'] === 0
             && $request['provider']['max_price']['completion'] === 0
@@ -230,16 +257,18 @@ final class ModelFabricApiTest extends TestCase
         $this->evidenced('vendor/model:free', 'no-training-documented', [
             'name' => 'OpenRouter', 'preset' => 'openrouter', 'base_url' => 'https://openrouter.ai/api/v1', 'models_cache' => ['vendor/model:free'],
         ]);
-        $headers = ['Authorization' => 'Bearer '.$this->token(), 'X-ModelFabric-Policy' => 'strict-free-cloud'];
+        $plain = $this->token();
+        $headers = ['Authorization' => 'Bearer '.$plain, 'X-ModelFabric-Policy' => 'strict-free-cloud'];
         $body = ['messages' => [['role' => 'user', 'content' => 'patch']], 'max_tokens' => 4096];
         $this->fakeNativeOpenRouter('partial patch', 'length');
 
         $this->postJson('/api/modelfabric/v1/chat/completions', [...$body, 'stream' => true], $headers)->assertStatus(400);
         $this->postJson('/api/modelfabric/v1/chat/completions', [...$body, 'max_tokens' => 4097], $headers)->assertStatus(422);
         Http::assertNothingSent();
-        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)
+        $ticket = $this->nativeTicket($plain, $body);
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, [...$headers, 'X-ModelFabric-Admission-Ticket' => $ticket])
             ->assertStatus(502)->assertJsonPath('error.code', 'incomplete_coding_output');
-        Http::assertSentCount(3);
+        Http::assertSentCount(5);
         Http::assertSent(fn ($request): bool => $request->method() === 'POST' && $request['max_tokens'] === 4096);
     }
 
@@ -248,13 +277,16 @@ final class ModelFabricApiTest extends TestCase
         $this->evidenced('vendor/model:free', 'no-training-documented', [
             'name' => 'OpenRouter', 'preset' => 'openrouter', 'base_url' => 'https://openrouter.ai/api/v1', 'models_cache' => ['vendor/model:free'],
         ]);
-        $headers = ['Authorization' => 'Bearer '.$this->token(), 'X-ModelFabric-Policy' => 'strict-free-cloud'];
+        $plain = $this->token();
+        $headers = ['Authorization' => 'Bearer '.$plain, 'X-ModelFabric-Policy' => 'strict-free-cloud'];
         $content = str_repeat('x', 9000);
         $this->fakeNativeOpenRouter($content);
+        $body = ['messages' => [['role' => 'user', 'content' => 'patch']], 'max_tokens' => 4096];
+        $ticket = $this->nativeTicket($plain, $body);
 
-        $this->postJson('/api/modelfabric/v1/chat/completions', ['messages' => [['role' => 'user', 'content' => 'patch']], 'max_tokens' => 4096], $headers)
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, [...$headers, 'X-ModelFabric-Admission-Ticket' => $ticket])
             ->assertOk()->assertJsonPath('choices.0.message.content', $content);
-        Http::assertSentCount(3);
+        Http::assertSentCount(5);
     }
 
     public function test_invalid_roles_fail_validation(): void
@@ -262,6 +294,164 @@ final class ModelFabricApiTest extends TestCase
         $headers = ['Authorization' => 'Bearer '.$this->token()];
 
         $this->postJson('/api/modelfabric/v1/chat/completions', ['messages' => [['role' => 'tool', 'content' => 'x']]], $headers)->assertStatus(422);
+    }
+
+    public function test_openrouter_general_chat_enforces_zero_price_ceiling_even_with_owner_evidence(): void
+    {
+        $plain = $this->token(['private_source' => false]);
+        $this->evidenced('vendor/model:free', 'unknown', [
+            'name' => 'OpenRouter',
+            'preset' => 'openrouter',
+            'base_url' => 'https://openrouter.ai/api/v1',
+            'models_cache' => ['vendor/model:free'],
+        ]);
+        Http::fake([
+            'openrouter.ai/*' => Http::response(['choices' => [['message' => ['content' => 'public reply']]]], 200),
+        ]);
+
+        $this->postJson('/api/modelfabric/v1/chat/completions', [
+            'messages' => [['role' => 'user', 'content' => 'public synthetic prompt']],
+        ], ['Authorization' => 'Bearer '.$plain])
+            ->assertOk()->assertJsonPath('choices.0.message.content', 'public reply');
+
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request): bool => (string) $request['model'] === 'vendor/model:free'
+            && $request['provider']['allow_fallbacks'] === false
+            && $request['provider']['max_price'] === [
+                'prompt' => 0, 'completion' => 0, 'request' => 0, 'image' => 0,
+            ]);
+    }
+
+    public function test_explicit_truncated_chat_reply_fails_over_to_another_verified_free_model(): void
+    {
+        $plain = $this->token(['private_source' => false]);
+        $this->evidenced('model-a', 'unknown', [
+            'name' => 'A Groq',
+            'preset' => 'groq',
+            'base_url' => 'https://api.groq.com/openai/v1',
+            'models_cache' => ['model-a'],
+        ]);
+        $this->evidenced('model-b', 'unknown', [
+            'name' => 'B Gemini',
+            'preset' => 'gemini',
+            'base_url' => 'https://generativelanguage.googleapis.com/v1beta/openai',
+            'models_cache' => ['model-b'],
+        ]);
+        Http::fake([
+            'api.groq.com/*' => Http::response([
+                'choices' => [['message' => ['content' => 'INCOMPLETE PRIVATE TAIL'], 'finish_reason' => 'length']],
+            ], 200),
+            'generativelanguage.googleapis.com/*' => Http::response([
+                'choices' => [['message' => ['content' => 'complete verified-free reply'], 'finish_reason' => 'stop']],
+            ], 200),
+        ]);
+
+        $this->postJson('/api/modelfabric/v1/chat/completions', [
+            'messages' => [['role' => 'user', 'content' => 'public synthetic prompt']],
+        ], ['Authorization' => 'Bearer '.$plain])
+            ->assertOk()
+            ->assertJsonPath('choices.0.message.content', 'complete verified-free reply')
+            ->assertJsonPath('modelfabric.attempts', 2)
+            ->assertJsonPath('modelfabric.provider', 'B Gemini');
+        Http::assertSentCount(2);
+    }
+
+    public function test_overlong_general_chat_reply_returns_error_instead_of_silent_truncation(): void
+    {
+        $plain = $this->token(['private_source' => false]);
+        $this->evidenced('llama-free');
+        Http::fake([
+            'api.groq.com/*' => Http::response([
+                'choices' => [['message' => ['content' => str_repeat('x', 8001)], 'finish_reason' => 'stop']],
+            ], 200),
+        ]);
+
+        $this->postJson('/api/modelfabric/v1/chat/completions', [
+            'messages' => [['role' => 'user', 'content' => 'public synthetic prompt']],
+        ], ['Authorization' => 'Bearer '.$plain])
+            ->assertStatus(502)
+            ->assertJsonPath('error.code', 'response_too_large');
+        Http::assertSentCount(1);
+    }
+
+    public function test_shared_api_automatically_fails_over_from_429_to_another_verified_free_provider(): void
+    {
+        $plain = $this->token(['private_source' => false]);
+        $this->evidenced('model-a', 'unknown', [
+            'name' => 'A Groq',
+            'preset' => 'groq',
+            'base_url' => 'https://api.groq.com/openai/v1',
+            'models_cache' => ['model-a'],
+        ]);
+        $this->evidenced('model-b', 'unknown', [
+            'name' => 'B Gemini',
+            'preset' => 'gemini',
+            'base_url' => 'https://generativelanguage.googleapis.com/v1beta/openai',
+            'models_cache' => ['model-b'],
+        ]);
+        Http::fake([
+            'api.groq.com/*' => Http::response(['error' => 'rate-limited'], 429, ['Retry-After' => '600']),
+            'generativelanguage.googleapis.com/*' => Http::response([
+                'choices' => [['message' => ['content' => 'free fallback succeeded']]],
+            ], 200),
+        ]);
+
+        $this->postJson('/api/modelfabric/v1/chat/completions', [
+            'messages' => [['role' => 'user', 'content' => 'public synthetic prompt']],
+        ], ['Authorization' => 'Bearer '.$plain])
+            ->assertOk()
+            ->assertJsonPath('choices.0.message.content', 'free fallback succeeded')
+            ->assertJsonPath('modelfabric.attempts', 2)
+            ->assertJsonPath('modelfabric.provider', 'B Gemini');
+        Http::assertSentCount(2);
+        Http::assertNotSent(fn ($request): bool => ! str_contains((string) $request->url(), 'api.groq.com')
+            && ! str_contains((string) $request->url(), 'generativelanguage.googleapis.com'));
+    }
+
+    public function test_all_free_routes_rate_limited_returns_429_without_paid_fallback_and_resumes_after_reset(): void
+    {
+        $plain = $this->token(['private_source' => false]);
+        $this->evidenced('llama-free');
+        Http::fake([
+            'api.groq.com/*' => Http::sequence()
+                ->push(['error' => 'quota'], 429, ['Retry-After' => '900'])
+                ->push(['choices' => [['message' => ['content' => 'resumed']]]], 200),
+        ]);
+        $headers = ['Authorization' => 'Bearer '.$plain];
+        $body = ['messages' => [['role' => 'user', 'content' => 'public smoke']]];
+
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)
+            ->assertStatus(429)->assertJsonPath('error.code', 'rate_limited')
+            ->assertHeader('Retry-After')
+            ->assertHeader('Content-Type', 'application/json');
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)
+            ->assertStatus(429)->assertJsonPath('error.code', 'all_routes_cooling_down')
+            ->assertHeader('Retry-After');
+        Http::assertSentCount(1);
+
+        $this->travel(901)->seconds();
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)
+            ->assertOk()->assertJsonPath('choices.0.message.content', 'resumed');
+        Http::assertSentCount(2);
+    }
+
+    public function test_owner_daily_request_cap_reports_429_without_an_extra_provider_call(): void
+    {
+        $plain = $this->token(['private_source' => false]);
+        $this->evidenced('llama-free');
+        $provider = AiProvider::query()->firstOrFail();
+        $provider->daily_request_cap = 1;
+        $provider->save();
+        Http::fake([
+            'api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'ok']]]], 200),
+        ]);
+        $headers = ['Authorization' => 'Bearer '.$plain];
+        $body = ['messages' => [['role' => 'user', 'content' => 'public smoke']]];
+
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)->assertOk();
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)
+            ->assertStatus(429)->assertJsonPath('error.code', 'daily_cap_reached');
+        Http::assertSentCount(1);
     }
 
     public function test_token_is_rate_limited_per_minute(): void
@@ -290,7 +480,7 @@ final class ModelFabricApiTest extends TestCase
         Http::fake();
         $headers = ['Authorization' => 'Bearer '.$this->token(), 'X-ModelFabric-Policy' => 'strict-free-cloud'];
         $this->postJson('/api/modelfabric/v1/chat/completions', ['messages' => [['role' => 'user', 'content' => 'private source']]], $headers)
-            ->assertStatus(502)->assertJsonPath('error.code', 'native_account_unverified');
+            ->assertStatus(403)->assertJsonPath('error.code', 'native_admission_required');
         Http::assertNothingSent();
     }
 
@@ -301,8 +491,11 @@ final class ModelFabricApiTest extends TestCase
         ]);
         $this->fakeNativeOpenRouter('unused', 'stop', 0);
         $headers = ['Authorization' => 'Bearer '.$this->token(), 'X-ModelFabric-Policy' => 'strict-free-cloud'];
+        $this->getJson('/api/modelfabric/v1/models', [
+            ...$headers, 'X-ModelFabric-Request-Digest' => str_repeat('a', 64),
+        ])->assertOk()->assertJsonPath('modelfabric.native_admission', null);
         $this->postJson('/api/modelfabric/v1/chat/completions', ['messages' => [['role' => 'user', 'content' => 'private source']]], $headers)
-            ->assertStatus(502)->assertJsonPath('error.code', 'native_account_unverified');
+            ->assertStatus(403)->assertJsonPath('error.code', 'native_admission_required');
         Http::assertSentCount(1);
         Http::assertNotSent(fn ($request): bool => $request->method() === 'POST');
     }
@@ -334,6 +527,102 @@ final class ModelFabricApiTest extends TestCase
         Http::assertSentCount(5);
     }
 
+    public function test_owner_revocation_after_ticket_issue_rejects_stale_token_before_dispatch(): void
+    {
+        $this->evidenced('vendor/model:free', 'no-training-documented', [
+            'name' => 'OpenRouter', 'preset' => 'openrouter',
+            'base_url' => 'https://openrouter.ai/api/v1',
+            'models_cache' => ['vendor/model:free'],
+        ]);
+        $this->fakeNativeOpenRouter('must never be returned');
+        $plain = $this->token();
+        $body = [
+            'model' => 'modelfabric-auto',
+            'messages' => [['role' => 'user', 'content' => 'private synthetic code']],
+            'max_tokens' => 1024,
+            'stream' => false,
+        ];
+        $stale = AiModelToken::query()->firstOrFail();
+        $digest = hash('sha256', "https://kmjtechno.com/api/modelfabric/v1/chat/completions\n".$plain."\n".json_encode($body, JSON_THROW_ON_ERROR));
+        $response = $this->getJson('/api/modelfabric/v1/models', [
+            'Authorization' => 'Bearer '.$plain,
+            'X-ModelFabric-Policy' => 'strict-free-cloud',
+            'X-ModelFabric-Request-Digest' => $digest,
+        ])->assertOk()->assertJsonPath('modelfabric.native_admission.request_digest', $digest);
+        $ticket = $response->json('modelfabric.native_admission.ticket');
+        $this->assertIsString($ticket);
+        Http::assertSentCount(2);
+
+        AiModelToken::query()->whereKey($stale->id)->update(['revoked_at' => now()]);
+        // The in-memory object remains pre-revocation. Ticket consumption must
+        // fetch the new persisted state and deny without provider dispatch.
+        $this->assertNull($stale->revoked_at);
+        $this->assertNull(app(NativeCodingAdmissionTicket::class)->consume($stale, $ticket, $digest));
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, [
+            'Authorization' => 'Bearer '.$plain,
+            'X-ModelFabric-Policy' => 'strict-free-cloud',
+            'X-ModelFabric-Admission-Ticket' => $ticket,
+        ])->assertStatus(401);
+        Http::assertSentCount(2);
+        Http::assertNotSent(fn ($request): bool => $request->method() === 'POST');
+    }
+
+    public function test_native_admission_does_not_probe_a_cooling_provider_or_model(): void
+    {
+        $this->evidenced('vendor/model:free', 'no-training-documented', [
+            'name' => 'OpenRouter', 'preset' => 'openrouter',
+            'base_url' => 'https://openrouter.ai/api/v1',
+            'models_cache' => ['vendor/model:free'],
+        ]);
+        $provider = AiProvider::query()->firstOrFail();
+        $headers = [
+            'Authorization' => 'Bearer '.$this->token(),
+            'X-ModelFabric-Policy' => 'strict-free-cloud',
+            'X-ModelFabric-Request-Digest' => str_repeat('a', 64),
+        ];
+        Http::fake();
+        Cache::put('modelfabric:cooldown:'.$provider->id, now()->addMinutes(10)->getTimestamp(), 600);
+        $this->getJson('/api/modelfabric/v1/models', $headers)->assertOk()
+            ->assertJsonPath('modelfabric.native_admission', null);
+        Cache::forget('modelfabric:cooldown:'.$provider->id);
+
+        Cache::put(
+            'modelfabric:model-cooldown:'.hash('sha256', $provider->id.'|vendor/model:free'),
+            now()->addMinutes(10)->getTimestamp(),
+            600,
+        );
+        $this->getJson('/api/modelfabric/v1/models', $headers)->assertOk()
+            ->assertJsonPath('modelfabric.native_admission', null);
+        Http::assertNothingSent();
+    }
+
+    public function test_native_admission_never_probes_an_owner_capped_route(): void
+    {
+        $this->evidenced('vendor/model:free', 'no-training-documented', [
+            'name' => 'OpenRouter', 'preset' => 'openrouter',
+            'base_url' => 'https://openrouter.ai/api/v1',
+            'models_cache' => ['vendor/model:free'],
+        ]);
+        $provider = AiProvider::query()->firstOrFail();
+        $provider->daily_request_cap = 1;
+        $provider->save();
+        AiModelRequest::query()->create([
+            'organization_id' => $this->org,
+            'ai_provider_id' => $provider->id,
+            'model_id' => 'vendor/model:free',
+            'outcome' => 'failed',
+            'error_code' => 'attempt_reserved',
+            'latency_ms' => 0,
+        ]);
+        Http::fake();
+        $this->getJson('/api/modelfabric/v1/models', [
+            'Authorization' => 'Bearer '.$this->token(),
+            'X-ModelFabric-Policy' => 'strict-free-cloud',
+            'X-ModelFabric-Request-Digest' => str_repeat('b', 64),
+        ])->assertOk()->assertJsonPath('modelfabric.native_admission', null);
+        Http::assertNothingSent();
+    }
+
     public function test_native_ticket_is_not_issued_when_provider_remaining_quota_is_unknown(): void
     {
         $this->evidenced('vendor/model:free', 'no-training-documented', [
@@ -345,6 +634,21 @@ final class ModelFabricApiTest extends TestCase
             ->assertJsonPath('modelfabric.native_admission', null);
         Http::assertSentCount(1);
         Http::assertNotSent(fn ($request): bool => $request->method() === 'POST');
+    }
+
+    /** @param array<string, mixed> $body */
+    private function nativeTicket(string $plain, array $body): string
+    {
+        $digest = hash('sha256', "https://kmjtechno.com/api/modelfabric/v1/chat/completions\n".$plain."\n".json_encode($body, JSON_THROW_ON_ERROR));
+        $response = $this->getJson('/api/modelfabric/v1/models', [
+            'Authorization' => 'Bearer '.$plain,
+            'X-ModelFabric-Policy' => 'strict-free-cloud',
+            'X-ModelFabric-Request-Digest' => $digest,
+        ])->assertOk()->assertJsonPath('modelfabric.native_admission.request_digest', $digest);
+        $ticket = $response->json('modelfabric.native_admission.ticket');
+        $this->assertIsString($ticket);
+
+        return $ticket;
     }
 
     private function fakeNativeOpenRouter(string $content, string $finish = 'stop', int $remaining = 5): void

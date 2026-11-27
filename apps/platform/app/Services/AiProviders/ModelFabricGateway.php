@@ -52,7 +52,7 @@ final class ModelFabricGateway
      * @param  list<array{role: string, content: string}>  $messages
      * @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string}
      */
-    public function completeSelected(AiProvider $provider, string $model, array $messages): array
+    public function completeSelected(AiProvider $provider, string $model, array $messages, bool $publicPromptsConfirmed = false): array
     {
         try {
             $this->manager->assertInferenceAllowed($provider, $model);
@@ -60,18 +60,36 @@ final class ModelFabricGateway
             return $this->fail($exception->getMessage(), 0, $this->profiler->classify($messages, 'chat'));
         }
 
-        return $this->complete($provider->organization_id, $messages, selectedRoute: ['provider_id' => $provider->id, 'model' => $model]);
+        return $this->complete($provider->organization_id, $messages, publicPromptsConfirmed: $publicPromptsConfirmed, selectedRoute: ['provider_id' => $provider->id, 'model' => $model]);
     }
 
     /**
      * @param  list<array{role: string, content: string}>  $messages
      * @param  array{provider_id: string, model: string}|null  $selectedRoute
      * @param  array{provider_id: string, model: string}|null  $nativeRoute
-     * @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string}
+     * @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string, retry_after_seconds?: int}
      */
-    public function complete(string $organizationId, array $messages, string $capability = 'chat', bool $privateSource = false, ?string $sessionKey = null, bool $strictFreeCloud = false, ?int $maxCodingTokens = null, ?array $nativeRoute = null, bool $publicPromptsConfirmed = false, ?array $selectedRoute = null): array
+    public function complete(string $organizationId, array $messages, string $capability = 'chat', bool $privateSource = false, ?string $sessionKey = null, bool $strictFreeCloud = false, ?int $maxCodingTokens = null, ?array $nativeRoute = null, bool $publicPromptsConfirmed = false, ?array $selectedRoute = null, bool $privateMailConsent = false): array
     {
         $profile = $this->profiler->classify($messages, $capability);
+        // Two distinct, consent-gated private workflows:
+        // 1. Source-code generation requires strict-free-cloud and a consumed
+        //    native ticket bound to the exact authenticated request.
+        // 2. Internal Mail AI drafting requires fresh per-request human consent,
+        //    plus the router's no-training evidence and free-price admission.
+        // A bare private chat/code call, or an API caller's untrusted claim,
+        // can never qualify as the internal mail workflow.
+        if ($privateSource) {
+            $nativeCoding = $capability === 'code' && $strictFreeCloud
+                && $nativeRoute !== null && ! $privateMailConsent;
+            $consentedMail = $capability === 'chat' && ! $strictFreeCloud
+                && $nativeRoute === null && $privateMailConsent;
+            if (! $nativeCoding && ! $consentedMail) {
+                return $this->fail('native_admission_required', 0, $profile);
+            }
+        } elseif ($privateMailConsent) {
+            return $this->fail('invalid_private_mail_policy', 0, $profile);
+        }
         if ($strictFreeCloud && ($capability !== 'code' || ! $privateSource || ($maxCodingTokens !== null && ($maxCodingTokens < 1 || $maxCodingTokens > 4096)))) {
             return $this->fail('invalid_coding_policy', 0, $profile);
         }
@@ -158,7 +176,7 @@ final class ModelFabricGateway
 
             $attempts++;
             $started = hrtime(true);
-            $result = $this->manager->complete($provider, (string) $route['model'], $messages, $strictFreeCloud ? ($maxCodingTokens ?? 1024) : null, $attempt, $publicPromptsConfirmed);
+            $result = $this->manager->complete($provider, (string) $route['model'], $messages, $strictFreeCloud ? ($maxCodingTokens ?? 1024) : null, $attempt, $publicPromptsConfirmed, $privateSource);
             $latency = (int) ((hrtime(true) - $started) / 1_000_000);
 
             $attempt->update([
@@ -188,7 +206,26 @@ final class ModelFabricGateway
             $this->penalize($provider, (string) $route['model'], $last, $result['rate'] ?? null);
         }
 
-        return $this->fail($last, $attempts, $profile);
+        // A retry hint is emitted only when a CURRENT, already-admitted
+        // route is actually cooling. Account billing credits and unknown daily
+        // reset windows are never guessed or represented as a Retry-After.
+        $retryAfter = null;
+        if (in_array($last, ['rate_limited', 'model_rate_limited', 'all_routes_cooling_down'], true)) {
+            $now = now()->getTimestamp();
+            foreach ($plan['routes'] as $route) {
+                $providerId = (string) $route['provider_id'];
+                $until = max(
+                    self::coolingUntil($providerId) ?? 0,
+                    $this->modelCoolingUntil($providerId, (string) $route['model']) ?? 0,
+                );
+                if ($until > $now) {
+                    $remaining = $until - $now;
+                    $retryAfter = $retryAfter === null ? $remaining : min($retryAfter, $remaining);
+                }
+            }
+        }
+
+        return $this->fail($last, $attempts, $profile, $retryAfter);
     }
 
     /**
@@ -321,12 +358,41 @@ final class ModelFabricGateway
         return $limit !== null && $limit['cap'] !== null && $limit['cap'] > 0 && $limit['used'] * 10 >= $limit['cap'] * 8;
     }
 
+    /**
+     * Read-only local reservation preflight for native admission tickets.
+     *
+     * A ticket must not claim a coding route can dispatch when its provider,
+     * exact model, observed daily quota, or owner daily cap already blocks it.
+     * The actual transaction still rechecks every limit at dispatch: this
+     * method neither reserves quota nor attests account billing.
+     */
+    public function nativePreflightAllowed(AiProvider $provider, string $model): bool
+    {
+        if (self::coolingUntil($provider->id) !== null
+            || $this->modelCoolingUntil($provider->id, $model) !== null
+            || $this->dailyQuotaExhausted($provider->id, $model, $provider->preset === 'groq')) {
+            return false;
+        }
+        if ($provider->daily_request_cap !== null) {
+            $used = AiModelRequest::query()
+                ->where('organization_id', $provider->organization_id)
+                ->where('ai_provider_id', $provider->id)
+                ->where('created_at', '>=', now()->utc()->startOfDay())
+                ->count();
+            if ($used >= (int) $provider->daily_request_cap) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /** Unix time until which the provider is skipped, or null when it may be used. */
     public static function coolingUntil(string $providerId): ?int
     {
         $until = Cache::get('modelfabric:cooldown:'.$providerId);
 
-        return is_int($until) && $until > time() ? $until : null;
+        return is_int($until) && $until > now()->getTimestamp() ? $until : null;
     }
 
     /**
@@ -350,6 +416,7 @@ final class ModelFabricGateway
             Cache::put($this->dailyRateKey($providerId, $model), [
                 'remaining' => $rate['requests_remaining'],
                 'limit' => $dailyLimit,
+                'reset_at' => now()->addSeconds($reset)->toIso8601String(),
             ], $reset);
         }
         $key = $this->rateKey($providerId, $model, $modelScoped);
@@ -359,7 +426,54 @@ final class ModelFabricGateway
             'requests' => $rate['requests_remaining'],
             'tokens' => $rate['tokens_remaining'],
             'max_requests' => $maxRequests,
+            'observed_at' => now()->toIso8601String(),
         ], 120);
+    }
+
+    /**
+     * Actual recent provider response headers only, not account billing credits or predicted quota.
+     * Unknown, expired and unobserved values must stay unknown in the UI.
+     *
+     * @param  list<string>  $models
+     * @return list<array<string, mixed>>
+     */
+    public function quotaObservations(AiProvider $provider, array $models): array
+    {
+        $modelScoped = $provider->preset === 'groq';
+        // Show the owner's selected eligible model first; the directory can contain
+        // more than twelve candidates and must not hide the model in actual use.
+        $modelsToShow = $modelScoped ? $models : ['shared across models'];
+        if ($modelScoped && is_string($provider->default_model) && in_array($provider->default_model, $models, true)) {
+            $modelsToShow = [$provider->default_model, ...array_values(array_filter(
+                $models,
+                fn (string $model): bool => $model !== $provider->default_model,
+            ))];
+        }
+        $providerCooling = self::coolingUntil($provider->id);
+        $observations = [];
+        foreach (array_slice($modelsToShow, 0, 12) as $model) {
+            $observed = Cache::get($this->rateKey($provider->id, $model, $modelScoped));
+            $daily = $modelScoped ? Cache::get($this->dailyRateKey($provider->id, $model)) : null;
+            $modelCooling = $modelScoped ? $this->modelCoolingUntil($provider->id, $model) : null;
+            $cooling = max($providerCooling ?? 0, $modelCooling ?? 0);
+            if (! is_array($observed) && ! is_array($daily) && $cooling === 0) {
+                continue;
+            }
+            $observations[] = [
+                'cooling_until' => $cooling > 0 ? date('c', $cooling) : null,
+                'cooldown_scope' => $cooling === 0 ? null : ($modelCooling !== null && $modelCooling >= ($providerCooling ?? 0) ? 'model' : 'provider'),
+                'model' => $model,
+                'scope' => $modelScoped ? 'model' : 'provider',
+                'requests_remaining' => is_array($observed) && is_int($observed['requests'] ?? null) ? $observed['requests'] : null,
+                'tokens_remaining' => is_array($observed) && is_int($observed['tokens'] ?? null) ? $observed['tokens'] : null,
+                'observed_at' => is_array($observed) ? ($observed['observed_at'] ?? null) : null,
+                'daily_remaining' => is_array($daily) && is_int($daily['remaining'] ?? null) ? $daily['remaining'] : null,
+                'daily_limit' => is_array($daily) && is_int($daily['limit'] ?? null) ? $daily['limit'] : null,
+                'daily_reset_at' => is_array($daily) ? ($daily['reset_at'] ?? null) : null,
+            ];
+        }
+
+        return $observations;
     }
 
     private function nearLimit(string $providerId, string $model, bool $modelScoped): bool
@@ -386,21 +500,21 @@ final class ModelFabricGateway
         $retryAfter = $rate['retry_after'] ?? null;
         if ($code === 'rate_limited' && $provider->preset === 'kilo-free') {
             // All anonymous Kilo requests share the same Elite egress-IP quota.
-            $seconds = max(60, min(3600, $retryAfter ?? 3600));
+            $seconds = max(60, $retryAfter ?? 3600);
             Cache::put(self::KILO_COOLDOWN_KEY, true, $seconds);
         }
         // A verified Groq model's exhausted quota must not cool the entire provider.
         // Without a typed remaining=0 report, conservatively use provider-wide cooldown.
         if ($code === 'rate_limited' && $provider->preset === 'groq' && ($rate['requests_remaining'] ?? null) === 0) {
-            $seconds = $retryAfter !== null ? max(5, min(300, $retryAfter)) : self::RATE_LIMIT_COOLDOWN;
-            Cache::put($this->modelCooldownKey($provider->id, $model), time() + $seconds, $seconds);
+            $seconds = $retryAfter !== null ? max(5, $retryAfter) : self::RATE_LIMIT_COOLDOWN;
+            Cache::put($this->modelCooldownKey($provider->id, $model), now()->getTimestamp() + $seconds, $seconds);
 
             return;
         }
         $seconds = match ($code) {
-            'rate_limited' => $retryAfter !== null ? max(5, min(300, $retryAfter)) : self::RATE_LIMIT_COOLDOWN,
+            'rate_limited' => $retryAfter !== null ? max(5, $retryAfter) : self::RATE_LIMIT_COOLDOWN,
             'auth_failed' => self::AUTH_COOLDOWN,
-            'provider_unavailable', 'connection_failed', 'empty_response', 'unexpected_status', 'response_too_large' => $this->softFailure($provider->id),
+            'provider_unavailable', 'connection_failed', 'empty_response', 'incomplete_response', 'unexpected_status', 'response_too_large' => $this->softFailure($provider->id),
             // Admission refusals (zero_spend_blocked, model_not_discovered, ...) are not provider faults.
             default => 0,
         };
@@ -411,7 +525,7 @@ final class ModelFabricGateway
             $provider->save();
         }
         if ($seconds > 0) {
-            Cache::put('modelfabric:cooldown:'.$provider->id, time() + $seconds, $seconds);
+            Cache::put('modelfabric:cooldown:'.$provider->id, now()->getTimestamp() + $seconds, $seconds);
         }
     }
 
@@ -441,7 +555,7 @@ final class ModelFabricGateway
     {
         $until = Cache::get($this->modelCooldownKey($providerId, $model));
 
-        return is_int($until) && $until > time() ? $until : null;
+        return is_int($until) && $until > now()->getTimestamp() ? $until : null;
     }
 
     private function softFailure(string $providerId): int
@@ -586,9 +700,18 @@ final class ModelFabricGateway
         return 'modelfabric:fail:'.$providerId;
     }
 
-    /** @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string} */
-    private function fail(string $code, int $attempts, string $profile): array
+    /** @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string, retry_after_seconds?: int} */
+    private function fail(string $code, int $attempts, string $profile, ?int $retryAfterSeconds = null): array
     {
-        return ['ok' => false, 'content' => null, 'error_code' => $code, 'provider' => null, 'model' => null, 'attempts' => $attempts, 'profile' => $profile];
+        return [
+            'ok' => false,
+            'content' => null,
+            'error_code' => $code,
+            'provider' => null,
+            'model' => null,
+            'attempts' => $attempts,
+            'profile' => $profile,
+            ...($retryAfterSeconds === null ? [] : ['retry_after_seconds' => $retryAfterSeconds]),
+        ];
     }
 }

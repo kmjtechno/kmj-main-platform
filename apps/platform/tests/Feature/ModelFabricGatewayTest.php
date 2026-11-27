@@ -32,6 +32,141 @@ final class ModelFabricGatewayTest extends TestCase
         $this->app->instance(EndpointGuard::class, new EndpointGuard(fn (): array => ['93.184.216.34']));
     }
 
+    public function test_quota_observations_are_from_fresh_headers_only_and_never_imply_credits(): void
+    {
+        $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        $key = 'modelfabric:rate:'.hash('sha256', $provider->id.'|model-a');
+        $gateway = app(ModelFabricGateway::class);
+
+        $this->assertSame([], $gateway->quotaObservations($provider, ['model-a']));
+        Cache::put($key, [
+            'requests' => 13,
+            'tokens' => 4500,
+            'max_requests' => 20,
+            'observed_at' => now()->toIso8601String(),
+        ], 120);
+        $observations = $gateway->quotaObservations($provider, ['model-a']);
+        $this->assertCount(1, $observations);
+        $this->assertSame(13, $observations[0]['requests_remaining']);
+        $this->assertSame(4500, $observations[0]['tokens_remaining']);
+        $this->assertNull($observations[0]['daily_reset_at']);
+        $this->assertArrayNotHasKey('credit_balance', $observations[0]);
+        Cache::forget($key);
+        $this->assertSame([], $gateway->quotaObservations($provider, ['model-a']));
+    }
+
+    public function test_model_429_honours_provider_retry_after_and_shows_cooldown_without_quota_headers(): void
+    {
+        $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        Http::fake([
+            'api.groq.com/*' => Http::sequence()
+                ->push(['error' => 'limit'], 429, [
+                    'x-ratelimit-remaining-requests' => '0',
+                    'Retry-After' => '600',
+                ])
+                ->push(['choices' => [['message' => ['content' => 'recovered']]]], 200),
+        ]);
+
+        $gateway = app(ModelFabricGateway::class);
+        $result = $gateway->complete($this->org, [['role' => 'user', 'content' => 'ping']]);
+        $this->assertFalse($result['ok']);
+        $this->assertSame('rate_limited', $result['error_code']);
+        $this->assertNull(ModelFabricGateway::coolingUntil($provider->id));
+
+        // A 429 cooldown is local admission state, not a reported billing balance.
+        Cache::forget('modelfabric:rate:'.hash('sha256', $provider->id.'|model-a'));
+        $observations = $gateway->quotaObservations($provider, ['model-a']);
+        $this->assertCount(1, $observations);
+        $this->assertSame('model', $observations[0]['cooldown_scope']);
+        $this->assertNull($observations[0]['requests_remaining']);
+        $this->assertGreaterThanOrEqual(now()->addSeconds(580)->timestamp, strtotime($observations[0]['cooling_until']));
+        $this->assertArrayNotHasKey('credit_balance', $observations[0]);
+        $this->assertSame(0, $gateway->complete($this->org, [['role' => 'user', 'content' => 'again']])['attempts']);
+        Http::assertSentCount(1);
+
+        // After the provider reset, this same independently verified-free route
+        // becomes eligible without requiring another account connection.
+        $this->travel(601)->seconds();
+        $recovered = $gateway->complete($this->org, [['role' => 'user', 'content' => 'resume']]);
+        $this->assertTrue($recovered['ok']);
+        $this->assertSame('recovered', $recovered['content']);
+        Http::assertSentCount(2);
+    }
+
+    public function test_provider_429_honours_retry_after_and_does_not_attempt_while_cooling(): void
+    {
+        $provider = $this->provider('gemini', 'Gemini', 'https://generativelanguage.googleapis.com/v1beta/openai', 'model-a');
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::sequence()
+                ->push(['error' => 'limit'], 429, ['Retry-After' => '900'])
+                ->push(['choices' => [['message' => ['content' => 'recovered']]]], 200),
+        ]);
+
+        $gateway = app(ModelFabricGateway::class);
+        $this->assertSame('rate_limited', $gateway->complete($this->org, [['role' => 'user', 'content' => 'ping']])['error_code']);
+        $this->assertGreaterThanOrEqual(now()->addSeconds(880)->timestamp, ModelFabricGateway::coolingUntil($provider->id));
+        $observations = $gateway->quotaObservations($provider, ['model-a']);
+        $this->assertCount(1, $observations);
+        $this->assertSame('provider', $observations[0]['cooldown_scope']);
+        $this->assertNull($observations[0]['observed_at']);
+        $this->assertSame(0, $gateway->complete($this->org, [['role' => 'user', 'content' => 'again']])['attempts']);
+        Http::assertSentCount(1);
+
+        $this->travel(901)->seconds();
+        $recovered = $gateway->complete($this->org, [['role' => 'user', 'content' => 'resume']]);
+        $this->assertTrue($recovered['ok']);
+        $this->assertSame('recovered', $recovered['content']);
+        Http::assertSentCount(2);
+    }
+
+    public function test_provider_daily_retry_after_86400_is_not_shortened_to_one_hour(): void
+    {
+        $provider = $this->provider('gemini', 'Gemini', 'https://generativelanguage.googleapis.com/v1beta/openai', 'model-a');
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::sequence()
+                ->push(['error' => 'daily free tier exhausted'], 429, ['Retry-After' => '86400'])
+                ->push(['choices' => [['message' => ['content' => 'after daily reset']]]], 200),
+        ]);
+
+        $gateway = app(ModelFabricGateway::class);
+        $first = $gateway->complete($this->org, [['role' => 'user', 'content' => 'public smoke']]);
+        $this->assertSame('rate_limited', $first['error_code']);
+        $this->assertGreaterThanOrEqual(now()->addSeconds(86390)->timestamp, ModelFabricGateway::coolingUntil($provider->id));
+        $this->assertGreaterThanOrEqual(86390, $first['retry_after_seconds'] ?? 0);
+        $this->travel(3601)->seconds();
+        $this->assertSame(0, $gateway->complete($this->org, [['role' => 'user', 'content' => 'early retry']])['attempts']);
+        Http::assertSentCount(1);
+
+        $this->travel(82800)->seconds();
+        // Model discovery itself expires after 24 hours. The normal refresh job
+        // must requalify that catalog independently before resuming inference.
+        $provider->models_checked_at = now();
+        $provider->save();
+        $result = $gateway->complete($this->org, [['role' => 'user', 'content' => 'after reset']]);
+        $this->assertTrue($result['ok']);
+        $this->assertSame('after daily reset', $result['content']);
+        Http::assertSentCount(2);
+    }
+
+    public function test_quota_directory_prioritizes_selected_admitted_model_beyond_first_twelve(): void
+    {
+        $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-z');
+        $provider->default_model = 'model-z';
+        $provider->save();
+        Cache::put('modelfabric:rate:'.hash('sha256', $provider->id.'|model-z'), [
+            'requests' => 7,
+            'tokens' => 1234,
+            'max_requests' => 10,
+            'observed_at' => now()->toIso8601String(),
+        ], 120);
+        $models = [...array_map(fn (int $n): string => 'model-'.$n, range(1, 13)), 'model-z'];
+
+        $observations = app(ModelFabricGateway::class)->quotaObservations($provider, $models);
+        $this->assertCount(1, $observations);
+        $this->assertSame('model-z', $observations[0]['model']);
+        $this->assertSame(7, $observations[0]['requests_remaining']);
+    }
+
     public function test_no_route_means_no_provider_call_at_all(): void
     {
         Http::fake();
@@ -355,6 +490,116 @@ final class ModelFabricGatewayTest extends TestCase
         Http::assertSentCount(2);
     }
 
+    public function test_internal_private_source_invocation_requires_native_ticket_route_before_any_ledger_or_http(): void
+    {
+        $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        Http::fake(['api.groq.com/*' => Http::response([
+            'choices' => [['message' => ['content' => 'should never be dispatched']]],
+        ], 200)]);
+        $gateway = app(ModelFabricGateway::class);
+        $messages = [['role' => 'user', 'content' => 'confidential code']];
+
+        $this->assertSame('native_admission_required', $gateway->complete(
+            $this->org, $messages, capability: 'code', privateSource: true,
+        )['error_code']);
+        $this->assertSame('native_admission_required', $gateway->complete(
+            $this->org, $messages, capability: 'code', privateSource: true, strictFreeCloud: true,
+        )['error_code']);
+        $this->assertSame('native_admission_required', $gateway->complete(
+            $this->org, $messages, capability: 'code', privateSource: true,
+            nativeRoute: ['provider_id' => $provider->id, 'model' => 'model-a'],
+        )['error_code']);
+
+        Http::assertNothingSent();
+        $this->assertSame(0, AiModelRequest::query()->count());
+    }
+
+    public function test_internal_mail_consent_requires_private_chat_and_never_authorizes_coding(): void
+    {
+        $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        // Private mail requires explicit documented no-training evidence.
+        // The generic provider test helper intentionally defaults to unknown.
+        AiModelEvidence::query()->where('ai_provider_id', $provider->id)
+            ->update(['data_handling' => 'no-training-documented']);
+        Http::fake(['api.groq.com/*' => Http::response([
+            'choices' => [['message' => ['content' => 'consented editable mail reply']]],
+        ], 200)]);
+        $gateway = app(ModelFabricGateway::class);
+        $messages = [['role' => 'user', 'content' => 'consented private correspondence']];
+
+        $this->assertSame('native_admission_required', $gateway->complete(
+            $this->org, $messages, capability: 'chat', privateSource: true,
+        )['error_code']);
+        $this->assertSame('native_admission_required', $gateway->complete(
+            $this->org, $messages, capability: 'code', privateSource: true,
+            strictFreeCloud: true, privateMailConsent: true,
+            nativeRoute: ['provider_id' => $provider->id, 'model' => 'model-a'],
+        )['error_code']);
+        $this->assertSame('invalid_private_mail_policy', $gateway->complete(
+            $this->org, $messages, privateMailConsent: true,
+        )['error_code']);
+        Http::assertNothingSent();
+        $this->assertSame(0, AiModelRequest::query()->count());
+
+        $result = $gateway->complete(
+            $this->org, $messages, capability: 'chat',
+            privateSource: true, privateMailConsent: true,
+        );
+        $this->assertTrue($result['ok']);
+        $this->assertSame('consented editable mail reply', $result['content']);
+        Http::assertSentCount(1);
+        $this->assertDatabaseCount('ai_model_requests', 1);
+    }
+
+    public function test_consented_private_mail_to_openrouter_enforces_zero_retention_and_zero_price(): void
+    {
+        $provider = $this->provider('openrouter', 'OpenRouter', 'https://openrouter.ai/api/v1', 'vendor/model:free');
+        AiModelEvidence::query()->where('ai_provider_id', $provider->id)
+            ->update(['data_handling' => 'no-training-documented']);
+        Http::fake(['openrouter.ai/*' => Http::response([
+            'choices' => [['message' => ['content' => 'Editable private mail response']]],
+        ], 200)]);
+        $gateway = app(ModelFabricGateway::class);
+        $messages = [['role' => 'user', 'content' => 'Sensitive customer correspondence']];
+
+        $result = $gateway->complete(
+            $this->org, $messages, capability: 'chat',
+            privateSource: true, privateMailConsent: true,
+        );
+        $this->assertTrue($result['ok']);
+        $this->assertSame('Editable private mail response', $result['content']);
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request): bool => $request->method() === 'POST'
+            && $request['provider']['data_collection'] === 'deny'
+            && $request['provider']['zdr'] === true
+            && $request['provider']['allow_fallbacks'] === false
+            && $request['provider']['max_price']['prompt'] === 0
+            && $request['provider']['max_price']['completion'] === 0);
+        $this->assertDatabaseCount('ai_model_requests', 1);
+    }
+
+    public function test_consent_does_not_unlock_mail_content_when_no_training_evidence_is_missing(): void
+    {
+        $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        AiModelEvidence::query()->where('ai_provider_id', $provider->id)
+            ->update(['data_handling' => 'unknown']);
+        Http::fake(['api.groq.com/*' => Http::response([
+            'choices' => [['message' => ['content' => 'must stay private']]],
+        ], 200)]);
+
+        $result = app(ModelFabricGateway::class)->complete(
+            $this->org,
+            [['role' => 'user', 'content' => 'private mail']],
+            capability: 'chat',
+            privateSource: true,
+            privateMailConsent: true,
+        );
+        $this->assertFalse($result['ok']);
+        $this->assertSame('NO_FREE_ROUTE_AVAILABLE', $result['error_code']);
+        $this->assertSame(0, AiModelRequest::query()->count());
+        Http::assertNothingSent();
+    }
+
     public function test_keyless_inference_requires_explicit_public_prompt_confirmation(): void
     {
         AiProvider::query()->create(array_replace(
@@ -366,7 +611,7 @@ final class ModelFabricGatewayTest extends TestCase
         $messages = [['role' => 'user', 'content' => 'ping']];
 
         $this->assertSame('NO_FREE_ROUTE_AVAILABLE', $gateway->complete($this->org, $messages)['error_code']);
-        $this->assertSame('NO_FREE_ROUTE_AVAILABLE', $gateway->complete($this->org, $messages, privateSource: true, publicPromptsConfirmed: true)['error_code']);
+        $this->assertSame('native_admission_required', $gateway->complete($this->org, $messages, privateSource: true, publicPromptsConfirmed: true)['error_code']);
         Http::assertNothingSent();
 
         $this->assertTrue($gateway->complete($this->org, $messages, publicPromptsConfirmed: true)['ok']);

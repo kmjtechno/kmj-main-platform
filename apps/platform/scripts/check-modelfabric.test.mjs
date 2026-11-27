@@ -92,7 +92,10 @@ void test('API tokens tab shows a copy-ready connect guide without persisting th
     assert.match(page, /function ConnectGuide/);
     assert.match(page, /modelfabric-connect-guide/);
     assert.match(page, /modelfabric-auto/);
-    assert.match(page, /<ConnectGuide origin=\{origin\} token=\{newToken\}/);
+    assert.match(
+        page,
+        /<ConnectGuide\s+origin=\{origin\}\s+token=\{newToken\}\s+coding=\{/,
+    );
     assert.doesNotMatch(page, /localStorage|sessionStorage/);
 });
 
@@ -319,6 +322,35 @@ void test('connection samples do not embed the issued bearer or claim unsupporte
     assert.match(api, /\$token->private_source \? 'code' : 'chat'/);
 });
 
+void test('secure coding UI never declares source transfer ready from model evidence plus token alone', () => {
+    const api = read('app/Http/Controllers/ModelFabricApiController.php');
+    assert.match(page, /Activation pending/);
+    assert.doesNotMatch(page, /Route and token ready/);
+    assert.match(page, /account billing proof/);
+    assert.match(page, /single-use admission ticket/);
+    assert.match(page, /explicit source-transfer consent/);
+    assert.match(api, /native_admission_required/);
+    assert.match(
+        api,
+        /\$token->private_source && \(! \$strictFreeCloud \|\| \$nativeRoute === null\)/,
+    );
+});
+
+void test('secure coding token guide excludes bare SDK completions and explains native admission', () => {
+    assert.match(page, /data-testid="modelfabric-coding-connect-warning"/);
+    assert.match(
+        page,
+        /Secure coding tokens cannot use a bare OpenAI SDK\s+completion/,
+    );
+    assert.match(page, /request-bound single-use native admission ticket/);
+    assert.match(page, /id: 'coding-preflight'/);
+    assert.match(page, /X-ModelFabric-Policy: strict-free-cloud/);
+    assert.match(
+        page,
+        /const snippets: \{ id: string; label: string; code: string \}\[\] = coding/,
+    );
+});
+
 void test('guided readiness separates general chat from secure coding and gates unusable tokens', () => {
     assert.match(page, /modelfabric-workflow-readiness/);
     assert.match(page, /token.active && !token.private_source/);
@@ -400,4 +432,16 @@ void test('provider setup stays inside the native ModelFabric workspace', () => 
         /embedded \? 'provider-connections' : undefined/,
     );
     assert.match(providerPage, /!embedded && <Head/);
+});
+
+void test('one-click provider inference proof requires public consent and existing zero-spend reservation', () => {
+    const gateway = read('app/Services/AiProviders/ModelFabricGateway.php');
+    const providers = read('resources/js/pages/services/ai-providers.tsx');
+    assert.match(routes, /providers\/\{provider\}\/inference-check/);
+    assert.match(routes, /throttle:3,10/);
+    assert.match(controller, /public function verifyInference/);
+    assert.match(controller, /'public_prompts_confirmed' => \['accepted'\]/);
+    assert.match(controller, /gateway->completeSelected/);
+    assert.match(gateway, /selectedRoute:/);
+    assert.match(providers, /Run one bounded synthetic inference/);
 });

@@ -41,6 +41,7 @@ final class ModelFabricController extends Controller
         private readonly ProviderManager $manager,
         private readonly ModelFabricRouter $router,
         private readonly ModelFabricRuleApplier $rules,
+        private readonly ModelFabricGateway $gateway,
     ) {}
 
     public function index(Request $request): Response
@@ -80,6 +81,7 @@ final class ModelFabricController extends Controller
                 $presented['priority'] = (int) $provider->priority;
                 $presented['daily_request_cap'] = $provider->daily_request_cap === null ? null : (int) $provider->daily_request_cap;
                 $presented['used_today'] = (int) ($usedToday[$provider->id] ?? 0);
+                $presented['quota_observations'] = app(ModelFabricGateway::class)->quotaObservations($provider, $presented['models']);
                 if ($provider->preset === 'kilo-free') {
                     $presented['shared_hourly_quota'] = ModelFabricGateway::kiloQuotaSnapshot();
                 }
@@ -436,6 +438,40 @@ final class ModelFabricController extends Controller
         $this->audit($request, 'model_fabric.evidence_revoked', ['model' => $row->model_id]);
 
         return back()->with('status', 'Evidence revoked. The model is no longer routable.');
+    }
+
+    /**
+     * One deliberate public synthetic prompt, against the selected provider only.
+     * This is not a billable balance query or automatic provider qualification.
+     */
+    public function verifyInference(Request $request, string $provider): RedirectResponse
+    {
+        $scope = $this->owner($request, true);
+        $request->validate(['public_prompts_confirmed' => ['accepted']]);
+        $row = AiProvider::query()->where('organization_id', $scope['organization_id'])->whereKey($provider)->firstOrFail();
+        $models = $this->manager->admittedFreeModels($row);
+        if ($models === []) {
+            return back()->withErrors(['provider' => 'No currently admitted verified-free model.']);
+        }
+
+        $model = is_string($row->default_model) && in_array($row->default_model, $models, true)
+            ? $row->default_model
+            : $models[0];
+        $result = $this->gateway->completeSelected(
+            $row,
+            $model,
+            [['role' => 'user', 'content' => 'Reply with KMJ-OK.']],
+            publicPromptsConfirmed: true,
+        );
+        // A 200 from the provider is not evidence that the requested synthetic
+        // output was produced. Reject reasoning-only, unrelated or partial
+        // responses instead of marking the provider as inference-verified.
+        if (! $result['ok'] || trim((string) ($result['content'] ?? '')) !== 'KMJ-OK') {
+            return back()->withErrors(['provider' => 'Synthetic inference did not produce the expected KMJ-OK response. No inference verification was recorded.']);
+        }
+        $this->audit($request, 'model_fabric.synthetic_inference_passed', ['provider_id' => $row->id, 'model_id' => $model]);
+
+        return back()->with('status', 'One synthetic public inference succeeded. This is not proof of remaining billing credits.');
     }
 
     public function updateProvider(Request $request, string $provider): RedirectResponse

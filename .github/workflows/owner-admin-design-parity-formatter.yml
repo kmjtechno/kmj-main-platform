@@ -5,6 +5,7 @@ on:
       - 'apps/platform/resources/css/owner-module-shell.css'
       - 'apps/platform/resources/js/layouts/owner-module-shell.tsx'
       - 'apps/platform/resources/js/pages/**'
+      - 'apps/platform/resources/js/components/ai-provider-connect-hub.tsx'
       - 'apps/platform/scripts/check-owner-design-parity.test.mjs'
       - 'apps/platform/scripts/check-modelfabric.test.mjs'
       - 'apps/platform/scripts/check-owner-product-editor-state.test.mjs'
@@ -35,6 +36,7 @@ jobs:
             resources/js/pages/operator-modelfabric.tsx \
             scripts/check-modelfabric.test.mjs \
             resources/js/pages/services/ai-providers.tsx \
+            resources/js/components/ai-provider-connect-hub.tsx \
             resources/js/pages/services/codebridge.tsx \
             scripts/check-owner-design-parity.test.mjs \
             resources/js/pages/operator-products.tsx \
@@ -52,6 +54,7 @@ jobs:
             resources/js/pages/operator-modelfabric.tsx \
             scripts/check-modelfabric.test.mjs \
             resources/js/pages/services/ai-providers.tsx \
+            resources/js/components/ai-provider-connect-hub.tsx \
             resources/js/pages/services/codebridge.tsx \
             scripts/check-owner-design-parity.test.mjs \
             resources/js/pages/operator-products.tsx \
