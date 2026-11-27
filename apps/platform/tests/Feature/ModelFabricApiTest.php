@@ -264,6 +264,33 @@ final class ModelFabricApiTest extends TestCase
         $this->postJson('/api/modelfabric/v1/chat/completions', ['messages' => [['role' => 'tool', 'content' => 'x']]], $headers)->assertStatus(422);
     }
 
+    public function test_openrouter_general_chat_enforces_zero_price_ceiling_even_with_owner_evidence(): void
+    {
+        $plain = $this->token(['private_source' => false]);
+        $this->evidenced('vendor/model:free', 'unknown', [
+            'name' => 'OpenRouter',
+            'preset' => 'openrouter',
+            'base_url' => 'https://openrouter.ai/api/v1',
+            'models_cache' => ['vendor/model:free'],
+        ]);
+        Http::fake([
+            'openrouter.ai/*' => Http::response(['choices' => [['message' => ['content' => 'public reply']]]], 200),
+        ]);
+
+        $this->postJson('/api/modelfabric/v1/chat/completions', [
+            'messages' => [['role' => 'user', 'content' => 'public synthetic prompt']],
+        ], ['Authorization' => 'Bearer '.$plain])
+            ->assertOk()->assertJsonPath('choices.0.message.content', 'public reply');
+
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request): bool =>
+            (string) $request['model'] === 'vendor/model:free'
+            && $request['provider']['allow_fallbacks'] === false
+            && $request['provider']['max_price'] === [
+                'prompt' => 0, 'completion' => 0, 'request' => 0, 'image' => 0,
+            ]);
+    }
+
     public function test_all_free_routes_rate_limited_returns_429_without_paid_fallback_and_resumes_after_reset(): void
     {
         $plain = $this->token(['private_source' => false]);
