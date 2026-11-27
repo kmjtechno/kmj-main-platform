@@ -57,6 +57,9 @@ final class PaymentGatewayReadiness
                 'webhook_receiver_url' => url('/webhooks/payments/'.$provider),
                 'webhook_events_received' => $eventsReceived,
                 'webhook_last_received_at' => $this->iso($lastReceived),
+                // Last time the owner-only INR 1 sandbox order was accepted by the provider. This proves
+                // the test keys work; it is not a payment, a webhook match or a license.
+                'sandbox_order_probe_at' => $this->lastSandboxProbe($provider),
                 'recent_events' => $recentEvents,
                 'international_approval_recorded' => ($settings['international_approved'] ?? false) === true,
                 'live_transaction_verified' => false,
@@ -112,6 +115,29 @@ final class PaymentGatewayReadiness
             ->all();
 
         return array_values($rows);
+    }
+
+    private function lastSandboxProbe(string $provider): ?string
+    {
+        if (! Schema::hasTable('operator_action_audits')) {
+            return null;
+        }
+
+        $rows = DB::table('operator_action_audits')
+            ->where('action', 'payment_gateway.sandbox_order_probe')
+            ->where('outcome', 'sandbox_order_created_only')
+            ->orderByDesc('id')
+            ->limit(50)
+            ->get(['metadata', 'created_at']);
+
+        foreach ($rows as $row) {
+            $metadata = is_string($row->metadata) ? json_decode($row->metadata, true) : null;
+            if (is_array($metadata) && ($metadata['provider'] ?? null) === $provider) {
+                return $this->iso($row->created_at);
+            }
+        }
+
+        return null;
     }
 
     /** Storage is UTC; send explicit Zulu so the console can show India time. */

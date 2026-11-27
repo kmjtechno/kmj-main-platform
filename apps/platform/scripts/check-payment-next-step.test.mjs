@@ -19,8 +19,12 @@ void test('guided progress only turns green from real stored or proven state', (
     );
     assert.match(step, /setting\?\.webhook_secret_stored === true/);
     assert.match(step, /readiness\?\.webhook_verification_configured === true/);
-    // The sandbox order is never claimed done from the UI.
-    assert.match(step, /id: 'sandbox-order'[\s\S]*?done: false/);
+    // The sandbox order turns green only from the server-recorded provider acceptance.
+    assert.match(
+        step,
+        /id: 'sandbox-order'[\s\S]*?done: Boolean\(readiness\?\.sandbox_order_probe_at\)/,
+    );
+    assert.doesNotMatch(step, /id: 'sandbox-order'[\s\S]*?done: true/);
 });
 
 void test('guidance never offers to enable live charging or asks for secrets in chat', () => {
