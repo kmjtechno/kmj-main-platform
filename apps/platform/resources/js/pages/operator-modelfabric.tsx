@@ -509,17 +509,17 @@ function ConnectGuide({
               },
           ]
         : [
-        {
-            id: 'sdk',
-            label: 'Python (OpenAI SDK)',
-            code: `import os\nfrom openai import OpenAI\n\nclient = OpenAI(base_url="${baseUrl}", api_key=os.environ["KMJ_MODELFABRIC_TOKEN"])\nreply = client.chat.completions.create(\n    model="modelfabric-auto",\n    messages=[{"role": "user", "content": "ping"}],\n)\nprint(reply.choices[0].message.content)`,
-        },
-        {
-            id: 'curl',
-            label: 'curl (read-only model check)',
-            code: `curl --fail-with-body "${baseUrl}/models" \\\n  -H "Authorization: Bearer $KMJ_MODELFABRIC_TOKEN"`,
-        },
-    ];
+              {
+                  id: 'sdk',
+                  label: 'Python (OpenAI SDK)',
+                  code: `import os\nfrom openai import OpenAI\n\nclient = OpenAI(base_url="${baseUrl}", api_key=os.environ["KMJ_MODELFABRIC_TOKEN"])\nreply = client.chat.completions.create(\n    model="modelfabric-auto",\n    messages=[{"role": "user", "content": "ping"}],\n)\nprint(reply.choices[0].message.content)`,
+              },
+              {
+                  id: 'curl',
+                  label: 'curl (read-only model check)',
+                  code: `curl --fail-with-body "${baseUrl}/models" \\\n  -H "Authorization: Bearer $KMJ_MODELFABRIC_TOKEN"`,
+              },
+          ];
 
     return (
         <div className="mt-4 space-y-3" data-testid="modelfabric-connect-guide">
@@ -541,12 +541,12 @@ function ConnectGuide({
                     className="text-sm text-amber-700 dark:text-amber-300"
                     data-testid="modelfabric-coding-connect-warning"
                 >
-                    Secure coding tokens cannot use a bare OpenAI SDK completion.
-                    An enrolled CodeBridge worker must request a fresh
-                    request-bound single-use native admission ticket before
-                    each private source transfer. Source-transfer consent,
-                    provider billing proof and worker activation are separate
-                    gates; a read-only model check sends no source.
+                    Secure coding tokens cannot use a bare OpenAI SDK
+                    completion. An enrolled CodeBridge worker must request a
+                    fresh request-bound single-use native admission ticket
+                    before each private source transfer. Source-transfer
+                    consent, provider billing proof and worker activation are
+                    separate gates; a read-only model check sends no source.
                 </p>
             ) : null}
             {snippets.map((snippet) => (
@@ -567,8 +567,8 @@ function ConnectGuide({
                 </p>
             ) : (
                 <p className="text-muted-foreground text-xs">
-                    Optional: send an X-ModelFabric-Session header (any short id)
-                    to keep one conversation on the same route.
+                    Optional: send an X-ModelFabric-Session header (any short
+                    id) to keep one conversation on the same route.
                 </p>
             )}
         </div>
