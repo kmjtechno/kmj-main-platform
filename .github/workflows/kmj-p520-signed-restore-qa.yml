@@ -1,0 +1,26 @@
+name: KMJ P520 Signed Restore Receipt Cross-Host QA
+on:
+  pull_request:
+    paths:
+      - 'scripts/windows/P520-OFFSITE-SIGNED-RESTORE-RECEIPT-20261116.mjs'
+      - 'scripts/windows/test-P520-OFFSITE-SIGNED-RESTORE-RECEIPT-20261116.mjs'
+      - 'scripts/windows/P520-OFFSITE-BUNDLE-ISOLATION-20261116.mjs'
+      - '.github/workflows/kmj-p520-signed-restore-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  signature:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Ephemeral Ed25519 signature and actual Python Elite verifier interoperability
+        run: |
+          set -Eeuo pipefail
+          node --test scripts/windows/test-P520-OFFSITE-SIGNED-RESTORE-RECEIPT-20261116.mjs
+          echo OWNER_P520_PRIVATE_KEY_READ=NO
+          echo REAL_PG_RESTORE=NOT_EXECUTED
+          echo OWNER_PROTECTED_APPROVAL=NOT_GRANTED

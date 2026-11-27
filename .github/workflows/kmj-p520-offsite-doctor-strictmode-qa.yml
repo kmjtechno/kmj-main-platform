@@ -1,0 +1,36 @@
+name: KMJ P520 Offsite Doctor StrictMode QA
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/windows/P520-MAIN-PLATFORM-OFFSITE-DOCTOR-20261116.ps1'
+      - 'scripts/windows/test-P520-OFFSITE-DOCTOR-STRICTMODE-20261118.mjs'
+      - '.github/workflows/kmj-p520-offsite-doctor-strictmode-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  read-only-doctor:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    steps:
+      - name: Checkout exact candidate SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Assert source is exact checked out SHA and run bounded doctor regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          node --test scripts/windows/test-P520-OFFSITE-DOCTOR-STRICTMODE-20261118.mjs
+          echo 'WINDOWS_SUPERVISOR_TASK_MUTATION=NONE'
+          echo 'REAL_P520_ENCRYPTED_RESTORE=NOT_EXECUTED'
+          echo 'PRODUCTION_RELEASE_APPROVAL=NOT_GRANTED'

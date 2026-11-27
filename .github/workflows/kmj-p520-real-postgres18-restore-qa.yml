@@ -1,0 +1,27 @@
+name: KMJ P520 Real Synthetic PostgreSQL18 Restore QA
+on:
+  pull_request:
+    paths:
+      - 'scripts/ci/Dockerfile.p520-pg18-restore-ci'
+      - 'scripts/ci/verify-p520-real-pg18-restore-ci.sh'
+      - 'scripts/windows/P520-OFFSITE-PG-STORAGE-RESTORE-20261116.mjs'
+      - '.github/workflows/kmj-p520-real-postgres18-restore-qa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-synthetic-restore:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Shell safety and no-Google nonroot contract
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/ci/verify-p520-real-pg18-restore-ci.sh
+          grep -Fq -- '--network=none' scripts/ci/verify-p520-real-pg18-restore-ci.sh
+          grep -Fq 'OWNER_P520_BACKUP_AND_RESTORE=NOT_EXECUTED' scripts/ci/verify-p520-real-pg18-restore-ci.sh
+      - name: Run the exact P520 source against a real disposable PostgreSQL 18 dump
+        run: bash scripts/ci/verify-p520-real-pg18-restore-ci.sh "$(git rev-parse HEAD)"
