@@ -119,6 +119,31 @@ final class ModelFabricGatewayTest extends TestCase
         Http::assertSentCount(2);
     }
 
+    public function test_provider_daily_retry_after_86400_is_not_shortened_to_one_hour(): void
+    {
+        $provider = $this->provider('gemini', 'Gemini', 'https://generativelanguage.googleapis.com/v1beta/openai', 'model-a');
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::sequence()
+                ->push(['error' => 'daily free tier exhausted'], 429, ['Retry-After' => '86400'])
+                ->push(['choices' => [['message' => ['content' => 'after daily reset']]]], 200),
+        ]);
+
+        $gateway = app(ModelFabricGateway::class);
+        $first = $gateway->complete($this->org, [['role' => 'user', 'content' => 'public smoke']]);
+        $this->assertSame('rate_limited', $first['error_code']);
+        $this->assertGreaterThanOrEqual(now()->addSeconds(86390)->timestamp, ModelFabricGateway::coolingUntil($provider->id));
+        $this->assertGreaterThanOrEqual(86390, $first['retry_after_seconds'] ?? 0);
+        $this->travel(3601)->seconds();
+        $this->assertSame(0, $gateway->complete($this->org, [['role' => 'user', 'content' => 'early retry']])['attempts']);
+        Http::assertSentCount(1);
+
+        $this->travel(82800)->seconds();
+        $result = $gateway->complete($this->org, [['role' => 'user', 'content' => 'after reset']]);
+        $this->assertTrue($result['ok']);
+        $this->assertSame('after daily reset', $result['content']);
+        Http::assertSentCount(2);
+    }
+
     public function test_quota_directory_prioritizes_selected_admitted_model_beyond_first_twelve(): void
     {
         $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-z');
