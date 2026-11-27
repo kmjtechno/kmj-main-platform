@@ -340,6 +340,35 @@ final class ModelFabricGateway
         return $limit !== null && $limit['cap'] !== null && $limit['cap'] > 0 && $limit['used'] * 10 >= $limit['cap'] * 8;
     }
 
+    /**
+     * Read-only local reservation preflight for native admission tickets.
+     *
+     * A ticket must not claim a coding route can dispatch when its provider,
+     * exact model, observed daily quota, or owner daily cap already blocks it.
+     * The actual transaction still rechecks every limit at dispatch: this
+     * method neither reserves quota nor attests account billing.
+     */
+    public function nativePreflightAllowed(AiProvider $provider, string $model): bool
+    {
+        if (self::coolingUntil($provider->id) !== null
+            || $this->modelCoolingUntil($provider->id, $model) !== null
+            || $this->dailyQuotaExhausted($provider->id, $model, $provider->preset === 'groq')) {
+            return false;
+        }
+        if ($provider->daily_request_cap !== null) {
+            $used = AiModelRequest::query()
+                ->where('organization_id', $provider->organization_id)
+                ->where('ai_provider_id', $provider->id)
+                ->where('created_at', '>=', now()->utc()->startOfDay())
+                ->count();
+            if ($used >= (int) $provider->daily_request_cap) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /** Unix time until which the provider is skipped, or null when it may be used. */
     public static function coolingUntil(string $providerId): ?int
     {
