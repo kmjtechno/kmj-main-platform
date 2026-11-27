@@ -291,6 +291,41 @@ final class ModelFabricApiTest extends TestCase
             ]);
     }
 
+    public function test_shared_api_automatically_fails_over_from_429_to_another_verified_free_provider(): void
+    {
+        $plain = $this->token(['private_source' => false]);
+        $this->evidenced('model-a', 'unknown', [
+            'name' => 'A Groq',
+            'preset' => 'groq',
+            'base_url' => 'https://api.groq.com/openai/v1',
+            'models_cache' => ['model-a'],
+        ]);
+        $this->evidenced('model-b', 'unknown', [
+            'name' => 'B Gemini',
+            'preset' => 'gemini',
+            'base_url' => 'https://generativelanguage.googleapis.com/v1beta/openai',
+            'models_cache' => ['model-b'],
+        ]);
+        Http::fake([
+            'api.groq.com/*' => Http::response(['error' => 'rate-limited'], 429, ['Retry-After' => '600']),
+            'generativelanguage.googleapis.com/*' => Http::response([
+                'choices' => [['message' => ['content' => 'free fallback succeeded']]],
+            ], 200),
+        ]);
+
+        $this->postJson('/api/modelfabric/v1/chat/completions', [
+            'messages' => [['role' => 'user', 'content' => 'public synthetic prompt']],
+        ], ['Authorization' => 'Bearer '.$plain])
+            ->assertOk()
+            ->assertJsonPath('choices.0.message.content', 'free fallback succeeded')
+            ->assertJsonPath('modelfabric.attempts', 2)
+            ->assertJsonPath('modelfabric.provider', 'B Gemini');
+        Http::assertSentCount(2);
+        Http::assertNotSent(fn ($request): bool =>
+            ! str_contains((string) $request->url(), 'api.groq.com')
+            && ! str_contains((string) $request->url(), 'generativelanguage.googleapis.com'));
+    }
+
     public function test_all_free_routes_rate_limited_returns_429_without_paid_fallback_and_resumes_after_reset(): void
     {
         $plain = $this->token(['private_source' => false]);
