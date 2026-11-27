@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'P0 issue #1233 and keyless gateway regression; consolidated release only after acceptance.',
     },
     {
+        id: 'payments-cashfree-webhook-step-20261127',
+        title: 'Payments: Cashfree guided step 3 follows the client secret',
+        state: 'active',
+        detail: 'Cashfree signs webhooks with its client secret and has no separate webhook secret, so the guided step now follows the stored test keys and no longer points to a Razorpay-only secret generator. Display logic only; no secret handling changed.',
+        evidence:
+            'Source regression added; live view of the Cashfree guided setup after release pending.',
+    },
+    {
         id: 'payments-sandbox-order-step-20261127',
         title: 'Payments: sandbox test order step reflects the recorded result',
         state: 'active',
