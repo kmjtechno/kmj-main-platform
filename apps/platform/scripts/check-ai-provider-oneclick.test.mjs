@@ -29,10 +29,19 @@ void test('OpenRouter account click starts real protected PKCE route once', () =
 void test('OVHcloud discovery is visible but never auto-approved or mislabeled OAuth', () => {
     const config = read('config/ai_providers.php');
     assert.match(config, /'ovhcloud'.*'free_tier' => 'none'/);
-    assert.match(config, /https:\/\/oai\.endpoints\.kepler\.ai\.cloud\.ovh\.net\/v1/);
+    assert.match(
+        config,
+        /https:\/\/oai\.endpoints\.kepler\.ai\.cloud\.ovh\.net\/v1/,
+    );
     assert.match(hub, /key: 'ovhcloud'/);
-    assert.match(hub, /Production pricing and terms are unverified; inference blocked/);
-    assert.doesNotMatch(hub, /new Set\(\['openrouter', 'huggingface', 'ovhcloud'\]\)/);
+    assert.match(
+        hub,
+        /Production pricing and terms are unverified; inference blocked/,
+    );
+    assert.doesNotMatch(
+        hub,
+        /new Set\(\['openrouter', 'huggingface', 'ovhcloud'\]\)/,
+    );
 });
 
 void test('other providers use only exact official key pages, no fake OAuth', () => {
