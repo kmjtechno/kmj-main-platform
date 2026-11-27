@@ -325,7 +325,7 @@ final class OpenAiCompatibleAdapter
 
     private function retryAfter(?string $value): ?int
     {
-        return is_string($value) && preg_match('/\A\d{1,6}\z/', $value) === 1 ? min(3600, max(1, (int) $value)) : null;
+        return is_string($value) && preg_match('/\A\d{1,6}\z/', $value) === 1 ? max(1, (int) $value) : null;
     }
 
     /**
