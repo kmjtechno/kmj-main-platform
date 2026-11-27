@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'modelfabric-ux-verified-inference-20261127',
+        title: 'ModelFabric: provider directory and verified inference status',
+        state: 'active',
+        detail: 'Compact method-filtered provider directory, truthful eligibility versus successful inference, and responsive management cards. Live synthetic inference and full qualification still pending.',
+        evidence:
+            'Draft PR #1253; exact-head CI required. No partial production release authorized.',
+    },
+    {
         id: 'modelfabric-keyless-quota-20261126',
         title: 'ModelFabric: legitimate keyless free routes',
         state: 'active',

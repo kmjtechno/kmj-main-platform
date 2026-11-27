@@ -138,9 +138,9 @@ export default function AiProviderConnectHub({
     const [query, setQuery] = useState('');
     const [hideConnected, setHideConnected] = useState(false);
     const [choice, setChoice] = useState('');
-    const [method, setMethod] = useState<
-        'all' | 'oauth' | 'keyless' | 'key'
-    >('all');
+    const [method, setMethod] = useState<'all' | 'oauth' | 'keyless' | 'key'>(
+        'all',
+    );
     const connected = new Set(connectedPresets);
     const oauthKeys = new Set(['openrouter', 'huggingface']);
     const keylessKeys = new Set(['kilo-free', 'horde-anonymous']);
@@ -195,14 +195,12 @@ export default function AiProviderConnectHub({
                     className="mt-4 flex flex-wrap gap-2"
                     aria-label="Connection methods"
                 >
-                    {(
-                        [
-                            ['all', 'All providers'],
-                            ['oauth', 'One-click OAuth'],
-                            ['keyless', 'Without API key'],
-                            ['key', 'API key'],
-                        ] as const
-                    ).map(([value, label]) => (
+                    {([
+                        ['all', 'All providers'],
+                        ['oauth', 'One-click OAuth'],
+                        ['keyless', 'Without API key'],
+                        ['key', 'API key'],
+                    ] as const).map(([value, label]) => (
                         <button
                             key={value}
                             type="button"
