@@ -39,3 +39,11 @@ void test('recent webhook events are shown without implying settlement', () => {
     assert.match(step, /Received \(not settled\)/);
     assert.match(step, /does not settle an\s+order or issue a license/);
 });
+
+void test('Cashfree step 3 follows the client secret, not a separate webhook secret', () => {
+    assert.match(step, /provider === 'cashfree'\s*\?\s*keysSaved/);
+    const guide = read(
+        'resources/js/components/payment-gateway-onboarding.tsx',
+    );
+    assert.match(guide, /provider === 'cashfree'\s*\?\s*keysSaved/);
+});

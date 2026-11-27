@@ -90,7 +90,11 @@ export default function PaymentGatewayOnboarding({
         selected?.client_id_stored &&
         selected?.client_secret_stored,
     );
-    const webhookSecretSaved = selected?.webhook_secret_stored === true;
+    // Cashfree signs webhooks with the client secret (no separate webhook secret).
+    const webhookSecretSaved =
+        provider === 'cashfree'
+            ? keysSaved
+            : selected?.webhook_secret_stored === true;
     const savedCount = Number(keysSaved) + Number(webhookSecretSaved);
     // Server-level form errors may include fields not submitted by useForm.
     // Narrow the dynamic key safely without adding an unwanted request field.
