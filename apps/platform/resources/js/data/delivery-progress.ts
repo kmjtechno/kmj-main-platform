@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'public-ui-icons-polish-20261127',
+        title: 'Scroll to top, Kristi avatar and icon polish on public pages',
+        state: 'active',
+        detail: 'SOURCE ONLY: public pages have a scroll-to-top button and a Kristi avatar launcher. The home page has clearer spacing, readable text sizes and icons, and no language button. Other pages keep the language button. Signed-in pages are unchanged.',
+        evidence:
+            'Local browser render and source tests; owner visual acceptance and live evidence pending.',
+    },
+    {
         id: 'public-motion-header-20261127',
         title: 'Cleaner public header, smooth scrolling and motion',
         state: 'active',

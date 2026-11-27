@@ -220,11 +220,15 @@ body:has(.kmj-public-header) main [id] {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 12px;
+    --kmj-gap: 18px;
+    gap: var(--kmj-gap);
 }
 .locked-landing .lock-products > .lock-product {
     flex: 0 0
-        calc((100% - 12px * (var(--kmj-columns) - 1)) / var(--kmj-columns));
+        calc(
+            (100% - var(--kmj-gap) * (var(--kmj-columns) - 1)) /
+                var(--kmj-columns)
+        );
 }
 @media (max-width: 900px) {
     .locked-landing .lock-products {

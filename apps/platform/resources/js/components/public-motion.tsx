@@ -1,5 +1,6 @@
 import Lenis from 'lenis';
-import { useEffect } from 'react';
+import { ArrowUp } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import 'lenis/dist/lenis.css';
 
 /** Cards that fade up the first time they are scrolled into view. */
@@ -27,6 +28,21 @@ const SPOTLIGHT = [
  * natively scrollable without JavaScript or when reduced motion is requested.
  */
 export default function PublicMotion() {
+    const smooth = useRef<Lenis | null>(null);
+    const [deep, setDeep] = useState(false);
+
+    const toTop = () => {
+        if (smooth.current) {
+            smooth.current.scrollTo(0);
+        } else {
+            window.scrollTo(0, 0);
+        }
+
+        document
+            .querySelector<HTMLElement>('.kmj-public-header a')
+            ?.focus({ preventScroll: true });
+    };
+
     useEffect(() => {
         const header =
             document.querySelector<HTMLElement>('.kmj-public-header');
@@ -34,6 +50,7 @@ export default function PublicMotion() {
             const range =
                 document.documentElement.scrollHeight - window.innerHeight;
             header?.toggleAttribute('data-scrolled', window.scrollY > 12);
+            setDeep(window.scrollY > 500);
             header?.style.setProperty(
                 '--kmj-progress',
                 String(range > 0 ? Math.min(window.scrollY / range, 1) : 0),
@@ -55,6 +72,8 @@ export default function PublicMotion() {
             stopInertiaOnNavigate: true,
             prevent: (node) => node.getAttribute('role') === 'dialog',
         });
+
+        smooth.current = lenis;
 
         // Dialogs lock the page; smooth scrolling must respect that lock.
         const lock = new MutationObserver(() => {
@@ -161,9 +180,21 @@ export default function PublicMotion() {
             targets.forEach((element) =>
                 element.removeAttribute('data-reveal'),
             );
+            smooth.current = null;
             lenis.destroy();
         };
     }, []);
 
-    return null;
+    return (
+        <button
+            type="button"
+            className="kmj-to-top"
+            data-visible={deep || undefined}
+            aria-label="Scroll to top"
+            title="Scroll to top"
+            onClick={toTop}
+        >
+            <ArrowUp aria-hidden="true" size={20} />
+        </button>
+    );
 }
