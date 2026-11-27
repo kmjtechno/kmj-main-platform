@@ -44,3 +44,13 @@ void test('profile details are collected after sign-in on a verified, authentica
         /name="phone"/,
     );
 });
+
+void test('google sign-in routes use their own named rate limiters, not the shared numeric bucket', () => {
+    const routes = read('routes/google-auth.php');
+    assert.match(routes, /throttle:google-signin/);
+    assert.match(routes, /throttle:onboarding-profile/);
+    assert.doesNotMatch(routes, /throttle:\d+,\d+/);
+    const provider = read('app/Providers/FortifyServiceProvider.php');
+    assert.match(provider, /RateLimiter::for\('google-signin'/);
+    assert.match(provider, /RateLimiter::for\('onboarding-profile'/);
+});

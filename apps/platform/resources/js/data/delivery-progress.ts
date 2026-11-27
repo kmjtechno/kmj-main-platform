@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'P0 issue #1233 and keyless gateway regression; consolidated release only after acceptance.',
     },
     {
+        id: 'google-signin-own-rate-limit-20261127',
+        title: 'Auth: Google sign-in uses its own rate limiter',
+        state: 'active',
+        detail: 'SOURCE ONLY: after the live Google sign-in callback returned HTTP 429 on the first real attempt, the Google redirect/callback and onboarding profile routes moved from the shared numeric throttle to their own named per-IP limiters so unrelated traffic from the same IP cannot exhaust the OAuth callback. The exact cause on the live server (shared IP counter or proxy IP) was not proven; live acceptance of a real Google sign-up is pending.',
+        evidence:
+            'Source regression test on the PR; live Google sign-in not yet proven.',
+    },
+    {
         id: 'commerce-refund-revoke-access-20261127',
         title: 'Commerce: explicit revoke-access step after a refund',
         state: 'active',
