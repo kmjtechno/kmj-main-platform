@@ -55,6 +55,71 @@ final class ModelFabricGatewayTest extends TestCase
         $this->assertSame([], $gateway->quotaObservations($provider, ['model-a']));
     }
 
+    public function test_model_429_honours_provider_retry_after_and_shows_cooldown_without_quota_headers(): void
+    {
+        $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        Http::fake([
+            'api.groq.com/*' => Http::response(['error' => 'limit'], 429, [
+                'x-ratelimit-remaining-requests' => '0',
+                'Retry-After' => '600',
+            ]),
+        ]);
+
+        $gateway = app(ModelFabricGateway::class);
+        $result = $gateway->complete($this->org, [['role' => 'user', 'content' => 'ping']]);
+        $this->assertFalse($result['ok']);
+        $this->assertSame('rate_limited', $result['error_code']);
+        $this->assertNull(ModelFabricGateway::coolingUntil($provider->id));
+
+        // A 429 cooldown is local admission state, not a reported billing balance.
+        Cache::forget('modelfabric:rate:'.hash('sha256', $provider->id.'|model-a'));
+        $observations = $gateway->quotaObservations($provider, ['model-a']);
+        $this->assertCount(1, $observations);
+        $this->assertSame('model', $observations[0]['cooldown_scope']);
+        $this->assertNull($observations[0]['requests_remaining']);
+        $this->assertGreaterThanOrEqual(now()->addSeconds(580)->timestamp, strtotime($observations[0]['cooling_until']));
+        $this->assertArrayNotHasKey('credit_balance', $observations[0]);
+        $this->assertSame(0, $gateway->complete($this->org, [['role' => 'user', 'content' => 'again']])['attempts']);
+        Http::assertSentCount(1);
+    }
+
+    public function test_provider_429_honours_retry_after_and_does_not_attempt_while_cooling(): void
+    {
+        $provider = $this->provider('gemini', 'Gemini', 'https://generativelanguage.googleapis.com/v1beta/openai', 'model-a');
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::response(['error' => 'limit'], 429, ['Retry-After' => '900']),
+        ]);
+
+        $gateway = app(ModelFabricGateway::class);
+        $this->assertSame('rate_limited', $gateway->complete($this->org, [['role' => 'user', 'content' => 'ping']])['error_code']);
+        $this->assertGreaterThanOrEqual(now()->addSeconds(880)->timestamp, ModelFabricGateway::coolingUntil($provider->id));
+        $observations = $gateway->quotaObservations($provider, ['model-a']);
+        $this->assertCount(1, $observations);
+        $this->assertSame('provider', $observations[0]['cooldown_scope']);
+        $this->assertNull($observations[0]['observed_at']);
+        $this->assertSame(0, $gateway->complete($this->org, [['role' => 'user', 'content' => 'again']])['attempts']);
+        Http::assertSentCount(1);
+    }
+
+    public function test_quota_directory_prioritizes_selected_admitted_model_beyond_first_twelve(): void
+    {
+        $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-z');
+        $provider->default_model = 'model-z';
+        $provider->save();
+        Cache::put('modelfabric:rate:'.hash('sha256', $provider->id.'|model-z'), [
+            'requests' => 7,
+            'tokens' => 1234,
+            'max_requests' => 10,
+            'observed_at' => now()->toIso8601String(),
+        ], 120);
+        $models = [...array_map(fn (int $n): string => 'model-'.$n, range(1, 13)), 'model-z'];
+
+        $observations = app(ModelFabricGateway::class)->quotaObservations($provider, $models);
+        $this->assertCount(1, $observations);
+        $this->assertSame('model-z', $observations[0]['model']);
+        $this->assertSame(7, $observations[0]['requests_remaining']);
+    }
+
     public function test_no_route_means_no_provider_call_at_all(): void
     {
         Http::fake();
