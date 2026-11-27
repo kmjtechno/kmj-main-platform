@@ -1,3 +1,12 @@
+import { RecordExplainer } from '@/components/customer/record-explainer';
+import {
+    accessStatusLabel,
+    featureLabel,
+    isUsableLicenseState,
+    licenseStateLabel,
+    planLabel,
+    productLabel,
+} from '@/lib/customer-labels';
 import { formatIstDate } from '@/lib/format-ist-date-time';
 import { Head, Link } from '@inertiajs/react';
 import {
@@ -77,7 +86,18 @@ type DiscoverableProduct = {
     summary: string;
 };
 
+type LicenseRecord = {
+    id: string;
+    product: string;
+    plan: string;
+    state: string;
+    subject_label: string;
+    expires_at: string;
+};
+
 type DashboardProps = {
+    licenses: LicenseRecord[];
+    licenseCount: number;
     organizations: Organization[];
     discoverableProducts: DiscoverableProduct[];
     hasPasskey: boolean;
@@ -102,6 +122,8 @@ const productImages: Record<string, string> = {
 };
 
 export default function Dashboard({
+    licenses,
+    licenseCount,
     organizations,
     discoverableProducts,
     hasPasskey,
@@ -118,6 +140,10 @@ export default function Dashboard({
         (entitlement) => entitlement.status === 'active',
     );
 
+    const usableLicenses = licenses.filter((license) =>
+        isUsableLicenseState(license.state),
+    );
+
     const availableProducts = discoverableProducts.filter(
         (product) => product.purchase_enabled,
     );
@@ -127,61 +153,87 @@ export default function Dashboard({
     const renderProduct = (product: DiscoverableProduct) => (
         <article
             key={product.slug}
-            className="flex min-w-0 flex-col justify-between rounded-xl border p-4"
+            className="flex min-w-0 gap-4 rounded-xl border p-4"
         >
-            <div>
+            {productImages[product.slug] && (
+                <img
+                    src={productImages[product.slug]}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="bg-muted/30 hidden size-24 shrink-0 rounded-lg border object-contain p-2 sm:block"
+                />
+            )}
+            <div className="flex min-w-0 flex-1 flex-col">
                 <h3 className="font-bold">{product.name}</h3>
                 <p className="text-muted-foreground mt-1 text-xs">
                     {product.lifecycle_label}
                     {product.purchase_enabled
-                        ? ' · Access requests available'
-                        : ' · Not available for purchase'}
+                        ? ' · You can request access'
+                        : ' · Not available to buy yet'}
                 </p>
-                <p className="text-muted-foreground mt-3 line-clamp-3 text-xs leading-5">
+                <p className="text-muted-foreground mt-2 line-clamp-3 text-sm leading-6">
                     {product.summary}
                 </p>
+                <div className="mt-auto flex flex-wrap gap-x-5 pt-2">
+                    {product.purchase_enabled && (
+                        <Link
+                            href="/purchase"
+                            className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-red-600 dark:text-red-400"
+                        >
+                            Request access <ArrowRight className="size-4" />
+                        </Link>
+                    )}
+                    <Link
+                        href={`/products/${encodeURIComponent(product.slug)}`}
+                        className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold hover:underline"
+                    >
+                        Product details
+                    </Link>
+                </div>
             </div>
-            <Link
-                href={`/products/${encodeURIComponent(product.slug)}`}
-                className="mt-4 inline-flex min-h-10 items-center gap-2 text-xs font-bold text-red-500"
-            >
-                Product details <ArrowRight className="size-4" />
-            </Link>
         </article>
     );
+    // auto-fit: one product fills the row instead of leaving empty columns.
+    const productGrid =
+        'grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-3';
 
     return (
         <>
-            <Head title="My KMJ Services" />
+            <Head title="My Services" />
 
             <div className="kmj-premium-dashboard flex h-full min-w-0 flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6 lg:p-8">
-                <section className="kmj-admin-hero rounded-[1.65rem] p-6 sm:p-8 lg:p-10">
-                    <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
+                <section className="kmj-admin-hero rounded-[1.65rem] p-5 sm:p-8">
+                    <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
                         <div className="max-w-2xl">
                             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-red-500/15 bg-red-500/5 px-3 py-1 text-xs font-semibold text-red-500">
                                 <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                                 KMJ Licensing Hub · Customer access
                             </div>
                             <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
-                                My KMJ Services
+                                My Services
                             </h1>
                             <p className="text-muted-foreground mt-3 max-w-xl text-sm leading-6">
-                                Your licensed products and features depend on
-                                your actual organization entitlements and
-                                subscription status. The public product catalog
-                                never grants access, and customers cannot change
-                                Super Admin licensing policies.
+                                Your licenses and the products switched on for
+                                your account. Seeing a product in the catalog
+                                does not give you access to it.
                             </p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
                             <Metric
-                                label="Authorized services"
-                                value={services.length}
+                                label="Usable licenses"
+                                value={usableLicenses.length}
                             />
                             <Metric
-                                label="Active"
-                                value={activeServices.length}
+                                label="Products switched on"
+                                value={
+                                    new Set(
+                                        activeServices.map(
+                                            (service) => service.product_id,
+                                        ),
+                                    ).size
+                                }
                             />
                         </div>
                     </div>
@@ -191,61 +243,122 @@ export default function Dashboard({
                     <OwnerProductsPanel products={ownerProducts} />
                 )}
 
-                <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <BadgeCheck className="h-5 w-5 text-red-500" />
-                                <h2 className="font-bold">
-                                    Your authorized services
-                                </h2>
-                            </div>
-                            <p className="text-muted-foreground mt-1 text-xs">
-                                Only licenses and features granted to your
-                                account or organizations appear here.
-                                All-product licensing controls stay with the
-                                Super Admin.
-                            </p>
+                {licenses.length > 0 && (
+                    <section
+                        aria-labelledby="dashboard-licenses-heading"
+                        className="bg-card rounded-2xl border p-5 sm:p-6"
+                    >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <h2
+                                id="dashboard-licenses-heading"
+                                className="flex items-center gap-2 font-bold"
+                            >
+                                <KeyRound className="size-5 text-red-500" />
+                                Your licenses
+                            </h2>
+                            <Link
+                                href="/licensing#my-licenses"
+                                className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-red-600 dark:text-red-400"
+                            >
+                                {licenseCount > 3
+                                    ? `All ${licenseCount} licenses`
+                                    : 'License details'}
+                                <ArrowRight className="size-4" />
+                            </Link>
                         </div>
+                        <ul className="mt-3 grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-3">
+                            {licenses.slice(0, 3).map((license) => (
+                                <li
+                                    key={license.id}
+                                    className="flex flex-wrap items-start justify-between gap-3 rounded-xl border p-4"
+                                >
+                                    <div className="min-w-0">
+                                        <h3 className="font-bold">
+                                            {productLabel(license.product)}
+                                        </h3>
+                                        <p className="text-muted-foreground mt-1 text-sm">
+                                            {planLabel(license.plan)} plan ·{' '}
+                                            {license.subject_label}
+                                        </p>
+                                        <p className="text-muted-foreground text-sm">
+                                            Expires{' '}
+                                            {formatDate(license.expires_at)}
+                                        </p>
+                                    </div>
+                                    <span className="bg-muted rounded-full px-3 py-1 text-xs font-bold">
+                                        {licenseStateLabel(license.state)}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
+
+                <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
+                    <div className="flex items-center gap-2">
+                        <BadgeCheck className="h-5 w-5 text-red-500" />
+                        <h2 className="font-bold">Your products</h2>
                     </div>
+                    <p className="text-muted-foreground mt-1 text-sm">
+                        Products and features switched on for your organization.
+                    </p>
 
                     {services.length === 0 ? (
-                        <div className="bg-muted/20 mt-5 rounded-xl border border-dashed p-8 text-center">
-                            <KeyRound className="text-muted-foreground/40 mx-auto h-8 w-8" />
-                            <div className="mt-3 text-sm font-bold">
-                                No authorized service yet
+                        licenses.length > 0 ? (
+                            <div
+                                className="bg-muted/20 mt-4 rounded-xl border border-dashed p-5"
+                                data-testid="license-without-access"
+                            >
+                                <p className="text-sm font-bold">
+                                    No product access is switched on yet
+                                </p>
+                                <p className="text-muted-foreground mt-1 max-w-2xl text-sm leading-6">
+                                    You do have a license record (shown above).
+                                    A license and product access are separate
+                                    records, so no product or download appears
+                                    here. If you expected one, email{' '}
+                                    <a
+                                        className="underline"
+                                        href="mailto:info@kmjtechno.com"
+                                    >
+                                        info@kmjtechno.com
+                                    </a>
+                                    .
+                                </p>
                             </div>
-                            <p className="text-muted-foreground mx-auto mt-1 max-w-xl text-xs leading-5">
-                                Getting started takes three steps. Your service
-                                appears here automatically once it is approved.
-                            </p>
-                            <ol className="text-muted-foreground mx-auto mt-4 max-w-md space-y-1 text-left text-xs leading-5">
-                                <li>1. Pick a product from the catalog.</li>
-                                <li>
-                                    2. Send a purchase request for your
-                                    organization.
-                                </li>
-                                <li>
-                                    3. The KMJ team confirms payment and
-                                    activates your access.
-                                </li>
-                            </ol>
-                            <div className="mt-5 flex flex-wrap justify-center gap-3">
-                                <Link
-                                    href="/purchase"
-                                    className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-bold text-white"
-                                >
-                                    Request a product{' '}
-                                    <ArrowRight className="size-4" />
-                                </Link>
-                                <Link
-                                    href="/products"
-                                    className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-xs font-bold hover:border-red-500/40"
-                                >
-                                    Browse products
-                                </Link>
+                        ) : (
+                            <div className="bg-muted/20 mt-4 rounded-xl border border-dashed p-5 sm:p-6">
+                                <div className="text-sm font-bold">
+                                    No authorized service yet
+                                </div>
+                                <ol className="text-muted-foreground mt-3 space-y-1 text-sm leading-6">
+                                    <li>1. Pick a product from the catalog.</li>
+                                    <li>
+                                        2. Send a purchase request for your
+                                        organization.
+                                    </li>
+                                    <li>
+                                        3. The KMJ team confirms payment and
+                                        switches on your access.
+                                    </li>
+                                </ol>
+                                <div className="mt-4 flex flex-wrap gap-3">
+                                    <Link
+                                        href="/purchase"
+                                        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white"
+                                    >
+                                        Request a product{' '}
+                                        <ArrowRight className="size-4" />
+                                    </Link>
+                                    <Link
+                                        href="/products"
+                                        className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold hover:border-red-500/40"
+                                    >
+                                        Browse products
+                                    </Link>
+                                </div>
                             </div>
-                        </div>
+                        )
                     ) : (
                         <div className="mt-5 grid gap-4">
                             {services.map((service) =>
@@ -268,53 +381,18 @@ export default function Dashboard({
                     )}
                 </section>
 
-                <section className="bg-card rounded-2xl border p-5 sm:p-6">
-                    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                        <div className="flex items-start gap-3">
-                            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-red-500/10 text-red-500">
-                                <KeyRound className="size-5" />
-                            </span>
-                            <div>
-                                <h2 className="font-bold">
-                                    KMJ Licensing Hub · Developer Apps
-                                </h2>
-                                <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-5">
-                                    Register apps, review tenant-scoped customer
-                                    keys and access secure developer setup
-                                    instructions. Key issuance remains
-                                    restricted until release gates pass.
-                                </p>
-                            </div>
-                        </div>
-                        <Link
-                            href="/developer/apps"
-                            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-xs font-bold text-white"
-                        >
-                            Open Developer Apps{' '}
-                            <ArrowRight className="size-4" />
-                        </Link>
-                    </div>
-                </section>
-
                 {ownerProducts === null && (
                     <section className="border-sidebar-border/70 bg-card rounded-2xl border p-5 sm:p-6">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                                <h2 className="text-lg font-bold">
-                                    Explore KMJ products
-                                </h2>
-                                <p className="text-muted-foreground mt-1 max-w-2xl text-xs leading-5">
-                                    These are public catalog entries, not
-                                    subscriptions or licenses assigned to your
-                                    account. Availability is shown for each
-                                    product.
-                                </p>
-                            </div>
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <h2 className="text-lg font-bold">
+                                Explore KMJ products
+                            </h2>
                             <Link
                                 href="/products"
-                                className="inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-xs font-bold hover:border-red-500/40"
+                                className="inline-flex min-h-11 items-center gap-2 rounded-xl border px-4 text-sm font-bold hover:border-red-500/40"
                             >
-                                Entire catalog <ArrowRight className="size-4" />
+                                Browse products{' '}
+                                <ArrowRight className="size-4" />
                             </Link>
                         </div>
 
@@ -326,7 +404,7 @@ export default function Dashboard({
                             <>
                                 {availableProducts.length > 0 ? (
                                     <div
-                                        className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                                        className={`mt-4 ${productGrid}`}
                                         data-testid="products-available"
                                     >
                                         {availableProducts.map(renderProduct)}
@@ -342,12 +420,12 @@ export default function Dashboard({
                                         className="mt-4 rounded-xl border p-4"
                                         data-testid="products-upcoming"
                                     >
-                                        <summary className="cursor-pointer text-sm font-bold">
+                                        <summary className="min-h-6 cursor-pointer text-sm font-bold">
                                             In development (
                                             {upcomingProducts.length}) · not
-                                            available for purchase
+                                            available to buy
                                         </summary>
-                                        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                        <div className={`mt-4 ${productGrid}`}>
                                             {upcomingProducts.map(
                                                 renderProduct,
                                             )}
@@ -358,6 +436,8 @@ export default function Dashboard({
                         )}
                     </section>
                 )}
+
+                {ownerProducts === null && <RecordExplainer />}
 
                 <section className="border-sidebar-border/70 bg-card dark:border-sidebar-border rounded-2xl border p-5 sm:p-6">
                     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -390,6 +470,15 @@ export default function Dashboard({
                         </Link>
                     </div>
                 </section>
+                <p className="text-muted-foreground text-sm">
+                    Do you build software that needs KMJ license keys?{' '}
+                    <Link
+                        href="/developer/apps"
+                        className="inline-flex min-h-11 items-center font-semibold text-red-600 hover:underline dark:text-red-400"
+                    >
+                        Open Developer Apps
+                    </Link>
+                </p>
             </div>
         </>
     );
@@ -485,9 +574,9 @@ function CodeBridgeCard({
                         }
                     />
                     <ServiceMetric
-                        label="OAuth"
+                        label="ChatGPT sign-in"
                         value={detail?.oauth_ready ? 'Ready' : 'Setup required'}
-                        hint="Secure ChatGPT sign-in"
+                        hint="Secure connection"
                     />
                     <ServiceMetric
                         label="Managed devices"
@@ -501,7 +590,7 @@ function CodeBridgeCard({
                     <ServiceMetric
                         label="License valid until"
                         value={formatDate(detail?.license_expires_at)}
-                        hint="Main Platform authority"
+                        hint="From your license"
                     />
                 </div>
 
@@ -596,37 +685,36 @@ function GenericServiceCard({
                             <h3 className="font-black">
                                 {service.product_name}
                             </h3>
-                            <p className="text-muted-foreground mt-1 text-[11px]">
+                            <p className="text-muted-foreground mt-1 text-xs">
                                 {service.organization_name}
                             </p>
                         </div>
-                        <StatusBadge status={service.status} />
+                        <StatusBadge
+                            status={accessStatusLabel(service.status)}
+                        />
                     </div>
-                    <div className="mt-3 rounded-lg border border-red-500/10 bg-red-500/5 px-3 py-2 text-xs">
+                    <div className="mt-3 rounded-lg border border-red-500/10 bg-red-500/5 px-3 py-2 text-sm">
                         <div className="font-bold">
-                            Subscription feature access
-                        </div>
-                        <div className="text-muted-foreground mt-1 break-all">
-                            {service.capability}
+                            {featureLabel(service.capability)}
                         </div>
                         <p className="text-muted-foreground mt-1">
                             {service.status === 'active'
-                                ? 'Assigned entitlement. Product-side checks still apply.'
-                                : 'Not active: this entitlement does not grant feature access.'}
+                                ? 'Switched on for your organization. The product may run its own checks.'
+                                : 'Not active: this gives no feature access.'}
                         </p>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-3">
                         <Link
                             href={'/products/' + service.product_slug}
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-red-500"
+                            className="inline-flex min-h-11 items-center gap-1 text-sm font-bold text-red-500"
                         >
-                            Service details
+                            Product details
                             <ArrowRight className="h-3 w-3" />
                         </Link>
                         {service.release && (
                             <a
                                 href={service.release.download_url}
-                                className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-600 dark:text-emerald-400"
+                                className="inline-flex min-h-11 items-center gap-1 text-sm font-black text-emerald-600 dark:text-emerald-400"
                             >
                                 <Download className="h-3 w-3" />
                                 Download v{service.release.version}

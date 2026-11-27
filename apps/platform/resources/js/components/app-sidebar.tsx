@@ -31,7 +31,7 @@ import type { NavItem } from '@/types';
 
 const baseNavItems: NavItem[] = [
     {
-        title: 'Dashboard',
+        title: 'My Services',
         href: dashboard(),
         icon: LayoutGrid,
     },

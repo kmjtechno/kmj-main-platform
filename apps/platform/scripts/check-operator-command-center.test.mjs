@@ -96,7 +96,7 @@ void test('catalog readiness is informative, never a payment or license grant', 
 
 void test('owner-only entry is above customer services, never public listing', () => {
     const panel = dashboard.indexOf('<OwnerProductsPanel');
-    const services = dashboard.indexOf('Your authorized services');
+    const services = dashboard.indexOf('Your products');
     assert.ok(panel > 0 && services > panel);
     assert.ok(dashboard.includes('{ownerProducts !== null && ('));
     assert.ok(dashboard.includes('href="/operator"'));

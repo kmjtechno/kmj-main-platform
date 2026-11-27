@@ -1,15 +1,15 @@
+import { RecordExplainer } from '@/components/customer/record-explainer';
+import {
+    accessStatusLabel,
+    featureLabel,
+    isUsableLicenseState,
+    licenseStateLabel,
+    planLabel,
+    productLabel,
+} from '@/lib/customer-labels';
 import { formatIstDate } from '@/lib/format-ist-date-time';
 import { Head, Link } from '@inertiajs/react';
-import {
-    ArrowRight,
-    BadgeCheck,
-    Boxes,
-    Clock3,
-    Download,
-    KeyRound,
-    Laptop2,
-    ShieldCheck,
-} from 'lucide-react';
+import { ArrowRight, Boxes, KeyRound } from 'lucide-react';
 
 type CustomerLicense = {
     id: string;
@@ -49,43 +49,18 @@ type Props = {
     authorization_source: 'authenticated_verified_membership';
     device_reset_enabled: false;
     paid_issuance_enabled: false;
-    codebridge_usage_preview: {
-        status: 'proposal_only';
-        meter_live: false;
-        checkout_live: false;
-        trial_live: false;
-        used_calls: null;
-        remaining_calls: null;
-        next_reset_at: null;
-        active_plan: null;
-        unit: 'completed_remote_tool_calls';
-        period: 'calendar_month_utc';
-        self_hosted_unmetered: true;
-        ai_provider_fees_included: false;
-        plans: {
-            id: string;
-            label: string;
-            monthly_calls: number | null;
-            monthly_price_inr: number | null;
-            per_user: boolean;
-        }[];
-    };
     trusted_download_source: string;
 };
 
 function readableDate(value: string | null): string {
-    if (!value) return 'Not specified';
+    if (!value) return 'Not set';
     return formatIstDate(value, 'Not available');
 }
 
-const stateLabels: Record<string, string> = {
-    ACTIVE: 'Active',
-    RENEWAL_DUE: 'Renewal due',
-    GRACE: 'Grace period',
-    NOT_STARTED: 'Not started',
-    REVOKED: 'Revoked',
-    RESTRICTED: 'Restricted',
-};
+const actionClass =
+    'inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-bold';
+const linkClass =
+    'inline-flex min-h-11 items-center font-semibold text-red-600 hover:underline dark:text-red-400';
 
 export default function LicensingHub({
     licenses,
@@ -94,14 +69,9 @@ export default function LicensingHub({
     product_entitlements,
     organizations,
     trusted_download_source,
-    codebridge_usage_preview,
 }: Props) {
-    const activeLicenses = licenses.filter((license) =>
-        ['ACTIVE', 'RENEWAL_DUE', 'GRACE'].includes(license.state),
-    ).length;
-    const nonDeactivatedDevices = licenses.reduce(
-        (count, license) => count + license.non_deactivated_devices,
-        0,
+    const usableLicenses = licenses.filter((license) =>
+        isUsableLicenseState(license.state),
     );
     const renewalAttention = licenses.filter((license) =>
         ['RENEWAL_DUE', 'GRACE'].includes(license.state),
@@ -110,175 +80,80 @@ export default function LicensingHub({
         ['REVOKED', 'RESTRICTED'].includes(license.state),
     );
 
+    const nextStep =
+        renewalAttention.length > 0
+            ? {
+                  title: 'A license needs renewal',
+                  detail: 'Check the dates below and ask KMJ about renewal.',
+                  href: '#my-renewals',
+                  action: 'See what needs attention',
+              }
+            : accessReview.length > 0
+              ? {
+                    title: 'A license cannot be used',
+                    detail: 'KMJ support has to review it.',
+                    href: '#my-renewals',
+                    action: 'See what needs attention',
+                }
+              : license_count > 0
+                ? {
+                      title:
+                          usableLicenses.length > 0
+                              ? 'Nothing to do right now'
+                              : 'Your license has not started yet',
+                      detail: 'Your license dates are listed below.',
+                      href: '#my-licenses',
+                      action: 'View my licenses',
+                  }
+                : product_entitlements.length > 0
+                  ? {
+                        title: 'You have product access',
+                        detail: 'There is no separate license record on this account.',
+                        href: '#my-products',
+                        action: 'View my product access',
+                    }
+                  : {
+                        title: 'No license yet',
+                        detail:
+                            organizations.length > 0
+                                ? 'Send a purchase request to get started.'
+                                : 'Your account has no organization yet. Contact info@kmjtechno.com.',
+                        href: '/purchase',
+                        action: 'Request a product',
+                    };
+
     return (
         <>
             <Head title="Licensing Hub | KMJ TECHNO" />
-            <main className="mx-auto flex w-full max-w-7xl flex-col gap-7 px-4 py-8 sm:px-6 lg:px-8">
-                <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(135deg,#181d27_0%,#10131b_65%,#250c13_100%)] p-6 text-white shadow-xl sm:p-9">
-                    <div className="pointer-events-none absolute -top-20 -right-16 size-64 rounded-full bg-red-600/10 blur-3xl" />
-                    <p className="relative flex items-center gap-2 text-xs font-bold tracking-[0.2em] text-red-300 uppercase">
-                        <ShieldCheck className="size-4" aria-hidden="true" />
-                        KMJ TECHNO · One secure licensing authority
-                    </p>
-                    <h1 className="relative mt-3 text-3xl font-black tracking-tight sm:text-4xl">
-                        Licensing Hub
-                    </h1>
-                    <p className="relative mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-                        Your product entitlements, license records and recorded
-                        device bindings in one verified KMJ account. Issuance,
-                        payments and device transfers still require their
-                        independent server-side security gates.
-                    </p>
-                    <div className="relative mt-6 flex flex-wrap gap-3">
-                        <a
-                            href="#getting-started"
-                            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-500"
-                        >
-                            My next step
-                            <ArrowRight className="size-4" aria-hidden="true" />
-                        </a>
-                        <Link
-                            href="/purchase"
-                            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/20 px-4 py-2 text-xs font-semibold text-white hover:bg-white/10"
-                        >
-                            Explore product plans
-                        </Link>
-                    </div>
-                </section>
-
+            <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
                 <section
                     id="getting-started"
-                    aria-labelledby="getting-started-heading"
-                    className="border-border bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
+                    aria-labelledby="licensing-heading"
+                    className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-7"
                 >
-                    <div className="flex flex-wrap items-start justify-between gap-4">
+                    <h1
+                        id="licensing-heading"
+                        className="text-3xl font-black tracking-tight"
+                    >
+                        Licensing Hub
+                    </h1>
+                    <p className="text-muted-foreground mt-2 text-sm">
+                        Your licenses and product access in one place. No
+                        automatic charges are made from this page.
+                    </p>
+                    <div className="bg-muted/40 mt-5 flex flex-col justify-between gap-3 rounded-xl border p-4 sm:flex-row sm:items-center">
                         <div>
-                            <p className="text-xs font-bold tracking-wider text-red-500 uppercase">
-                                Your licensing journey
-                            </p>
-                            <h2
-                                id="getting-started-heading"
-                                className="mt-1 text-lg font-bold"
-                            >
-                                Find the right next step
-                            </h2>
-                            <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
-                                Follow your actual account records. A purchase,
-                                entitlement, recorded activation and signed
-                                license are different checks.
+                            <h2 className="font-bold">{nextStep.title}</h2>
+                            <p className="text-muted-foreground mt-1 text-sm">
+                                {nextStep.detail}
                             </p>
                         </div>
-                        <span className="bg-muted rounded-full px-3 py-1 text-xs font-semibold">
-                            Guided view · No automatic charges
-                        </span>
-                    </div>
-                    <ol className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                        {[
-                            {
-                                number: '01',
-                                title: 'Account',
-                                detail:
-                                    organizations.length > 0
-                                        ? `${organizations.length} linked organization(s)`
-                                        : 'No linked organization recorded',
-                                href: '/dashboard',
-                                action: 'Open account dashboard',
-                            },
-                            {
-                                number: '02',
-                                title: 'Products',
-                                detail:
-                                    product_entitlements.length > 0
-                                        ? `${product_entitlements.length} entitlement record(s)`
-                                        : 'No entitlement recorded',
-                                href: '#my-products',
-                                action: 'Review products',
-                            },
-                            {
-                                number: '03',
-                                title: 'Licenses',
-                                detail: `${license_count} KSLP license record(s)`,
-                                href: '#my-licenses',
-                                action: 'Check license status',
-                            },
-                            {
-                                number: '04',
-                                title: 'Devices & downloads',
-                                detail: 'Device transfer and signed releases require verification',
-                                href: '#my-devices',
-                                action: 'Review device records',
-                            },
-                        ].map((step) => (
-                            <li
-                                key={step.number}
-                                className="border-border rounded-xl border p-4"
-                            >
-                                <span className="text-xs font-extrabold text-red-500">
-                                    STEP {step.number}
-                                </span>
-                                <h3 className="mt-2 text-sm font-bold">
-                                    {step.title}
-                                </h3>
-                                <p className="text-muted-foreground mt-2 min-h-10 text-xs leading-5">
-                                    {step.detail}
-                                </p>
-                                {step.href.startsWith('#') ? (
-                                    <a
-                                        href={step.href}
-                                        className="mt-3 inline-flex min-h-10 items-center gap-1 text-xs font-semibold text-red-600 hover:underline"
-                                    >
-                                        {step.action}
-                                        <ArrowRight
-                                            className="size-3.5"
-                                            aria-hidden="true"
-                                        />
-                                    </a>
-                                ) : (
-                                    <Link
-                                        href={step.href}
-                                        className="mt-3 inline-flex min-h-10 items-center gap-1 text-xs font-semibold text-red-600 hover:underline"
-                                    >
-                                        {step.action}
-                                        <ArrowRight
-                                            className="size-3.5"
-                                            aria-hidden="true"
-                                        />
-                                    </Link>
-                                )}
-                            </li>
-                        ))}
-                    </ol>
-                    <div className="border-border mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
-                        <div>
-                            <p className="text-sm font-bold">
-                                {license_count > 0
-                                    ? 'Your next action: verify your license'
-                                    : product_entitlements.length > 0
-                                      ? 'Your next action: review your product'
-                                      : 'Your next action: explore KMJ products'}
-                            </p>
-                            <p className="text-muted-foreground mt-1 text-xs">
-                                This guidance does not enable checkout, signed
-                                keys or device reset.
-                            </p>
-                        </div>
-                        {license_count > 0 ? (
+                        {nextStep.href.startsWith('#') ? (
                             <a
-                                href="#my-licenses"
-                                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-bold text-white hover:bg-red-700"
+                                href={nextStep.href}
+                                className={`${actionClass} shrink-0 justify-center border hover:border-red-500/40`}
                             >
-                                Review licenses
-                                <ArrowRight
-                                    className="size-4"
-                                    aria-hidden="true"
-                                />
-                            </a>
-                        ) : product_entitlements.length > 0 ? (
-                            <a
-                                href="#my-products"
-                                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-bold text-white hover:bg-red-700"
-                            >
-                                Review entitlements
+                                {nextStep.action}
                                 <ArrowRight
                                     className="size-4"
                                     aria-hidden="true"
@@ -287,9 +162,9 @@ export default function LicensingHub({
                         ) : (
                             <Link
                                 href="/purchase"
-                                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-bold text-white hover:bg-red-700"
+                                className={`${actionClass} shrink-0 justify-center bg-red-600 text-white hover:bg-red-500`}
                             >
-                                Explore products
+                                {nextStep.action}
                                 <ArrowRight
                                     className="size-4"
                                     aria-hidden="true"
@@ -297,505 +172,260 @@ export default function LicensingHub({
                             </Link>
                         )}
                     </div>
-                    <p className="text-muted-foreground mt-4 text-xs">
-                        Building licensed software? The{' '}
-                        <Link
-                            href="/developer/apps"
-                            className="font-semibold text-red-600 hover:underline"
-                        >
-                            Developer Apps &amp; Keys
-                        </Link>{' '}
-                        workspace has separate issuer-subscription permissions.
-                        It does not grant customer licenses or purchases.
-                    </p>
                 </section>
 
-                <section
-                    id="codebridge-usage-preview"
-                    aria-labelledby="codebridge-usage-heading"
-                    className="border-border bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
-                >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                            <p className="text-xs font-bold tracking-wider text-red-500 uppercase">
-                                KMJ CodeBridge · Monthly usage
-                            </p>
-                            <h2
-                                id="codebridge-usage-heading"
-                                className="mt-1 text-lg font-bold"
-                            >
-                                Free forever. Grow when you need more.
-                            </h2>
-                            <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
-                                Planned hosted remote tool-call allowances. No
-                                card needed for the proposed Free plan.
-                                Self-hosted open-source CodeBridge is not
-                                subject to a KMJ monthly hosted-call meter. AI
-                                provider fees, if any, are separate.
-                            </p>
-                        </div>
-                        <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-300">
-                            Proposal · Not live
-                        </span>
-                    </div>
-                    <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                        {codebridge_usage_preview.plans.map((plan) => (
-                            <article
-                                key={plan.id}
-                                className="border-border rounded-xl border p-4"
-                            >
-                                <h3 className="text-sm font-bold">
-                                    {plan.label}
-                                </h3>
-                                <p className="mt-2 text-2xl font-extrabold tabular-nums">
-                                    {plan.monthly_price_inr === null
-                                        ? 'Custom'
-                                        : `₹${plan.monthly_price_inr}`}
-                                    {plan.monthly_price_inr !== null && (
-                                        <span className="text-muted-foreground ml-1 text-xs font-medium">
-                                            /
-                                            {plan.per_user
-                                                ? 'user/month'
-                                                : 'month'}
-                                        </span>
-                                    )}
-                                </p>
-                                <p className="text-muted-foreground mt-2 text-xs">
-                                    {plan.monthly_calls === null
-                                        ? 'Contract-specific monthly allowance'
-                                        : `${plan.monthly_calls.toLocaleString('en-IN')} planned remote calls/month`}
-                                </p>
-                            </article>
-                        ))}
-                    </div>
-                    <div
-                        className="mt-4 rounded-xl border border-dashed p-3 text-sm"
-                        role="status"
+                {(renewalAttention.length > 0 || accessReview.length > 0) && (
+                    <section
+                        id="my-renewals"
+                        aria-labelledby="renewals-heading"
+                        className="scroll-mt-6 rounded-2xl border border-amber-500/40 p-5 sm:p-6"
                     >
-                        <strong>Live usage: Not available yet.</strong> The
-                        account-wide meter, remaining calls and UTC reset date
-                        will appear only after authenticated gateway tracking
-                        and licensing verification are production ready. No
-                        usage numbers or purchases are inferred from this
-                        preview.
-                    </div>
-                </section>
-
-                <nav
-                    aria-label="Licensing workflow sections"
-                    className="flex flex-wrap gap-2"
-                >
-                    {[
-                        ['Getting started', '#getting-started'],
-                        ['My products', '#my-products'],
-                        ['Licenses', '#my-licenses'],
-                        ['Renewals', '#my-renewals'],
-                        ['Devices', '#my-devices'],
-                        ['Downloads', '#my-downloads'],
-                    ].map(([label, href]) => (
-                        <a
-                            key={href}
-                            href={href}
-                            className="border-border bg-card hover:bg-accent rounded-full border px-4 py-2 text-xs font-bold transition"
-                        >
-                            {label}
-                        </a>
-                    ))}
-                </nav>
+                        <h2 id="renewals-heading" className="font-bold">
+                            Needs your attention
+                        </h2>
+                        <ul className="mt-3 space-y-4">
+                            {renewalAttention.map((license) => (
+                                <li key={license.id} className="text-sm">
+                                    <p className="font-bold">
+                                        {productLabel(license.product)} ·{' '}
+                                        {licenseStateLabel(license.state)}
+                                    </p>
+                                    <p className="text-muted-foreground mt-1">
+                                        Expires{' '}
+                                        {readableDate(license.expires_at)}
+                                        {license.state === 'GRACE' &&
+                                            license.grace_until &&
+                                            ` · Grace period ends ${readableDate(license.grace_until)}`}
+                                        . A renewal is not automatic: KMJ has to
+                                        confirm it before your dates change.
+                                    </p>
+                                    <Link
+                                        href="/purchase"
+                                        className={linkClass}
+                                    >
+                                        Ask about renewal · no payment here
+                                    </Link>
+                                </li>
+                            ))}
+                            {accessReview.map((license) => (
+                                <li key={license.id} className="text-sm">
+                                    <p className="font-bold">
+                                        {productLabel(license.product)} ·{' '}
+                                        {licenseStateLabel(license.state)}
+                                    </p>
+                                    <p className="text-muted-foreground mt-1">
+                                        Email info@kmjtechno.com and quote
+                                        reference {license.id.slice(0, 8)}.
+                                        Buying another plan cannot bypass
+                                        revocation or a restriction.
+                                    </p>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
 
                 <section
-                    className="grid gap-3 sm:grid-cols-3"
-                    aria-label="Licensing overview"
+                    id="my-licenses"
+                    aria-labelledby="licenses-heading"
+                    className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
                 >
-                    {[
-                        {
-                            label: 'License records',
-                            number: license_count,
-                            icon: KeyRound,
-                        },
-                        {
-                            label: 'Active, due or grace records shown',
-                            number: activeLicenses,
-                            icon: BadgeCheck,
-                        },
-                        {
-                            label: 'Non-deactivated device bindings',
-                            number: nonDeactivatedDevices,
-                            icon: Laptop2,
-                        },
-                    ].map(({ label, number, icon: Icon }) => (
-                        <div
-                            key={label}
-                            className="border-border bg-card rounded-2xl border p-5"
-                        >
-                            <Icon
-                                className="mb-3 size-5 text-red-500"
-                                aria-hidden="true"
-                            />
-                            <p className="text-3xl font-extrabold tabular-nums">
-                                {number}
-                            </p>
-                            <p className="text-muted-foreground mt-1 text-xs">
-                                {label}
-                            </p>
-                        </div>
-                    ))}
+                    <h2
+                        id="licenses-heading"
+                        className="flex items-center gap-2 font-bold"
+                    >
+                        <KeyRound
+                            className="size-5 text-red-500"
+                            aria-hidden="true"
+                        />
+                        My licenses ({license_count})
+                    </h2>
+                    {licenses_truncated && (
+                        <p className="mt-3 text-sm text-amber-700 dark:text-amber-300">
+                            Showing the latest 100 licenses only. Contact KMJ
+                            support for older ones.
+                        </p>
+                    )}
+                    {license_count === 0 ? (
+                        <p className="text-muted-foreground mt-3 text-sm">
+                            No license is linked to your account or
+                            organizations.
+                        </p>
+                    ) : (
+                        <ul className="mt-4 grid gap-3">
+                            {licenses.map((license) => (
+                                <li
+                                    key={license.id}
+                                    className="rounded-xl border p-4"
+                                >
+                                    <div className="flex flex-wrap items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <h3 className="font-bold">
+                                                {productLabel(license.product)}
+                                            </h3>
+                                            <p className="text-muted-foreground mt-1 text-sm">
+                                                {planLabel(license.plan)} plan ·{' '}
+                                                {license.subject_label}
+                                            </p>
+                                        </div>
+                                        <span className="bg-muted rounded-full px-3 py-1 text-xs font-bold">
+                                            {licenseStateLabel(license.state)}
+                                        </span>
+                                    </div>
+                                    <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
+                                        <div>
+                                            <dt className="text-muted-foreground text-xs">
+                                                {license.state === 'NOT_STARTED'
+                                                    ? 'Starts'
+                                                    : 'Expires'}
+                                            </dt>
+                                            <dd>
+                                                {readableDate(
+                                                    license.state ===
+                                                        'NOT_STARTED'
+                                                        ? license.starts_at
+                                                        : license.expires_at,
+                                                )}
+                                            </dd>
+                                        </div>
+                                        <div>
+                                            <dt className="text-muted-foreground text-xs">
+                                                Computers registered
+                                            </dt>
+                                            <dd>
+                                                {
+                                                    license.non_deactivated_devices
+                                                }
+                                            </dd>
+                                        </div>
+                                        <div>
+                                            <dt className="text-muted-foreground text-xs">
+                                                Support reference
+                                            </dt>
+                                            <dd className="font-mono">
+                                                {license.id.slice(0, 8)}
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    {license_count > 0 && (
+                        <p className="text-muted-foreground mt-3 text-xs">
+                            A registered computer is a saved record. It does not
+                            show whether that computer is online now.
+                        </p>
+                    )}
                 </section>
 
                 <section
                     id="my-products"
                     aria-labelledby="products-heading"
-                    className="border-border bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
+                    className="bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
                 >
-                    <div className="flex items-start gap-3">
-                        <Boxes
-                            className="mt-0.5 size-5 text-red-500"
-                            aria-hidden="true"
-                        />
-                        <div>
-                            <h2
-                                id="products-heading"
-                                className="text-lg font-bold"
-                            >
-                                My Products
-                            </h2>
-                            <p className="text-muted-foreground text-xs">
-                                Recorded organization entitlements. An
-                                entitlement record is not itself a signed
-                                license.
-                            </p>
-                        </div>
-                    </div>
-                    {product_entitlements.length === 0 ? (
-                        <p className="text-muted-foreground mt-5 text-sm">
-                            No product entitlements are linked to your verified
-                            organization memberships yet.
-                        </p>
-                    ) : (
-                        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                            {product_entitlements.map((product) => (
-                                <div
-                                    key={product.id}
-                                    className="border-border rounded-xl border p-4"
-                                >
-                                    <p className="text-sm font-bold">
-                                        {product.product_name}
-                                    </p>
-                                    <p className="text-muted-foreground mt-1 text-xs">
-                                        {product.organization_name} ·{' '}
-                                        {product.capability}
-                                    </p>
-                                    <p className="mt-2 text-xs">
-                                        Entitlement: {product.status}
-                                    </p>
-                                    <p className="text-muted-foreground mt-1 text-xs">
-                                        Ends: {readableDate(product.ends_at)}
-                                    </p>
-                                    <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-                                        Signed license not attested here
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </section>
-
-                <section
-                    id="my-licenses"
-                    aria-labelledby="licenses-heading"
-                    className="border-border bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
-                >
-                    <div className="flex items-start gap-3">
-                        <KeyRound
-                            className="mt-0.5 size-5 text-red-500"
-                            aria-hidden="true"
-                        />
-                        <div>
-                            <h2
-                                id="licenses-heading"
-                                className="text-lg font-bold"
-                            >
-                                My Licenses
-                            </h2>
-                            <p className="text-muted-foreground text-xs">
-                                KSLP license status, plan, renewal and expiry;
-                                no plaintext keys or device fingerprints.
-                            </p>
-                        </div>
-                    </div>
-                    {licenses_truncated && (
-                        <p className="mt-4 text-xs text-amber-600 dark:text-amber-400">
-                            Showing the latest 100 records only. Contact KMJ
-                            support for older history.
-                        </p>
-                    )}
-                    {licenses.length === 0 ? (
-                        <p className="text-muted-foreground mt-5 text-sm">
-                            No KSLP licenses were found for your verified
-                            account or organization memberships.
-                        </p>
-                    ) : (
-                        <div className="mt-5 grid gap-3">
-                            {licenses.map((license) => (
-                                <article
-                                    key={license.id}
-                                    className="border-border rounded-xl border p-4"
-                                >
-                                    <div className="flex flex-wrap justify-between gap-3">
-                                        <div>
-                                            <h3 className="text-sm font-bold">
-                                                {license.product}
-                                            </h3>
-                                            <p className="text-muted-foreground mt-1 text-xs">
-                                                {license.subject_label} ·{' '}
-                                                {license.plan} · Ref{' '}
-                                                {license.id.slice(0, 8)}
-                                            </p>
-                                        </div>
-                                        <span className="bg-muted rounded-full px-3 py-1 text-xs font-bold">
-                                            {stateLabels[license.state] ??
-                                                'Unknown'}
-                                        </span>
-                                    </div>
-                                    <div className="text-muted-foreground mt-3 flex flex-wrap gap-4 text-xs">
-                                        <span className="inline-flex items-center gap-1">
-                                            <Clock3
-                                                className="size-4"
-                                                aria-hidden="true"
-                                            />
-                                            Expires{' '}
-                                            {readableDate(license.expires_at)}
-                                        </span>
-                                        <span>
-                                            Device bindings:{' '}
-                                            {license.non_deactivated_devices}
-                                        </span>
-                                        <span>Online status: not verified</span>
-                                        {license.state === 'NOT_STARTED' && (
-                                            <span>
-                                                Starts{' '}
-                                                {readableDate(
-                                                    license.starts_at,
-                                                )}
-                                            </span>
-                                        )}
-                                        {license.state === 'GRACE' &&
-                                            license.grace_until && (
-                                                <span>
-                                                    Grace until{' '}
-                                                    {readableDate(
-                                                        license.grace_until,
-                                                    )}
-                                                </span>
-                                            )}
-                                    </div>
-                                </article>
-                            ))}
-                        </div>
-                    )}
-                </section>
-
-                <section
-                    id="my-renewals"
-                    aria-labelledby="renewals-heading"
-                    className="border-border bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
-                >
-                    <div className="flex items-start gap-3">
-                        <Clock3
-                            className="mt-0.5 size-5 text-red-500"
-                            aria-hidden="true"
-                        />
-                        <div>
-                            <h2
-                                id="renewals-heading"
-                                className="text-lg font-bold"
-                            >
-                                Renewals &amp; access review
-                            </h2>
-                            <p className="text-muted-foreground mt-2 text-xs leading-5">
-                                Your next step is based only on your visible
-                                KSLP license records. A renewal-due or grace
-                                status is not proof of a charge, auto-renewal or
-                                newly signed license. Plans are for discovery,
-                                not an immediate license extension.
-                            </p>
-                        </div>
-                    </div>
-                    {licenses_truncated && (
-                        <p className="mt-4 text-xs text-amber-600 dark:text-amber-400">
-                            These results cover the latest 100 shown licenses,
-                            not your complete renewal history.
-                        </p>
-                    )}
-                    {renewalAttention.length === 0 &&
-                    accessReview.length === 0 ? (
-                        <div className="bg-muted/50 mt-5 rounded-xl p-4 text-sm">
-                            No renewal-due, grace or access-restricted records
-                            were found in the licenses shown. This does not
-                            confirm auto-renewal or active billing.
-                        </div>
-                    ) : (
-                        <div className="mt-5 grid gap-3">
-                            {renewalAttention.map((license) => (
-                                <article
-                                    key={license.id}
-                                    className="border-border rounded-xl border p-4"
-                                >
-                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <h3 className="text-sm font-bold">
-                                            {license.product}
-                                        </h3>
-                                        <span className="rounded-full border border-amber-500/40 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-300">
-                                            {stateLabels[license.state]}
-                                        </span>
-                                    </div>
-                                    <p className="text-muted-foreground mt-2 text-xs">
-                                        {license.subject_label} · Plan{' '}
-                                        {license.plan} · Expires{' '}
-                                        {readableDate(license.expires_at)}
-                                        {license.state === 'GRACE' &&
-                                            license.grace_until && (
-                                                <>
-                                                    {' '}
-                                                    · Grace ends{' '}
-                                                    {readableDate(
-                                                        license.grace_until,
-                                                    )}
-                                                </>
-                                            )}
-                                    </p>
-                                    <p className="text-muted-foreground mt-3 text-xs leading-5">
-                                        Review the available plan options. The
-                                        server must independently verify an
-                                        approved renewal and any resulting
-                                        entitlement before changing access.
-                                    </p>
-                                    <Link
-                                        href="/purchase"
-                                        className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg border border-red-500/30 px-3 text-xs font-semibold text-red-600 hover:bg-red-500/5"
-                                    >
-                                        Explore plans · Not checkout
-                                        <ArrowRight
-                                            className="size-4"
-                                            aria-hidden="true"
-                                        />
-                                    </Link>
-                                </article>
-                            ))}
-                            {accessReview.map((license) => (
-                                <article
-                                    key={license.id}
-                                    className="border-border rounded-xl border p-4"
-                                >
-                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <h3 className="text-sm font-bold">
-                                            {license.product}
-                                        </h3>
-                                        <span className="bg-muted rounded-full px-3 py-1 text-xs font-bold">
-                                            {stateLabels[license.state]}
-                                        </span>
-                                    </div>
-                                    <p className="text-muted-foreground mt-2 text-xs leading-5">
-                                        {license.subject_label} · Ref{' '}
-                                        {license.id.slice(0, 8)}. Access
-                                        requires an authorized review. Buying
-                                        another plan cannot bypass revocation or
-                                        an unknown restriction; use KMJ account
-                                        support for next steps.
-                                    </p>
-                                </article>
-                            ))}
-                        </div>
-                    )}
-                    <p className="text-muted-foreground mt-4 text-xs">
-                        Device-seat recovery is separate from renewal and
-                        remains disabled until signed device verification,
-                        cooldown and audit gates pass.
-                    </p>
-                </section>
-
-                <section
-                    id="my-devices"
-                    aria-labelledby="devices-heading"
-                    className="border-border bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
-                >
-                    <div className="flex items-start gap-3">
-                        <Laptop2
-                            className="mt-0.5 size-5 text-red-500"
-                            aria-hidden="true"
-                        />
-                        <div>
-                            <h2
-                                id="devices-heading"
-                                className="text-lg font-bold"
-                            >
-                                Devices & recovery
-                            </h2>
-                            <p className="text-muted-foreground text-xs">
-                                Only aggregate historical activation evidence is
-                                shown. No hardware identity or device secret
-                                leaves the licensing server.
-                            </p>
-                        </div>
-                    </div>
-                    <div className="bg-muted/50 mt-5 rounded-xl p-4">
-                        <p className="text-sm font-semibold">
-                            Secure device reset / transfer: not enabled
-                        </p>
-                        <p className="text-muted-foreground mt-2 text-xs leading-5">
-                            Moving a seat must first verify device key
-                            possession, license ownership, cooldown and
-                            revocation sequence. A browser-only reset would
-                            bypass those protections. Use KMJ support for
-                            recovery until the reviewed flow is enabled.
-                        </p>
-                        {organizations.length > 0 && (
-                            <p className="text-muted-foreground mt-2 text-xs">
-                                Linked organizations: {organizations.length}
-                            </p>
-                        )}
-                    </div>
-                </section>
-
-                <section
-                    id="my-downloads"
-                    aria-labelledby="downloads-heading"
-                    className="border-border bg-card scroll-mt-6 rounded-2xl border p-5 sm:p-6"
-                >
-                    <div className="flex items-start gap-3">
-                        <Download
-                            className="mt-0.5 size-5 text-red-500"
-                            aria-hidden="true"
-                        />
-                        <div>
-                            <h2
-                                id="downloads-heading"
-                                className="text-lg font-bold"
-                            >
-                                Downloads & releases
-                            </h2>
-                            <p className="text-muted-foreground text-xs">
-                                Obtain downloads only from the existing
-                                entitlement-aware account dashboard. This page
-                                does not grant or fabricate a signed release.
-                            </p>
-                        </div>
-                    </div>
-                    <Link
-                        href={trusted_download_source}
-                        className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl border border-red-500/30 px-4 text-xs font-bold text-red-600 hover:bg-red-500/5"
+                    <h2
+                        id="products-heading"
+                        className="flex items-center gap-2 font-bold"
                     >
-                        <Download className="size-4" aria-hidden="true" />
-                        View authorized account downloads
-                        <ArrowRight className="size-4" aria-hidden="true" />
-                    </Link>
+                        <Boxes
+                            className="size-5 text-red-500"
+                            aria-hidden="true"
+                        />
+                        Product access
+                    </h2>
+                    {product_entitlements.length > 0 ? (
+                        <ul className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-3">
+                            {product_entitlements.map((access) => (
+                                <li
+                                    key={access.id}
+                                    className="rounded-xl border p-4 text-sm"
+                                >
+                                    <p className="font-bold">
+                                        {access.product_name}
+                                    </p>
+                                    <p className="text-muted-foreground mt-1">
+                                        {access.organization_name} ·{' '}
+                                        {featureLabel(access.capability)}
+                                    </p>
+                                    <p className="mt-2">
+                                        {accessStatusLabel(access.status)}
+                                        {access.ends_at &&
+                                            ` · Ends ${readableDate(access.ends_at)}`}
+                                    </p>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-muted-foreground mt-3 text-sm">
+                            No product access is switched on for your
+                            organizations.
+                            {license_count > 0 &&
+                                ' Your license is a separate record and stays listed above.'}
+                        </p>
+                    )}
                 </section>
 
-                <p className="text-muted-foreground text-center text-xs">
-                    One KMJ Main Platform / KSLP authority. No legacy AuthSP
-                    login, payment shortcut, client-side licensing keys or
-                    independent signer.
-                </p>
+                <RecordExplainer />
+
+                <section
+                    aria-label="More help"
+                    className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-3"
+                >
+                    <div
+                        id="my-downloads"
+                        className="scroll-mt-6 rounded-xl border p-4 text-sm"
+                    >
+                        <h2 className="font-bold">Downloads</h2>
+                        <p className="text-muted-foreground mt-1">
+                            Downloads appear on My Services, next to a product
+                            that is switched on.
+                        </p>
+                        <Link
+                            href={trusted_download_source}
+                            className={linkClass}
+                        >
+                            Open My Services
+                        </Link>
+                    </div>
+                    <div
+                        id="my-devices"
+                        className="scroll-mt-6 rounded-xl border p-4 text-sm"
+                    >
+                        <h2 className="font-bold">Moving to a new computer</h2>
+                        <p className="text-muted-foreground mt-1">
+                            Self-service transfer is not available yet. Email
+                            KMJ support with your license reference.
+                        </p>
+                        <a
+                            href="mailto:info@kmjtechno.com"
+                            className={linkClass}
+                        >
+                            info@kmjtechno.com
+                        </a>
+                    </div>
+                    <div className="rounded-xl border p-4 text-sm">
+                        <h2 className="font-bold">For software developers</h2>
+                        <p className="text-muted-foreground mt-1">
+                            Issuing keys for your own software needs a separate
+                            developer permission.
+                        </p>
+                        <Link href="/developer/apps" className={linkClass}>
+                            Open Developer Apps
+                        </Link>
+                    </div>
+                    <div
+                        id="codebridge-usage-preview"
+                        className="rounded-xl border p-4 text-sm"
+                        role="status"
+                    >
+                        <h2 className="font-bold">CodeBridge monthly usage</h2>
+                        <p className="text-muted-foreground mt-1">
+                            Live usage: Not available yet. No usage numbers or
+                            plan prices are shown until they are real.
+                        </p>
+                    </div>
+                </section>
             </main>
         </>
     );

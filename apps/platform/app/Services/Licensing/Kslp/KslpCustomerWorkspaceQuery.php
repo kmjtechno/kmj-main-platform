@@ -28,11 +28,84 @@ final class KslpCustomerWorkspaceQuery
     public function forUser(User $actor): array
     {
         $userId = (int) $actor->getKey();
-        $organizationNames = [];
+        $organizationNames = $this->organizationNames($userId);
+
+        ['licenses' => $safeLicenses, 'total' => $total] = $this->licenseRecords($userId, $organizationNames);
+
+        $entitlements = $organizationNames === [] ? [] :
+            DB::table('entitlements as e')
+                ->join('products as p', 'p.id', '=', 'e.product_id')
+                ->whereIn('e.organization_id', array_keys($organizationNames))
+                ->orderByDesc('e.created_at')
+                ->limit(100)
+                ->get([
+                    'e.id', 'e.organization_id', 'e.capability', 'e.status',
+                    'e.starts_at', 'e.ends_at', 'p.name as product_name',
+                    'p.slug as product_slug',
+                ])->map(function ($entitlement) use ($organizationNames): array {
+                    return [
+                        'id' => (string) $entitlement->id,
+                        'organization_name' => $organizationNames[(string) $entitlement->organization_id],
+                        'product_name' => (string) $entitlement->product_name,
+                        'product_slug' => (string) $entitlement->product_slug,
+                        'capability' => (string) $entitlement->capability,
+                        'status' => (string) $entitlement->status,
+                        'starts_at' => $entitlement->starts_at,
+                        'ends_at' => $entitlement->ends_at,
+                        'signed_license_issued' => false,
+                    ];
+                })->all();
+
+        return [
+            'licenses' => $safeLicenses,
+            'license_count' => $total,
+            'licenses_truncated' => $total > count($safeLicenses),
+            'product_entitlements' => $entitlements,
+            'organizations' => array_map(
+                fn (string $id, string $name): array => ['id' => $id, 'name' => $name],
+                array_keys($organizationNames),
+                array_values($organizationNames),
+            ),
+            'authorization_source' => 'authenticated_verified_membership',
+            'device_reset_enabled' => false,
+            'paid_issuance_enabled' => false,
+            'trusted_download_source' => '/dashboard',
+            // All users see the same non-billable proposal. No unverified
+            // seat/tenant counters or live payment assertions are exposed.
+            'codebridge_usage_preview' => $this->usagePreview->catalog(),
+        ];
+    }
+
+    /**
+     * The same customer-scoped license records the Licensing page shows, so the
+     * dashboard can never report "nothing" while a license exists.
+     *
+     * @return array{licenses: array<int, array<string, mixed>>, total: int}
+     */
+    public function licensesForUser(User $actor): array
+    {
+        $userId = (int) $actor->getKey();
+
+        return $this->licenseRecords($userId, $this->organizationNames($userId));
+    }
+
+    /** @return array<string, string> */
+    private function organizationNames(int $userId): array
+    {
+        $names = [];
         foreach ($this->organizations->forUser($userId) as $organization) {
-            $organizationNames[$organization['id']] = $organization['name'];
+            $names[$organization['id']] = $organization['name'];
         }
 
+        return $names;
+    }
+
+    /**
+     * @param  array<string, string>  $organizationNames
+     * @return array{licenses: array<int, array<string, mixed>>, total: int}
+     */
+    private function licenseRecords(int $userId, array $organizationNames): array
+    {
         $customerIds = array_values(array_unique([
             (string) $userId,
             ...array_keys($organizationNames),
@@ -81,48 +154,7 @@ final class KslpCustomerWorkspaceQuery
             ];
         })->all();
 
-        $entitlements = $organizationNames === [] ? [] :
-            DB::table('entitlements as e')
-                ->join('products as p', 'p.id', '=', 'e.product_id')
-                ->whereIn('e.organization_id', array_keys($organizationNames))
-                ->orderByDesc('e.created_at')
-                ->limit(100)
-                ->get([
-                    'e.id', 'e.organization_id', 'e.capability', 'e.status',
-                    'e.starts_at', 'e.ends_at', 'p.name as product_name',
-                    'p.slug as product_slug',
-                ])->map(function ($entitlement) use ($organizationNames): array {
-                    return [
-                        'id' => (string) $entitlement->id,
-                        'organization_name' => $organizationNames[(string) $entitlement->organization_id],
-                        'product_name' => (string) $entitlement->product_name,
-                        'product_slug' => (string) $entitlement->product_slug,
-                        'capability' => (string) $entitlement->capability,
-                        'status' => (string) $entitlement->status,
-                        'starts_at' => $entitlement->starts_at,
-                        'ends_at' => $entitlement->ends_at,
-                        'signed_license_issued' => false,
-                    ];
-                })->all();
-
-        return [
-            'licenses' => $safeLicenses,
-            'license_count' => $total,
-            'licenses_truncated' => $total > count($safeLicenses),
-            'product_entitlements' => $entitlements,
-            'organizations' => array_map(
-                fn (string $id, string $name): array => ['id' => $id, 'name' => $name],
-                array_keys($organizationNames),
-                array_values($organizationNames),
-            ),
-            'authorization_source' => 'authenticated_verified_membership',
-            'device_reset_enabled' => false,
-            'paid_issuance_enabled' => false,
-            'trusted_download_source' => '/dashboard',
-            // All users see the same non-billable proposal. No unverified
-            // seat/tenant counters or live payment assertions are exposed.
-            'codebridge_usage_preview' => $this->usagePreview->catalog(),
-        ];
+        return ['licenses' => $safeLicenses, 'total' => $total];
     }
 
     /** @param array<string, mixed> $license */

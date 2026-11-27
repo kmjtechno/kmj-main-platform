@@ -100,7 +100,7 @@ void test('owner dashboard entry remains authority-gated and leaves customer ser
     assert.match(dashboard, /href="\/operator\/kslp"/);
     assert.ok(
         dashboard.indexOf('<OwnerProductsPanel') <
-            dashboard.indexOf('Your authorized services'),
+            dashboard.indexOf('Your products'),
     );
     assert.match(
         routes,
