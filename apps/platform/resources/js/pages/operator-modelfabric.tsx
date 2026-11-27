@@ -1364,11 +1364,11 @@ export default function OperatorModelFabric({
                                     <p className="text-muted-foreground text-sm">
                                         Model evidence and a token are not
                                         account billing proof. Private-source
-                                        requests require strict-free-cloud,
-                                        a fresh single-use admission ticket and
-                                        explicit source-transfer consent.
-                                        Worker activation is independently
-                                        verified in CodeBridge.
+                                        requests require strict-free-cloud, a
+                                        fresh single-use admission ticket and
+                                        explicit source-transfer consent. Worker
+                                        activation is independently verified in
+                                        CodeBridge.
                                     </p>
                                     {!privateReady ? (
                                         <p className="text-sm leading-relaxed">
