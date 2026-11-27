@@ -1,0 +1,21 @@
+name: Root staging private anchor source safety
+on:
+  pull_request:
+    paths:
+      - scripts/operations/KMJ_ROOT_STAGING_ANCHOR_BOOTSTRAP_20261104.py
+      - scripts/test_root_stage_anchor_bootstrap_20261104.py
+      - .github/workflows/kmj-root-stage-anchor.yml
+permissions:
+  contents: read
+jobs:
+  root_anchor_source_gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Verify static no-deploy and no-recursive-mutation invariants
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest scripts/test_root_stage_anchor_bootstrap_20261104.py -v
