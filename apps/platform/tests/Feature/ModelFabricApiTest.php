@@ -390,9 +390,11 @@ final class ModelFabricApiTest extends TestCase
 
         $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)
             ->assertStatus(429)->assertJsonPath('error.code', 'rate_limited')
+            ->assertHeader('Retry-After')
             ->assertHeader('Content-Type', 'application/json');
         $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)
-            ->assertStatus(429)->assertJsonPath('error.code', 'all_routes_cooling_down');
+            ->assertStatus(429)->assertJsonPath('error.code', 'all_routes_cooling_down')
+            ->assertHeader('Retry-After');
         Http::assertSentCount(1);
 
         $this->travel(901)->seconds();
