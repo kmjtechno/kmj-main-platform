@@ -24,13 +24,18 @@ final class ModelFabricRouter
      *
      * @return array{status: string, routes: list<array<string, mixed>>, reasons: list<array{provider: string, reason: string}>}
      */
-    public function plan(string $organizationId, string $capability = 'chat', bool $privateSource = false, bool $strictFreeCloud = false): array
+    public function plan(string $organizationId, string $capability = 'chat', bool $privateSource = false, bool $strictFreeCloud = false, bool $publicPromptsConfirmed = true): array
     {
         $routes = [];
         $reasons = [];
 
         $providers = AiProvider::query()->where('organization_id', $organizationId)->orderBy('name')->get();
         foreach ($providers as $provider) {
+            if ($provider->preset === 'kilo-free' && ($privateSource || $strictFreeCloud || $capability !== 'chat' || ! $publicPromptsConfirmed)) {
+                $reasons[] = ['provider' => $provider->name, 'reason' => 'public_chat_only'];
+
+                continue;
+            }
             $evidence = $this->currentEvidence($provider);
             $models = $this->manager->admittedFreeModels($provider);
             if ($models === []) {

@@ -9,6 +9,7 @@ use App\Models\AiModelRequest;
 use App\Models\AiProvider;
 use App\Services\AiProviders\EndpointGuard;
 use App\Services\AiProviders\ModelFabricGateway;
+use App\Services\AiProviders\ProviderManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -277,6 +278,140 @@ final class ModelFabricGatewayTest extends TestCase
         $this->assertStringNotContainsString('secret-prompt', $row);
         $this->assertStringNotContainsString('secret-answer', $row);
         $this->assertStringNotContainsString('sk-test', $row);
+    }
+
+    public function test_direct_provider_call_requires_single_use_gateway_reservation(): void
+    {
+        $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        $messages = [['role' => 'user', 'content' => 'hi']];
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'ok']]]])]);
+        $manager = app(ProviderManager::class);
+
+        $this->assertSame('gateway_reservation_required', $manager->complete($provider, 'model-a', $messages)['error_code']);
+        Http::assertNothingSent();
+
+        $this->assertTrue(app(ModelFabricGateway::class)->completeSelected($provider, 'model-a', $messages)['ok']);
+        $attempt = AiModelRequest::query()->firstOrFail();
+        $this->assertSame('gateway_reservation_required', $manager->complete($provider, 'model-a', $messages, attempt: $attempt)['error_code']);
+        Http::assertSentCount(1);
+    }
+
+    public function test_kilo_shared_hourly_cap_skips_route_without_sending_a_request(): void
+    {
+        $kilo = AiProvider::query()->create(array_replace(
+            $this->providerRow('kilo-free', 'Kilo', 'https://ai-gateway.kilo.ai/api/v1', 'sample/public:free'),
+            ['api_key' => '', 'key_last4' => ''],
+        ));
+        for ($i = 0; $i < 200; $i++) {
+            AiModelRequest::query()->create([
+                'organization_id' => $this->org,
+                'ai_provider_id' => $kilo->id,
+                'model_id' => 'sample/public:free',
+                'outcome' => 'failed',
+                'error_code' => 'attempt_reserved',
+                'latency_ms' => 0,
+            ]);
+        }
+
+        Http::fake();
+        $result = app(ModelFabricGateway::class)->complete($this->org, [['role' => 'user', 'content' => 'hi']], publicPromptsConfirmed: true);
+
+        $this->assertFalse($result['ok']);
+        $this->assertSame('keyless_hourly_quota_exhausted', $result['error_code']);
+        Http::assertNothingSent();
+    }
+
+    public function test_shared_keyless_quota_survives_connection_deletion_and_expires(): void
+    {
+        $row = array_replace(
+            $this->providerRow('kilo-free', 'Kilo', 'https://ai-gateway.kilo.ai/api/v1', 'sample/public:free'),
+            ['api_key' => '', 'key_last4' => ''],
+        );
+        $provider = AiProvider::query()->create($row);
+        for ($i = 0; $i < 199; $i++) {
+            DB::table('ai_shared_quota_reservations')->insert([
+                'id' => (string) Str::uuid(),
+                'scope' => 'kilo-free',
+                'created_at' => now(),
+            ]);
+        }
+        Http::fake(['ai-gateway.kilo.ai/*' => Http::response(['choices' => [['message' => ['content' => 'pong']]]], 200)]);
+        $gateway = app(ModelFabricGateway::class);
+        $messages = [['role' => 'user', 'content' => 'ping']];
+
+        $this->assertTrue($gateway->complete($this->org, $messages, publicPromptsConfirmed: true)['ok']);
+        $this->assertSame(200, ModelFabricGateway::kiloQuotaSnapshot()['used']);
+        $provider->delete();
+        AiProvider::query()->create($row);
+        $this->assertSame(200, ModelFabricGateway::kiloQuotaSnapshot()['used']);
+        $this->assertSame('keyless_hourly_quota_exhausted', $gateway->complete($this->org, $messages, publicPromptsConfirmed: true)['error_code']);
+        Http::assertSentCount(1);
+
+        DB::table('ai_shared_quota_reservations')->update(['created_at' => now()->subHours(3)]);
+        $this->assertSame(0, ModelFabricGateway::kiloQuotaSnapshot()['used']);
+        $this->assertTrue($gateway->complete($this->org, $messages, publicPromptsConfirmed: true)['ok']);
+        $this->assertSame(1, ModelFabricGateway::kiloQuotaSnapshot()['used']);
+        $this->assertDatabaseCount('ai_shared_quota_reservations', 1);
+        Http::assertSentCount(2);
+    }
+
+    public function test_keyless_inference_requires_explicit_public_prompt_confirmation(): void
+    {
+        AiProvider::query()->create(array_replace(
+            $this->providerRow('kilo-free', 'Kilo', 'https://ai-gateway.kilo.ai/api/v1', 'sample/public:free'),
+            ['api_key' => '', 'key_last4' => ''],
+        ));
+        Http::fake(['ai-gateway.kilo.ai/*' => Http::response(['choices' => [['message' => ['content' => 'pong']]]], 200)]);
+        $gateway = app(ModelFabricGateway::class);
+        $messages = [['role' => 'user', 'content' => 'ping']];
+
+        $this->assertSame('NO_FREE_ROUTE_AVAILABLE', $gateway->complete($this->org, $messages)['error_code']);
+        $this->assertSame('NO_FREE_ROUTE_AVAILABLE', $gateway->complete($this->org, $messages, privateSource: true, publicPromptsConfirmed: true)['error_code']);
+        Http::assertNothingSent();
+
+        $this->assertTrue($gateway->complete($this->org, $messages, publicPromptsConfirmed: true)['ok']);
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request): bool => ! $request->hasHeader('Authorization'));
+    }
+
+    public function test_credit_models_share_the_lowest_daily_connection_cap(): void
+    {
+        $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        $provider->models_cache = ['model-a', 'model-b'];
+        $provider->save();
+        AiModelEvidence::query()->where('ai_provider_id', $provider->id)->update([
+            'cost_class' => 'credit-limited',
+            'credit_daily_cap' => 1,
+            'credit_hard_cap_attested_at' => now(),
+        ]);
+        AiModelEvidence::query()->create([
+            'organization_id' => $this->org,
+            'ai_provider_id' => $provider->id,
+            'model_id' => 'model-b',
+            'price_evidence_url' => 'https://example.com/pricing',
+            'price_evidence_note' => 'Hard no-overage protection independently attested.',
+            'verified_at' => now(),
+            'expires_at' => now()->addDays(10),
+            'data_handling' => 'unknown',
+            'capabilities' => ['chat'],
+            'cost_class' => 'credit-limited',
+            'credit_daily_cap' => 5,
+            'credit_hard_cap_attested_at' => now(),
+        ]);
+        AiModelRequest::query()->create([
+            'organization_id' => $this->org,
+            'ai_provider_id' => $provider->id,
+            'model_id' => 'model-a',
+            'outcome' => 'ok',
+            'latency_ms' => 0,
+        ]);
+
+        Http::fake();
+        $result = app(ModelFabricGateway::class)->complete($this->org, [['role' => 'user', 'content' => 'hi']]);
+
+        $this->assertFalse($result['ok']);
+        $this->assertSame('credit_cap_reached', $result['error_code']);
+        Http::assertNothingSent();
     }
 
     private function provider(string $preset, string $name, string $baseUrl, string $model): AiProvider

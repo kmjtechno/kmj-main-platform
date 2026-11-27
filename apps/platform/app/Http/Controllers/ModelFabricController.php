@@ -80,6 +80,9 @@ final class ModelFabricController extends Controller
                 $presented['priority'] = (int) $provider->priority;
                 $presented['daily_request_cap'] = $provider->daily_request_cap === null ? null : (int) $provider->daily_request_cap;
                 $presented['used_today'] = (int) ($usedToday[$provider->id] ?? 0);
+                if ($provider->preset === 'kilo-free') {
+                    $presented['shared_hourly_quota'] = ModelFabricGateway::kiloQuotaSnapshot();
+                }
 
                 return $presented;
             })->values(),
@@ -198,7 +201,7 @@ final class ModelFabricController extends Controller
         ]);
 
         return back()->with('status', $creditLimited
-            ? 'Credit-limited approval saved. KMJ stops routing to it at its daily cap; it is routable until it expires or is revoked.'
+            ? 'Credit-limited approval saved. KMJ applies the lowest current credit cap across this connection. Provider hard no-overage protection is still required.'
             : 'Price evidence saved. The model is routable until it expires or is revoked.');
     }
 

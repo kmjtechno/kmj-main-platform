@@ -17,7 +17,44 @@ use InvalidArgumentException;
  */
 final class OpenAiCompatibleAdapter
 {
+    private const KILO_BASE = 'https://ai-gateway.kilo.ai/api/v1';
+
     private const MAX_MODELS = 200;
+
+    public static function kiloPublicModel(string $model): bool
+    {
+        $id = strtolower($model);
+
+        return (str_ends_with($model, ':free') || $model === 'reflection/beam-free')
+            && ! str_starts_with($id, 'nvidia/') && ! str_contains($id, 'nemotron')
+            && ! str_starts_with($id, 'kilo-auto/');
+    }
+
+    /** @param array<string, mixed> $entry */
+    private static function kiloCatalogFree(array $entry, string $id): bool
+    {
+        if (! self::kiloPublicModel($id) || ($entry['isFree'] ?? false) !== true
+            || ! is_array($entry['pricing'] ?? null)
+            || ! in_array('text', (array) ($entry['architecture']['input_modalities'] ?? []), true)
+            || ! in_array('text', (array) ($entry['architecture']['output_modalities'] ?? []), true)) {
+            return false;
+        }
+        $pricing = $entry['pricing'];
+        if (! isset($pricing['prompt'], $pricing['completion'])) {
+            return false;
+        }
+        foreach ($pricing as $price) {
+            if (! is_numeric($price) || (float) $price !== 0.0) {
+                return false;
+            }
+        }
+        $description = strtolower((string) ($entry['description'] ?? ''));
+        $providers = array_map('strtolower', array_filter((array) ($entry['inference_provider_ids'] ?? []), 'is_string'));
+
+        return ! str_contains($description, 'not suitable for production')
+            && ! str_contains($description, 'trial use only')
+            && ! in_array('nvidia', $providers, true);
+    }
 
     private const MAX_BODY = 2_000_000;
 
@@ -49,6 +86,7 @@ final class OpenAiCompatibleAdapter
         // OpenRouter's documented server-side filter reduces the catalog sent
         // to this fixed 2 MB / 200-ID reader. A zero prompt-price result is NOT
         // authorization for inference: only the existing :free rule admits it.
+        $keyless = $target['base'] === self::KILO_BASE && $apiKey === '';
         $catalogUrl = $target['base'].'/models';
         if ($target['host'] === 'openrouter.ai') {
             $catalogUrl .= '?max_price=0';
@@ -60,10 +98,14 @@ final class OpenAiCompatibleAdapter
         }
 
         try {
-            $response = Http::withOptions([
+            $request = Http::withOptions([
                 'allow_redirects' => false,
                 'curl' => [CURLOPT_RESOLVE => [$target['host'].':443:'.$target['ip']]],
-            ])->withToken($apiKey)->acceptJson()->withHeaders($github ? ['Accept' => 'application/vnd.github+json', 'X-GitHub-Api-Version' => '2022-11-28'] : [])->timeout(10)->connectTimeout(5)->get($catalogUrl);
+            ]);
+            if (! $keyless) {
+                $request->withToken($apiKey);
+            }
+            $response = $request->acceptJson()->withHeaders($github ? ['Accept' => 'application/vnd.github+json', 'X-GitHub-Api-Version' => '2022-11-28'] : [])->timeout(10)->connectTimeout(5)->get($catalogUrl);
         } catch (ConnectionException) {
             return $this->result('unreachable', [], [], 'connection_failed');
         }
@@ -100,7 +142,10 @@ final class OpenAiCompatibleAdapter
             if (! is_string($id) || preg_match('/\A[A-Za-z0-9._:\/-]{1,128}\z/', $id) !== 1) {
                 continue;
             }
-            if ($target['host'] === 'openrouter.ai' && str_ends_with($id, ':free')) {
+            if ($keyless && ! self::kiloCatalogFree($entry, $id)) {
+                continue;
+            }
+            if ($keyless || ($target['host'] === 'openrouter.ai' && str_ends_with($id, ':free'))) {
                 $free[$id] = true;
             } else {
                 $other[$id] = true;
@@ -135,6 +180,11 @@ final class OpenAiCompatibleAdapter
             return ['ok' => false, 'content' => null, 'error_code' => 'pinning_unavailable'];
         }
 
+        $keyless = $target['base'] === self::KILO_BASE && $apiKey === '';
+        if ($keyless && ($strictCodingTokens !== null || ! self::kiloPublicModel($model))) {
+            return ['ok' => false, 'content' => null, 'error_code' => 'zero_spend_blocked'];
+        }
+
         $body = [
             'model' => $model,
             'messages' => $messages,
@@ -157,10 +207,14 @@ final class OpenAiCompatibleAdapter
         }
 
         try {
-            $response = Http::withOptions([
+            $request = Http::withOptions([
                 'allow_redirects' => false,
                 'curl' => [CURLOPT_RESOLVE => [$target['host'].':443:'.$target['ip']]],
-            ])->withToken($apiKey)->acceptJson()->timeout(45)->connectTimeout(5)->post($target['base'].'/chat/completions', $body);
+            ]);
+            if (! $keyless) {
+                $request->withToken($apiKey);
+            }
+            $response = $request->acceptJson()->timeout(45)->connectTimeout(5)->post($target['base'].'/chat/completions', $body);
         } catch (ConnectionException) {
             return ['ok' => false, 'content' => null, 'error_code' => 'connection_failed'];
         }

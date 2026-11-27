@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\AiProvider;
 use App\Models\User;
 use App\Services\AiProviders\EndpointGuard;
+use App\Services\AiProviders\ModelFabricRouter;
 use App\Services\AiProviders\ProviderManager;
 use App\Services\AiProviders\ResolvesAiProviderScope;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -502,6 +503,57 @@ final class AiProviderManagerTest extends TestCase
         $this->assertSame('ok', $provider->health);
         $this->expectException(RuntimeException::class);
         app(ProviderManager::class)->assertInferenceAllowed($provider, 'some-model');
+    }
+
+    public function test_kilo_keyless_connect_requires_public_consent_and_filters_catalog(): void
+    {
+        $free = [
+            'isFree' => true,
+            'pricing' => ['prompt' => '0', 'completion' => '0'],
+            'architecture' => ['input_modalities' => ['text'], 'output_modalities' => ['text']],
+        ];
+        Http::fake(['ai-gateway.kilo.ai/*' => Http::response(['data' => [
+            ['id' => 'sample/public:free'] + $free,
+            ['id' => 'reflection/beam-free'] + $free,
+            ['id' => 'sample/paid'],
+            ['id' => 'sample/unverified:free'],
+            ['id' => 'sample/billed:free', 'pricing' => ['prompt' => '0.01', 'completion' => '0']] + $free,
+            ['id' => 'sample/trial:free', 'description' => 'Trial use only'] + $free,
+            ['id' => 'nvidia/trial:free'] + $free,
+        ]], 200)]);
+
+        $url = '/services/kmj-codebridge/ai-providers/connect/kilo-free';
+        $this->confirmed($this->owner)->post($url)->assertSessionHasErrors('public_prompts_confirmed');
+        $this->confirmed($this->member)->post($url, ['public_prompts_confirmed' => true])->assertForbidden();
+        $this->confirmed($this->owner)->post($url, ['public_prompts_confirmed' => true])->assertSessionHasNoErrors();
+        $this->confirmed($this->owner)->post($url, ['public_prompts_confirmed' => true])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('ai_providers', 1);
+        $provider = AiProvider::query()->firstOrFail();
+        $this->assertSame(['reflection/beam-free', 'sample/public:free'], app(ProviderManager::class)->admittedFreeModels($provider));
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request): bool => $request->method() === 'GET' && ! $request->hasHeader('Authorization'));
+        $this->assertSame([], app(ModelFabricRouter::class)->plan($this->orgA, 'code', true)['routes']);
+    }
+
+    public function test_horde_anonymous_connect_discovers_only_and_never_admits_inference(): void
+    {
+        Http::fake(['oai.aihorde.net/*' => Http::response(['data' => [
+            ['id' => 'community/model'],
+        ]])]);
+        $url = '/services/kmj-codebridge/ai-providers/connect/horde-anonymous';
+        $this->confirmed($this->owner)->post($url)->assertSessionHasErrors('community_terms_confirmed');
+        $this->confirmed($this->member)->post($url, ['community_terms_confirmed' => true])->assertForbidden();
+        $this->confirmed($this->owner)->post($url, ['community_terms_confirmed' => true])->assertSessionHasNoErrors();
+        $this->confirmed($this->owner)->post($url, ['community_terms_confirmed' => true])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('ai_providers', 1);
+        $provider = AiProvider::query()->firstOrFail();
+        $this->assertSame('horde-anonymous', $provider->preset);
+        $this->assertSame(['community/model'], $provider->models_cache);
+        $this->assertSame([], app(ProviderManager::class)->admittedFreeModels($provider));
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request): bool => $request->method() === 'GET' && $request->hasHeader('Authorization', 'Bearer 0000000000'));
     }
 
     private function confirmed(User $user): static

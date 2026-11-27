@@ -10,7 +10,7 @@ import {
 type Preset = {
     key: string;
     label: string;
-    free_tier: 'allowlist' | 'model-suffix' | 'none';
+    free_tier: 'allowlist' | 'model-suffix' | 'catalog-free' | 'none';
     custom: boolean;
 };
 
@@ -22,6 +22,18 @@ type Guide = {
 };
 
 const guides: Guide[] = [
+    {
+        key: 'llm7',
+        title: 'LLM7',
+        url: 'https://dash.llm7.io/',
+        helper: 'Free token available; inference blocked until account quota and no-overage verification.',
+    },
+    {
+        key: 'pollinations',
+        title: 'Pollinations',
+        url: 'https://enter.pollinations.ai/keys',
+        helper: 'Wallet-based API and registered OAuth app. Inference remains blocked.',
+    },
     {
         key: 'groq',
         title: 'Groq',
@@ -101,6 +113,8 @@ export default function AiProviderConnectHub({
     oauthBusy,
     onConnectOpenRouter,
     onConnectHuggingFace,
+    onConnectKiloFree,
+    onConnectHordeAnonymous,
     onChooseKeyProvider,
     selectedPreset,
     compact = false,
@@ -110,6 +124,8 @@ export default function AiProviderConnectHub({
     oauthBusy: boolean;
     onConnectOpenRouter: () => void;
     onConnectHuggingFace: () => void;
+    onConnectKiloFree: () => void;
+    onConnectHordeAnonymous: () => void;
     onChooseKeyProvider: (preset: string) => void;
     selectedPreset: string | null;
     compact?: boolean;
@@ -117,11 +133,17 @@ export default function AiProviderConnectHub({
 }) {
     const supported = new Set(presets.map((preset) => preset.key));
     const [hfFree, setHfFree] = useState(false);
+    const [kiloPublic, setKiloPublic] = useState(false);
+    const [hordeTerms, setHordeTerms] = useState(false);
     const [query, setQuery] = useState('');
     const [hideConnected, setHideConnected] = useState(false);
     const [choice, setChoice] = useState('');
     const connected = new Set(connectedPresets);
     const oauthKeys = new Set(['openrouter', 'huggingface']);
+    const keylessKeys = new Set(['kilo-free', 'horde-anonymous']);
+    const kiloDisabled = oauthBusy || !kiloPublic || connected.has('kilo-free');
+    const hordeDisabled =
+        oauthBusy || !hordeTerms || connected.has('horde-anonymous');
 
     if (compact) {
         const selected = presets.find((preset) => preset.key === choice);
@@ -180,9 +202,11 @@ export default function AiProviderConnectHub({
                             {visible.map((preset) => (
                                 <option key={preset.key} value={preset.key}>
                                     {preset.label}
-                                    {oauthKeys.has(preset.key)
-                                        ? ' · OAuth'
-                                        : ' · API key'}
+                                    {keylessKeys.has(preset.key)
+                                        ? ' · No key required'
+                                        : oauthKeys.has(preset.key)
+                                          ? ' · OAuth'
+                                          : ' · API key'}
                                     {connected.has(preset.key)
                                         ? ' · Connected'
                                         : ''}
@@ -232,7 +256,18 @@ export default function AiProviderConnectHub({
                                     <ExternalLink className="h-3 w-3" />
                                 </a>
                             )}
-                            {oauthKeys.has(selected.key) ? (
+                            {keylessKeys.has(selected.key) ? (
+                                <a
+                                    href={
+                                        selected.key === 'horde-anonymous'
+                                            ? '#modelfabric-horde-connect'
+                                            : '#modelfabric-keyless-connect'
+                                    }
+                                    className="kmj-ai-primary-action inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-bold"
+                                >
+                                    Connect without a key
+                                </a>
+                            ) : oauthKeys.has(selected.key) ? (
                                 <a
                                     href="#modelfabric-oauth-connect"
                                     className="kmj-ai-primary-action inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-bold"
@@ -281,7 +316,9 @@ export default function AiProviderConnectHub({
                                     onClick={onConnectOpenRouter}
                                     className="kmj-ai-primary-action mt-3 min-h-11 w-full rounded-lg px-3 text-sm font-bold"
                                 >
-                                    Connect OpenRouter
+                                    {connected.has('openrouter')
+                                        ? 'Add OpenRouter account'
+                                        : 'Connect OpenRouter'}
                                 </button>
                             </article>
                         )}
@@ -316,6 +353,86 @@ export default function AiProviderConnectHub({
                         )}
                     </div>
                 </div>
+                {supported.has('kilo-free') && (
+                    <article
+                        id="modelfabric-keyless-connect"
+                        className="kmj-ai-directory-item mt-4 rounded-xl border p-3"
+                    >
+                        <h3 className="font-bold">One-click without API key</h3>
+                        <h4 className="mt-2 font-bold">Kilo Gateway</h4>
+                        <p className="text-muted-foreground text-xs">
+                            Free public chat · 200 requests/hour per IP.
+                        </p>
+                        <label className="mt-2 flex items-start gap-2 text-xs">
+                            <input
+                                type="checkbox"
+                                checked={kiloPublic}
+                                onChange={(event) =>
+                                    setKiloPublic(event.target.checked)
+                                }
+                            />
+                            Public prompts only; provider terms apply.
+                        </label>
+                        <a
+                            href="https://kilo.ai/terms"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs underline"
+                        >
+                            Kilo terms of service
+                        </a>
+                        <button
+                            type="button"
+                            disabled={kiloDisabled}
+                            onClick={onConnectKiloFree}
+                            className="kmj-ai-primary-action mt-3 min-h-11 rounded-lg px-4 text-sm font-bold disabled:opacity-50"
+                        >
+                            {connected.has('kilo-free')
+                                ? 'Connected'
+                                : 'Connect Kilo Free'}
+                        </button>
+                    </article>
+                )}
+                {supported.has('horde-anonymous') && (
+                    <article
+                        id="modelfabric-horde-connect"
+                        className="kmj-ai-directory-item mt-4 rounded-xl border p-3"
+                    >
+                        <h4 className="font-bold">AI Horde</h4>
+                        <p className="text-muted-foreground text-xs">
+                            Anonymous community catalog. Inference blocked
+                            pending live qualification.
+                        </p>
+                        <label className="mt-2 flex items-start gap-2 text-xs">
+                            <input
+                                type="checkbox"
+                                checked={hordeTerms}
+                                onChange={(event) =>
+                                    setHordeTerms(event.target.checked)
+                                }
+                            />
+                            I accept community service terms.
+                        </label>
+                        <a
+                            href="https://aihorde.net/terms/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs underline"
+                        >
+                            AI Horde terms of service
+                        </a>
+                        <button
+                            type="button"
+                            disabled={hordeDisabled}
+                            onClick={onConnectHordeAnonymous}
+                            className="kmj-ai-primary-action mt-3 min-h-11 rounded-lg px-4 text-sm font-bold disabled:opacity-50"
+                        >
+                            {connected.has('horde-anonymous')
+                                ? 'Connected'
+                                : 'Discover AI Horde'}
+                        </button>
+                    </article>
+                )}
                 <p className="text-muted-foreground mt-3 text-xs">
                     Discovery does not prove free inference eligibility.
                 </p>

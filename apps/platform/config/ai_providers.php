@@ -7,6 +7,7 @@ declare(strict_types=1);
  *   allowlist    - a free account does NOT make every model free. Inference is admitted only for
  *                  model ids the owner lists as verified-free in `free_models` (empty = blocked)
  *   model-suffix - only models whose id ends with ":free" are admitted
+ *   catalog-free - only fixed-endpoint Kilo catalog entries with explicit zero pricing and isFree
  *   none         - no free tier; blocked while the provider is "free only"
  * Custom endpoints must be on `approved_hosts` (owner-approved, HTTPS, public DNS only).
  */
@@ -16,6 +17,10 @@ return [
     'presets' => [
         'groq' => ['label' => 'Groq', 'base_url' => 'https://api.groq.com/openai/v1', 'free_tier' => 'allowlist'],
         'openrouter' => ['label' => 'OpenRouter', 'base_url' => 'https://openrouter.ai/api/v1', 'free_tier' => 'model-suffix'],
+        // Anonymous gateway: no billable credential; public chat only, no NVIDIA trial models.
+        'kilo-free' => ['label' => 'Kilo Gateway (keyless)', 'base_url' => 'https://ai-gateway.kilo.ai/api/v1', 'free_tier' => 'catalog-free'],
+        // Official anonymous community endpoint: catalog discovery only pending live qualification.
+        'horde-anonymous' => ['label' => 'AI Horde (anonymous discovery)', 'base_url' => 'https://oai.aihorde.net/v1', 'free_tier' => 'none'],
         'gemini' => ['label' => 'Google Gemini (OpenAI-compatible)', 'base_url' => 'https://generativelanguage.googleapis.com/v1beta/openai', 'free_tier' => 'allowlist'],
         'cerebras' => ['label' => 'Cerebras', 'base_url' => 'https://api.cerebras.ai/v1', 'free_tier' => 'allowlist'],
         'mistral' => ['label' => 'Mistral', 'base_url' => 'https://api.mistral.ai/v1', 'free_tier' => 'allowlist'],
@@ -29,6 +34,8 @@ return [
         'siliconflow' => ['label' => 'SiliconFlow (discovery only)', 'base_url' => 'https://api.siliconflow.com/v1', 'free_tier' => 'none'],
         'modelscope' => ['label' => 'ModelScope (discovery only)', 'base_url' => 'https://api-inference.modelscope.cn/v1', 'free_tier' => 'none'],
         'anyapi' => ['label' => 'AnyAPI (discovery only)', 'base_url' => 'https://api.anyapi.ai/v1', 'free_tier' => 'none'],
+        'llm7' => ['label' => 'LLM7 (discovery only)', 'base_url' => 'https://api.llm7.io/v1', 'free_tier' => 'none'],
+        'pollinations' => ['label' => 'Pollinations (discovery only)', 'base_url' => 'https://gen.pollinations.ai/v1', 'free_tier' => 'none'],
         // Connect-only presets never activate inference without explicit zero-cost admission.
         'cohere' => ['label' => 'Cohere (evaluation key)', 'base_url' => 'https://api.cohere.ai/compatibility/v1', 'free_tier' => 'allowlist'],
         'qwen-sg' => ['label' => 'Alibaba Qwen (Singapore)', 'base_url' => 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1', 'free_tier' => 'none'],

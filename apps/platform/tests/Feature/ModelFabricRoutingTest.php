@@ -81,6 +81,24 @@ final class ModelFabricRoutingTest extends TestCase
         $this->assertSame('NO_FREE_ROUTE_AVAILABLE', app(ModelFabricRouter::class)->plan($this->org)['status']);
     }
 
+    public function test_explicit_expiry_and_revocation_override_server_allowlist_defaults(): void
+    {
+        config(['ai_providers.free_models.groq' => ['llama-free-1']]);
+        $provider = $this->provider('groq', ['llama-free-1']);
+        $this->assertSame('ROUTE_AVAILABLE', app(ModelFabricRouter::class)->plan($this->org)['status']);
+
+        $this->confirmed($this->owner)->post(self::BASE.'/evidence', $this->evidenceInput($provider))->assertSessionHasNoErrors();
+        $row = AiModelEvidence::query()->firstOrFail();
+        $row->expires_at = now()->subMinute();
+        $row->save();
+        $this->assertSame('NO_FREE_ROUTE_AVAILABLE', app(ModelFabricRouter::class)->plan($this->org)['status']);
+
+        $row->expires_at = now()->addDay();
+        $row->revoked_at = now();
+        $row->save();
+        $this->assertSame('NO_FREE_ROUTE_AVAILABLE', app(ModelFabricRouter::class)->plan($this->org)['status']);
+    }
+
     public function test_private_source_needs_documented_no_training_evidence(): void
     {
         $provider = $this->provider('groq', ['llama-free-1']);
@@ -169,6 +187,12 @@ final class ModelFabricRoutingTest extends TestCase
             ->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('operator-modelfabric')
             ->where('canManage', false));
+    }
+
+    public function test_discovery_only_candidates_do_not_admit_inference(): void
+    {
+        $this->assertSame('none', config('ai_providers.presets.llm7.free_tier'));
+        $this->assertSame('none', config('ai_providers.presets.pollinations.free_tier'));
     }
 
     public function test_owner_page_renders_plans_without_secrets(): void

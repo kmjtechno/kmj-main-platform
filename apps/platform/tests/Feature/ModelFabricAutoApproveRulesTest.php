@@ -134,6 +134,37 @@ final class ModelFabricAutoApproveRulesTest extends TestCase
         $this->assertNotNull(AiModelEvidence::query()->where('model_id', 'models/gemini-2.5-flash')->firstOrFail()->revoked_at);
     }
 
+    public function test_expired_manual_credit_evidence_cannot_be_reclassified_as_free_by_a_rule(): void
+    {
+        $provider = $this->provider('gemini', ['models/gemini-2.5-flash', 'models/gemini-2.5-flash-lite']);
+        $credit = AiModelEvidence::query()->create([
+            'organization_id' => $this->org,
+            'ai_provider_id' => $provider->id,
+            'model_id' => 'models/gemini-2.5-flash',
+            'price_evidence_url' => 'https://example.com/p',
+            'price_evidence_note' => 'Expired manual credit approval.',
+            'verified_at' => now()->subDays(10),
+            'expires_at' => now()->subDay(),
+            'data_handling' => 'unknown',
+            'capabilities' => ['chat'],
+            'cost_class' => 'credit-limited',
+            'credit_daily_cap' => 3,
+            'credit_hard_cap_attested_at' => now()->subDays(10),
+        ]);
+
+        $this->confirmed($this->owner)->post('/operator/modelfabric/rules', $this->payload($provider))->assertSessionHasNoErrors();
+
+        $this->assertSame('credit-limited', $credit->refresh()->cost_class);
+        $this->assertSame(3, $credit->credit_daily_cap);
+        $this->assertFalse($credit->isCurrent());
+        $this->assertNull($credit->ai_model_rule_id);
+        $this->assertDatabaseHas('ai_model_evidence', [
+            'ai_provider_id' => $provider->id,
+            'model_id' => 'models/gemini-2.5-flash-lite',
+            'cost_class' => 'free',
+        ]);
+    }
+
     public function test_revoking_a_rule_revokes_only_the_models_it_approved(): void
     {
         $provider = $this->provider('gemini', ['models/gemini-2.5-flash']);

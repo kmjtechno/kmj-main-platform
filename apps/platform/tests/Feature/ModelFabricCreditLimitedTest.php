@@ -121,7 +121,7 @@ final class ModelFabricCreditLimitedTest extends TestCase
         $this->credit($provider, 'models/credit-a', 1);
         $nested = null;
         Http::fake(['generativelanguage.googleapis.com/*' => function () use (&$nested, $provider) {
-            $this->assertSame(1, DB::table('ai_model_requests')->where('ai_provider_id', $provider->id)->where('error_code', 'attempt_reserved')->count());
+            $this->assertSame(1, DB::table('ai_model_requests')->where('ai_provider_id', $provider->id)->where('error_code', 'attempt_dispatched')->count());
             $nested = app(ModelFabricGateway::class)->complete($this->org, [['role' => 'user', 'content' => 'concurrent request']]);
 
             return Http::response(['choices' => [['message' => ['content' => 'pong']]]], 200);

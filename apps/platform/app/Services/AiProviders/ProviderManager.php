@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\AiProviders;
 
 use App\Models\AiModelEvidence;
+use App\Models\AiModelRequest;
 use App\Models\AiModelRule;
 use App\Models\AiProvider;
 use Illuminate\Support\Facades\Config;
@@ -54,6 +55,10 @@ final class ProviderManager
         }
         $this->guard->validate($baseUrl, $this->approvedHosts());
         $apiKey = (string) ($data['api_key'] ?? '');
+        if (($presetKey === 'kilo-free' && $apiKey !== '')
+            || ($presetKey === 'horde-anonymous' && $apiKey !== '0000000000')) {
+            throw new InvalidArgumentException('keyless_provider');
+        }
 
         return AiProvider::query()->create([
             'organization_id' => $organizationId,
@@ -76,6 +81,9 @@ final class ProviderManager
     {
         $replacingKey = isset($data['api_key']) && is_string($data['api_key']) && $data['api_key'] !== '';
         if ($replacingKey) {
+            if (in_array($provider->preset, ['kilo-free', 'horde-anonymous'], true)) {
+                throw new InvalidArgumentException('keyless_provider');
+            }
             if ($this->presets()[$provider->preset]['retired'] ?? false) {
                 throw new InvalidArgumentException('provider_retired');
             }
@@ -179,12 +187,18 @@ final class ProviderManager
             return [];
         }
 
+        if ($provider->preset === 'kilo-free' && ($provider->api_key !== ''
+            || $provider->base_url !== ($this->presets()['kilo-free']['base_url'] ?? null))) {
+            return [];
+        }
         $tier = $this->presets()[$provider->preset]['free_tier'] ?? 'none';
-        $allowlist = $this->allowlist($provider, $tier);
+        $allowlist = $tier === 'catalog-free' && $provider->preset === 'kilo-free'
+            ? array_values($provider->models_cache ?? []) : $this->allowlist($provider, $tier);
 
         return array_values(array_filter(
             $provider->models_cache ?? [],
-            static fn (string $model): bool => FreePolicy::inferenceAllowed($tier, $model, $allowlist),
+            fn (string $model): bool => ($provider->preset !== 'kilo-free' || OpenAiCompatibleAdapter::kiloPublicModel($model))
+                && FreePolicy::inferenceAllowed($tier, $model, $allowlist),
         ));
     }
 
@@ -213,8 +227,15 @@ final class ProviderManager
         if (! in_array($model, $provider->models_cache ?? [], true)) {
             throw new InvalidArgumentException('model_not_discovered');
         }
+        if ($provider->preset === 'kilo-free' && ($provider->api_key !== ''
+            || $provider->base_url !== ($this->presets()['kilo-free']['base_url'] ?? null)
+            || ! OpenAiCompatibleAdapter::kiloPublicModel($model))) {
+            throw new InvalidArgumentException('zero_spend_blocked');
+        }
         $tier = $this->presets()[$provider->preset]['free_tier'] ?? 'none';
-        FreePolicy::assertInferenceAllowed($tier, $model, $this->allowlist($provider, $tier));
+        $allowlist = $tier === 'catalog-free' && $provider->preset === 'kilo-free'
+            ? array_values($provider->models_cache ?? []) : $this->allowlist($provider, $tier);
+        FreePolicy::assertInferenceAllowed($tier, $model, $allowlist);
     }
 
     /**
@@ -236,12 +257,14 @@ final class ProviderManager
 
         $evidence = AiModelEvidence::query()
             ->where('ai_provider_id', $provider->id)
-            ->whereNull('revoked_at')
-            ->where('expires_at', '>', now())
-            ->pluck('model_id')
-            ->all();
+            ->where('organization_id', $provider->organization_id)
+            ->get(['model_id', 'revoked_at', 'expires_at']);
+        // Explicit per-connection evidence wins over a global environment default,
+        // including revoked or expired evidence. Do not silently restore that route.
+        $ids = array_diff($ids, $evidence->pluck('model_id')->all());
+        $current = $evidence->filter(fn (AiModelEvidence $row): bool => $row->isCurrent())->pluck('model_id')->all();
 
-        return array_values(array_unique([...$ids, ...array_filter($evidence, 'is_string')]));
+        return array_values(array_unique([...$ids, ...array_filter($current, 'is_string')]));
     }
 
     /**
@@ -251,12 +274,28 @@ final class ProviderManager
      * @param  list<array{role: string, content: string}>  $messages
      * @return array{ok: bool, content: ?string, error_code: ?string, rate?: array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int, daily_requests_limit?: int, daily_reset_seconds?: int}}
      */
-    public function complete(AiProvider $provider, string $model, array $messages, ?int $strictCodingTokens = null): array
+    public function complete(AiProvider $provider, string $model, array $messages, ?int $strictCodingTokens = null, ?AiModelRequest $attempt = null, bool $publicPromptsConfirmed = false): array
     {
         try {
             $this->assertInferenceAllowed($provider, $model);
         } catch (InvalidArgumentException|RuntimeException $exception) {
             return ['ok' => false, 'content' => null, 'error_code' => $exception->getMessage()];
+        }
+
+        if ($provider->preset === 'kilo-free' && (! $publicPromptsConfirmed || $strictCodingTokens !== null)) {
+            return ['ok' => false, 'content' => null, 'error_code' => 'public_chat_only'];
+        }
+        // Every outbound call must consume a recent, matching, single-use gateway reservation.
+        // Interrupted or duplicate dispatches never reclaim capacity.
+        if ($attempt === null || AiModelRequest::query()->whereKey($attempt->id)
+            ->where('organization_id', $provider->organization_id)
+            ->where('ai_provider_id', $provider->id)
+            ->where('model_id', $model)
+            ->where('outcome', 'failed')
+            ->where('error_code', 'attempt_reserved')
+            ->where('created_at', '>=', now()->subMinutes(5))
+            ->update(['error_code' => 'attempt_dispatched']) !== 1) {
+            return ['ok' => false, 'content' => null, 'error_code' => 'gateway_reservation_required'];
         }
 
         return $this->adapter->complete($provider->base_url, $provider->api_key, $this->approvedHosts(), $model, $messages, $strictCodingTokens);
@@ -272,7 +311,7 @@ final class ProviderManager
             'name' => $provider->name,
             'preset' => $provider->preset,
             'host' => (string) parse_url($provider->base_url, PHP_URL_HOST),
-            'key_mask' => '••••'.$provider->key_last4,
+            'key_mask' => in_array($provider->preset, ['kilo-free', 'horde-anonymous'], true) ? 'Not required' : '••••'.$provider->key_last4,
             'enabled' => $provider->enabled,
             'zero_spend' => true,
             'credit_balance' => 'unknown',

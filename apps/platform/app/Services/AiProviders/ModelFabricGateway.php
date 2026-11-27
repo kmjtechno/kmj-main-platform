@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Services\AiProviders;
 
+use App\Models\AiModelEvidence;
 use App\Models\AiModelRequest;
 use App\Models\AiProvider;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
+use RuntimeException;
 
 /**
  * Failover over verified-zero routes only (design ideas adopted from the MIT-licensed FreeLLMAPI
@@ -20,6 +23,10 @@ final class ModelFabricGateway
     public const MAX_ATTEMPTS = 3;
 
     private const RATE_LIMIT_COOLDOWN = 60;
+
+    private const KILO_HOURLY_CAP = 200;
+
+    private const KILO_COOLDOWN_KEY = 'modelfabric:kilo-free:shared-cooldown';
 
     private const SOFT_FAIL_COOLDOWN = 30;
 
@@ -39,17 +46,36 @@ final class ModelFabricGateway
     ) {}
 
     /**
+     * Preserve the workspace's explicit provider/model choice without bypassing
+     * the shared gateway's admission, quota reservation and cooldown checks.
+     *
      * @param  list<array{role: string, content: string}>  $messages
+     * @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string}
+     */
+    public function completeSelected(AiProvider $provider, string $model, array $messages): array
+    {
+        try {
+            $this->manager->assertInferenceAllowed($provider, $model);
+        } catch (InvalidArgumentException|RuntimeException $exception) {
+            return $this->fail($exception->getMessage(), 0, $this->profiler->classify($messages, 'chat'));
+        }
+
+        return $this->complete($provider->organization_id, $messages, selectedRoute: ['provider_id' => $provider->id, 'model' => $model]);
+    }
+
+    /**
+     * @param  list<array{role: string, content: string}>  $messages
+     * @param  array{provider_id: string, model: string}|null  $selectedRoute
      * @param  array{provider_id: string, model: string}|null  $nativeRoute
      * @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string}
      */
-    public function complete(string $organizationId, array $messages, string $capability = 'chat', bool $privateSource = false, ?string $sessionKey = null, bool $strictFreeCloud = false, ?int $maxCodingTokens = null, ?array $nativeRoute = null): array
+    public function complete(string $organizationId, array $messages, string $capability = 'chat', bool $privateSource = false, ?string $sessionKey = null, bool $strictFreeCloud = false, ?int $maxCodingTokens = null, ?array $nativeRoute = null, bool $publicPromptsConfirmed = false, ?array $selectedRoute = null): array
     {
         $profile = $this->profiler->classify($messages, $capability);
         if ($strictFreeCloud && ($capability !== 'code' || ! $privateSource || ($maxCodingTokens !== null && ($maxCodingTokens < 1 || $maxCodingTokens > 4096)))) {
             return $this->fail('invalid_coding_policy', 0, $profile);
         }
-        $plan = $this->router->plan($organizationId, $capability, $privateSource, $strictFreeCloud);
+        $plan = $this->router->plan($organizationId, $capability, $privateSource, $strictFreeCloud, $publicPromptsConfirmed);
         if ($plan['status'] === ModelFabricRouter::NO_ROUTE) {
             return $this->fail(ModelFabricRouter::NO_ROUTE, 0, $profile);
         }
@@ -62,6 +88,12 @@ final class ModelFabricGateway
                 return $this->fail(ModelFabricRouter::NO_ROUTE, 0, $profile);
             }
         }
+        if ($selectedRoute !== null) {
+            $plan['routes'] = array_values(array_filter($plan['routes'], static fn (array $route): bool => $route['provider_id'] === $selectedRoute['provider_id'] && $route['model'] === $selectedRoute['model']));
+            if ($plan['routes'] === []) {
+                return $this->fail(ModelFabricRouter::NO_ROUTE, 0, $profile);
+            }
+        }
         $limits = $this->providerLimits($organizationId);
         $plan['routes'] = $this->scorer->order($plan['routes'], $profile, fn (string $id, string $model): array => [
             'low' => $this->nearLimit($id, $model, (bool) ($limits[$id]['model_scoped'] ?? false)) || $this->nearDailyCap($limits[$id] ?? null),
@@ -69,13 +101,13 @@ final class ModelFabricGateway
             'priority' => (int) ($limits[$id]['priority'] ?? 100),
         ]);
 
-        // ADR-004 rev 2: a credit-limited route is skipped at its owner-set daily cap and sinks at 80%, so
-        // a mis-stated provider limit can never spend the owner's money. A missing or zero cap fails closed.
+        // Count every local attempt against the most conservative current credit cap for a connection.
+        // A request count is not a monetary balance. The provider's hard no-overage policy is still required.
         $creditUsed = $this->creditUsage($organizationId, $plan['routes']);
         // Sticky sessions are a preference only. Apply quota partitioning AFTER stickiness so
         // continuity and owner priority cannot keep sending work to a nearly exhausted route.
         $plan['routes'] = $this->preferSticky($plan['routes'], $organizationId, $sessionKey);
-        $plan['routes'] = $this->sinkNearQuota($plan['routes'], $creditUsed, $limits);
+        $plan['routes'] = $this->sinkNearQuota($organizationId, $plan['routes'], $creditUsed, $limits);
 
         $attempts = 0;
         $last = 'all_routes_cooling_down';
@@ -99,8 +131,8 @@ final class ModelFabricGateway
                 continue;
             }
             if (($route['cost_class'] ?? 'free') === 'credit-limited') {
-                $cap = (int) ($route['credit_daily_cap'] ?? 0);
-                if ($cap <= 0 || ($creditUsed[$providerId.'|'.(string) $route['model']] ?? 0) >= $cap) {
+                $cap = $this->sharedCreditCap($organizationId, $providerId, (int) ($route['credit_daily_cap'] ?? 0));
+                if ($cap <= 0 || ($creditUsed[$providerId] ?? 0) >= $cap) {
                     $last = 'credit_cap_reached';
 
                     continue;
@@ -115,7 +147,7 @@ final class ModelFabricGateway
             // Reserve the attempt BEFORE the outbound request. A short database
             // transaction serializes reservations for the same provider, including
             // across PHP workers. A crash consumes the reservation conservatively.
-            $reservation = $this->reserveAttempt($organizationId, $providerId, (string) $route['model'], $capability, $privateSource, $strictFreeCloud);
+            $reservation = $this->reserveAttempt($organizationId, $providerId, (string) $route['model'], $capability, $privateSource, $strictFreeCloud, $publicPromptsConfirmed);
             if ($reservation['error'] !== null) {
                 $last = $reservation['error'];
 
@@ -126,7 +158,7 @@ final class ModelFabricGateway
 
             $attempts++;
             $started = hrtime(true);
-            $result = $this->manager->complete($provider, (string) $route['model'], $messages, $strictFreeCloud ? ($maxCodingTokens ?? 1024) : null);
+            $result = $this->manager->complete($provider, (string) $route['model'], $messages, $strictFreeCloud ? ($maxCodingTokens ?? 1024) : null, $attempt, $publicPromptsConfirmed);
             $latency = (int) ((hrtime(true) - $started) / 1_000_000);
 
             $attempt->update([
@@ -162,7 +194,7 @@ final class ModelFabricGateway
     /**
      * Owner priority/cap plus today's routed attempts (UTC day) per provider of this organization.
      *
-     * @return array<string, array{priority: int, cap: ?int, used: int, model_scoped: bool}>
+     * @return array<string, array{priority: int, cap: ?int, used: int, model_scoped: bool, keyless_near: bool}>
      */
     private function providerLimits(string $organizationId): array
     {
@@ -181,6 +213,7 @@ final class ModelFabricGateway
                 'used' => (int) ($used[$provider->id] ?? 0),
                 // Groq publishes per-model rate limits; unknown providers remain account-scoped.
                 'model_scoped' => $provider->preset === 'groq',
+                'keyless_near' => $provider->preset === 'kilo-free' && self::kiloHourlyUsage() >= 160,
             ];
         }
 
@@ -188,7 +221,7 @@ final class ModelFabricGateway
     }
 
     /**
-     * Today's routed attempts (UTC day) per "provider|model" for credit-limited routes only.
+     * Today's total routed attempts (UTC day) per connection, including non-credit models.
      *
      * @param  list<array<string, mixed>>  $routes
      * @return array<string, int>
@@ -210,12 +243,12 @@ final class ModelFabricGateway
             ->where('organization_id', $organizationId)
             ->whereIn('ai_provider_id', array_keys($providerIds))
             ->where('created_at', '>=', now()->utc()->startOfDay())
-            ->selectRaw('ai_provider_id, model_id, count(*) as c')
-            ->groupBy('ai_provider_id', 'model_id')
+            ->selectRaw('ai_provider_id, count(*) as c')
+            ->groupBy('ai_provider_id')
             ->toBase()
             ->get();
         foreach ($rows as $row) {
-            $used[(string) $row->ai_provider_id.'|'.(string) $row->model_id] = (int) $row->c;
+            $used[(string) $row->ai_provider_id] = (int) $row->c;
         }
 
         return $used;
@@ -226,20 +259,21 @@ final class ModelFabricGateway
      *
      * @param  list<array<string, mixed>>  $routes
      * @param  array<string, int>  $creditUsed
-     * @param  array<string, array{priority: int, cap: ?int, used: int, model_scoped: bool}>  $limits
+     * @param  array<string, array{priority: int, cap: ?int, used: int, model_scoped: bool, keyless_near: bool}>  $limits
      * @return list<array<string, mixed>>
      */
-    private function sinkNearQuota(array $routes, array $creditUsed, array $limits): array
+    private function sinkNearQuota(string $organizationId, array $routes, array $creditUsed, array $limits): array
     {
         $normal = [];
         $near = [];
         foreach ($routes as $route) {
-            $cap = (int) ($route['credit_daily_cap'] ?? 0);
-            $used = $creditUsed[(string) $route['provider_id'].'|'.(string) $route['model']] ?? 0;
             $providerId = (string) $route['provider_id'];
+            $cap = ($route['cost_class'] ?? 'free') === 'credit-limited'
+                ? $this->sharedCreditCap($organizationId, $providerId, (int) ($route['credit_daily_cap'] ?? 0)) : 0;
+            $used = $creditUsed[$providerId] ?? 0;
             $limit = $limits[$providerId] ?? null;
             $nearCreditCap = ($route['cost_class'] ?? 'free') === 'credit-limited' && $cap > 0 && $used * 10 >= $cap * 8;
-            if ($nearCreditCap || $this->nearDailyCap($limit)
+            if ($nearCreditCap || ($limit['keyless_near'] ?? false) || $this->nearDailyCap($limit)
                 || $this->nearLimit($providerId, (string) $route['model'], (bool) ($limit['model_scoped'] ?? false))) {
                 $near[] = $route;
             } else {
@@ -350,6 +384,11 @@ final class ModelFabricGateway
     private function penalize(AiProvider $provider, string $model, string $code, ?array $rate = null): void
     {
         $retryAfter = $rate['retry_after'] ?? null;
+        if ($code === 'rate_limited' && $provider->preset === 'kilo-free') {
+            // All anonymous Kilo requests share the same Elite egress-IP quota.
+            $seconds = max(60, min(3600, $retryAfter ?? 3600));
+            Cache::put(self::KILO_COOLDOWN_KEY, true, $seconds);
+        }
         // A verified Groq model's exhausted quota must not cool the entire provider.
         // Without a typed remaining=0 report, conservatively use provider-wide cooldown.
         if ($code === 'rate_limited' && $provider->preset === 'groq' && ($rate['requests_remaining'] ?? null) === 0) {
@@ -416,19 +455,32 @@ final class ModelFabricGateway
     /**
      * @return array{provider: ?AiProvider, attempt: ?AiModelRequest, error: ?string}
      */
-    private function reserveAttempt(string $organizationId, string $providerId, string $model, string $capability, bool $privateSource, bool $strictFreeCloud): array
+    private function reserveAttempt(string $organizationId, string $providerId, string $model, string $capability, bool $privateSource, bool $strictFreeCloud, bool $publicPromptsConfirmed): array
     {
-        return DB::transaction(function () use ($organizationId, $providerId, $model, $capability, $privateSource, $strictFreeCloud): array {
+        return DB::transaction(function () use ($organizationId, $providerId, $model, $capability, $privateSource, $strictFreeCloud, $publicPromptsConfirmed): array {
             $deny = static fn (string $code): array => ['provider' => null, 'attempt' => null, 'error' => $code];
             $provider = AiProvider::query()->where('organization_id', $organizationId)->whereKey($providerId)->lockForUpdate()->first();
             if ($provider === null) {
                 return $deny('provider_unavailable');
             }
 
+            if ($provider->preset === 'kilo-free') {
+                // Serialize all Kilo reservations across organizations on the production PostgreSQL database.
+                $driver = DB::connection()->getDriverName();
+                if ($driver === 'pgsql') {
+                    DB::select('SELECT pg_advisory_xact_lock(1263356999)');
+                } elseif ($driver !== 'sqlite') {
+                    return $deny('shared_quota_unavailable');
+                }
+                if (Cache::has(self::KILO_COOLDOWN_KEY) || self::kiloHourlyUsage() >= self::KILO_HOURLY_CAP) {
+                    return $deny('keyless_hourly_quota_exhausted');
+                }
+            }
+
             // Re-evaluate the current plan under the reservation lock. Never
             // reserve a previously admitted but now revoked or expired route.
             $current = null;
-            foreach ($this->router->plan($organizationId, $capability, $privateSource, $strictFreeCloud)['routes'] as $candidate) {
+            foreach ($this->router->plan($organizationId, $capability, $privateSource, $strictFreeCloud, $publicPromptsConfirmed)['routes'] as $candidate) {
                 if ($candidate['provider_id'] === $providerId && $candidate['model'] === $model) {
                     $current = $candidate;
                     break;
@@ -453,8 +505,8 @@ final class ModelFabricGateway
                 return $deny('daily_cap_reached');
             }
             if (($current['cost_class'] ?? 'free') === 'credit-limited') {
-                $cap = (int) ($current['credit_daily_cap'] ?? 0);
-                if ($cap <= 0 || (clone $today)->where('model_id', $model)->count() >= $cap) {
+                $cap = $this->sharedCreditCap($organizationId, $providerId, (int) ($current['credit_daily_cap'] ?? 0));
+                if ($cap <= 0 || (clone $today)->count() >= $cap) {
                     return $deny('credit_cap_reached');
                 }
             }
@@ -470,8 +522,63 @@ final class ModelFabricGateway
                 'latency_ms' => 0,
             ]);
 
+            if ($provider->preset === 'kilo-free') {
+                // Keep the shared IP budget independent of provider or tenant deletion.
+                // Both rows commit under the same PostgreSQL advisory lock.
+                DB::table('ai_shared_quota_reservations')->insert([
+                    'id' => $attempt->id,
+                    'scope' => 'kilo-free',
+                    'created_at' => now(),
+                ]);
+                DB::table('ai_shared_quota_reservations')->where('scope', 'kilo-free')
+                    ->where('created_at', '<', now()->subHours(2))->delete();
+            }
+
             return ['provider' => $provider, 'attempt' => $attempt, 'error' => null];
         });
+    }
+
+    private function sharedCreditCap(string $organizationId, string $providerId, int $routeCap): int
+    {
+        if ($routeCap <= 0) {
+            return 0;
+        }
+
+        $cap = $routeCap;
+        foreach (AiModelEvidence::query()->where('organization_id', $organizationId)
+            ->where('ai_provider_id', $providerId)->where('cost_class', 'credit-limited')
+            ->whereNull('revoked_at')->where('expires_at', '>', now())->get() as $proof) {
+            if ($proof->credit_hard_cap_attested_at === null || $proof->credit_daily_cap === null || $proof->credit_daily_cap <= 0) {
+                return 0;
+            }
+            $cap = min($cap, $proof->credit_daily_cap);
+        }
+
+        return $cap;
+    }
+
+    /** @return array{used: int, limit: int, cooling: bool} */
+    public static function kiloQuotaSnapshot(): array
+    {
+        return [
+            'used' => self::kiloHourlyUsage(),
+            'limit' => self::KILO_HOURLY_CAP,
+            'cooling' => Cache::has(self::KILO_COOLDOWN_KEY),
+        ];
+    }
+
+    private static function kiloHourlyUsage(): int
+    {
+        $since = now()->subHour();
+        $ledger = DB::table('ai_shared_quota_reservations')->where('scope', 'kilo-free');
+        // Count any pre-ledger history once, without double-counting new reservations.
+        $legacy = AiModelRequest::query()
+            ->whereIn('ai_provider_id', AiProvider::query()->select('id')->where('preset', 'kilo-free'))
+            ->whereNotIn('id', (clone $ledger)->select('id'))
+            ->where('created_at', '>=', $since)
+            ->count();
+
+        return $legacy + (clone $ledger)->where('created_at', '>=', $since)->count();
     }
 
     private function failKey(string $providerId): string

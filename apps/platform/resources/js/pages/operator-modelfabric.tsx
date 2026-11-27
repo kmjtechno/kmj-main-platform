@@ -618,6 +618,9 @@ export default function OperatorModelFabric({
     const healthy = providers.filter(
         (p) => p.enabled && p.health === 'ok',
     ).length;
+    const routingReady = providers.filter(
+        (p) => p.enabled && p.health === 'ok' && p.models.length > 0,
+    ).length;
     const currentEvidence = evidence.filter((row) => row.current).length;
     const activeTokens = tokens.filter((token) => token.active).length;
     const chatTokens = tokens.filter(
@@ -1116,7 +1119,7 @@ export default function OperatorModelFabric({
                         tone="cyan"
                         label="Providers healthy"
                         value={`${healthy} / ${providers.length}`}
-                        detail="Passed Test connection"
+                        detail={`${routingReady} model-admitted · quota checked at request time`}
                     />
                     <StatTile
                         icon={ShieldCheck}

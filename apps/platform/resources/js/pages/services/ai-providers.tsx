@@ -7,7 +7,7 @@ import '../../../css/ai-provider-connect.css';
 export type Preset = {
     key: string;
     label: string;
-    free_tier: 'allowlist' | 'model-suffix' | 'none';
+    free_tier: 'allowlist' | 'model-suffix' | 'catalog-free' | 'none';
     custom: boolean;
 };
 
@@ -26,6 +26,9 @@ export type Provider = {
     health: string;
     health_checked_at: string | null;
     error_code: string | null;
+    used_today?: number;
+    daily_request_cap?: number | null;
+    shared_hourly_quota?: { used: number; limit: number; cooling: boolean };
     rate_limit: {
         status?: string;
         requests_remaining?: number | null;
@@ -46,6 +49,7 @@ const BASE = '/services/kmj-codebridge/ai-providers';
 const FREE_TIER_TEXT: Record<string, string> = {
     allowlist: 'Only models you list as verified-free are admitted',
     'model-suffix': 'Only ":free" models are free',
+    'catalog-free': 'Explicit zero-price public models from Kilo catalog',
     none: 'No free tier: inference is blocked',
 };
 
@@ -55,6 +59,18 @@ function creditText(limit: Provider['rate_limit']): string {
     }
 
     return `Rate limit reported by provider: ${limit.requests_remaining ?? '–'} requests, ${limit.tokens_remaining ?? '–'} tokens left (not billing credits)`;
+}
+
+function quotaText(provider: Provider): string {
+    const hourly = provider.shared_hourly_quota;
+    if (hourly) {
+        const state = hourly.cooling ? ' · cooling down' : '';
+        return `Local shared quota: ${hourly.used}/${hourly.limit} attempts in the last hour${state}`;
+    }
+    if (provider.daily_request_cap != null) {
+        return `Local daily cap: ${provider.used_today ?? 0}/${provider.daily_request_cap} attempts (UTC)`;
+    }
+    return creditText(provider.rate_limit);
 }
 
 function ProviderCard({
@@ -72,6 +88,7 @@ function ProviderCard({
     const [newKey, setNewKey] = useState('');
     const [expanded, setExpanded] = useState(false);
     const [replaceVisible, setReplaceVisible] = useState(false);
+    const keyless = ['kilo-free', 'horde-anonymous'].includes(provider.preset);
     const act = (run: () => void) => {
         setBusy(true);
         run();
@@ -95,7 +112,8 @@ function ProviderCard({
                 <div>
                     <h2 className="text-base font-black">{provider.name}</h2>
                     <p className="text-muted-foreground text-xs">
-                        {provider.host} · key {provider.key_mask}
+                        {provider.host} ·{' '}
+                        {keyless ? 'No API key' : `key ${provider.key_mask}`}
                     </p>
                 </div>
                 <div className="flex gap-2 text-xs font-bold">
@@ -111,7 +129,11 @@ function ProviderCard({
                                 : `Health: ${provider.health}`}
                     </span>
                     <span className="rounded-full border px-3 py-1">
-                        {provider.enabled ? 'Enabled' : 'Disabled'}
+                        {provider.error_code === 'provider_retired'
+                            ? 'Inactive'
+                            : provider.enabled
+                              ? 'Enabled'
+                              : 'Disabled'}
                     </span>
                 </div>
             </header>
@@ -122,12 +144,15 @@ function ProviderCard({
                 {provider.preset === 'openrouter'
                     ? 'zero-prompt-price catalog candidates'
                     : 'catalog models'}{' '}
-                discovered
+                {provider.health !== 'ok' ? ' cached' : ' discovered'}
                 {provider.models.length === 0
                     ? ' · Inference blocked until verified-free admission'
                     : ' · Free-only policy active'}
             </p>
 
+            <p className="text-muted-foreground text-xs">
+                {quotaText(provider)}
+            </p>
             <div className="flex flex-wrap items-center gap-2">
                 {canManage && provider.error_code !== 'provider_retired' && (
                     <button
@@ -319,7 +344,7 @@ function ProviderCard({
                         </div>
                     )}
 
-                    {canManage && (
+                    {canManage && !keyless && (
                         <button
                             type="button"
                             onClick={() => {
@@ -335,7 +360,7 @@ function ProviderCard({
                                 : 'Replace API key'}
                         </button>
                     )}
-                    {canManage && replaceVisible && (
+                    {canManage && !keyless && replaceVisible && (
                         <div id={`ai-provider-replace-key-${provider.id}`}>
                             <form
                                 className="flex flex-wrap items-end gap-2"
@@ -623,6 +648,26 @@ export default function AiProviders({
         );
     };
 
+    const startKiloFree = () => {
+        if (oauthBusy) return;
+        setOauthBusy(true);
+        router.post(
+            BASE + '/connect/kilo-free',
+            { public_prompts_confirmed: true },
+            { preserveScroll: true, onFinish: () => setOauthBusy(false) },
+        );
+    };
+
+    const startHordeAnonymous = () => {
+        if (oauthBusy) return;
+        setOauthBusy(true);
+        router.post(
+            BASE + '/connect/horde-anonymous',
+            { community_terms_confirmed: true },
+            { preserveScroll: true, onFinish: () => setOauthBusy(false) },
+        );
+    };
+
     const startHuggingFace = () => {
         if (oauthBusy) return;
         setOauthBusy(true);
@@ -721,6 +766,10 @@ export default function AiProviders({
                                     oauthBusy={oauthBusy}
                                     onConnectOpenRouter={startOpenRouter}
                                     onConnectHuggingFace={startHuggingFace}
+                                    onConnectKiloFree={startKiloFree}
+                                    onConnectHordeAnonymous={
+                                        startHordeAnonymous
+                                    }
                                     selectedPreset={
                                         preferredPreset?.key ?? null
                                     }
@@ -745,7 +794,13 @@ export default function AiProviders({
                                             Close key setup
                                         </button>
                                         <AddProvider
-                                            presets={presets}
+                                            presets={presets.filter(
+                                                (preset) =>
+                                                    ![
+                                                        'kilo-free',
+                                                        'horde-anonymous',
+                                                    ].includes(preset.key),
+                                            )}
                                             preferredPreset={preferredPreset}
                                             onManualProviderChange={() =>
                                                 setPreferredPreset(null)

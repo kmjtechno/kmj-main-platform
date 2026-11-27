@@ -65,7 +65,7 @@ final class AiProviderController extends Controller
             // Optional: when empty the provider's own label is used (made unique automatically).
             'name' => ['nullable', 'string', 'min:2', 'max:80', 'regex:/\A[\pL\pN ._@+()\/&\'-]+\z/u',
                 Rule::unique('ai_providers', 'name')->where('organization_id', $scope['organization_id'])],
-            'preset' => ['required', Rule::in(array_keys($this->manager->presets()))],
+            'preset' => ['required', Rule::in(array_keys($this->manager->presets())), Rule::notIn(['kilo-free', 'horde-anonymous'])],
             'base_url' => ['nullable', 'string', 'max:255'],
             'api_key' => ['required', 'string', 'min:8', 'max:512', 'regex:/\A\S+\z/'],
             'verify_connection' => ['sometimes', 'boolean'],
@@ -101,6 +101,61 @@ final class AiProviderController extends Controller
 
         return back()->with('status', 'Provider connection verified. '.count($free).' approved free model(s) found.'
             .($free === [] ? ' Inference remains blocked until free-model admission is configured.' : ' Default free model selected.'));
+    }
+
+    public function connectKiloFree(Request $request): RedirectResponse
+    {
+        $scope = $this->managing($request);
+        $request->validate(['public_prompts_confirmed' => ['accepted']]);
+        $existing = AiProvider::query()->where('organization_id', $scope['organization_id'])
+            ->where('preset', 'kilo-free')->first();
+        if ($existing instanceof AiProvider) {
+            return back()->with('status', 'Kilo Gateway already connected. Manage its existing connection.');
+        }
+
+        try {
+            $provider = $this->manager->create($scope['organization_id'], (int) $this->user($request)->id, [
+                'preset' => 'kilo-free',
+                'name' => 'Kilo Gateway (public)',
+                'api_key' => '',
+            ]);
+        } catch (InvalidArgumentException|UniqueConstraintViolationException) {
+            return back()->withErrors(['provider' => 'Cannot connect Kilo Gateway. Check existing connections and retry.']);
+        }
+
+        $tested = $this->manager->test($provider);
+        $count = count($this->manager->admittedFreeModels($tested));
+
+        return back()->with('status', $tested->health === 'ok'
+            ? 'Kilo Gateway connected. '.$count.' free public-chat models admitted. No prompt sent.'
+            : 'Kilo Gateway saved; connection verification pending. No inference enabled.');
+    }
+
+    public function connectHordeAnonymous(Request $request): RedirectResponse
+    {
+        $scope = $this->managing($request);
+        $request->validate(['community_terms_confirmed' => ['accepted']]);
+        $existing = AiProvider::query()->where('organization_id', $scope['organization_id'])
+            ->where('preset', 'horde-anonymous')->first();
+        if ($existing instanceof AiProvider) {
+            return back()->with('status', 'AI Horde already connected. Manage or recheck its existing connection.');
+        }
+
+        try {
+            $provider = $this->manager->create($scope['organization_id'], (int) $this->user($request)->id, [
+                'preset' => 'horde-anonymous',
+                'name' => 'AI Horde (community)',
+                'api_key' => '0000000000',
+            ]);
+        } catch (InvalidArgumentException|UniqueConstraintViolationException) {
+            return back()->withErrors(['provider' => 'Cannot connect AI Horde. Check existing connections and retry.']);
+        }
+
+        $tested = $this->manager->test($provider);
+
+        return back()->with('status', $tested->health === 'ok'
+            ? 'AI Horde catalog verified. Community inference remains blocked pending qualification.'
+            : 'AI Horde saved; catalog verification pending. No inference enabled.');
     }
 
     public function update(Request $request, string $provider): RedirectResponse

@@ -101,8 +101,8 @@ final class ModelFabricRuleApplier
                     if ($existing->revoked_at !== null) {
                         continue; // an explicit revoke always wins over a rule
                     }
-                    if ($existing->ai_model_rule_id === null && $existing->isCurrent()) {
-                        continue; // a current manual approval stands
+                    if ($existing->ai_model_rule_id === null || $existing->cost_class === 'credit-limited') {
+                        continue; // manual expiry or credit limits cannot be bypassed by a broad rule
                     }
                     if ($existing->ai_model_rule_id === $rule->id && $existing->expires_at->equalTo($rule->expires_at)) {
                         continue;
