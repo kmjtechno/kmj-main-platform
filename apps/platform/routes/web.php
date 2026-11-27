@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CodeBridgeOAuthLinkController;
 use App\Http\Controllers\HuggingFaceConnectController;
+use App\Http\Controllers\OrderRefundRecordController;
 use App\Models\LicenseAuditEvent;
 use App\Models\User;
 use App\Services\AuthorityBootstrapper;
@@ -892,6 +893,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         return redirect()->route('operator.index');
     })->name('operator.orders.fulfill')->middleware('password.confirm');
+
+    Route::post('operator/orders/{order}/refund-record', OrderRefundRecordController::class)
+        ->name('operator.orders.refund-record')->middleware('password.confirm');
 
     Route::post('operator/orders/{order}/sandbox-license', function (
         Request $request,

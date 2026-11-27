@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'P0 issue #1233 and keyless gateway regression; consolidated release only after acceptance.',
     },
     {
+        id: 'commerce-order-refund-record-20261126',
+        title: 'Commerce: owner-only refund record (manual)',
+        state: 'active',
+        detail: 'SOURCE ONLY: append-only record of a refund the owner already made in the provider dashboard, bounded by the confirmed order amount, idempotent by request key, audited. Super Admin only for now (verified email + passkey + password confirm) through one authority seam; KMJ staff/billing team does not exist yet and must be mapped there when built. JSON route only, no screen yet, no provider call, no money movement, no order status change and no license revocation.',
+        evidence:
+            'PostgreSQL feature tests and migration rollback in CI on the PR; exact-head review and live acceptance pending. Refund execution and license revocation remain unimplemented.',
+    },
+    {
         id: 'modelfabric-canonical-provider-entry-20261126',
         title: 'ModelFabric: canonical owner provider entry',
         state: 'active',

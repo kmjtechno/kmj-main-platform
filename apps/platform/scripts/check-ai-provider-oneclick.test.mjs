@@ -132,7 +132,10 @@ void test('configured providers use honest summary and deliberate advanced contr
     assert.match(page, /\{expanded && \(/);
     assert.match(page, /\{canManage && !keyless && replaceVisible && \(/);
     assert.match(page, /\{canManage && !keyless && \(/);
-    assert.match(page, /\['kilo-free', 'horde-anonymous'\]\.includes\(provider\.preset\)/);
+    assert.match(
+        page,
+        /\['kilo-free', 'horde-anonymous'\]\.includes\(provider\.preset\)/,
+    );
     assert.match(page, /window\.confirm/);
     assert.match(page, /data: \{ confirm: 'DELETE' \}/);
     assert.match(page, /fallback_models: next/);
