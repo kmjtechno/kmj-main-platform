@@ -759,6 +759,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'created_at' => $order->getAttribute('created_at')?->toISOString(),
                     'fulfillment_state' => $fulfillmentState,
                     'entitlement_id' => $activeEntitlement?->getKey(),
+                    'refunded_minor' => (int) DB::table('commerce_order_refund_records')
+                        ->where('order_id', $order->getKey())
+                        ->sum('amount_minor'),
                     'can_manage_license' => $activeEntitlement instanceof Entitlement
                         && $capabilities->allows($user->id, $organizationId, 'license.manage'),
                 ];

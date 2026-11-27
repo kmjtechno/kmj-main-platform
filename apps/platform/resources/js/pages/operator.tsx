@@ -27,6 +27,7 @@ type RecentOrder = {
     created_at: string | null;
     fulfillment_state: FulfillmentState;
     entitlement_id: string | null;
+    refunded_minor: number;
     can_manage_license: boolean;
 };
 
@@ -239,6 +240,137 @@ function ManualPaymentConfirmation({ order }: { order: RecentOrder }) {
     );
 }
 
+/**
+ * Records a refund the owner already made in the payment provider dashboard.
+ * It moves no money, does not change the order, and does not revoke any license.
+ * The server (Super Admin + passkey + confirmed-amount cap) stays authoritative.
+ */
+function RefundRecord({ order }: { order: RecentOrder }) {
+    const [open, setOpen] = useState(false);
+    const currency = order.currency ?? 'INR';
+    const digits = minorDigits(currency);
+    const form = useForm({
+        amount_minor: '',
+        reason: '',
+        provider_refund_reference: '',
+        request_key: '',
+    });
+    const minor = toMinorUnits(form.data.amount_minor, currency);
+    const remaining = (order.amount_minor ?? 0) - order.refunded_minor;
+
+    const submit = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (minor === null || minor < 1 || minor > remaining) return;
+        form.transform((data) => ({
+            ...data,
+            amount_minor: String(minor),
+            request_key: `refund:${order.id}:${crypto.randomUUID()}`,
+        }));
+        form.post(`/operator/orders/${order.id}/refund-record`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                form.reset();
+                setOpen(false);
+            },
+        });
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <button
+                    type="button"
+                    data-test="record-refund"
+                    className="mt-2 inline-flex rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[10px] font-bold text-amber-600 transition hover:bg-amber-500/15 dark:text-amber-400"
+                >
+                    Record refund
+                </button>
+            </DialogTrigger>
+            <DialogContent className="border-red-900 bg-[#0b1119] text-white">
+                <DialogTitle>Record refund already made</DialogTitle>
+                <DialogDescription className="text-slate-300">
+                    Only records a refund you already issued in the payment
+                    provider dashboard. This does not send money, change the
+                    order, or revoke the license.
+                </DialogDescription>
+                <p className="text-xs break-all text-slate-400">
+                    Order: {order.id} · Refunded so far {currency}{' '}
+                    {(order.refunded_minor / 10 ** digits).toFixed(digits)} ·
+                    Remaining {currency}{' '}
+                    {(remaining / 10 ** digits).toFixed(digits)}
+                </p>
+                <form onSubmit={submit} className="grid gap-2">
+                    <input
+                        type="text"
+                        inputMode="decimal"
+                        value={form.data.amount_minor}
+                        onChange={(event) =>
+                            form.setData('amount_minor', event.target.value)
+                        }
+                        placeholder="Refund amount (normal currency units)"
+                        className="h-9 rounded-lg border border-white/10 bg-black/20 px-2 text-xs text-white"
+                        aria-label="Refund amount"
+                        required
+                    />
+                    {form.data.amount_minor !== '' &&
+                        (minor === null || minor < 1 || minor > remaining) && (
+                            <div
+                                className="text-[10px] text-red-500"
+                                role="status"
+                            >
+                                Enter a valid amount up to the remaining{' '}
+                                {(remaining / 10 ** digits).toFixed(digits)}.
+                            </div>
+                        )}
+                    <input
+                        value={form.data.reason}
+                        onChange={(event) =>
+                            form.setData('reason', event.target.value)
+                        }
+                        placeholder="Reason"
+                        maxLength={240}
+                        className="h-9 rounded-lg border border-white/10 bg-black/20 px-2 text-xs text-white"
+                        aria-label="Refund reason"
+                        required
+                    />
+                    <input
+                        value={form.data.provider_refund_reference}
+                        onChange={(event) =>
+                            form.setData(
+                                'provider_refund_reference',
+                                event.target.value,
+                            )
+                        }
+                        placeholder="Provider refund reference (optional)"
+                        maxLength={120}
+                        className="h-9 rounded-lg border border-white/10 bg-black/20 px-2 text-xs text-white"
+                        aria-label="Provider refund reference"
+                    />
+                    <button
+                        type="submit"
+                        data-test="confirm-record-refund"
+                        disabled={
+                            form.processing ||
+                            minor === null ||
+                            minor < 1 ||
+                            minor > remaining
+                        }
+                        className="rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                    >
+                        Record refund
+                    </button>
+                    {(form.errors as Record<string, string | undefined>)
+                        .refund && (
+                        <div className="text-[10px] text-red-500" role="alert">
+                            {(form.errors as Record<string, string>).refund}
+                        </div>
+                    )}
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 export default function Operator({
     ownerView,
     metrics,
@@ -411,6 +543,26 @@ export default function Operator({
                                                 <span className="text-muted-foreground text-[10px] font-semibold">
                                                     No action
                                                 </span>
+                                            )}
+                                            {order.status === 'confirmed' &&
+                                                order.amount_minor !== null &&
+                                                order.refunded_minor <
+                                                    order.amount_minor && (
+                                                    <RefundRecord
+                                                        order={order}
+                                                    />
+                                                )}
+                                            {order.refunded_minor > 0 && (
+                                                <div
+                                                    className="text-muted-foreground mt-1 text-[10px]"
+                                                    data-test="refunded-total"
+                                                >
+                                                    Refunded {order.currency}{' '}
+                                                    {(
+                                                        order.refunded_minor /
+                                                        100
+                                                    ).toFixed(2)}
+                                                </div>
                                             )}
                                         </div>
                                     </div>

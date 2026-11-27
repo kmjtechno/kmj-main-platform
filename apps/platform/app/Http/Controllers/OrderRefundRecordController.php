@@ -9,6 +9,7 @@ use App\Services\Commerce\OrderRefundRecorder;
 use App\Services\Staff\PlatformStaffAuthority;
 use DomainException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 final class OrderRefundRecordController extends Controller
@@ -18,7 +19,7 @@ final class OrderRefundRecordController extends Controller
         string $order,
         PlatformStaffAuthority $authority,
         OrderRefundRecorder $recorder,
-    ): JsonResponse {
+    ): JsonResponse|RedirectResponse {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
         abort_unless($authority->allows($user, PlatformStaffAuthority::BILLING_REFUND_RECORD), 403);
@@ -40,9 +41,17 @@ final class OrderRefundRecordController extends Controller
                 $data['provider_refund_reference'] ?? null,
             );
         } catch (DomainException $e) {
-            return response()->json(['code' => $e->getMessage()], 422);
+            if ($request->expectsJson()) {
+                return response()->json(['code' => $e->getMessage()], 422);
+            }
+
+            return back()->withErrors(['refund' => $e->getMessage()]);
         }
 
-        return response()->json($result, $result['reused'] ? 200 : 201);
+        if ($request->expectsJson()) {
+            return response()->json($result, $result['reused'] ? 200 : 201);
+        }
+
+        return back()->with('status', 'refund-recorded');
     }
 }
