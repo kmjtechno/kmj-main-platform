@@ -125,6 +125,16 @@ class FortifyServiceProvider extends ServiceProvider
             ];
         });
 
+        // Own bucket for Google sign-in: numeric `throttle:N,M` shares one per-IP counter with every
+        // other numeric throttle, so unrelated traffic from the same IP could 429 the OAuth callback.
+        RateLimiter::for('google-signin', static function (Request $request) {
+            return Limit::perMinute(20)->by('google-signin:'.hash('sha256', (string) $request->ip()));
+        });
+
+        RateLimiter::for('onboarding-profile', static function (Request $request) {
+            return Limit::perMinute(20)->by('onboarding-profile:'.hash('sha256', (string) ($request->user()?->getKey() ?? $request->ip())));
+        });
+
         RateLimiter::for('login', function (Request $request) {
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
 
