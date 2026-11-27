@@ -166,7 +166,7 @@ final class OpenAiCompatibleAdapter
      * @param  list<array{role: string, content: string}>  $messages
      * @return array{ok: bool, content: ?string, error_code: ?string, rate?: array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int, daily_requests_limit?: int, daily_reset_seconds?: int}}
      */
-    public function complete(string $baseUrl, string $apiKey, array $approvedHosts, string $model, array $messages, ?int $strictCodingTokens = null): array
+    public function complete(string $baseUrl, string $apiKey, array $approvedHosts, string $model, array $messages, ?int $strictCodingTokens = null, bool $privateData = false): array
     {
         if ($strictCodingTokens !== null && ($strictCodingTokens < 1 || $strictCodingTokens > self::MAX_CODING_TOKENS)) {
             return ['ok' => false, 'content' => null, 'error_code' => 'invalid_output_limit'];
@@ -199,6 +199,14 @@ final class OpenAiCompatibleAdapter
                 'allow_fallbacks' => false,
                 'max_price' => ['prompt' => 0, 'completion' => 0, 'request' => 0, 'image' => 0],
             ];
+        }
+        // A tenant's consented private correspondence needs the same endpoint-level
+        // retention and training restrictions as code, even without the native
+        // coding ticket. Otherwise a free OpenRouter model could route a private
+        // email to a backend that retains or trains on the prompt.
+        if ($privateData && $target['host'] === 'openrouter.ai') {
+            $body['provider']['data_collection'] = 'deny';
+            $body['provider']['zdr'] = true;
         }
         if ($strictCodingTokens !== null) {
             // Independently verify this exact account and model before sending source.
