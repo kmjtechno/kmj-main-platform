@@ -327,7 +327,11 @@ export default function AiProviderConnectHub({
 
                 <div
                     id="modelfabric-oauth-connect"
-                    className="mt-5 scroll-mt-4 border-t pt-4"
+                    className={
+                        method === 'oauth' || oauthKeys.has(choice)
+                            ? 'mt-5 scroll-mt-4 border-t pt-4'
+                            : 'hidden'
+                    }
                 >
                     <h3 className="flex items-center gap-2 text-base font-bold">
                         <Zap className="h-4 w-4 text-red-400" />
@@ -389,7 +393,13 @@ export default function AiProviderConnectHub({
                         )}
                     </div>
                 </div>
-                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <div
+                    className={
+                        method === 'keyless' || keylessKeys.has(choice)
+                            ? 'mt-4 grid gap-3 md:grid-cols-2'
+                            : 'hidden'
+                    }
+                >
                     {supported.has('kilo-free') && (
                         <article
                             id="modelfabric-keyless-connect"
@@ -404,7 +414,8 @@ export default function AiProviderConnectHub({
                             <label className="mt-2 flex items-start gap-2 text-xs">
                                 <input
                                     type="checkbox"
-                                    checked={kiloPublic}
+                                    checked={kiloPublic || connected.has('kilo-free')}
+                                    disabled={connected.has('kilo-free')}
                                     onChange={(event) =>
                                         setKiloPublic(event.target.checked)
                                     }
@@ -444,7 +455,8 @@ export default function AiProviderConnectHub({
                             <label className="mt-2 flex items-start gap-2 text-xs">
                                 <input
                                     type="checkbox"
-                                    checked={hordeTerms}
+                                    checked={hordeTerms || connected.has('horde-anonymous')}
+                                    disabled={connected.has('horde-anonymous')}
                                     onChange={(event) =>
                                         setHordeTerms(event.target.checked)
                                     }
