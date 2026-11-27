@@ -97,6 +97,30 @@ final class ModelFabricLimitsTest extends TestCase
         $this->assertSame('B Gemini', $result['provider']);
     }
 
+    public function test_owner_can_explicitly_verify_one_public_inference_without_bypassing_quota(): void
+    {
+        $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'llama-free');
+        $url = '/operator/modelfabric/providers/'.$provider->id.'/inference-check';
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'KMJ-OK']]]], 200)]);
+
+        $this->confirmed($this->owner)->post($url)->assertSessionHasErrors('public_prompts_confirmed');
+        $this->confirmed($this->member)->post($url, ['public_prompts_confirmed' => true])->assertForbidden();
+        Http::assertNothingSent();
+
+        $this->confirmed($this->owner)->post($url, ['public_prompts_confirmed' => true])
+            ->assertSessionHasNoErrors()->assertSessionHas('status');
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request): bool => str_contains((string) $request->body(), 'Reply with KMJ-OK.')
+            && ! str_contains((string) $request->body(), 'private-source'));
+        $this->assertSame(1, AiModelRequest::query()->where('outcome', 'ok')->count());
+
+        $provider->daily_request_cap = 1;
+        $provider->save();
+        $this->confirmed($this->owner)->post($url, ['public_prompts_confirmed' => true])
+            ->assertSessionHasErrors('provider');
+        Http::assertSentCount(1);
+    }
+
     public function test_owner_manager_can_save_limits_and_members_cannot(): void
     {
         $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'llama-free');

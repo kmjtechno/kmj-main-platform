@@ -401,3 +401,15 @@ void test('provider setup stays inside the native ModelFabric workspace', () => 
     );
     assert.match(providerPage, /!embedded && <Head/);
 });
+
+void test('one-click provider inference proof requires public consent and existing zero-spend reservation', () => {
+    const gateway = read('app/Services/AiProviders/ModelFabricGateway.php');
+    const providers = read('resources/js/pages/services/ai-providers.tsx');
+    assert.match(routes, /providers\/\{provider\}\/inference-check/);
+    assert.match(routes, /throttle:3,10/);
+    assert.match(controller, /public function verifyInference/);
+    assert.match(controller, /'public_prompts_confirmed' => \['accepted'\]/);
+    assert.match(controller, /gateway->completeSelected/);
+    assert.match(gateway, /selectedRoute:/);
+    assert.match(providers, /Run one bounded synthetic inference/);
+});

@@ -16,6 +16,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
         Route::delete('rules/{rule}', [ModelFabricController::class, 'revokeRule'])->middleware('throttle:20,1')->name('rules.revoke');
         Route::delete('evidence/{evidence}', [ModelFabricController::class, 'revokeEvidence'])->middleware('throttle:20,1')->name('evidence.revoke');
         Route::patch('providers/{provider}', [ModelFabricController::class, 'updateProvider'])->middleware('throttle:20,1')->name('providers.update');
+        Route::post('providers/{provider}/inference-check', [ModelFabricController::class, 'verifyInference'])->middleware('throttle:3,10')->name('providers.inference-check');
         Route::post('tokens', [ModelFabricController::class, 'storeToken'])->middleware('throttle:10,1')->name('tokens.store');
         Route::delete('tokens/{token}', [ModelFabricController::class, 'revokeToken'])->middleware('throttle:20,1')->name('tokens.revoke');
     });

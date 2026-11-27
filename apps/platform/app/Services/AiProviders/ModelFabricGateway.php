@@ -52,7 +52,7 @@ final class ModelFabricGateway
      * @param  list<array{role: string, content: string}>  $messages
      * @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string}
      */
-    public function completeSelected(AiProvider $provider, string $model, array $messages): array
+    public function completeSelected(AiProvider $provider, string $model, array $messages, bool $publicPromptsConfirmed = false): array
     {
         try {
             $this->manager->assertInferenceAllowed($provider, $model);
@@ -60,7 +60,7 @@ final class ModelFabricGateway
             return $this->fail($exception->getMessage(), 0, $this->profiler->classify($messages, 'chat'));
         }
 
-        return $this->complete($provider->organization_id, $messages, selectedRoute: ['provider_id' => $provider->id, 'model' => $model]);
+        return $this->complete($provider->organization_id, $messages, publicPromptsConfirmed: $publicPromptsConfirmed, selectedRoute: ['provider_id' => $provider->id, 'model' => $model]);
     }
 
     /**

@@ -41,6 +41,7 @@ final class ModelFabricController extends Controller
         private readonly ProviderManager $manager,
         private readonly ModelFabricRouter $router,
         private readonly ModelFabricRuleApplier $rules,
+        private readonly ModelFabricGateway $gateway,
     ) {}
 
     public function index(Request $request): Response
@@ -437,6 +438,37 @@ final class ModelFabricController extends Controller
         $this->audit($request, 'model_fabric.evidence_revoked', ['model' => $row->model_id]);
 
         return back()->with('status', 'Evidence revoked. The model is no longer routable.');
+    }
+
+    /**
+     * One deliberate public synthetic prompt, against the selected provider only.
+     * This is not a billable balance query or automatic provider qualification.
+     */
+    public function verifyInference(Request $request, string $provider): RedirectResponse
+    {
+        $scope = $this->owner($request, true);
+        $request->validate(['public_prompts_confirmed' => ['accepted']]);
+        $row = AiProvider::query()->where('organization_id', $scope['organization_id'])->whereKey($provider)->firstOrFail();
+        $models = $this->manager->admittedFreeModels($row);
+        if ($models === []) {
+            return back()->withErrors(['provider' => 'No currently admitted verified-free model.']);
+        }
+
+        $model = is_string($row->default_model) && in_array($row->default_model, $models, true)
+            ? $row->default_model
+            : $models[0];
+        $result = $this->gateway->completeSelected(
+            $row,
+            $model,
+            [['role' => 'user', 'content' => 'Reply with KMJ-OK.']],
+            publicPromptsConfirmed: true,
+        );
+        if (! $result['ok']) {
+            return back()->withErrors(['provider' => 'Synthetic inference was not verified. Recheck current eligibility, quota and provider health.']);
+        }
+        $this->audit($request, 'model_fabric.synthetic_inference_passed', ['provider_id' => $row->id, 'model_id' => $model]);
+
+        return back()->with('status', 'One synthetic public inference succeeded. This is not proof of remaining billing credits.');
     }
 
     public function updateProvider(Request $request, string $provider): RedirectResponse
