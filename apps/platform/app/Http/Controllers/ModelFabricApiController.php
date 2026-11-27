@@ -132,7 +132,13 @@ final class ModelFabricApiController extends Controller
                 default => 502,
             };
 
-            return $this->error($status, $code, 'No verified-zero route could answer this request.');
+            $response = $this->error($status, $code, 'No verified-zero route could answer this request.');
+            $retry = $result['retry_after_seconds'] ?? null;
+            if ($status === 429 && is_int($retry) && $retry > 0) {
+                $response->headers->set('Retry-After', (string) $retry);
+            }
+
+            return $response;
         }
 
         $id = 'chatcmpl-mf-'.Str::lower(Str::random(24));
