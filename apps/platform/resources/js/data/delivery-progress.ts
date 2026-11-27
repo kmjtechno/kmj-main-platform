@@ -10,6 +10,13 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'public-home-502-link-header-20261127',
+        title: 'Home page response headers kept within web server limits',
+        state: 'active',
+        detail: 'SOURCE ONLY: the preload Link response header is removed because it grew with each built asset and the home page returned 502 after a release. Preload tags remain in the page HTML.',
+        evidence: 'Source change and regression test; live evidence pending.',
+    },
+    {
         id: 'public-ui-icons-polish-20261127',
         title: 'Scroll to top, Kristi avatar and icon polish on public pages',
         state: 'active',
