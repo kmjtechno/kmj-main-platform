@@ -488,9 +488,11 @@ function CopyRow({ label, value }: { label: string; value: string }) {
 function ConnectGuide({
     origin,
     token,
+    coding,
 }: {
     origin: string;
     token: string | null | undefined;
+    coding: boolean;
 }) {
     const baseUrl = `${origin}/api/modelfabric/v1`;
     const protocolHelp =
@@ -498,7 +500,15 @@ function ConnectGuide({
     const tokenHelp =
         'Set KMJ_MODELFABRIC_TOKEN in a private credential store. Samples never contain your token. Run the read-only model check first. Never paste credentials into source or shell history.';
     // Keep the one-time bearer in the explicit copy row, never in code samples.
-    const snippets: { id: string; label: string; code: string }[] = [
+    const snippets: { id: string; label: string; code: string }[] = coding
+        ? [
+              {
+                  id: 'coding-preflight',
+                  label: 'Secure coding: read-only admission check',
+                  code: `curl --fail-with-body "${baseUrl}/models" \\\n  -H "Authorization: Bearer $KMJ_MODELFABRIC_TOKEN" \\\n  -H "X-ModelFabric-Policy: strict-free-cloud"`,
+              },
+          ]
+        : [
         {
             id: 'sdk',
             label: 'Python (OpenAI SDK)',
@@ -526,6 +536,19 @@ function ConnectGuide({
                 />
             </div>
             <p className="text-muted-foreground text-xs">{tokenHelp}</p>
+            {coding ? (
+                <p
+                    className="text-sm text-amber-700 dark:text-amber-300"
+                    data-testid="modelfabric-coding-connect-warning"
+                >
+                    Secure coding tokens cannot use a bare OpenAI SDK completion.
+                    An enrolled CodeBridge worker must request a fresh
+                    request-bound single-use native admission ticket before
+                    each private source transfer. Source-transfer consent,
+                    provider billing proof and worker activation are separate
+                    gates; a read-only model check sends no source.
+                </p>
+            ) : null}
             {snippets.map((snippet) => (
                 <details key={snippet.id} className="rounded-xl border p-2">
                     <summary className="cursor-pointer text-xs font-bold">
@@ -536,10 +559,18 @@ function ConnectGuide({
                     </pre>
                 </details>
             ))}
-            <p className="text-muted-foreground text-xs">
-                Optional: send an X-ModelFabric-Session header (any short id) to
-                keep one conversation on the same route.
-            </p>
+            {coding ? (
+                <p className="text-muted-foreground text-xs">
+                    Do not send private code from a generic curl or SDK sample.
+                    Complete enrolled CodeBridge source consent and the native
+                    ticket handshake first.
+                </p>
+            ) : (
+                <p className="text-muted-foreground text-xs">
+                    Optional: send an X-ModelFabric-Session header (any short id)
+                    to keep one conversation on the same route.
+                </p>
+            )}
         </div>
     );
 }
@@ -2359,7 +2390,16 @@ export default function OperatorModelFabric({
                                 ) : null}
                             </form>
                         ) : null}
-                        <ConnectGuide origin={origin} token={newToken} />
+                        <ConnectGuide
+                            origin={origin}
+                            token={newToken}
+                            coding={
+                                workflow === 'coding' ||
+                                tokenPrivate ||
+                                (Boolean(newToken) &&
+                                    tokens[0]?.private_source === true)
+                            }
+                        />
                         <ul className="mt-3 divide-y text-sm">
                             {tokens.length === 0 ? (
                                 <li className="py-2">No token created yet.</li>
