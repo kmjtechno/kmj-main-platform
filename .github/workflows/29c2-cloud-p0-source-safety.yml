@@ -1,0 +1,23 @@
+name: KMJ 29C2 Free Cloud P0 Release Source Safety
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/*29c2*'
+      - 'scripts/test_29c2_zero_cloud_release_contract.py'
+      - '.github/workflows/29c2-cloud-p0-source-safety.yml'
+permissions:
+  contents: read
+jobs:
+  release-source-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify exact SHA, schema reversal and verified-zero cloud gates
+        run: |
+          set -Eeuo pipefail
+          python3 -B -m unittest discover -s scripts -p test_29c2_zero_cloud_release_contract.py -v
+          echo 'SOURCE_ONLY=PASS'
+          echo 'REAL_BACKUP_RECOVERY_BROWSER_CLOUD_OR_PRODUCTION=NOT_RUN_BY_CI'
