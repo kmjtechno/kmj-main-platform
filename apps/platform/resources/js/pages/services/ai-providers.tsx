@@ -37,6 +37,8 @@ export type Provider = {
         daily_remaining: number | null;
         daily_limit: number | null;
         daily_reset_at: string | null;
+        cooling_until: string | null;
+        cooldown_scope: 'model' | 'provider' | null;
     }[];
     used_today?: number;
     daily_request_cap?: number | null;
@@ -171,7 +173,7 @@ function ProviderCard({
             {(provider.quota_observations ?? []).length > 0 && (
                 <details className="rounded-lg border p-2 text-xs">
                     <summary className="cursor-pointer font-semibold">
-                        Recent provider-reported quota signals
+                        Quota headers and local retry cooldowns
                     </summary>
                     <div className="mt-2 space-y-2">
                         {provider.quota_observations?.map((observation) => (
@@ -194,7 +196,11 @@ function ProviderCard({
                                     ` · daily ${observation.daily_remaining}/${observation.daily_limit}`}
                                 {observation.daily_reset_at &&
                                     ` · daily reset ${formatIstStamp(observation.daily_reset_at)}`}
-                                {' · provider headers, not billing credits'}
+                                {observation.cooling_until &&
+                                    ` · ${observation.cooldown_scope === 'model' ? 'model' : 'provider'} retry after ${formatIstStamp(observation.cooling_until)}`}
+                                {observation.observed_at
+                                    ? ' · provider headers, not billing credits'
+                                    : ' · local cooldown only; quota unknown'}
                             </p>
                         ))}
                     </div>
