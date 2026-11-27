@@ -59,10 +59,12 @@ final class ModelFabricGatewayTest extends TestCase
     {
         $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-a');
         Http::fake([
-            'api.groq.com/*' => Http::response(['error' => 'limit'], 429, [
-                'x-ratelimit-remaining-requests' => '0',
-                'Retry-After' => '600',
-            ]),
+            'api.groq.com/*' => Http::sequence()
+                ->push(['error' => 'limit'], 429, [
+                    'x-ratelimit-remaining-requests' => '0',
+                    'Retry-After' => '600',
+                ])
+                ->push(['choices' => [['message' => ['content' => 'recovered']]]], 200),
         ]);
 
         $gateway = app(ModelFabricGateway::class);
@@ -81,13 +83,23 @@ final class ModelFabricGatewayTest extends TestCase
         $this->assertArrayNotHasKey('credit_balance', $observations[0]);
         $this->assertSame(0, $gateway->complete($this->org, [['role' => 'user', 'content' => 'again']])['attempts']);
         Http::assertSentCount(1);
+
+        // After the provider reset, this same independently verified-free route
+        // becomes eligible without requiring another account connection.
+        $this->travel(601)->seconds();
+        $recovered = $gateway->complete($this->org, [['role' => 'user', 'content' => 'resume']]);
+        $this->assertTrue($recovered['ok']);
+        $this->assertSame('recovered', $recovered['content']);
+        Http::assertSentCount(2);
     }
 
     public function test_provider_429_honours_retry_after_and_does_not_attempt_while_cooling(): void
     {
         $provider = $this->provider('gemini', 'Gemini', 'https://generativelanguage.googleapis.com/v1beta/openai', 'model-a');
         Http::fake([
-            'generativelanguage.googleapis.com/*' => Http::response(['error' => 'limit'], 429, ['Retry-After' => '900']),
+            'generativelanguage.googleapis.com/*' => Http::sequence()
+                ->push(['error' => 'limit'], 429, ['Retry-After' => '900'])
+                ->push(['choices' => [['message' => ['content' => 'recovered']]]], 200),
         ]);
 
         $gateway = app(ModelFabricGateway::class);
@@ -99,6 +111,12 @@ final class ModelFabricGatewayTest extends TestCase
         $this->assertNull($observations[0]['observed_at']);
         $this->assertSame(0, $gateway->complete($this->org, [['role' => 'user', 'content' => 'again']])['attempts']);
         Http::assertSentCount(1);
+
+        $this->travel(901)->seconds();
+        $recovered = $gateway->complete($this->org, [['role' => 'user', 'content' => 'resume']]);
+        $this->assertTrue($recovered['ok']);
+        $this->assertSame('recovered', $recovered['content']);
+        Http::assertSentCount(2);
     }
 
     public function test_quota_directory_prioritizes_selected_admitted_model_beyond_first_twelve(): void
