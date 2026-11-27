@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'P0 issue #1233 and keyless gateway regression; consolidated release only after acceptance.',
     },
     {
+        id: 'release-center-migration-status-20261127',
+        title: 'Release Center: read-only pending-migration status',
+        state: 'active',
+        detail: 'The owner Release Center shows whether any database migration file shipped in the live release is still unapplied, so a missed post-activation step is visible. Read-only: it runs and writes nothing, and it does not replace the root post-activation step or prove a release is ready.',
+        evidence:
+            'Source regression and PostgreSQL feature test on the PR; live reading after release pending.',
+    },
+    {
         id: 'registration-google-signin-20261127',
         title: 'Registration: Google sign-up with contact details collected afterwards',
         state: 'active',
