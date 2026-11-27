@@ -290,6 +290,58 @@ final class ModelFabricApiTest extends TestCase
             ]);
     }
 
+    public function test_explicit_truncated_chat_reply_fails_over_to_another_verified_free_model(): void
+    {
+        $plain = $this->token(['private_source' => false]);
+        $this->evidenced('model-a', 'unknown', [
+            'name' => 'A Groq',
+            'preset' => 'groq',
+            'base_url' => 'https://api.groq.com/openai/v1',
+            'models_cache' => ['model-a'],
+        ]);
+        $this->evidenced('model-b', 'unknown', [
+            'name' => 'B Gemini',
+            'preset' => 'gemini',
+            'base_url' => 'https://generativelanguage.googleapis.com/v1beta/openai',
+            'models_cache' => ['model-b'],
+        ]);
+        Http::fake([
+            'api.groq.com/*' => Http::response([
+                'choices' => [['message' => ['content' => 'INCOMPLETE PRIVATE TAIL'], 'finish_reason' => 'length']],
+            ], 200),
+            'generativelanguage.googleapis.com/*' => Http::response([
+                'choices' => [['message' => ['content' => 'complete verified-free reply'], 'finish_reason' => 'stop']],
+            ], 200),
+        ]);
+
+        $this->postJson('/api/modelfabric/v1/chat/completions', [
+            'messages' => [['role' => 'user', 'content' => 'public synthetic prompt']],
+        ], ['Authorization' => 'Bearer '.$plain])
+            ->assertOk()
+            ->assertJsonPath('choices.0.message.content', 'complete verified-free reply')
+            ->assertJsonPath('modelfabric.attempts', 2)
+            ->assertJsonPath('modelfabric.provider', 'B Gemini');
+        Http::assertSentCount(2);
+    }
+
+    public function test_overlong_general_chat_reply_returns_error_instead_of_silent_truncation(): void
+    {
+        $plain = $this->token(['private_source' => false]);
+        $this->evidenced('llama-free');
+        Http::fake([
+            'api.groq.com/*' => Http::response([
+                'choices' => [['message' => ['content' => str_repeat('x', 8001), 'finish_reason' => 'stop']],
+            ], 200),
+        ]);
+
+        $this->postJson('/api/modelfabric/v1/chat/completions', [
+            'messages' => [['role' => 'user', 'content' => 'public synthetic prompt']],
+        ], ['Authorization' => 'Bearer '.$plain])
+            ->assertStatus(502)
+            ->assertJsonPath('error.code', 'response_too_large');
+        Http::assertSentCount(1);
+    }
+
     public function test_shared_api_automatically_fails_over_from_429_to_another_verified_free_provider(): void
     {
         $plain = $this->token(['private_source' => false]);
