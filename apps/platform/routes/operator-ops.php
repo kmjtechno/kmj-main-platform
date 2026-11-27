@@ -9,6 +9,7 @@ use App\Services\Operations\EliteActivationIntentQueue;
 use App\Services\Operations\EliteAdmissionIntentQueue;
 use App\Services\Operations\EliteReleasePrepareIntentQueue;
 use App\Services\Operations\EliteReleaseReadinessSnapshot;
+use App\Services\Operations\MigrationStatusSnapshot;
 use App\Services\Operations\OperationalReadinessSnapshot;
 use App\Services\Operations\OperatorActionRunner;
 use App\Services\Operations\ReleaseContractCatalog;
@@ -211,6 +212,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             ReleaseContractCatalog $catalog,
             ServerMetricsSnapshot $metrics,
             EliteReleaseReadinessSnapshot $eliteRelease,
+            MigrationStatusSnapshot $migrations,
         ) {
             $user = $request->user();
             abort_unless($user instanceof User, 401);
@@ -232,6 +234,7 @@ Route::middleware(['auth', 'verified', 'password.confirm'])
             }
 
             return Inertia::render('operator-release-center', [
+                'migrations' => $migrations->capture(),
                 'catalog' => $catalog->load(),
                 'live' => [
                     'main-platform' => [

@@ -103,6 +103,19 @@ final class ReleaseCenterTest extends TestCase
                 ->missing('live.demo-app'));
     }
 
+    public function test_migration_status_is_read_only_and_reports_applied_state(): void
+    {
+        $this->writeContract('main-platform.release.contract.json', $this->contract('main-platform'));
+
+        $this->actingAs($this->owner())->withSession(['auth.password_confirmed_at' => time()])
+            ->get('/operator/release-center')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('migrations.status', 'ok')
+                ->where('migrations.pending_count', 0)
+                ->where('migrations.pending', []));
+    }
+
     public function test_relaxed_approval_wrong_filename_oversized_and_broken_files_are_listed_as_invalid(): void
     {
         $relaxed = $this->contract('relaxed');

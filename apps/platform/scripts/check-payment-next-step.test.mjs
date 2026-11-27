@@ -19,8 +19,12 @@ void test('guided progress only turns green from real stored or proven state', (
     );
     assert.match(step, /setting\?\.webhook_secret_stored === true/);
     assert.match(step, /readiness\?\.webhook_verification_configured === true/);
-    // The sandbox order is never claimed done from the UI.
-    assert.match(step, /id: 'sandbox-order'[\s\S]*?done: false/);
+    // The sandbox order turns green only from the server-recorded provider acceptance.
+    assert.match(
+        step,
+        /id: 'sandbox-order'[\s\S]*?done: Boolean\(readiness\?\.sandbox_order_probe_at\)/,
+    );
+    assert.doesNotMatch(step, /id: 'sandbox-order'[\s\S]*?done: true/);
 });
 
 void test('guidance never offers to enable live charging or asks for secrets in chat', () => {
@@ -34,4 +38,12 @@ void test('recent webhook events are shown without implying settlement', () => {
     assert.match(step, /Recent webhook events/);
     assert.match(step, /Received \(not settled\)/);
     assert.match(step, /does not settle an\s+order or issue a license/);
+});
+
+void test('Cashfree step 3 follows the client secret, not a separate webhook secret', () => {
+    assert.match(step, /provider === 'cashfree'\s*\?\s*keysSaved/);
+    const guide = read(
+        'resources/js/components/payment-gateway-onboarding.tsx',
+    );
+    assert.match(guide, /provider === 'cashfree'\s*\?\s*keysSaved/);
 });

@@ -26,6 +26,54 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'P0 issue #1233 and keyless gateway regression; consolidated release only after acceptance.',
     },
     {
+        id: 'commerce-refund-revoke-access-20261127',
+        title: 'Commerce: explicit revoke-access step after a refund',
+        state: 'active',
+        detail: 'SOURCE ONLY: after the owner has recorded a refund for an order, a separate Super Admin Revoke access button ends the active entitlements of the same organization and product. It is never automatic, needs a recorded refund, is refused while another paid unrefunded order for the same product exists, and is audited. It revokes the entitlement only: individual signed license ids (jti) and an offline client that has not synced are not covered, and no money moves.',
+        evidence:
+            'Source regression and PostgreSQL feature tests on the PR; live acceptance pending.',
+    },
+    {
+        id: 'release-center-migration-status-20261127',
+        title: 'Release Center: read-only pending-migration status',
+        state: 'active',
+        detail: 'The owner Release Center shows whether any database migration file shipped in the live release is still unapplied, so a missed post-activation step is visible. Read-only: it runs and writes nothing, and it does not replace the root post-activation step or prove a release is ready.',
+        evidence:
+            'Source regression and PostgreSQL feature test on the PR; live reading after release pending.',
+    },
+    {
+        id: 'registration-google-signin-20261127',
+        title: 'Registration: Google sign-up with contact details collected afterwards',
+        state: 'active',
+        detail: 'SOURCE ONLY and hidden until the owner stores a Google OAuth client in the server secrets: Continue with Google on login and register (authorization-code flow with PKCE and state, verified email required, identity fields only, no package added). A new Google user gets a verified account and organization and then fills phone, country and company on a profile page. A Google login is refused for any account with a passkey or two-factor, and a pre-registered unverified account loses its old password when the real owner signs in. No Google client is configured and no live Google sign-in has been tried.',
+        evidence:
+            'Source regression and PostgreSQL feature tests with Google calls faked on the PR; live acceptance pending the owner OAuth client.',
+    },
+    {
+        id: 'registration-invisible-bot-guard-20261127',
+        title: 'Registration: invisible bot guard',
+        state: 'active',
+        detail: 'The public signup form now carries a hidden honeypot field and an encrypted, time-stamped, one-use form token that the server checks before any account is created (too-fast, expired, replayed, missing or filled-honeypot submissions are rejected and logged without personal data). No third-party captcha and no cost. It reduces automated signups; it does not prove a human, and OAuth signup and a post-login profile step are not built yet.',
+        evidence:
+            'Source regression and PostgreSQL feature tests on the PR; live effect on bot signups not yet measured.',
+    },
+    {
+        id: 'payments-cashfree-webhook-step-20261127',
+        title: 'Payments: Cashfree guided step 3 follows the client secret',
+        state: 'active',
+        detail: 'Cashfree signs webhooks with its client secret and has no separate webhook secret, so the guided step now follows the stored test keys and no longer points to a Razorpay-only secret generator. Display logic only; no secret handling changed.',
+        evidence:
+            'Source regression added; live view of the Cashfree guided setup after release pending.',
+    },
+    {
+        id: 'payments-sandbox-order-step-20261127',
+        title: 'Payments: sandbox test order step reflects the recorded result',
+        state: 'active',
+        detail: 'The guided setup step for the provider sandbox INR 1 test order now turns green from the server-side record of the provider accepting it, with its India-time stamp. This proves only that the stored test keys can create a sandbox order: no payment, no webhook-to-order match and no license are claimed.',
+        evidence:
+            'Source regression and PostgreSQL feature test on the PR; live click and acceptance pending.',
+    },
+    {
         id: 'commerce-order-refund-record-20261126',
         title: 'Commerce: owner-only refund record (manual)',
         state: 'active',

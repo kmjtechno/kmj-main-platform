@@ -89,6 +89,12 @@ return [
         'github_token' => env('KMJ_CODEBRIDGE_STAGE_GITHUB_TOKEN', ''),
     ],
 
+    'google_signin' => [
+        // Sign-in only (openid, email, profile). The button stays hidden until both values are set.
+        'client_id' => env('GOOGLE_OAUTH_CLIENT_ID', ''),
+        'client_secret' => env('GOOGLE_OAUTH_CLIENT_SECRET', ''),
+    ],
+
     'codebridge_gateway' => [
         // Private upstream is operator-approved (usually same-host loopback).
         // An unconfigured upstream must fail closed, never send device/MCP

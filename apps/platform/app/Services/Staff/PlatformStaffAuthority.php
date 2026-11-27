@@ -19,12 +19,15 @@ final class PlatformStaffAuthority
 {
     public const BILLING_REFUND_RECORD = 'billing.refund.record';
 
+    public const ENTITLEMENT_REVOKE_AFTER_REFUND = 'entitlement.revoke.after_refund';
+
     public function __construct(private readonly PlatformOwnerAccess $owner) {}
 
     public function allows(User $user, string $capability): bool
     {
         return match ($capability) {
-            self::BILLING_REFUND_RECORD => $this->owner->allows($user),
+            self::BILLING_REFUND_RECORD,
+            self::ENTITLEMENT_REVOKE_AFTER_REFUND => $this->owner->allows($user),
             default => false,
         };
     }

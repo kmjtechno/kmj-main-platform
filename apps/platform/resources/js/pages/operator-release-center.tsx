@@ -44,12 +44,21 @@ const riskTone: Record<string, string> = {
     destructive: 'text-red-600 dark:text-red-400',
 };
 
+type Migrations = {
+    status: 'ok' | 'pending' | 'unavailable';
+    pending_count: number;
+    pending: string[];
+    applied_count: number;
+};
+
 export default function OperatorReleaseCenter({
     catalog,
     live,
+    migrations,
 }: {
     catalog: Catalog;
     live: Record<string, Live>;
+    migrations?: Migrations;
 }) {
     return (
         <>
@@ -221,6 +230,21 @@ export default function OperatorReleaseCenter({
                                         }
                                         )
                                     </p>
+                                    {contract.project === 'main-platform' &&
+                                    migrations ? (
+                                        <p
+                                            className="mt-1"
+                                            data-testid="release-migration-status"
+                                        >
+                                            Database migrations:{' '}
+                                            {migrations.status === 'ok'
+                                                ? `all applied (${migrations.applied_count})`
+                                                : migrations.status ===
+                                                    'pending'
+                                                  ? `${migrations.pending_count} pending (${migrations.pending.join(', ')}). Post-activation has not been applied.`
+                                                  : 'could not be read'}
+                                        </p>
+                                    ) : null}
                                     <p className="text-muted-foreground mt-1">
                                         Advisory view from this server&apos;s
                                         own state. It is not proof of a release

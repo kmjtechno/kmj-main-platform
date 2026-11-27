@@ -8,6 +8,7 @@ export type PaymentGatewayReadiness = {
     webhook_verification_configured: boolean;
     webhook_events_received: number;
     webhook_last_received_at: string | null;
+    sandbox_order_probe_at?: string | null;
     recent_events: {
         event_type: string;
         status: string;
@@ -61,12 +62,22 @@ export function paymentSetupSteps(
         {
             id: 'webhook-secret',
             title: 'Store the webhook secret',
-            why: 'Use the same secret in the provider dashboard and here, so KMJ can check that events really come from the provider.',
-            done: setting?.webhook_secret_stored === true,
-            action: {
-                label: 'Open webhook setup',
-                href: '#webhook-setup',
-            },
+            why: 'Razorpay: generate the secret in the Webhook setup card (shown once), then paste it into the Razorpay webhook. Cashfree signs with its client secret. KMJ uses it to check that events really come from the provider.',
+            // Cashfree signs webhooks with the client secret, so no separate secret exists.
+            done:
+                provider === 'cashfree'
+                    ? keysSaved
+                    : setting?.webhook_secret_stored === true,
+            action:
+                provider === 'cashfree'
+                    ? {
+                          label: 'Save test keys',
+                          href: `#gateway-settings-${provider}`,
+                      }
+                    : {
+                          label: 'Generate webhook secret',
+                          href: '#webhook-setup',
+                      },
         },
         {
             id: 'webhook-proof',
@@ -82,7 +93,7 @@ export function paymentSetupSteps(
             id: 'sandbox-order',
             title: 'Run the sandbox test order',
             why: 'Creates a ₹1 TEST order on the provider sandbox. No card is charged and no license is issued.',
-            done: false,
+            done: Boolean(readiness?.sandbox_order_probe_at),
             action: {
                 label: 'Go to Test Connection',
                 href: '#gateway-onboarding',
@@ -168,6 +179,14 @@ export default function PaymentNextStep({
                         <ArrowRight className="size-4" />
                     </a>
                 </div>
+            ) : null}
+
+            {gateway?.sandbox_order_probe_at ? (
+                <p className="mt-3 text-xs text-slate-400">
+                    Sandbox test order accepted by the provider:{' '}
+                    {formatIstStamp(gateway.sandbox_order_probe_at)}. This is
+                    not a payment, a webhook match or a license.
+                </p>
             ) : null}
 
             {gateway?.webhook_last_received_at ? (

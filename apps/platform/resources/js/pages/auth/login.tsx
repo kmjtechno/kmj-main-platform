@@ -1,4 +1,5 @@
 import { Form, Head, usePage } from '@inertiajs/react';
+import GoogleSignInButton from '@/components/google-signin-button';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
@@ -35,6 +36,8 @@ export default function Login({ status, canResetPassword }: Props) {
                 separator="Or use your password"
             />
             {/* @end-chisel-passkeys */}
+
+            <GoogleSignInButton />
 
             <Form
                 {...store.form()}
