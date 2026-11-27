@@ -86,7 +86,10 @@ final class NativeCodingAdmissionTicket
                 || ! is_string($entry['digest'] ?? null) || ! hash_equals($entry['digest'], $digest)
                 || ! is_int($entry['expires_at'] ?? null) || $entry['expires_at'] <= (int) floor(microtime(true) * 1000)
                 || ! is_string($entry['provider_id'] ?? null) || ! is_string($entry['model'] ?? null)
-                || ! $token->isUsable()) {
+                // Middleware's token object can be stale if an owner revoked
+                // the token during the upstream read-only ticket preflight.
+                // Re-read the exact token row within the consume lock.
+                || ! $token->fresh()?->isUsable()) {
                 return null;
             }
             Cache::forget($key);
