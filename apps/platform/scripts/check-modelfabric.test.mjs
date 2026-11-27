@@ -319,6 +319,17 @@ void test('connection samples do not embed the issued bearer or claim unsupporte
     assert.match(api, /\$token->private_source \? 'code' : 'chat'/);
 });
 
+void test('secure coding UI never declares source transfer ready from model evidence plus token alone', () => {
+    const api = read('app/Http/Controllers/ModelFabricApiController.php');
+    assert.match(page, /Activation pending/);
+    assert.doesNotMatch(page, /Route and token ready/);
+    assert.match(page, /account billing proof/);
+    assert.match(page, /single-use admission ticket/);
+    assert.match(page, /explicit source-transfer consent/);
+    assert.match(api, /native_admission_required/);
+    assert.match(api, /\$token->private_source && \(! \$strictFreeCloud \|\| \$nativeRoute === null\)/);
+});
+
 void test('guided readiness separates general chat from secure coding and gates unusable tokens', () => {
     assert.match(page, /modelfabric-workflow-readiness/);
     assert.match(page, /token.active && !token.private_source/);
