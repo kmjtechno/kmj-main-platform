@@ -67,7 +67,7 @@ final class ModelFabricGateway
      * @param  list<array{role: string, content: string}>  $messages
      * @param  array{provider_id: string, model: string}|null  $selectedRoute
      * @param  array{provider_id: string, model: string}|null  $nativeRoute
-     * @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string}
+     * @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string, retry_after_seconds?: int}
      */
     public function complete(string $organizationId, array $messages, string $capability = 'chat', bool $privateSource = false, ?string $sessionKey = null, bool $strictFreeCloud = false, ?int $maxCodingTokens = null, ?array $nativeRoute = null, bool $publicPromptsConfirmed = false, ?array $selectedRoute = null): array
     {
