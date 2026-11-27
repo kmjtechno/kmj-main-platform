@@ -118,6 +118,38 @@ export default function Dashboard({
         (entitlement) => entitlement.status === 'active',
     );
 
+    const availableProducts = discoverableProducts.filter(
+        (product) => product.purchase_enabled,
+    );
+    const upcomingProducts = discoverableProducts.filter(
+        (product) => !product.purchase_enabled,
+    );
+    const renderProduct = (product: DiscoverableProduct) => (
+        <article
+            key={product.slug}
+            className="flex min-w-0 flex-col justify-between rounded-xl border p-4"
+        >
+            <div>
+                <h3 className="font-bold">{product.name}</h3>
+                <p className="text-muted-foreground mt-1 text-xs">
+                    {product.lifecycle_label}
+                    {product.purchase_enabled
+                        ? ' · Access requests available'
+                        : ' · Not available for purchase'}
+                </p>
+                <p className="text-muted-foreground mt-3 line-clamp-3 text-xs leading-5">
+                    {product.summary}
+                </p>
+            </div>
+            <Link
+                href={`/products/${encodeURIComponent(product.slug)}`}
+                className="mt-4 inline-flex min-h-10 items-center gap-2 text-xs font-bold text-red-500"
+            >
+                Product details <ArrowRight className="size-4" />
+            </Link>
+        </article>
+    );
+
     return (
         <>
             <Head title="My KMJ Services" />
@@ -291,36 +323,38 @@ export default function Dashboard({
                                 No publicly listed products at present.
                             </p>
                         ) : (
-                            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                                {discoverableProducts.map((product) => (
-                                    <article
-                                        key={product.slug}
-                                        className="flex min-w-0 flex-col justify-between rounded-xl border p-4"
+                            <>
+                                {availableProducts.length > 0 ? (
+                                    <div
+                                        className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                                        data-testid="products-available"
                                     >
-                                        <div>
-                                            <h3 className="font-bold">
-                                                {product.name}
-                                            </h3>
-                                            <p className="text-muted-foreground mt-1 text-xs">
-                                                {product.lifecycle_label}
-                                                {product.purchase_enabled
-                                                    ? ' · Access requests available'
-                                                    : ' · Not available for purchase'}
-                                            </p>
-                                            <p className="text-muted-foreground mt-3 line-clamp-3 text-xs leading-5">
-                                                {product.summary}
-                                            </p>
+                                        {availableProducts.map(renderProduct)}
+                                    </div>
+                                ) : (
+                                    <p className="text-muted-foreground mt-5 rounded-xl border border-dashed p-5 text-sm">
+                                        No product accepts access requests right
+                                        now.
+                                    </p>
+                                )}
+                                {upcomingProducts.length > 0 && (
+                                    <details
+                                        className="mt-4 rounded-xl border p-4"
+                                        data-testid="products-upcoming"
+                                    >
+                                        <summary className="cursor-pointer text-sm font-bold">
+                                            In development (
+                                            {upcomingProducts.length}) · not
+                                            available for purchase
+                                        </summary>
+                                        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                            {upcomingProducts.map(
+                                                renderProduct,
+                                            )}
                                         </div>
-                                        <Link
-                                            href={`/products/${encodeURIComponent(product.slug)}`}
-                                            className="mt-4 inline-flex min-h-10 items-center gap-2 text-xs font-bold text-red-500"
-                                        >
-                                            Product details{' '}
-                                            <ArrowRight className="size-4" />
-                                        </Link>
-                                    </article>
-                                ))}
-                            </div>
+                                    </details>
+                                )}
+                            </>
                         )}
                     </section>
                 )}
