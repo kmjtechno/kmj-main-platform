@@ -372,7 +372,7 @@ final class PublicProductCatalog
             eyebrow: 'Secure remote desktop',
             headline: 'A roadmap product for secure remote access using the shared KMJ account and licensing platform.',
             summary: 'KMJ Connect is the roadmap name for KMJ TECHNO’s remote-desktop product line. The commercial platform is designed for it, but a verified customer release is not yet available.',
-            status: 'Roadmap-defined product. A production-ready KMJ Connect release has not been verified, so download, pricing and purchase remain disabled.',
+            status: 'Roadmap-defined product. A production-ready KMJ Connect release has not been verified, so download and purchase remain disabled.',
             proof: [
                 [
                     'title' => 'Roadmap-defined product',

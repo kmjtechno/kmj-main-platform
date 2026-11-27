@@ -1,4 +1,6 @@
+import ProductPricing from '@/components/pricing/product-pricing';
 import { featureLabel } from '@/lib/customer-labels';
+import type { ProductPrices } from '@/lib/price-labels';
 import { formatIstDate } from '@/lib/format-ist-date-time';
 import { minorDigits } from '@/lib/money-minor';
 import { orderProgress } from '@/lib/order-progress';
@@ -23,6 +25,7 @@ type Product = {
     slug: string;
     name: string;
     features: string[];
+    pricing: ProductPrices | null;
 };
 
 type Order = {
@@ -51,7 +54,7 @@ const purchaseSteps = [
     },
     {
         title: 'KMJ confirms payment',
-        detail: 'KMJ tells you the price. After you agree and pay, KMJ confirms it.',
+        detail: 'KMJ confirms your plan and the amount with GST. After you pay, KMJ confirms it.',
     },
     {
         title: 'Access activated',
@@ -244,10 +247,22 @@ export default function Purchase({
                                     <dl className="space-y-3">
                                         <div>
                                             <dt className="font-bold">Price</dt>
-                                            <dd className="text-muted-foreground">
-                                                Not published yet. KMJ sends you
-                                                the price, and you pay only if
-                                                you agree.
+                                            <dd className="mt-2">
+                                                {selectedProduct.pricing ? (
+                                                    <ProductPricing
+                                                        pricing={
+                                                            selectedProduct.pricing
+                                                        }
+                                                        onSale
+                                                    />
+                                                ) : (
+                                                    <span className="text-muted-foreground">
+                                                        Not published yet. KMJ
+                                                        sends you the price, and
+                                                        you pay only if you
+                                                        agree.
+                                                    </span>
+                                                )}
                                             </dd>
                                         </div>
                                         <div>

@@ -12,6 +12,8 @@ import {
 import ProductBrandVisual from '@/components/public/product-visual';
 import PublicSeo from '@/components/public-seo';
 import ProductShare from '@/components/public/product-share';
+import ProductPricing from '@/components/pricing/product-pricing';
+import type { ProductPrices } from '@/lib/price-labels';
 import PublicSiteFooter from '@/components/public-site-footer';
 import PublicSiteHeader from '@/components/public-site-header';
 import CalibrationDemo from '@/components/products/calibration-demo';
@@ -209,7 +211,13 @@ function ProductVisual({ product }: { product: Product }) {
     );
 }
 
-export default function ProductShow({ product }: { product: Product }) {
+export default function ProductShow({
+    product,
+    pricing = null,
+}: {
+    product: Product;
+    pricing?: ProductPrices | null;
+}) {
     const { auth } = usePage<{ auth?: { user?: unknown } }>().props;
     const signedIn = Boolean(auth?.user);
     const Demo =
@@ -459,6 +467,27 @@ export default function ProductShow({ product }: { product: Product }) {
 
                         <ProductVisual product={product} />
                     </section>
+
+                    {pricing && (
+                        <section
+                            id="pricing"
+                            aria-labelledby="pricing-heading"
+                            className="mx-auto max-w-[1440px] scroll-mt-24 px-5 py-12 sm:px-8 lg:px-12"
+                        >
+                            <h2
+                                id="pricing-heading"
+                                className="text-3xl font-black tracking-tight"
+                            >
+                                Pricing
+                            </h2>
+                            <div className="mt-5">
+                                <ProductPricing
+                                    pricing={pricing}
+                                    onSale={product.purchase_enabled}
+                                />
+                            </div>
+                        </section>
+                    )}
 
                     {product.content?.description ||
                     product.content?.features?.length ||
