@@ -50,7 +50,7 @@ const navigationIcons: Record<string, typeof House> = {
 };
 
 export default function PublicSiteHeader() {
-    const { auth, publicSite, operator } = usePage().props;
+    const { auth, publicSite, operator, localization } = usePage().props;
     const { url } = usePage();
     const [open, setOpen] = useState(false);
     const menuButton = useRef<HTMLButtonElement>(null);
@@ -58,8 +58,9 @@ export default function PublicSiteHeader() {
     const registrationAvailable = publicSite?.registration_available === true;
     const dashboardHref = ownerEnabled ? '/super-admin' : '/dashboard';
     const currentPath = url.split('?')[0].split('#')[0];
-    // The owner asked for a home page without the language button.
-    const showLanguage = currentPath !== '/';
+    // The owner asked to remove the Hindi button. A visitor who already
+    // saved Hindi still needs a way back to English.
+    const showLanguage = localization?.locale === 'hi';
     return (
         <>
             <a className="lock-skip" href="#main-content">
