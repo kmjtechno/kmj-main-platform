@@ -10,7 +10,7 @@ required_workflow = (
     "infra/server/trust/kmj-elite-staging-known_hosts",
     "LOGIN_KEY_MISSING",
     "TRUSTED_HOSTS_FILE_INVALID",
-    "SSH_HOST: '103.212.136.154'",
+    "SSH_HOST: '150.242.200.81'",
     "Fail closed if public staging DNS no longer targets reviewed VPS",
     "STAGING_TLS_REPAIR=BLOCKED DNS_CHANGED_OR_AMBIGUOUS",
     "STAGING_DNS_PIN=PASS",
@@ -38,7 +38,7 @@ for s in required_workflow:
 for s in required_guard:
     assert s in guard, f"existing staging guard missing: {s}"
 HOST_KEY_FILE = Path(__file__).resolve().parents[1] / "infra/server/trust/kmj-elite-staging-known_hosts"
-EXPECTED_HOST_KEY = "103.212.136.154 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINZMT7YHsS5qRX/ciXTbLxKZVCgpJS7m/L9Nwgr3RNZS"
+EXPECTED_HOST_KEY = "150.242.200.81 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINZMT7YHsS5qRX/ciXTbLxKZVCgpJS7m/L9Nwgr3RNZS"
 assert HOST_KEY_FILE.read_text(encoding="utf-8").strip() == EXPECTED_HOST_KEY, "reviewed host key drift"
 assert "pull_request:" in pr_workflow, "PR contract workflow required"
 assert "staging-tls-repair-execute.yml" in pr_workflow, "PR must test execution source"

@@ -30,7 +30,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           mapfile -t ips < <(getent ahostsv4 staging.kmjtechno.com | awk '{print $1}' | sort -u)
-          [[ "${#ips[@]}" == 1 && "${ips[0]}" == 103.212.136.154 ]] || {
+          [[ "${#ips[@]}" == 1 && "${ips[0]}" == 150.242.200.81 ]] || {
             echo 'STAGING_EXTERNAL=BLOCKED DNS_PIN_MISMATCH'; exit 2;
           }
           echo 'STAGING_DNS_PIN=PASS'
