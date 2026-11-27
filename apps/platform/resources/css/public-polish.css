@@ -111,6 +111,7 @@
     margin: 0 28px 14px 0;
 }
 .locked-landing .lock-kristi-person {
+    display: block;
     position: static;
     flex-shrink: 0;
     width: 52px;
@@ -192,6 +193,46 @@
     background: #c1121f;
 }
 
+/* Two columns keep the open guide short, so the page stays usable. */
+.locked-landing .lock-kristi-box {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    gap: 6px;
+    padding: 14px;
+}
+.locked-landing .lock-kristi-box > * {
+    grid-column: 1 / -1;
+}
+.locked-landing .lock-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+}
+.locked-landing .lock-kristi-head {
+    margin-bottom: 4px;
+}
+.locked-landing .lock-kristi-box > .lock-kristi-option {
+    grid-column: auto;
+    gap: 7px;
+    margin: 0;
+    padding: 8px;
+    font-size: 11px;
+    line-height: 1.25;
+}
+.locked-landing .lock-kristi-option > svg {
+    flex-shrink: 0;
+}
+.locked-landing .lock-kristi-option > svg:last-child {
+    display: none;
+}
+.locked-landing .lock-kristi-answer {
+    margin: 0;
+}
+.locked-landing .lock-kristi-box form {
+    margin-top: 2px;
+}
+
 /* Header, footer and menu icons */
 .lock-header.kmj-public-header .lock-auth-login,
 .lock-header.kmj-public-header .lock-auth-register {
@@ -208,6 +249,16 @@
     }
     .lock-header.kmj-public-header nav.is-open a {
         justify-content: flex-start;
+    }
+}
+@media (max-width: 400px) {
+    /* Keeps the menu button on screen while registration is paused. */
+    .lock-header.kmj-public-header .lock-auth .lock-registration-paused {
+        max-width: 84px;
+        font-size: 10.5px;
+        line-height: 1.25;
+        text-align: center;
+        white-space: normal;
     }
 }
 @media (max-width: 560px) {
