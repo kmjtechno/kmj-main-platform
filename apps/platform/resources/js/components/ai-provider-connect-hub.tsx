@@ -195,12 +195,14 @@ export default function AiProviderConnectHub({
                     className="mt-4 flex flex-wrap gap-2"
                     aria-label="Connection methods"
                 >
-                    {([
-                        ['all', 'All providers'],
-                        ['oauth', 'One-click OAuth'],
-                        ['keyless', 'Without API key'],
-                        ['key', 'API key'],
-                    ] as const).map(([value, label]) => (
+                    {(
+                        [
+                            ['all', 'All providers'],
+                            ['oauth', 'One-click OAuth'],
+                            ['keyless', 'Without API key'],
+                            ['key', 'API key'],
+                        ] as const
+                    ).map(([value, label]) => (
                         <button
                             key={value}
                             type="button"
@@ -393,7 +395,9 @@ export default function AiProviderConnectHub({
                             id="modelfabric-keyless-connect"
                             className="kmj-ai-directory-item rounded-xl border p-3"
                         >
-                            <h3 className="font-bold">Kilo Gateway · keyless</h3>
+                            <h3 className="font-bold">
+                                Kilo Gateway · keyless
+                            </h3>
                             <p className="text-muted-foreground text-xs">
                                 Free public chat · 200 requests/hour per IP.
                             </p>

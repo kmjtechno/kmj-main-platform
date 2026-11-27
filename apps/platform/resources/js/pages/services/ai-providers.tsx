@@ -173,14 +173,20 @@ function ProviderCard({
                     </summary>
                     <div className="mt-2 space-y-2">
                         {provider.quota_observations?.map((observation) => (
-                            <p key={observation.model} className="text-muted-foreground">
+                            <p
+                                key={observation.model}
+                                className="text-muted-foreground"
+                            >
                                 {observation.scope === 'model'
                                     ? observation.model
                                     : 'Shared connection'}
                                 {' · '}
-                                {observation.requests_remaining ?? 'Unknown'} requests left
+                                {observation.requests_remaining ??
+                                    'Unknown'}{' '}
+                                requests left
                                 {' · '}
-                                {observation.tokens_remaining ?? 'Unknown'} tokens left
+                                {observation.tokens_remaining ?? 'Unknown'}{' '}
+                                tokens left
                                 {observation.daily_limit != null &&
                                     observation.daily_remaining != null &&
                                     ` · daily ${observation.daily_remaining}/${observation.daily_limit}`}
