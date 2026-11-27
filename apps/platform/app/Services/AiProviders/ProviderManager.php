@@ -274,7 +274,7 @@ final class ProviderManager
      * @param  list<array{role: string, content: string}>  $messages
      * @return array{ok: bool, content: ?string, error_code: ?string, rate?: array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int, daily_requests_limit?: int, daily_reset_seconds?: int}}
      */
-    public function complete(AiProvider $provider, string $model, array $messages, ?int $strictCodingTokens = null, ?AiModelRequest $attempt = null, bool $publicPromptsConfirmed = false): array
+    public function complete(AiProvider $provider, string $model, array $messages, ?int $strictCodingTokens = null, ?AiModelRequest $attempt = null, bool $publicPromptsConfirmed = false, bool $privateData = false): array
     {
         try {
             $this->assertInferenceAllowed($provider, $model);
@@ -298,7 +298,7 @@ final class ProviderManager
             return ['ok' => false, 'content' => null, 'error_code' => 'gateway_reservation_required'];
         }
 
-        return $this->adapter->complete($provider->base_url, $provider->api_key, $this->approvedHosts(), $model, $messages, $strictCodingTokens);
+        return $this->adapter->complete($provider->base_url, $provider->api_key, $this->approvedHosts(), $model, $messages, $strictCodingTokens, $privateData);
     }
 
     /** @return array<string, mixed> */
