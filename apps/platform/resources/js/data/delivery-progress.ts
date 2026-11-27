@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'P0 issue #1233 and keyless gateway regression; consolidated release only after acceptance.',
     },
     {
+        id: 'payments-sandbox-order-step-20261127',
+        title: 'Payments: sandbox test order step reflects the recorded result',
+        state: 'active',
+        detail: 'The guided setup step for the provider sandbox INR 1 test order now turns green from the server-side record of the provider accepting it, with its India-time stamp. This proves only that the stored test keys can create a sandbox order: no payment, no webhook-to-order match and no license are claimed.',
+        evidence:
+            'Source regression and PostgreSQL feature test on the PR; live click and acceptance pending.',
+    },
+    {
         id: 'commerce-order-refund-record-20261126',
         title: 'Commerce: owner-only refund record (manual)',
         state: 'active',
