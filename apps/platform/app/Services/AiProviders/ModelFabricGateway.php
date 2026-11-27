@@ -69,15 +69,26 @@ final class ModelFabricGateway
      * @param  array{provider_id: string, model: string}|null  $nativeRoute
      * @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string, retry_after_seconds?: int}
      */
-    public function complete(string $organizationId, array $messages, string $capability = 'chat', bool $privateSource = false, ?string $sessionKey = null, bool $strictFreeCloud = false, ?int $maxCodingTokens = null, ?array $nativeRoute = null, bool $publicPromptsConfirmed = false, ?array $selectedRoute = null): array
+    public function complete(string $organizationId, array $messages, string $capability = 'chat', bool $privateSource = false, ?string $sessionKey = null, bool $strictFreeCloud = false, ?int $maxCodingTokens = null, ?array $nativeRoute = null, bool $publicPromptsConfirmed = false, ?array $selectedRoute = null, bool $privateMailConsent = false): array
     {
         $profile = $this->profiler->classify($messages, $capability);
-        // Defense in depth: even a future internal KMJ caller cannot use a
-        // private-source capability to skip the native ticket consumed by
-        // ModelFabricApiController. An empty plan or an unverified model is
-        // not permission to upload private source.
-        if ($privateSource && (! $strictFreeCloud || $capability !== 'code' || $nativeRoute === null)) {
-            return $this->fail('native_admission_required', 0, $profile);
+        // Two distinct, consent-gated private workflows:
+        // 1. Source-code generation requires strict-free-cloud and a consumed
+        //    native ticket bound to the exact authenticated request.
+        // 2. Internal Mail AI drafting requires fresh per-request human consent,
+        //    plus the router's no-training evidence and free-price admission.
+        // A bare private chat/code call, or an API caller's untrusted claim,
+        // can never qualify as the internal mail workflow.
+        if ($privateSource) {
+            $nativeCoding = $capability === 'code' && $strictFreeCloud
+                && $nativeRoute !== null && ! $privateMailConsent;
+            $consentedMail = $capability === 'chat' && ! $strictFreeCloud
+                && $nativeRoute === null && $privateMailConsent;
+            if (! $nativeCoding && ! $consentedMail) {
+                return $this->fail('native_admission_required', 0, $profile);
+            }
+        } elseif ($privateMailConsent) {
+            return $this->fail('invalid_private_mail_policy', 0, $profile);
         }
         if ($strictFreeCloud && ($capability !== 'code' || ! $privateSource || ($maxCodingTokens !== null && ($maxCodingTokens < 1 || $maxCodingTokens > 4096)))) {
             return $this->fail('invalid_coding_policy', 0, $profile);
