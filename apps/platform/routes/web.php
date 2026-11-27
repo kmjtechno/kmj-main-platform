@@ -209,9 +209,12 @@ Route::get('/', function (PublicProductCatalog $products) {
     ]);
 })->name('home');
 
-Route::get('products', function (PublicProductCatalog $products) {
+Route::get('products', function (PublicProductCatalog $products, PublishedPriceList $prices) {
     return Inertia::render('products/index', [
         'products' => $products->all(),
+        'pricing' => collect($products->slugs())
+            ->mapWithKeys(fn (string $slug): array => [$slug => $prices->forProduct($slug)])
+            ->all(),
     ]);
 })->name('products.index');
 

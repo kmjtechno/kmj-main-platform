@@ -23,7 +23,7 @@ final class PublicInitialMetadata
 
         $known = [
             'welcome' => ['/', 'KMJ TECHNO — Software, Mobile Apps, Cloud & AI Engineering', 'KMJ TECHNO builds software platforms, cloud systems, AI and immersive experiences.'],
-            'products/index' => ['/products', 'Products — KMJ TECHNO', 'Explore the KMJ TECHNO product portfolio with evidence-backed lifecycle, availability and product status.'],
+            'products/index' => ['/products', 'Software, Cloud & Immersive Products — KMJ TECHNO', 'KMJ TECHNO products: cloud platform, developer tools, remote access, projector calibration and cinema systems, with current status and prices.'],
             'company' => ['/company', 'Company — KMJ TECHNO', 'Learn how KMJ TECHNO approaches software, cloud systems, intelligent automation, immersive technology and governed digital products.'],
             'capabilities' => ['/capabilities', 'Capabilities — KMJ TECHNO', 'Explore KMJ TECHNO focus areas across cloud platforms, AI automation, immersive calibration, security, licensing and connected digital products.'],
             'trust' => ['/trust', 'Trust Center — KMJ TECHNO', 'KMJ TECHNO Trust Center: evidence-backed product lifecycle, governed access, licensing boundaries and release integrity.'],
@@ -55,7 +55,7 @@ final class PublicInitialMetadata
             }
 
             $path = '/products/'.$slug;
-            $title = $name.' — KMJ TECHNO';
+            $title = self::productTitle($name, $product['eyebrow'] ?? null);
             $description = $summary;
             $image = [
                 'kmj-cloudos' => '/assets/products/kmj-cloudos.webp',
@@ -107,10 +107,22 @@ final class PublicInitialMetadata
         } else {
             $schema = [
                 '@context' => 'https://schema.org',
-                '@type' => $component === 'company' ? 'AboutPage' : 'WebPage',
+                '@type' => match ($component) {
+                    'company' => 'AboutPage',
+                    'products/index' => 'CollectionPage',
+                    default => 'WebPage',
+                },
                 'name' => $title,
                 'url' => $canonical,
             ];
+        }
+
+        if ($component === 'products/index') {
+            $schema = [$schema, [
+                '@context' => 'https://schema.org',
+                '@type' => 'ItemList',
+                'itemListElement' => $this->listItems($page['props']['products'] ?? null, $base),
+            ]];
         }
 
         if ($component === 'products/show') {
@@ -165,6 +177,32 @@ final class PublicInitialMetadata
             'type' => str_starts_with($component, 'legal/') || str_starts_with($component, 'products/codebridge/')
                 ? 'article' : 'website',
         ];
+    }
+
+    /** The category phrase helps a title say what the product is. */
+    private static function productTitle(string $name, mixed $eyebrow): string
+    {
+        return is_string($eyebrow) && trim($eyebrow) !== '' && $eyebrow !== 'KMJ TECHNO product catalog'
+            ? $name.': '.trim($eyebrow).' — KMJ TECHNO'
+            : $name.' — KMJ TECHNO';
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function listItems(mixed $products, string $base): array
+    {
+        $items = [];
+        foreach (is_array($products) ? $products : [] as $product) {
+            if (is_array($product) && is_string($product['slug'] ?? null) && is_string($product['name'] ?? null)) {
+                $items[] = [
+                    '@type' => 'ListItem',
+                    'position' => count($items) + 1,
+                    'name' => $product['name'],
+                    'url' => $base.'/products/'.rawurlencode($product['slug']),
+                ];
+            }
+        }
+
+        return $items;
     }
 
     /**

@@ -259,7 +259,12 @@ export default function ProductShow({
     return (
         <>
             <PublicSeo
-                title={product.name + ' — KMJ TECHNO'}
+                title={
+                    product.eyebrow &&
+                    product.eyebrow !== 'KMJ TECHNO product catalog'
+                        ? `${product.name}: ${product.eyebrow} — KMJ TECHNO`
+                        : `${product.name} — KMJ TECHNO`
+                }
                 description={product.summary}
                 path={'/products/' + product.slug}
                 image={image}

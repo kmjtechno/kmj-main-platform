@@ -89,49 +89,10 @@ body:has(.kmj-public-header) main > section {
     font-size: 15px;
     line-height: 1.6;
 }
-.kmj-catalog main > section {
-    padding-top: clamp(24px, 3vw, 48px);
-    padding-bottom: 32px;
-}
 .kmj-catalog main h1 {
     font-size: clamp(36px, 4vw, 64px);
     line-height: 1.08;
     letter-spacing: -0.035em;
-}
-.kmj-catalog-card {
-    min-height: 0;
-    border-radius: 10px;
-    background: #081016;
-    border-color: #344653;
-}
-.kmj-catalog-card .kmj-catalog-body {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding: 20px;
-}
-.kmj-catalog-card h2 {
-    margin-top: 16px;
-    font-size: 24px;
-    line-height: 1.2;
-    letter-spacing: -0.025em;
-}
-.kmj-catalog-card p {
-    font-size: 14px;
-    line-height: 1.6;
-}
-.kmj-catalog-card .kmj-catalog-evidence {
-    display: block;
-    margin-top: auto;
-    padding-top: 16px;
-}
-.kmj-catalog-evidence > summary {
-    min-height: 36px;
-    padding-block: 8px;
-    color: #e4eaf0;
-}
-.kmj-catalog-evidence[open] > :not(summary) {
-    margin-top: 12px;
 }
 @media (max-width: 1050px) {
     .locked-landing .lock-hero-copy {
