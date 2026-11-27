@@ -1,0 +1,32 @@
+name: KMJ Exact 29A982 Local Backup Restore Contract
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/prepare-29a982-p0-local-recovery-20261027.sh'
+      - 'scripts/test_29a982_local_recovery_contract.py'
+      - '.github/workflows/p0-29a982-local-recovery-contract.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/prepare-29a982-p0-local-recovery-20261027.sh'
+      - 'scripts/test_29a982_local_recovery_contract.py'
+      - '.github/workflows/p0-29a982-local-recovery-contract.yml'
+permissions:
+  contents: read
+jobs:
+  pinned-local-recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Parse root helper and assert fail-closed release contract
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/operations/prepare-29a982-p0-local-recovery-20261027.sh
+          python3 -B -m unittest discover -s scripts -p test_29a982_local_recovery_contract.py -v
+          echo 'BACKUP_RESTORE_SCRIPT_CONTRACT=PASS'
+          echo 'PRODUCTION_BACKUP_EXECUTION=NOT_ATTEMPTED'
+          echo 'PRODUCTION_ACTIVATION=NOT_ATTEMPTED'
