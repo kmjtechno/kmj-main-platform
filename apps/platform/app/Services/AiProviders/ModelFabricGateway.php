@@ -176,7 +176,7 @@ final class ModelFabricGateway
 
             $attempts++;
             $started = hrtime(true);
-            $result = $this->manager->complete($provider, (string) $route['model'], $messages, $strictFreeCloud ? ($maxCodingTokens ?? 1024) : null, $attempt, $publicPromptsConfirmed);
+            $result = $this->manager->complete($provider, (string) $route['model'], $messages, $strictFreeCloud ? ($maxCodingTokens ?? 1024) : null, $attempt, $publicPromptsConfirmed, $privateSource);
             $latency = (int) ((hrtime(true) - $started) / 1_000_000);
 
             $attempt->update([
