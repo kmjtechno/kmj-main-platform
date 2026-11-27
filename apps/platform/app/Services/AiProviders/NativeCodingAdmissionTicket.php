@@ -24,6 +24,7 @@ final class NativeCodingAdmissionTicket
         private readonly ModelFabricRouter $router,
         private readonly ProviderManager $manager,
         private readonly NativeOpenRouterAdmission $admission,
+        private readonly ModelFabricGateway $gateway,
     ) {}
 
     /** @return array<string, mixed>|null */
@@ -36,7 +37,8 @@ final class NativeCodingAdmissionTicket
         $attempted = 0;
         foreach ($routes as $route) {
             $provider = AiProvider::query()->where('organization_id', $token->organization_id)->whereKey($route['provider_id'])->first();
-            if ($provider === null || $provider->preset !== 'openrouter' || ModelFabricGateway::coolingUntil($provider->id) !== null) {
+            if ($provider === null || $provider->preset !== 'openrouter'
+                || ! $this->gateway->nativePreflightAllowed($provider, (string) $route['model'])) {
                 continue;
             }
             if (++$attempted > self::MAX_CANDIDATES) {
@@ -84,7 +86,10 @@ final class NativeCodingAdmissionTicket
                 || ! is_string($entry['digest'] ?? null) || ! hash_equals($entry['digest'], $digest)
                 || ! is_int($entry['expires_at'] ?? null) || $entry['expires_at'] <= (int) floor(microtime(true) * 1000)
                 || ! is_string($entry['provider_id'] ?? null) || ! is_string($entry['model'] ?? null)
-                || ! $token->isUsable()) {
+                // Middleware's token object can be stale if an owner revoked
+                // the token during the upstream read-only ticket preflight.
+                // Re-read the exact token row within the consume lock.
+                || ! $token->fresh()?->isUsable()) {
                 return null;
             }
             Cache::forget($key);

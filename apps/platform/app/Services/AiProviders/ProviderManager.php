@@ -274,7 +274,7 @@ final class ProviderManager
      * @param  list<array{role: string, content: string}>  $messages
      * @return array{ok: bool, content: ?string, error_code: ?string, rate?: array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int, daily_requests_limit?: int, daily_reset_seconds?: int}}
      */
-    public function complete(AiProvider $provider, string $model, array $messages, ?int $strictCodingTokens = null, ?AiModelRequest $attempt = null, bool $publicPromptsConfirmed = false): array
+    public function complete(AiProvider $provider, string $model, array $messages, ?int $strictCodingTokens = null, ?AiModelRequest $attempt = null, bool $publicPromptsConfirmed = false, bool $privateData = false): array
     {
         try {
             $this->assertInferenceAllowed($provider, $model);
@@ -298,13 +298,16 @@ final class ProviderManager
             return ['ok' => false, 'content' => null, 'error_code' => 'gateway_reservation_required'];
         }
 
-        return $this->adapter->complete($provider->base_url, $provider->api_key, $this->approvedHosts(), $model, $messages, $strictCodingTokens);
+        return $this->adapter->complete($provider->base_url, $provider->api_key, $this->approvedHosts(), $model, $messages, $strictCodingTokens, $privateData);
     }
 
     /** @return array<string, mixed> */
     public function present(AiProvider $provider): array
     {
         $tier = $this->presets()[$provider->preset]['free_tier'] ?? 'none';
+        $lastSuccess = AiModelRequest::query()->where('organization_id', $provider->organization_id)
+            ->where('ai_provider_id', $provider->id)->where('outcome', 'ok')
+            ->latest('created_at')->first();
 
         return [
             'id' => $provider->id,
@@ -315,6 +318,7 @@ final class ProviderManager
             'enabled' => $provider->enabled,
             'zero_spend' => true,
             'credit_balance' => 'unknown',
+            'last_successful_inference_at' => $lastSuccess?->created_at?->toIso8601String(),
             'free_tier' => $tier,
             'default_model' => $provider->default_model,
             'fallback_models' => $provider->fallback_models ?? [],

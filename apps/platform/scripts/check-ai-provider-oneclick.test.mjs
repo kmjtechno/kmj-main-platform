@@ -26,6 +26,24 @@ void test('OpenRouter account click starts real protected PKCE route once', () =
     assert.match(oauth, /CURLOPT_RESOLVE/);
 });
 
+void test('OVHcloud discovery is visible but never auto-approved or mislabeled OAuth', () => {
+    const config = read('config/ai_providers.php');
+    assert.match(config, /'ovhcloud'.*'free_tier' => 'none'/);
+    assert.match(
+        config,
+        /https:\/\/oai\.endpoints\.kepler\.ai\.cloud\.ovh\.net\/v1/,
+    );
+    assert.match(hub, /key: 'ovhcloud'/);
+    assert.match(
+        hub,
+        /Production pricing and terms are unverified; inference blocked/,
+    );
+    assert.doesNotMatch(
+        hub,
+        /new Set\(\['openrouter', 'huggingface', 'ovhcloud'\]\)/,
+    );
+});
+
 void test('other providers use only exact official key pages, no fake OAuth', () => {
     assert.match(hub, /https:\/\/console\.groq\.com\/keys/);
     assert.match(hub, /https:\/\/aistudio\.google\.com\/apikey/);
@@ -219,4 +237,13 @@ void test('anonymous provider setup requires explicit consent and no pasted key'
     assert.match(page, /BASE \+ '\/connect\/horde-anonymous'/);
     assert.match(page, /community_terms_confirmed: true/);
     assert.match(page, /\{canManage && !keyless && replaceVisible && \(/);
+});
+
+void test('connection method filters and inference receipts distinguish eligibility from usage', () => {
+    assert.match(hub, /Connection methods/);
+    assert.match(hub, /methodOf\(preset.key\) === method/);
+    assert.match(page, /No successful inference recorded/);
+    assert.match(page, /last_successful_inference_at/);
+    assert.match(manager, /where\('outcome', 'ok'\)/);
+    assert.match(css, /grid-template-columns: repeat\(auto-fit/);
 });

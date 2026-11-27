@@ -109,13 +109,44 @@ final class ModelFabricApiController extends Controller
             }
         }
 
+        // A private-source token never authorizes a bare chat POST. Its request
+        // must carry a strict-free-cloud policy AND a fresh, single-use,
+        // exact-body admission ticket. Catalog/evidence alone is not consent to
+        // upload source, and the adapter's price check is not a replacement.
+        if ($token->private_source && (! $strictFreeCloud || $nativeRoute === null)) {
+            return $this->error(403, 'native_admission_required', 'Private source requires strict-free-cloud and a fresh native admission ticket.');
+        }
+
         // The caller's "model" field is ignored on purpose: it cannot pick a paid or unverified model.
         $capability = $token->private_source ? 'code' : 'chat';
         $result = $this->gateway->complete($token->organization_id, $messages, $capability, $token->private_source, $this->sessionKey($request), $strictFreeCloud, isset($data['max_tokens']) ? (int) $data['max_tokens'] : null, $nativeRoute, $this->publicPromptsConfirmed($request));
         if (! $result['ok']) {
             $code = (string) $result['error_code'];
 
-            return $this->error($code === ModelFabricRouter::NO_ROUTE ? 503 : 502, $code, 'No verified-zero route could answer this request.');
+            // OpenAI-compatible clients must distinguish a temporary quota hold
+            // from a failed upstream response. Never turn a billing/owner cap into
+            // a paid fallback: the next request is re-admitted by the gateway.
+            $status = match (true) {
+                $code === ModelFabricRouter::NO_ROUTE => 503,
+                in_array($code, [
+                    'rate_limited',
+                    'model_rate_limited',
+                    'all_routes_cooling_down',
+                    'provider_daily_quota_exhausted',
+                    'keyless_hourly_quota_exhausted',
+                    'daily_cap_reached',
+                    'credit_cap_reached',
+                ], true) => 429,
+                default => 502,
+            };
+
+            $response = $this->error($status, $code, 'No verified-zero route could answer this request.');
+            $retry = $result['retry_after_seconds'] ?? null;
+            if ($status === 429 && is_int($retry) && $retry > 0) {
+                $response->headers->set('Retry-After', (string) $retry);
+            }
+
+            return $response;
         }
 
         $id = 'chatcmpl-mf-'.Str::lower(Str::random(24));

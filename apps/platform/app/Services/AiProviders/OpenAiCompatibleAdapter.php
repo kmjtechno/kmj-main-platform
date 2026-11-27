@@ -166,7 +166,7 @@ final class OpenAiCompatibleAdapter
      * @param  list<array{role: string, content: string}>  $messages
      * @return array{ok: bool, content: ?string, error_code: ?string, rate?: array{requests_remaining: ?int, tokens_remaining: ?int, retry_after: ?int, daily_requests_limit?: int, daily_reset_seconds?: int}}
      */
-    public function complete(string $baseUrl, string $apiKey, array $approvedHosts, string $model, array $messages, ?int $strictCodingTokens = null): array
+    public function complete(string $baseUrl, string $apiKey, array $approvedHosts, string $model, array $messages, ?int $strictCodingTokens = null, bool $privateData = false): array
     {
         if ($strictCodingTokens !== null && ($strictCodingTokens < 1 || $strictCodingTokens > self::MAX_CODING_TOKENS)) {
             return ['ok' => false, 'content' => null, 'error_code' => 'invalid_output_limit'];
@@ -191,6 +191,23 @@ final class OpenAiCompatibleAdapter
             'max_tokens' => $strictCodingTokens ?? self::MAX_COMPLETION_TOKENS,
             'stream' => false,
         ];
+        // For ALL OpenRouter requests, not only private-source coding, constrain the
+        // upstream provider selector to zero-priced inference. A stale :free listing
+        // or provider price change must fail closed instead of spending credits.
+        if ($target['host'] === 'openrouter.ai') {
+            $body['provider'] = [
+                'allow_fallbacks' => false,
+                'max_price' => ['prompt' => 0, 'completion' => 0, 'request' => 0, 'image' => 0],
+            ];
+        }
+        // A tenant's consented private correspondence needs the same endpoint-level
+        // retention and training restrictions as code, even without the native
+        // coding ticket. Otherwise a free OpenRouter model could route a private
+        // email to a backend that retains or trains on the prompt.
+        if ($privateData && $target['host'] === 'openrouter.ai') {
+            $body['provider']['data_collection'] = 'deny';
+            $body['provider']['zdr'] = true;
+        }
         if ($strictCodingTokens !== null) {
             // Independently verify this exact account and model before sending source.
             // Do not route unsupported providers through the general chat path.
@@ -264,7 +281,19 @@ final class OpenAiCompatibleAdapter
             return ['ok' => true, 'content' => $content, 'error_code' => null, 'rate' => $rate];
         }
 
-        return ['ok' => true, 'content' => mb_substr($content, 0, 8000), 'error_code' => null, 'rate' => $rate];
+        // Never turn a provider's explicit token-limit interruption into a successful
+        // completed chat, and never silently truncate the answer returned to KMJ clients.
+        // Some OpenAI-compatible providers omit finish_reason on older API versions;
+        // reject any explicitly non-final reason while preserving those integrations.
+        $finishReason = $response->json('choices.0.finish_reason');
+        if (($finishReason !== null && $finishReason !== 'stop') || str_contains($content, "\0")) {
+            return $fail('incomplete_response');
+        }
+        if (mb_strlen($content) > 8000) {
+            return $fail('response_too_large');
+        }
+
+        return ['ok' => true, 'content' => $content, 'error_code' => null, 'rate' => $rate];
     }
 
     /**
@@ -304,7 +333,7 @@ final class OpenAiCompatibleAdapter
 
     private function retryAfter(?string $value): ?int
     {
-        return is_string($value) && preg_match('/\A\d{1,6}\z/', $value) === 1 ? min(3600, max(1, (int) $value)) : null;
+        return is_string($value) && preg_match('/\A\d{1,6}\z/', $value) === 1 ? max(1, (int) $value) : null;
     }
 
     /**

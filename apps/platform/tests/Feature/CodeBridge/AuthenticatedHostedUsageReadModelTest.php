@@ -90,7 +90,10 @@ final class AuthenticatedHostedUsageReadModelTest extends TestCase
         $this->assertSame(4, $snapshot['organizations'][0]['recorded_reserved_calls']);
         $this->assertTrue($snapshot['organizations'][0]['recorded_only_not_verified']);
         $this->assertStringNotContainsString($foreign, json_encode($snapshot, JSON_THROW_ON_ERROR));
-        $this->assertStringNotContainsString('9876', json_encode($snapshot, JSON_THROW_ON_ERROR));
+        // A legitimate random organization UUID may itself contain "9876".
+        // Test numeric foreign usage fields, not an arbitrary JSON substring.
+        $this->assertNotContains(9876, array_column($snapshot['organizations'], 'recorded_completed_calls'));
+        $this->assertNotContains(7, array_column($snapshot['organizations'], 'recorded_reserved_calls'));
         $this->assertDatabaseCount('codebridge_usage_periods', 3);
     }
 

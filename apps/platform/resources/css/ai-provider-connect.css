@@ -184,3 +184,13 @@
     input[type='checkbox'] {
     min-height: 0;
 }
+
+/* Responsive provider tiles keep discovery and maintenance above the fold. */
+.owner-module-shell .kmj-ai-providers .kmj-ai-connection-list {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+    align-items: start;
+}
+.owner-module-shell .kmj-ai-providers .kmj-ai-managed-provider {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}

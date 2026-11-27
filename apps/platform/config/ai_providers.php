@@ -21,6 +21,9 @@ return [
         'kilo-free' => ['label' => 'Kilo Gateway (keyless)', 'base_url' => 'https://ai-gateway.kilo.ai/api/v1', 'free_tier' => 'catalog-free'],
         // Official anonymous community endpoint: catalog discovery only pending live qualification.
         'horde-anonymous' => ['label' => 'AI Horde (anonymous discovery)', 'base_url' => 'https://oai.aihorde.net/v1', 'free_tier' => 'none'],
+        // OVH documents anonymous 2 RPM/IP/model, but does not establish free production billing.
+        // Keep catalog discovery only: no legitimate zero-charge admission yet.
+        'ovhcloud' => ['label' => 'OVHcloud AI Endpoints (discovery only)', 'base_url' => 'https://oai.endpoints.kepler.ai.cloud.ovh.net/v1', 'free_tier' => 'none'],
         'gemini' => ['label' => 'Google Gemini (OpenAI-compatible)', 'base_url' => 'https://generativelanguage.googleapis.com/v1beta/openai', 'free_tier' => 'allowlist'],
         'cerebras' => ['label' => 'Cerebras', 'base_url' => 'https://api.cerebras.ai/v1', 'free_tier' => 'allowlist'],
         'mistral' => ['label' => 'Mistral', 'base_url' => 'https://api.mistral.ai/v1', 'free_tier' => 'allowlist'],
