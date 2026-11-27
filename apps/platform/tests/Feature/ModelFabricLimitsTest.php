@@ -121,6 +121,20 @@ final class ModelFabricLimitsTest extends TestCase
         Http::assertSentCount(1);
     }
 
+    public function test_synthetic_inference_does_not_claim_success_for_unrelated_provider_output(): void
+    {
+        $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'llama-free');
+        Http::fake(['api.groq.com/*' => Http::response([
+            'choices' => [['message' => ['content' => 'I will think through the prompt instead of giving the sentinel'], 'finish_reason' => 'stop']],
+        ], 200)]);
+
+        $this->confirmed($this->owner)->post('/operator/modelfabric/providers/'.$provider->id.'/inference-check', [
+            'public_prompts_confirmed' => true,
+        ])->assertSessionHasErrors('provider');
+        Http::assertSentCount(1);
+        $this->assertSame(1, AiModelRequest::query()->where('outcome', 'ok')->count());
+    }
+
     public function test_owner_manager_can_save_limits_and_members_cannot(): void
     {
         $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'llama-free');
