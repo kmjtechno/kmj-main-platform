@@ -175,18 +175,13 @@ assert.match(productPage, /<PublicSiteHeader \/>/);
 assert.match(productPage, /<PublicSiteFooter \/>/);
 assert.match(productPage, /business and engineering\./);
 assert.ok(productPage.includes('text-white/72'));
-assert.equal(
-    productPage.split('.padStart(').length,
-    2,
-    'each product card must render its product number exactly once',
-);
 assert.ok(
-    productPage.includes('grid flex-1 gap-8 p-6 sm:p-8'),
+    productPage.includes('flex flex-1 flex-col p-6 sm:p-8'),
     'product cards must keep content padded away from the edges',
 );
 assert.ok(
-    productPage.includes('lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]'),
-    'featured product must use a balanced desktop layout',
+    productPage.includes('md:grid-cols-2 lg:grid-cols-3'),
+    'product cards must reflow from one to three columns',
 );
 
 // Readability regression: body copy, status labels, and microcopy must not

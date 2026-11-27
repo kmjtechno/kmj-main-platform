@@ -40,7 +40,7 @@ final class PublicInitialMetadataTest extends TestCase
         $this->get('/products/kmj-cloudos')
             ->assertOk()
             ->assertSee('<link rel="canonical" href="https://kmjtechno.example/products/kmj-cloudos">', false)
-            ->assertSee('<meta property="og:title" content="KMJ CloudOS — KMJ TECHNO">', false)
+            ->assertSee('<meta property="og:title" content="KMJ CloudOS: Cloud operating platform — KMJ TECHNO">', false)
             ->assertSee('<meta property="og:image" content="https://kmjtechno.example/assets/products/kmj-cloudos.webp">', false);
     }
 

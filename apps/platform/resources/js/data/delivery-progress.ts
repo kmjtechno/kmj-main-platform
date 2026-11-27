@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'all-products-copy-listing-seo-20261127',
+        title: 'All product pages and the product list in plain words',
+        state: 'active',
+        detail: 'SOURCE ONLY: every catalog product has short customer wording, the product list shows status and published or planned price, and it publishes an item list for search. Several product pictures still contain unmeasured figures and need replacement.',
+        evidence:
+            'Local render and source tests; no live, Search Console or answer-engine evidence yet.',
+    },
+    {
         id: 'product-page-seo-geo-20261127',
         title: 'Premium product pages with crawlable answers',
         state: 'active',

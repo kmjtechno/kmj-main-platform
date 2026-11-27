@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\Commerce\KmjProductCatalog;
+use App\Services\Commerce\PublicProductCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -58,5 +59,29 @@ final class ProductDiscoveryContentTest extends TestCase
             ->assertOk()
             ->assertSee('Planned prices (not on sale), GST extra')
             ->assertSee('Summary: ');
+    }
+
+    public function test_product_list_publishes_every_public_product_with_prices(): void
+    {
+        $this->get('/products')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('products/index')
+                ->where('pricing.kmj-cloudos.plans.0.name', 'Professional'))
+            ->assertSee('"@type":"ItemList"', false)
+            ->assertSee('https://kmjtechno.example/products/kmj-omnidesk', false)
+            ->assertSee('<noscript>', false);
+    }
+
+    public function test_catalog_wording_stays_short_and_free_of_internal_terms(): void
+    {
+        $products = app(PublicProductCatalog::class)->all();
+        $this->assertNotEmpty($products);
+
+        foreach ($products as $product) {
+            $text = $product['headline'].' '.$product['summary'].' '.$product['truth']['status'].' '.json_encode($product['proof']);
+            $this->assertDoesNotMatchRegularExpression('/canonical|fail-closed behavior|governed|authority/i', (string) preg_replace('/"state":"[^"]*"/', '', $text), $product['slug']);
+            $this->assertLessThanOrEqual(170, mb_strlen($product['summary']), $product['slug']);
+        }
     }
 }
