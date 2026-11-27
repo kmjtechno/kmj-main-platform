@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Services\Auth\GoogleSignIn;
 use App\Services\Mail\RegistrationMailReadiness;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
@@ -56,6 +57,8 @@ class HandleInertiaRequests extends Middleware
                 // not evidence of external inbox delivery.
                 'registration_available' => ! app()->isProduction()
                     || app(RegistrationMailReadiness::class)->canAttemptDelivery(),
+                // Google sign-in verifies the email itself, so it does not depend on our mailer.
+                'google_signin_available' => app(GoogleSignIn::class)->enabled(),
             ],
             'localization' => [
                 'locale' => $locale,
