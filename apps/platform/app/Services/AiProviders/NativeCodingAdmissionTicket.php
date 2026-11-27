@@ -24,6 +24,7 @@ final class NativeCodingAdmissionTicket
         private readonly ModelFabricRouter $router,
         private readonly ProviderManager $manager,
         private readonly NativeOpenRouterAdmission $admission,
+        private readonly ModelFabricGateway $gateway,
     ) {}
 
     /** @return array<string, mixed>|null */
@@ -36,7 +37,8 @@ final class NativeCodingAdmissionTicket
         $attempted = 0;
         foreach ($routes as $route) {
             $provider = AiProvider::query()->where('organization_id', $token->organization_id)->whereKey($route['provider_id'])->first();
-            if ($provider === null || $provider->preset !== 'openrouter' || ModelFabricGateway::coolingUntil($provider->id) !== null) {
+            if ($provider === null || $provider->preset !== 'openrouter'
+                || ! $this->gateway->nativePreflightAllowed($provider, (string) $route['model'])) {
                 continue;
             }
             if (++$attempted > self::MAX_CANDIDATES) {
