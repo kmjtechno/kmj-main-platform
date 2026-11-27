@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'public-language-button-removed-20261127',
+        title: 'Hindi button removed from public page headers',
+        state: 'active',
+        detail: 'SOURCE ONLY: public pages shown in English no longer have a language button. A visitor whose saved language is Hindi still sees an English button.',
+        evidence:
+            'Local source tests; owner visual acceptance and live evidence pending.',
+    },
+    {
         id: 'public-home-502-link-header-20261127',
         title: 'Home page response headers kept within web server limits',
         state: 'active',
