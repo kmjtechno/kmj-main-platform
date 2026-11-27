@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'P0 issue #1233 and keyless gateway regression; consolidated release only after acceptance.',
     },
     {
+        id: 'customer-dashboard-product-wall-20261127',
+        title: 'Customer dashboard: purchasable products first',
+        state: 'active',
+        detail: 'SOURCE ONLY: the customer dashboard product list shows products that accept access requests first and folds the in-development ones into a collapsed section. Other findings from the owner screenshots are recorded as open items in the customer UX audit, not fixed.',
+        evidence:
+            'Source regression test and type check; no live or mobile check yet.',
+    },
+    {
         id: 'google-signin-own-rate-limit-20261127',
         title: 'Auth: Google sign-in uses its own rate limiter',
         state: 'active',
