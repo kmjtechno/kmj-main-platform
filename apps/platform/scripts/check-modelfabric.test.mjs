@@ -335,11 +335,17 @@ void test('secure coding UI never declares source transfer ready from model evid
 
 void test('secure coding token guide excludes bare SDK completions and explains native admission', () => {
     assert.match(page, /data-testid="modelfabric-coding-connect-warning"/);
-    assert.match(page, /Secure coding tokens cannot use a bare OpenAI SDK completion/);
+    assert.match(
+        page,
+        /Secure coding tokens cannot use a bare OpenAI SDK\s+completion/,
+    );
     assert.match(page, /request-bound single-use native admission ticket/);
     assert.match(page, /id: 'coding-preflight'/);
     assert.match(page, /X-ModelFabric-Policy: strict-free-cloud/);
-    assert.match(page, /const snippets: \{ id: string; label: string; code: string \}\[\] = coding/);
+    assert.match(
+        page,
+        /const snippets: \{ id: string; label: string; code: string \}\[\] = coding/,
+    );
 });
 
 void test('guided readiness separates general chat from secure coding and gates unusable tokens', () => {
