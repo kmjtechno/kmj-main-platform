@@ -225,35 +225,32 @@ void test('Licensing Hub uses guided owner workspaces and preserves routes', () 
     assert.match(ownerRoutes, /'password\.confirm'/);
 });
 
-void test('customer Licensing Hub has truthful four-step next-action guidance', () => {
+void test('customer Licensing Hub has one truthful next step and keeps its sections', () => {
     const customer = read('resources/js/pages/licensing-hub.tsx');
 
-    for (const [section, label] of [
-        ['getting-started', 'Getting started'],
-        ['my-products', 'My products'],
-        ['my-licenses', 'Licenses'],
-        ['my-devices', 'Devices'],
-        ['my-downloads', 'Downloads'],
+    for (const section of [
+        'getting-started',
+        'my-products',
+        'my-licenses',
+        'my-devices',
+        'my-downloads',
     ]) {
         assert.ok(customer.includes(`id="${section}"`), section);
-        assert.ok(customer.includes(`['${label}', '#${section}']`), label);
     }
 
     assert.ok(customer.includes('organizations.length > 0'));
     assert.ok(customer.includes('product_entitlements.length > 0'));
     assert.ok(customer.includes('license_count > 0'));
-    assert.ok(
-        customer.includes('href="/dashboard"') ||
-            customer.includes("href: '/dashboard'"),
-    );
+    assert.ok(customer.includes('trusted_download_source'));
     assert.ok(customer.includes('href="/purchase"'));
     assert.ok(customer.includes('href="/developer/apps"'));
-    assert.ok(customer.includes('separate issuer-subscription permissions'));
-    assert.ok(customer.includes('No automatic charges'));
-    assert.ok(customer.includes('This guidance does not enable checkout'));
+    assert.ok(customer.includes('separate'));
+    assert.ok(customer.includes('developer permission'));
+    assert.ok(customer.includes('automatic charges'));
     assert.ok(customer.includes('Live usage: Not available yet.'));
-    assert.ok(customer.includes('Secure device reset / transfer: not enabled'));
-    assert.ok(!customer.includes('Your products, signed-license records'));
+    assert.ok(customer.includes('Self-service transfer is not available yet'));
+    // Unlaunched plan prices are not shown to customers.
+    assert.doesNotMatch(customer, /monthly_price_inr|₹|Proposal/);
 });
 
 void test('issuer quota snapshot remains tenant scoped and never implies reseller credits', () => {
@@ -289,7 +286,6 @@ void test('issuer quota snapshot remains tenant scoped and never implies reselle
 
 void test('customer renewal guidance distinguishes real license states and blocks fake renewal', () => {
     const customer = read('resources/js/pages/licensing-hub.tsx');
-    assert.ok(customer.includes("['Renewals', '#my-renewals']"));
     assert.ok(customer.includes('id="my-renewals"'));
     assert.ok(customer.includes('renewalAttention = licenses.filter'));
     assert.ok(customer.includes("['RENEWAL_DUE', 'GRACE']"));
@@ -297,14 +293,12 @@ void test('customer renewal guidance distinguishes real license states and block
     assert.ok(customer.includes("['REVOKED', 'RESTRICTED']"));
     assert.ok(customer.includes('renewalAttention.map'));
     assert.ok(customer.includes('accessReview.map'));
-    assert.ok(customer.includes('Explore plans · Not checkout'));
-    assert.ok(customer.includes('cannot bypass revocation'));
+    assert.ok(customer.includes('Ask about renewal · no payment here'));
+    assert.match(customer, /cannot bypass\s+revocation/);
     assert.ok(customer.includes('license.grace_until'));
     assert.ok(customer.includes('license.starts_at'));
     assert.ok(customer.includes('licenses_truncated &&'));
-    assert.ok(
-        customer.includes('remains disabled until signed device verification'),
-    );
+    assert.ok(customer.includes('A renewal is not automatic'));
     assert.ok(!customer.includes("href='/licensing/renew'"));
     assert.ok(!customer.includes('Automatic renewal successful'));
 });

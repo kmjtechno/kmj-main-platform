@@ -35,8 +35,11 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             ->map(static fn (mixed $id): string => (string) $id)
             ->all();
 
-        $fulfillableProductIds = EntitlementPolicy::query()
+        $activePolicies = EntitlementPolicy::query()
             ->where('status', 'active')
+            ->orderBy('capability')
+            ->get(['product_id', 'capability']);
+        $fulfillableProductIds = $activePolicies
             ->pluck('product_id')
             ->unique()
             ->values()
@@ -88,6 +91,14 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                     'id' => (string) $product->getKey(),
                     'slug' => (string) $product->getAttribute('slug'),
                     'name' => (string) $product->getAttribute('name'),
+                    // What an approved request switches on. No price is
+                    // published here until an approved price list exists.
+                    'features' => $activePolicies
+                        ->where('product_id', $product->getKey())
+                        ->pluck('capability')
+                        ->unique()
+                        ->values()
+                        ->all(),
                 ])
                 ->all(),
             'recentOrders' => $recentOrders,

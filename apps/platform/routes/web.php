@@ -15,6 +15,7 @@ use App\Services\Commerce\KmjProductCatalog;
 use App\Services\Commerce\PublicProductCatalog;
 use App\Services\Licensing\CodeBridge\CodeBridgeCustomerDeviceDirectory;
 use App\Services\Licensing\CodeBridge\CodeBridgeDevicePairingService;
+use App\Services\Licensing\Kslp\KslpCustomerWorkspaceQuery;
 use App\Services\Licensing\LicenseAuditRecorder;
 use App\Services\Licensing\SandboxLicenseLifecycle;
 use App\Services\PlatformOwnerAccess;
@@ -390,6 +391,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         EntitlementReader $entitlements,
         CustomerReleaseAccess $releaseAccess,
         PublicProductCatalog $publicProducts,
+        KslpCustomerWorkspaceQuery $licensing,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -498,7 +500,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->values()
             ->all();
 
+        // License records and product access are separate tables. Show both.
+        $licenseRecords = $licensing->licensesForUser($user);
+
         return Inertia::render('dashboard', [
+            'licenses' => $licenseRecords['licenses'],
+            'licenseCount' => $licenseRecords['total'],
             'discoverableProducts' => $discoverableProducts,
             'organizations' => $items,
             'hasPasskey' => $user->passkeys()->exists(),

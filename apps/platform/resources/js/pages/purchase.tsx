@@ -1,10 +1,10 @@
+import { featureLabel } from '@/lib/customer-labels';
 import { formatIstDate } from '@/lib/format-ist-date-time';
 import { minorDigits } from '@/lib/money-minor';
 import { orderProgress } from '@/lib/order-progress';
 import type { FormEvent } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import {
-    BadgeIndianRupee,
     Building2,
     CheckCircle2,
     Clock3,
@@ -22,6 +22,7 @@ type Product = {
     id: string;
     slug: string;
     name: string;
+    features: string[];
 };
 
 type Order = {
@@ -50,11 +51,11 @@ const purchaseSteps = [
     },
     {
         title: 'KMJ confirms payment',
-        detail: 'A KMJ operator agrees price and payment with you, then confirms it.',
+        detail: 'KMJ tells you the price. After you agree and pay, KMJ confirms it.',
     },
     {
         title: 'Access activated',
-        detail: 'After confirmation, access appears on your dashboard.',
+        detail: 'KMJ then switches on your product, and it appears on My Services.',
     },
 ] as const;
 
@@ -91,6 +92,10 @@ export default function Purchase({
         idempotency_key: requestKey,
     });
 
+    const selectedProduct = products.find(
+        (product) => product.id === form.data.product_id,
+    );
+
     const canRequest =
         organizations.length > 0 && products.length > 0 && !form.processing;
 
@@ -110,28 +115,15 @@ export default function Purchase({
         <>
             <Head title="Purchase Center" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 sm:p-6">
-                <section className="from-background via-background overflow-hidden rounded-2xl border bg-gradient-to-br to-emerald-950/10 p-6 sm:p-8">
-                    <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
-                        <div className="max-w-2xl">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                                <BadgeIndianRupee className="h-3.5 w-3.5" />
-                                Purchase requests
-                            </div>
-                            <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">
-                                KMJ Purchase Center
-                            </h1>
-                            <p className="text-muted-foreground mt-3 max-w-xl text-sm leading-6">
-                                Request an active KMJ product for your
-                                organization. Payment evidence is confirmed by a
-                                Platform Owner before access is released through
-                                the entitlement and licensing authority chain.
-                            </p>
-                        </div>
-                        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs font-semibold text-amber-600 dark:text-amber-400">
-                            Payment confirmation does not automatically grant
-                            product access.
-                        </div>
-                    </div>
+                <section className="bg-card rounded-2xl border p-5 sm:p-7">
+                    <h1 className="text-3xl font-black tracking-tight">
+                        Purchase Center
+                    </h1>
+                    <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
+                        Ask to buy a KMJ product for your organization. Nothing
+                        is charged on this page, and sending a request does not
+                        switch anything on.
+                    </p>
                 </section>
 
                 <div className="grid gap-6 xl:grid-cols-[1fr_1.35fr]">
@@ -140,23 +132,13 @@ export default function Purchase({
                             <ShoppingCart className="h-5 w-5 text-red-500" />
                             <h2 className="font-bold">Request a purchase</h2>
                         </div>
-                        <p className="text-muted-foreground mt-1 text-xs">
-                            Choose an organization and active commercial
-                            product. Price/payment facts are confirmed
-                            separately by the operator.
-                        </p>
-                        <ol className="mt-4 grid gap-2 text-xs sm:grid-cols-3">
+                        <ol className="text-muted-foreground mt-3 space-y-2 text-sm leading-6">
                             {purchaseSteps.map((step, index) => (
-                                <li
-                                    key={step.title}
-                                    className="bg-muted/30 rounded-lg border px-3 py-2"
-                                >
-                                    <span className="font-bold">
-                                        {index + 1}. {step.title}
-                                    </span>
-                                    <span className="text-muted-foreground mt-1 block leading-5">
-                                        {step.detail}
-                                    </span>
+                                <li key={step.title}>
+                                    <span className="text-foreground font-bold">
+                                        {index + 1}. {step.title}.
+                                    </span>{' '}
+                                    {step.detail}
                                 </li>
                             ))}
                         </ol>
@@ -180,7 +162,7 @@ export default function Purchase({
                                 >
                                     {organizations.length === 0 ? (
                                         <option value="">
-                                            No purchase-enabled organization
+                                            No organization that can buy
                                         </option>
                                     ) : (
                                         organizations.map((organization) => (
@@ -227,7 +209,7 @@ export default function Purchase({
                                 >
                                     {products.length === 0 ? (
                                         <option value="">
-                                            No commercial product is active yet
+                                            No product is open for purchase
                                         </option>
                                     ) : (
                                         products.map((product) => (
@@ -254,6 +236,35 @@ export default function Purchase({
                                 )}
                             </label>
 
+                            {selectedProduct && (
+                                <div
+                                    className="bg-muted/40 rounded-xl border p-4 text-sm"
+                                    data-testid="purchase-plan-summary"
+                                >
+                                    <dl className="space-y-3">
+                                        <div>
+                                            <dt className="font-bold">Price</dt>
+                                            <dd className="text-muted-foreground">
+                                                Not published yet. KMJ sends you
+                                                the price, and you pay only if
+                                                you agree.
+                                            </dd>
+                                        </div>
+                                        <div>
+                                            <dt className="font-bold">
+                                                What gets switched on
+                                            </dt>
+                                            <dd className="text-muted-foreground">
+                                                {selectedProduct.features
+                                                    .map(featureLabel)
+                                                    .join(', ') ||
+                                                    'KMJ confirms this with the price.'}
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                </div>
+                            )}
+
                             {(form.errors.organization_id ||
                                 form.errors.product_id ||
                                 form.errors.idempotency_key) && (
@@ -267,7 +278,7 @@ export default function Purchase({
                             <button
                                 type="submit"
                                 disabled={!canRequest}
-                                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <ShoppingCart className="h-4 w-4" />
                                 {form.processing
@@ -278,12 +289,11 @@ export default function Purchase({
                     </section>
 
                     <section className="bg-card rounded-2xl border p-5 sm:p-6">
-                        <h2 className="font-bold">Your commercial requests</h2>
-                        <p className="text-muted-foreground mt-1 text-xs">
-                            Requested → payment confirmed → access activated.
-                            Activated products appear on your{' '}
+                        <h2 className="font-bold">Your requests</h2>
+                        <p className="text-muted-foreground mt-1 text-sm">
+                            Activated products appear on{' '}
                             <Link className="underline" href="/dashboard">
-                                dashboard
+                                My Services
                             </Link>
                             .
                         </p>
@@ -332,7 +342,7 @@ export default function Purchase({
                                                 {order.amount_minor !== null &&
                                                 order.currency
                                                     ? `${order.currency} ${(order.amount_minor / 10 ** minorDigits(order.currency)).toFixed(minorDigits(order.currency))}`
-                                                    : 'Amount pending operator confirmation'}
+                                                    : 'Price not confirmed yet'}
                                             </span>
                                         </div>
                                     </div>
