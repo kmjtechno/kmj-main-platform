@@ -230,27 +230,27 @@ final class PublicProductCatalog
             'lifecycle_label' => $purchaseEnabled ? 'Available' : 'Planned',
             'purchase_enabled' => $purchaseEnabled,
             'eyebrow' => 'Cloud operating platform',
-            'headline' => 'Explore the governed CloudOS operating workflow before requesting access.',
-            'summary' => 'KMJ CloudOS is the canonical cloud product in Main Platform. Product access is governed through organization, purchase, entitlement and licensing authority rather than browser state.',
+            'headline' => 'A cloud operating platform with access you can see and control.',
+            'summary' => 'KMJ CloudOS is the cloud operating platform from KMJ TECHNO. Create a KMJ account to get access, and see your plan and licence in one place.',
             'truth' => [
                 'status' => $purchaseEnabled
-                    ? 'Active canonical catalog product with Main Platform entitlement authority.'
-                    : 'Commercial access is unavailable until canonical product and policy authority are active.',
+                    ? 'CloudOS is available now.'
+                    : 'CloudOS is not on sale right now.',
             ],
             'proof' => [
                 [
-                    'title' => 'Canonical product authority',
-                    'detail' => 'The Main Platform catalog binds the kmj-cloudos slug to the governed commercial product.',
+                    'title' => 'Access you can check',
+                    'detail' => 'Your CloudOS access is recorded against your KMJ account or organization and shown in My Services.',
                     'state' => 'repository-verified',
                 ],
                 [
-                    'title' => 'Entitlement boundary',
-                    'detail' => 'Access uses the cloudos.platform.access capability and remains separate from payment confirmation.',
+                    'title' => 'No surprise charges',
+                    'detail' => 'Nothing is charged automatically. Paid access starts only after KMJ confirms your payment.',
                     'state' => 'repository-verified',
                 ],
                 [
-                    'title' => 'Safe virtual workflow',
-                    'detail' => 'The browser demo uses deterministic sample events and never controls live infrastructure.',
+                    'title' => 'A safe demo',
+                    'detail' => 'The demo on this page uses sample events and never touches live systems.',
                     'state' => 'simulation',
                 ],
             ],
@@ -259,10 +259,10 @@ final class PublicProductCatalog
                 'simulation' => true,
                 'label' => 'Interactive workflow simulation',
                 'steps' => [
-                    ['key' => 'monitor', 'label' => 'Monitor', 'detail' => 'Inspect a seeded service-health snapshot.'],
-                    ['key' => 'validate', 'label' => 'Validate', 'detail' => 'Review deterministic readiness checks.'],
-                    ['key' => 'deploy', 'label' => 'Deploy', 'detail' => 'Preview an isolated simulated deployment transition.'],
-                    ['key' => 'verify', 'label' => 'Verify', 'detail' => 'Confirm a synthetic post-deploy state and rollback boundary.'],
+                    ['key' => 'monitor', 'label' => 'Monitor', 'detail' => 'Look at a sample service health snapshot.'],
+                    ['key' => 'validate', 'label' => 'Validate', 'detail' => 'Review sample readiness checks.'],
+                    ['key' => 'deploy', 'label' => 'Deploy', 'detail' => 'Preview a simulated deployment.'],
+                    ['key' => 'verify', 'label' => 'Verify', 'detail' => 'Check the sample result and the rollback point.'],
                 ],
             ],
             'cta' => [

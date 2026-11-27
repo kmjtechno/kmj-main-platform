@@ -1,19 +1,9 @@
 import { Link, usePage } from '@inertiajs/react';
-import {
-    Activity,
-    ArrowRight,
-    CheckCircle2,
-    Code2,
-    LockKeyhole,
-    ServerCog,
-    ShieldCheck,
-    Sparkles,
-} from 'lucide-react';
+import { ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react';
 import ProductBrandVisual from '@/components/public/product-visual';
 import PublicSeo from '@/components/public-seo';
 import ProductShare from '@/components/public/product-share';
-import ProductPricing from '@/components/pricing/product-pricing';
-import type { ProductPrices } from '@/lib/price-labels';
+import { priceLines, type ProductPrices } from '@/lib/price-labels';
 import PublicSiteFooter from '@/components/public-site-footer';
 import PublicSiteHeader from '@/components/public-site-header';
 import CalibrationDemo from '@/components/products/calibration-demo';
@@ -75,148 +65,134 @@ type Product = {
     };
 };
 
-function ProductVisual({ product }: { product: Product }) {
-    const steps = product.demo.steps.length
-        ? product.demo.steps
-        : [
-              {
-                  key: 'discover',
-                  label: 'Discover',
-                  detail: 'Product boundary',
-              },
-              { key: 'govern', label: 'Govern', detail: 'Access authority' },
-              { key: 'verify', label: 'Verify', detail: 'Release evidence' },
-          ];
+type Access = 'trial' | 'request' | 'preregister';
 
+type Answer = { question: string; answer: string };
+
+// Only states a visitor can act on get a label.
+const proofLabels: Record<string, string> = {
+    'roadmap-verified': 'On the product roadmap',
+    'fail-closed': 'Held back until verified',
+    simulation: 'Demo with sample data',
+};
+
+const primaryButton =
+    'inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#c1121f] px-6 text-sm font-black text-white shadow-[0_14px_40px_rgba(193,18,31,.35)] transition hover:bg-[#a50f1a]';
+const secondaryButton =
+    'inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.03] px-6 text-sm font-bold text-white/85 transition hover:border-white/30 hover:text-white';
+const container = 'mx-auto w-full max-w-[1280px] px-5 sm:px-8';
+const eyebrow =
+    'text-[11px] font-black tracking-[0.22em] text-[#ff6a72] uppercase';
+const heading = 'mt-3 text-3xl font-black tracking-[-0.035em] sm:text-4xl';
+const card = 'rounded-2xl border border-white/[0.09] bg-white/[0.025] p-6';
+
+function ProductArtwork({ product }: { product: Product }) {
     return (
-        <div className="relative">
-            <div className="absolute -inset-10 rounded-[3rem] bg-[#ed2632]/10 blur-[90px]" />
-            <div className="relative overflow-hidden rounded-[2rem] border border-white/[0.11] bg-[#0a0d12]/96 shadow-[0_40px_120px_rgba(0,0,0,.55)]">
-                <div className="flex h-12 items-center justify-between border-b border-white/[0.07] px-5">
-                    <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-[#ef3340]" />
-                        <span className="h-2 w-2 rounded-full bg-white/16" />
-                        <span className="h-2 w-2 rounded-full bg-white/10" />
-                    </div>
-                    <div className="text-[10px] font-black tracking-[0.18em] text-white/65 uppercase">
-                        Product experience
-                    </div>
-                </div>
-
-                <div className="grid gap-4 p-5 sm:p-6">
-                    {product.image_path ? (
-                        <img
-                            src={product.image_path}
-                            alt={product.content?.image_alt || product.name}
-                            className="aspect-video w-full rounded-xl object-contain"
-                        />
-                    ) : (
-                        <ProductBrandVisual
-                            slug={product.slug}
-                            name={product.name}
-                            kind={product.demo.kind}
-                        />
-                    )}
-
-                    <div className="flex items-start justify-between gap-6 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5">
-                        <div>
-                            <div className="text-[10px] font-bold tracking-[0.16em] text-white/65 uppercase">
-                                Operational boundary
-                            </div>
-                            <div className="mt-2 text-lg font-black tracking-[-0.025em] text-white">
-                                {product.name}
-                            </div>
-                            <div className="mt-1 text-xs leading-5 text-white/65">
-                                Governed by KMJ Main Platform authority
-                            </div>
-                        </div>
-                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#ef3340]/20 bg-[#ef3340]/10">
-                            <ServerCog className="h-5 w-5 text-[#ff4a54]" />
-                        </div>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-3">
-                        <div className="rounded-2xl border border-white/[0.07] bg-[#080a0e] p-4">
-                            <Activity className="h-4 w-4 text-emerald-300/80" />
-                            <div className="mt-5 text-[10px] font-bold tracking-[0.16em] text-white/65 uppercase">
-                                Lifecycle
-                            </div>
-                            <div className="mt-1 text-sm font-black text-white/86">
-                                {product.lifecycle_label}
-                            </div>
-                        </div>
-                        <div className="rounded-2xl border border-white/[0.07] bg-[#080a0e] p-4">
-                            <LockKeyhole className="h-4 w-4 text-[#ff4a54]" />
-                            <div className="mt-5 text-[10px] font-bold tracking-[0.16em] text-white/65 uppercase">
-                                Access
-                            </div>
-                            <div className="mt-1 text-sm font-black text-white/86">
-                                {product.purchase_enabled
-                                    ? 'Governed'
-                                    : 'Closed'}
-                            </div>
-                        </div>
-                        <div className="rounded-2xl border border-white/[0.07] bg-[#080a0e] p-4">
-                            <ShieldCheck className="h-4 w-4 text-sky-300/80" />
-                            <div className="mt-5 text-[10px] font-bold tracking-[0.16em] text-white/65 uppercase">
-                                Claims
-                            </div>
-                            <div className="mt-1 text-sm font-black text-white/86">
-                                Evidence-led
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-white/[0.07] bg-[#080a0e] p-5">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <div className="text-[10px] font-bold tracking-[0.16em] text-white/65 uppercase">
-                                    Workflow
-                                </div>
-                                <div className="mt-1 text-sm font-bold text-white/75">
-                                    {product.demo.simulation
-                                        ? 'Interactive browser simulation'
-                                        : 'Verified product boundary'}
-                                </div>
-                            </div>
-                            <span className="rounded-full border border-white/10 px-2.5 py-1 text-[9px] font-bold tracking-[0.12em] text-white/65 uppercase">
-                                Safe preview
-                            </span>
-                        </div>
-                        <div className="mt-5 grid gap-2">
-                            {steps.slice(0, 4).map((step, index) => (
-                                <div
-                                    key={step.key}
-                                    className="flex items-center gap-3 rounded-xl border border-white/[0.055] bg-white/[0.02] px-3 py-3"
-                                >
-                                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white/[0.05] text-[10px] font-black text-white/65">
-                                        {String(index + 1).padStart(2, '0')}
-                                    </span>
-                                    <div className="min-w-0 flex-1">
-                                        <div className="text-xs font-bold text-white/75">
-                                            {step.label}
-                                        </div>
-                                        <div className="mt-0.5 truncate text-[10px] text-white/65">
-                                            {step.detail}
-                                        </div>
-                                    </div>
-                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300/45" />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
+        <figure className="relative min-w-0">
+            <div className="pointer-events-none absolute -inset-6 rounded-[3rem] bg-[#c1121f]/15 blur-[80px]" />
+            <div className="relative overflow-hidden rounded-[1.75rem] border border-white/[0.12] bg-[#0a0d12] p-2 shadow-[0_40px_120px_rgba(0,0,0,.55)]">
+                {product.image_path ? (
+                    <img
+                        src={product.image_path}
+                        alt={product.content?.image_alt || product.name}
+                        width={1280}
+                        height={960}
+                        fetchPriority="high"
+                        className="aspect-[4/3] w-full rounded-[1.35rem] object-contain"
+                    />
+                ) : (
+                    <ProductBrandVisual
+                        slug={product.slug}
+                        name={product.name}
+                        kind={product.demo.kind}
+                    />
+                )}
             </div>
-        </div>
+            <figcaption className="relative mt-4 text-center text-xs leading-5 text-white/65">
+                Concept artwork. Any figures shown in the picture are
+                illustrative, not measured results.
+            </figcaption>
+        </figure>
+    );
+}
+
+function PlanCards({
+    pricing,
+    onSale,
+    action,
+}: {
+    pricing: ProductPrices;
+    onSale: boolean;
+    action: { href: string; label: string };
+}) {
+    return (
+        <ul className="mt-10 grid grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))] gap-4">
+            {pricing.plans.map((plan) => {
+                const [price, ...notes] = priceLines(plan);
+                // "₹499 + GST per user / month": the amount leads, terms follow.
+                const [, amount, terms] =
+                    price.match(/^(₹[\d,.]+)\s+(.+)$/) ?? [];
+
+                return (
+                    <li
+                        key={plan.name}
+                        className="flex flex-col rounded-3xl border border-white/[0.1] bg-gradient-to-b from-white/[0.055] to-white/[0.015] p-7"
+                    >
+                        <h3 className="text-sm font-black tracking-[0.12em] text-white/75 uppercase">
+                            {plan.name}
+                        </h3>
+                        <p className="mt-4 text-2xl leading-snug font-black tracking-[-0.025em] text-white">
+                            {amount ? (
+                                <>
+                                    <span className="text-5xl">{amount}</span>{' '}
+                                    <span className="text-sm font-bold tracking-normal text-white/70">
+                                        {terms}
+                                    </span>
+                                </>
+                            ) : (
+                                price
+                            )}
+                        </p>
+                        {notes.map((note) => (
+                            <p
+                                key={note}
+                                className="mt-2 text-sm text-white/70"
+                            >
+                                {note}
+                            </p>
+                        ))}
+                        <div className="mt-auto pt-7">
+                            {onSale ? (
+                                <Link
+                                    href={action.href}
+                                    className={secondaryButton + ' w-full'}
+                                    aria-label={`${action.label}: ${plan.name}`}
+                                >
+                                    {action.label}
+                                </Link>
+                            ) : (
+                                <p className="rounded-xl border border-white/10 px-4 py-3 text-center text-xs font-bold text-white/70">
+                                    Planned price. Not on sale yet.
+                                </p>
+                            )}
+                        </div>
+                    </li>
+                );
+            })}
+        </ul>
     );
 }
 
 export default function ProductShow({
     product,
     pricing = null,
+    access = 'preregister',
+    answers = [],
 }: {
     product: Product;
     pricing?: ProductPrices | null;
+    access?: Access;
+    answers?: Answer[];
 }) {
     const { auth } = usePage<{ auth?: { user?: unknown } }>().props;
     const signedIn = Boolean(auth?.user);
@@ -226,6 +202,59 @@ export default function ProductShow({
             : product.demo.kind === 'calibration'
               ? CalibrationDemo
               : null;
+    const onSale = product.purchase_enabled;
+    const signupHref = signedIn
+        ? '/dashboard'
+        : `/register?product=${encodeURIComponent(product.slug)}`;
+    const primary = {
+        trial: {
+            href: signupHref,
+            label: signedIn ? 'Open My Services' : 'Start 30-day free trial',
+        },
+        request: { href: '/purchase', label: 'Request access' },
+        preregister: {
+            href: signupHref,
+            label: signedIn ? 'Open My Services' : 'Pre-register',
+        },
+    }[access];
+    const reassurance = {
+        trial: 'Verify your email and the trial starts. Nothing is charged automatically.',
+        request:
+            'Access is activated after KMJ confirms your payment. Nothing is charged automatically.',
+        preregister:
+            'Free to pre-register. Access is not given until the product is released.',
+    }[access];
+    const steps = {
+        trial: [
+            ['Create your account', 'Sign up with your email.'],
+            ['Verify your email', 'Your 30-day free trial starts.'],
+            [
+                'Choose a plan',
+                'Request a paid plan when you are ready. Paid access starts after KMJ confirms payment.',
+            ],
+        ],
+        request: [
+            ['Create your account', 'Sign up and verify your email.'],
+            ['Request access', 'Tell us which plan you need.'],
+            ['Get activated', 'Access starts after KMJ confirms your payment.'],
+        ],
+        preregister: [
+            ['Create your account', 'Sign up and verify your email.'],
+            ['Pre-register', 'We record your interest in this product.'],
+            [
+                'Wait for release',
+                'Nothing is charged, and access is not given before release.',
+            ],
+        ],
+    }[access];
+    const accountNote =
+        onSale && !signedIn ? (
+            <p className="mt-2 max-w-xl text-xs leading-5 text-white/65">
+                Requesting access needs a KMJ account. No payment is taken at
+                this step.
+            </p>
+        ) : null;
+    const image = product.image_path || productSocialImages[product.slug];
 
     return (
         <>
@@ -233,26 +262,24 @@ export default function ProductShow({
                 title={product.name + ' — KMJ TECHNO'}
                 description={product.summary}
                 path={'/products/' + product.slug}
-                image={product.image_path || productSocialImages[product.slug]}
+                image={image}
                 imageAlt={
                     product.content?.image_alt || product.name + ' — KMJ TECHNO'
                 }
                 structuredData={[
-                    ...(product.content?.faqs?.length
+                    ...(answers.length
                         ? [
                               {
                                   '@context': 'https://schema.org',
                                   '@type': 'FAQPage',
-                                  mainEntity: product.content.faqs.map(
-                                      (faq) => ({
-                                          '@type': 'Question',
-                                          name: faq.question,
-                                          acceptedAnswer: {
-                                              '@type': 'Answer',
-                                              text: faq.answer,
-                                          },
-                                      }),
-                                  ),
+                                  mainEntity: answers.map((faq) => ({
+                                      '@type': 'Question',
+                                      name: faq.question,
+                                      acceptedAnswer: {
+                                          '@type': 'Answer',
+                                          text: faq.answer,
+                                      },
+                                  })),
                               },
                           ]
                         : []),
@@ -312,126 +339,381 @@ export default function ProductShow({
                 ]}
             />
 
-            <div className="min-h-screen overflow-hidden bg-[#06080b] text-white selection:bg-[#ef2632] selection:text-white">
-                <div className="pointer-events-none fixed inset-0">
-                    <div className="absolute -top-72 left-[16%] h-[44rem] w-[44rem] rounded-full bg-[#a30f18]/15 blur-[150px]" />
-                    <div className="absolute top-[35rem] right-[-18rem] h-[38rem] w-[38rem] rounded-full bg-[#ef2632]/8 blur-[140px]" />
-                </div>
-
+            <div className="min-h-screen overflow-x-clip bg-[#030b10] text-white selection:bg-[#ef2632] selection:text-white">
                 <PublicSiteHeader />
 
-                <main id="main-content" className="relative z-10">
-                    <section className="mx-auto grid max-w-[1440px] gap-14 px-5 pt-16 pb-20 sm:px-8 lg:grid-cols-[1.02fr_.98fr] lg:items-center lg:px-12 lg:pt-24 lg:pb-28">
-                        <div>
-                            <Link
-                                href="/products"
-                                className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.12em] text-white/65 uppercase transition hover:text-white/90"
-                            >
-                                Products
-                                <span className="text-white/65">/</span>
-                                <span className="text-white/62">
-                                    {product.name}
-                                </span>
-                            </Link>
+                <main id="main-content">
+                    <section className="relative isolate">
+                        <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_70%_60%_at_75%_20%,rgba(193,18,31,0.16),transparent_70%)]" />
+                        <div className={container + ' pt-8 pb-16 lg:pb-24'}>
+                            <nav aria-label="Breadcrumb">
+                                <ol className="flex flex-wrap items-center gap-2 text-xs font-bold text-white/65">
+                                    <li>
+                                        <Link
+                                            href="/products"
+                                            className="hover:text-white"
+                                        >
+                                            Products
+                                        </Link>
+                                    </li>
+                                    <li aria-hidden="true">/</li>
+                                    <li aria-current="page">{product.name}</li>
+                                </ol>
+                            </nav>
 
-                            <div className="mt-8 flex flex-wrap items-center gap-3">
-                                <span className="rounded-full border border-white/10 bg-white/[0.035] px-3.5 py-1.5 text-[10px] font-black tracking-[0.12em] text-white/65 uppercase">
-                                    {product.category}
-                                </span>
-                                <span className="rounded-full border border-[#ef3340]/30 bg-[#ef3340]/10 px-3.5 py-1.5 text-[10px] font-black tracking-[0.16em] text-[#ff6a72] uppercase">
-                                    {product.eyebrow}
-                                </span>
-                                <span className="rounded-full border border-white/10 bg-white/[0.035] px-3.5 py-1.5 text-[10px] font-bold tracking-[0.1em] text-white/65 uppercase">
-                                    {product.lifecycle_label}
-                                </span>
+                            <div className="mt-10 grid items-center gap-12 lg:grid-cols-[1fr_1.05fr] lg:gap-16">
+                                <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1.5 text-[11px] font-black tracking-[0.12em] text-white/80 uppercase">
+                                            <span
+                                                aria-hidden="true"
+                                                className={
+                                                    'h-1.5 w-1.5 rounded-full ' +
+                                                    (onSale
+                                                        ? 'bg-emerald-400'
+                                                        : 'bg-amber-300')
+                                                }
+                                            />
+                                            {product.lifecycle_label}
+                                        </span>
+                                        <span className={eyebrow}>
+                                            {product.eyebrow}
+                                        </span>
+                                    </div>
+
+                                    <h1 className="mt-6 font-black text-balance">
+                                        {product.name}
+                                    </h1>
+                                    <p className="mt-5 max-w-xl text-xl leading-8 font-bold text-balance text-white sm:text-2xl sm:leading-9">
+                                        {product.headline}
+                                    </p>
+                                    <p className="mt-4 max-w-xl text-base leading-7 text-white/70">
+                                        {product.summary}
+                                    </p>
+
+                                    {product.variants &&
+                                        product.variants.length > 0 && (
+                                            <ul
+                                                aria-label="Platform configurations"
+                                                className="mt-6 flex flex-wrap gap-2"
+                                            >
+                                                {product.variants.map(
+                                                    (variant) => (
+                                                        <li
+                                                            key={variant}
+                                                            className="rounded-full border border-[#ef3340]/30 bg-[#ef3340]/[0.08] px-3.5 py-1.5 text-xs font-black text-[#ff8087]"
+                                                        >
+                                                            {variant}
+                                                        </li>
+                                                    ),
+                                                )}
+                                            </ul>
+                                        )}
+
+                                    <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                                        <Link
+                                            href={primary.href}
+                                            className={primaryButton}
+                                        >
+                                            {primary.label}
+                                            <ArrowRight
+                                                aria-hidden="true"
+                                                className="h-4 w-4"
+                                            />
+                                        </Link>
+                                        {pricing ? (
+                                            <a
+                                                href="#pricing"
+                                                className={secondaryButton}
+                                            >
+                                                See pricing
+                                            </a>
+                                        ) : Demo ? (
+                                            <a
+                                                href="#demo"
+                                                className={secondaryButton}
+                                            >
+                                                Try the demo
+                                            </a>
+                                        ) : (
+                                            <Link
+                                                href="/products"
+                                                className={secondaryButton}
+                                            >
+                                                All products
+                                            </Link>
+                                        )}
+                                    </div>
+                                    <p className="mt-4 max-w-xl text-sm leading-6 text-white/65">
+                                        {reassurance}
+                                    </p>
+                                    {access === 'request' && !pricing
+                                        ? accountNote
+                                        : null}
+                                </div>
+
+                                <ProductArtwork product={product} />
                             </div>
+                        </div>
+                    </section>
 
-                            <h1 className="mt-7 max-w-3xl text-5xl leading-[0.94] font-black tracking-[-0.06em] sm:text-6xl lg:text-[5.1rem]">
-                                {product.name}
-                            </h1>
-                            <p className="mt-7 max-w-2xl text-xl leading-9 font-medium tracking-[-0.015em] text-white/68 sm:text-2xl sm:leading-10">
-                                {product.headline}
-                            </p>
-                            <p className="mt-5 max-w-2xl text-sm leading-7 text-white/66 sm:text-[15px]">
-                                {product.summary}
-                            </p>
+                    {pricing && (
+                        <section
+                            id="pricing"
+                            aria-labelledby="pricing-heading"
+                            className="scroll-mt-24 border-t border-white/[0.07]"
+                        >
+                            <div className={container + ' py-16 lg:py-24'}>
+                                <p className={eyebrow}>Pricing</p>
+                                <h2 id="pricing-heading" className={heading}>
+                                    {onSale
+                                        ? 'Choose your plan'
+                                        : 'Planned pricing'}
+                                </h2>
+                                <PlanCards
+                                    pricing={pricing}
+                                    onSale={onSale}
+                                    action={{
+                                        href: '/purchase',
+                                        label: 'Request this plan',
+                                    }}
+                                />
+                                <p className="mt-5 text-xs leading-5 text-white/65">
+                                    GST is extra. Your own cloud, AI provider,
+                                    hardware and onsite costs are not included.
+                                    Nothing is charged automatically.
+                                </p>
+                                {accountNote}
+                            </div>
+                        </section>
+                    )}
 
-                            {product.variants &&
-                                product.variants.length > 0 && (
-                                    <div className="mt-7">
-                                        <div className="text-[10px] font-black tracking-[0.14em] text-white/65 uppercase">
-                                            Platform configurations
-                                        </div>
-                                        <div className="mt-3 flex flex-wrap gap-2">
-                                            {product.variants.map((variant) => (
-                                                <span
-                                                    key={variant}
-                                                    className="rounded-full border border-[#ef3340]/25 bg-[#ef3340]/[0.07] px-3.5 py-2 text-xs font-black tracking-[0.08em] text-[#ff727a]"
-                                                >
-                                                    {variant}
-                                                </span>
-                                            ))}
-                                        </div>
+                    <section
+                        aria-labelledby="start-heading"
+                        className="border-t border-white/[0.07] bg-white/[0.015]"
+                    >
+                        <div className={container + ' py-16 lg:py-24'}>
+                            <p className={eyebrow}>Getting access</p>
+                            <h2 id="start-heading" className={heading}>
+                                Three clear steps
+                            </h2>
+                            <ol className="mt-10 grid gap-4 md:grid-cols-3">
+                                {steps.map(([title, detail], index) => (
+                                    <li key={title} className={card}>
+                                        <span className="grid h-10 w-10 place-items-center rounded-full bg-[#c1121f] text-sm font-black">
+                                            {index + 1}
+                                        </span>
+                                        <h3 className="mt-5 text-lg font-black">
+                                            {title}
+                                        </h3>
+                                        <p className="mt-2 text-sm leading-6 text-white/70">
+                                            {detail}
+                                        </p>
+                                    </li>
+                                ))}
+                            </ol>
+                        </div>
+                    </section>
+
+                    {product.content?.description ||
+                    product.content?.features?.length ||
+                    product.content?.banner_path ? (
+                        <section
+                            aria-label="Product details"
+                            className="border-t border-white/[0.07]"
+                        >
+                            <div
+                                className={
+                                    container + ' grid gap-10 py-16 lg:py-24'
+                                }
+                            >
+                                {product.content.banner_path && (
+                                    <img
+                                        src={product.content.banner_path}
+                                        alt={
+                                            product.content.image_alt ||
+                                            product.name
+                                        }
+                                        loading="lazy"
+                                        className="aspect-video w-full rounded-3xl object-cover"
+                                    />
+                                )}
+                                {product.content.description && (
+                                    <div>
+                                        <h2 className={heading}>
+                                            About {product.name}
+                                        </h2>
+                                        <p className="mt-5 max-w-3xl text-base leading-8 whitespace-pre-wrap text-white/75">
+                                            {product.content.description}
+                                        </p>
                                     </div>
                                 )}
-
-                            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-                                {Demo ? (
-                                    <a
-                                        href="#demo"
-                                        className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-black text-[#07090c] transition hover:-translate-y-0.5 hover:bg-white/90"
-                                    >
-                                        Explore the product
-                                        <ArrowRight className="h-4 w-4" />
-                                    </a>
-                                ) : (
-                                    <Link
-                                        href="/products"
-                                        className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-black text-[#07090c] transition hover:-translate-y-0.5 hover:bg-white/90"
-                                    >
-                                        Explore portfolio
-                                        <ArrowRight className="h-4 w-4" />
-                                    </Link>
-                                )}
-
-                                {product.purchase_enabled ? (
-                                    <Link
-                                        href="/purchase"
-                                        className="inline-flex h-12 items-center justify-center rounded-xl border border-white/12 bg-white/[0.035] px-6 text-sm font-bold text-white/78 transition hover:border-white/22 hover:bg-white/[0.07] hover:text-white"
-                                    >
-                                        Request commercial access
-                                    </Link>
-                                ) : (
-                                    <span className="inline-flex h-12 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.02] px-6 text-sm font-bold text-white/65">
-                                        {product.lifecycle_label}
-                                    </span>
-                                )}
+                                {product.content.features &&
+                                    product.content.features.length > 0 && (
+                                        <div>
+                                            <h2 className={heading}>
+                                                Product features
+                                            </h2>
+                                            <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+                                                {product.content.features.map(
+                                                    (feature, index) => (
+                                                        <li
+                                                            key={index}
+                                                            className="flex gap-3 rounded-2xl border border-white/[0.09] p-4 text-sm leading-6 text-white/80"
+                                                        >
+                                                            <CheckCircle2
+                                                                aria-hidden="true"
+                                                                className="mt-0.5 h-4 w-4 shrink-0 text-[#ff6a72]"
+                                                            />
+                                                            {feature}
+                                                        </li>
+                                                    ),
+                                                )}
+                                            </ul>
+                                        </div>
+                                    )}
                             </div>
+                        </section>
+                    ) : null}
 
-                            {(product.slug === 'kmj-cloudos' ||
-                                !product.purchase_enabled) && (
-                                <Link
-                                    href={
-                                        signedIn
-                                            ? '/dashboard'
-                                            : `/register?product=${encodeURIComponent(product.slug)}`
-                                    }
-                                    className="mt-4 inline-flex min-h-12 items-center rounded-xl bg-[#c1121f] px-6 text-sm font-black text-white"
-                                >
-                                    {product.slug === 'kmj-cloudos' &&
-                                    product.purchase_enabled
-                                        ? '30-day free trial'
-                                        : 'Pre-register'}
-                                </Link>
-                            )}
-
-                            {product.purchase_enabled && !signedIn ? (
-                                <p className="mt-3 max-w-xl text-xs leading-5 text-white/55">
-                                    Requesting access needs a KMJ account. You
-                                    will be asked to log in or create one first.
-                                    No payment is taken at this step.
+                    {Demo ? (
+                        <section
+                            id="demo"
+                            className="scroll-mt-24 border-t border-white/[0.07]"
+                        >
+                            <div className={container + ' py-16 lg:py-24'}>
+                                <p className={eyebrow}>Interactive demo</p>
+                                <h2 className={heading}>
+                                    See how the workflow runs
+                                </h2>
+                                <p className="mt-4 max-w-2xl text-base leading-7 text-white/70">
+                                    {product.truth.status} The demo runs in your
+                                    browser and controls no live system.
                                 </p>
-                            ) : null}
+                                <div className="mt-10 min-w-0">
+                                    <Demo steps={product.demo.steps} />
+                                </div>
+                            </div>
+                        </section>
+                    ) : (
+                        <section className="border-t border-white/[0.07]">
+                            <div className={container + ' py-16'}>
+                                <div className={card}>
+                                    <p className={eyebrow}>Current status</p>
+                                    <p className="mt-3 max-w-3xl text-base leading-7 text-white/75">
+                                        {product.truth.status}
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+                    )}
+
+                    {product.proof.length > 0 && (
+                        <section
+                            aria-labelledby="trust-heading"
+                            className="border-t border-white/[0.07] bg-white/[0.015]"
+                        >
+                            <div className={container + ' py-16 lg:py-24'}>
+                                <p className={eyebrow}>Trust</p>
+                                <h2 id="trust-heading" className={heading}>
+                                    What you can rely on today
+                                </h2>
+                                <ul className="mt-10 grid grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))] gap-4">
+                                    {product.proof.map((item) => (
+                                        <li key={item.title} className={card}>
+                                            <ShieldCheck
+                                                aria-hidden="true"
+                                                className="h-6 w-6 text-[#ff6a72]"
+                                            />
+                                            <h3 className="mt-4 text-lg font-black">
+                                                {item.title}
+                                            </h3>
+                                            <p className="mt-2 text-sm leading-6 text-white/70">
+                                                {item.detail}
+                                            </p>
+                                            {proofLabels[item.state] && (
+                                                <p className="mt-4 text-xs font-bold text-white/65">
+                                                    {proofLabels[item.state]}
+                                                </p>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </section>
+                    )}
+
+                    {answers.length > 0 && (
+                        <section
+                            aria-labelledby="faq-heading"
+                            className="border-t border-white/[0.07]"
+                        >
+                            <div
+                                className={
+                                    container +
+                                    ' grid gap-10 py-16 lg:grid-cols-[.7fr_1.3fr] lg:py-24'
+                                }
+                            >
+                                <div>
+                                    <p className={eyebrow}>FAQ</p>
+                                    <h2 id="faq-heading" className={heading}>
+                                        Common questions
+                                    </h2>
+                                </div>
+                                <div className="min-w-0 border-t border-white/10">
+                                    {answers.map((item, index) => (
+                                        <details
+                                            key={item.question}
+                                            open={index === 0}
+                                            className="group border-b border-white/10"
+                                        >
+                                            <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 py-4 text-base font-bold">
+                                                {item.question}
+                                                <span
+                                                    aria-hidden="true"
+                                                    className="text-2xl text-[#ff6a72] group-open:rotate-45"
+                                                >
+                                                    +
+                                                </span>
+                                            </summary>
+                                            <p className="pb-5 text-sm leading-7 whitespace-pre-wrap text-white/75">
+                                                {item.answer}
+                                            </p>
+                                        </details>
+                                    ))}
+                                </div>
+                            </div>
+                        </section>
+                    )}
+
+                    <section className="border-t border-white/[0.07]">
+                        <div className={container + ' py-16 lg:py-20'}>
+                            <div className="rounded-3xl border border-[#c1121f]/30 bg-gradient-to-br from-[#c1121f]/20 to-transparent p-8 sm:p-12">
+                                <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+                                    <div className="max-w-xl">
+                                        <h2 className="text-3xl font-black tracking-[-0.035em]">
+                                            Get started with {product.name}
+                                        </h2>
+                                        <p className="mt-3 text-sm leading-6 text-white/75">
+                                            {reassurance}
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-col gap-3 sm:flex-row">
+                                        <Link
+                                            href={primary.href}
+                                            className={primaryButton}
+                                        >
+                                            {primary.label}
+                                        </Link>
+                                        <Link
+                                            href="/products"
+                                            className={secondaryButton}
+                                        >
+                                            All products
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
 
                             <ProductShare
                                 name={product.name}
@@ -439,286 +721,22 @@ export default function ProductShow({
                             />
 
                             {product.slug === 'kmj-codebridge' && (
-                                <div className="mt-6 flex flex-wrap gap-2 text-xs font-bold text-white/65">
-                                    <Link
-                                        href="/products/kmj-codebridge/terms"
-                                        className="rounded-lg border border-white/10 bg-white/[0.025] px-3 py-2 transition hover:border-white/20 hover:text-white/80"
-                                    >
-                                        Terms of Service
-                                    </Link>
-                                    <Link
-                                        href="/products/kmj-codebridge/privacy"
-                                        className="rounded-lg border border-white/10 bg-white/[0.025] px-3 py-2 transition hover:border-white/20 hover:text-white/80"
-                                    >
-                                        Privacy Policy
-                                    </Link>
-                                    <Link
-                                        href="/products/kmj-codebridge/support"
-                                        className="rounded-lg border border-white/10 bg-white/[0.025] px-3 py-2 transition hover:border-white/20 hover:text-white/80"
-                                    >
-                                        Support
-                                    </Link>
-                                </div>
-                            )}
-
-                            <div className="mt-10 grid max-w-2xl gap-px overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.07] sm:grid-cols-3">
-                                {[
-                                    ['Authority', 'Canonical product'],
-                                    ['Access', 'Entitlement governed'],
-                                    ['Safety', 'Production isolated'],
-                                ].map(([label, value]) => (
-                                    <div
-                                        key={label}
-                                        className="bg-[#080b0f] px-5 py-4"
-                                    >
-                                        <div className="text-[9px] font-black tracking-[0.16em] text-white/65 uppercase">
+                                <div className="mt-6 flex flex-wrap gap-2 text-xs font-bold">
+                                    {[
+                                        ['terms', 'Terms of Service'],
+                                        ['privacy', 'Privacy Policy'],
+                                        ['support', 'Support'],
+                                    ].map(([path, label]) => (
+                                        <Link
+                                            key={path}
+                                            href={`/products/kmj-codebridge/${path}`}
+                                            className="inline-flex min-h-10 items-center rounded-lg border border-white/10 px-3 text-white/75 hover:text-white"
+                                        >
                                             {label}
-                                        </div>
-                                        <div className="mt-1.5 text-xs font-bold text-white/62">
-                                            {value}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <ProductVisual product={product} />
-                    </section>
-
-                    {pricing && (
-                        <section
-                            id="pricing"
-                            aria-labelledby="pricing-heading"
-                            className="mx-auto max-w-[1440px] scroll-mt-24 px-5 py-12 sm:px-8 lg:px-12"
-                        >
-                            <h2
-                                id="pricing-heading"
-                                className="text-3xl font-black tracking-tight"
-                            >
-                                Pricing
-                            </h2>
-                            <div className="mt-5">
-                                <ProductPricing
-                                    pricing={pricing}
-                                    onSale={product.purchase_enabled}
-                                />
-                            </div>
-                        </section>
-                    )}
-
-                    {product.content?.description ||
-                    product.content?.features?.length ||
-                    product.content?.faqs?.length ||
-                    product.content?.banner_path ? (
-                        <section
-                            aria-label="Product details"
-                            className="mx-auto grid max-w-[1440px] gap-8 px-5 py-12 sm:px-8 lg:px-12"
-                        >
-                            {product.content.banner_path && (
-                                <img
-                                    src={product.content.banner_path}
-                                    alt={
-                                        product.content.image_alt ||
-                                        product.name
-                                    }
-                                    className="aspect-video w-full rounded-2xl object-cover"
-                                />
-                            )}
-                            {product.content.description && (
-                                <div>
-                                    <h2 className="text-2xl font-bold">
-                                        About {product.name}
-                                    </h2>
-                                    <p className="mt-4 max-w-4xl text-base leading-8 whitespace-pre-wrap text-white/75">
-                                        {product.content.description}
-                                    </p>
+                                        </Link>
+                                    ))}
                                 </div>
                             )}
-                            {product.content.features &&
-                                product.content.features.length > 0 && (
-                                    <div>
-                                        <h2 className="text-2xl font-bold">
-                                            Product features
-                                        </h2>
-                                        <ul className="mt-4 grid list-disc gap-3 pl-5 text-white/75 sm:grid-cols-2">
-                                            {product.content.features.map(
-                                                (feature, index) => (
-                                                    <li key={index}>
-                                                        {feature}
-                                                    </li>
-                                                ),
-                                            )}
-                                        </ul>
-                                    </div>
-                                )}
-                            {product.content.faqs &&
-                                product.content.faqs.length > 0 && (
-                                    <div>
-                                        <h2 className="mb-4 text-2xl font-bold">
-                                            Product questions
-                                        </h2>
-                                        {product.content.faqs.map(
-                                            (faq, index) => (
-                                                <details
-                                                    key={index}
-                                                    className="border-b border-white/10 py-4"
-                                                >
-                                                    <summary className="cursor-pointer font-semibold">
-                                                        {faq.question}
-                                                    </summary>
-                                                    <p className="mt-3 max-w-4xl leading-7 whitespace-pre-wrap text-white/75">
-                                                        {faq.answer}
-                                                    </p>
-                                                </details>
-                                            ),
-                                        )}
-                                    </div>
-                                )}
-                        </section>
-                    ) : null}
-
-                    <section className="border-y border-white/[0.07] bg-[#090c10]/72">
-                        <div className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
-                            <div className="grid gap-12 lg:grid-cols-[.8fr_1.2fr]">
-                                <div className="max-w-lg">
-                                    <div className="inline-flex items-center gap-2 text-[10px] font-black tracking-[0.2em] text-[#ff5962] uppercase">
-                                        <Sparkles className="h-3.5 w-3.5" />
-                                        Product foundation
-                                    </div>
-                                    <h2 className="mt-4 text-3xl font-black tracking-[-0.045em] sm:text-4xl">
-                                        Built around verifiable authority, not
-                                        marketing shortcuts.
-                                    </h2>
-                                    <p className="mt-5 text-sm leading-7 text-white/65">
-                                        The public experience stays aligned with
-                                        product lifecycle, access authority and
-                                        release evidence. Internal engineering
-                                        controls remain outside the customer
-                                        surface.
-                                    </p>
-                                </div>
-
-                                <div className="grid gap-4 md:grid-cols-3">
-                                    {product.proof.map((item, index) => {
-                                        const Icon =
-                                            index === 0
-                                                ? Code2
-                                                : index === 1
-                                                  ? ShieldCheck
-                                                  : CheckCircle2;
-
-                                        return (
-                                            <article
-                                                key={item.title}
-                                                className="group rounded-[1.5rem] border border-white/[0.08] bg-[#07090d] p-6 transition hover:-translate-y-1 hover:border-white/[0.14]"
-                                            >
-                                                <div className="grid h-10 w-10 place-items-center rounded-xl border border-[#ef3340]/18 bg-[#ef3340]/8">
-                                                    <Icon className="h-4.5 w-4.5 text-[#ff5962]" />
-                                                </div>
-                                                <div className="mt-6 text-base font-black tracking-[-0.02em] text-white/90">
-                                                    {item.title}
-                                                </div>
-                                                <p className="mt-3 text-sm leading-6 text-white/65">
-                                                    {item.detail}
-                                                </p>
-                                                <div className="mt-6 text-[9px] font-black tracking-[0.15em] text-white/65 uppercase">
-                                                    {item.state.replaceAll(
-                                                        '-',
-                                                        ' ',
-                                                    )}
-                                                </div>
-                                            </article>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    {Demo ? (
-                        <section id="demo" className="scroll-mt-24">
-                            <div className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-28">
-                                <div className="grid gap-10 lg:grid-cols-[.78fr_1.22fr]">
-                                    <div className="lg:pt-4">
-                                        <div className="text-[10px] font-black tracking-[0.2em] text-[#ff5962] uppercase">
-                                            Interactive product experience
-                                        </div>
-                                        <h2 className="mt-4 text-4xl font-black tracking-[-0.05em] sm:text-5xl">
-                                            Understand the workflow by using it.
-                                        </h2>
-                                        <p className="mt-5 max-w-lg text-sm leading-7 text-white/65">
-                                            This deterministic browser
-                                            simulation explains the product flow
-                                            without controlling production
-                                            infrastructure or claiming
-                                            unverified physical capability.
-                                        </p>
-                                        <div className="mt-7 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5">
-                                            <div className="text-[9px] font-black tracking-[0.15em] text-white/65 uppercase">
-                                                Current verified status
-                                            </div>
-                                            <p className="mt-2 text-sm leading-6 text-white/55">
-                                                {product.truth.status}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="overflow-hidden rounded-[1.75rem] border border-white/[0.09] bg-[#090c10] shadow-[0_32px_90px_rgba(0,0,0,.38)]">
-                                        <Demo steps={product.demo.steps} />
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-                    ) : (
-                        <section className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
-                            <div className="overflow-hidden rounded-[2rem] border border-white/[0.08] bg-gradient-to-br from-white/[0.045] to-transparent p-8 sm:p-10">
-                                <div className="max-w-3xl">
-                                    <div className="text-[10px] font-black tracking-[0.2em] text-amber-200/65 uppercase">
-                                        Product lifecycle
-                                    </div>
-                                    <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
-                                        Public demo stays closed until real
-                                        evidence is ready.
-                                    </h2>
-                                    <p className="mt-5 text-sm leading-7 text-white/65">
-                                        KMJ TECHNO publishes customer-facing
-                                        screenshots, downloads and performance
-                                        claims only after the corresponding
-                                        product gates are verified.
-                                    </p>
-                                </div>
-                            </div>
-                        </section>
-                    )}
-
-                    <section className="border-t border-white/[0.07] bg-[#090b0f]">
-                        <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-5 py-16 sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:px-12 lg:py-20">
-                            <div className="max-w-2xl">
-                                <div className="text-[10px] font-black tracking-[0.2em] text-white/65 uppercase">
-                                    KMJ TECHNO
-                                </div>
-                                <h2 className="mt-3 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
-                                    One product ecosystem. Clear authority at
-                                    every layer.
-                                </h2>
-                            </div>
-                            <div className="flex flex-col gap-3 sm:flex-row">
-                                <Link
-                                    href="/products"
-                                    className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/10 px-5 text-sm font-bold text-white/72 transition hover:border-white/20 hover:text-white"
-                                >
-                                    Explore all products
-                                </Link>
-                                {product.purchase_enabled && (
-                                    <Link
-                                        href="/purchase"
-                                        className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#ef2632] px-6 text-sm font-black text-white transition hover:bg-[#ff3742]"
-                                    >
-                                        Request access
-                                        <ArrowRight className="h-4 w-4" />
-                                    </Link>
-                                )}
-                            </div>
                         </div>
                     </section>
                 </main>

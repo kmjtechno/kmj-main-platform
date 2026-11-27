@@ -34,7 +34,7 @@ export default function CloudOSDemo({ steps }: { steps: Step[] }) {
                                 CloudOS workflow
                             </div>
                         </div>
-                        <div className="text-sm font-bold text-white/35">
+                        <div className="text-sm font-bold text-white/65">
                             {progress}%
                         </div>
                     </div>
@@ -103,17 +103,17 @@ export default function CloudOSDemo({ steps }: { steps: Step[] }) {
                                 </div>
 
                                 <div className="mt-5 rounded-2xl border border-white/[0.08] bg-[#090b0f]/95 p-5">
-                                    <div className="text-xs font-bold tracking-[0.14em] text-white/30 uppercase">
+                                    <div className="text-xs font-bold tracking-[0.14em] text-white/65 uppercase">
                                         Step {active + 1} of {steps.length}
                                     </div>
                                     <div className="mt-2 text-2xl font-black">
                                         {current.label}
                                     </div>
-                                    <p className="mt-3 text-sm leading-6 text-white/48">
+                                    <p className="mt-3 text-sm leading-6 text-white/65">
                                         {current.detail}
                                     </p>
                                     <div className="mt-4 text-xs leading-5 text-amber-100/55">
-                                        Seeded browser simulation only — no live
+                                        Demo with sample data only — no live
                                         service, worker or infrastructure is
                                         controlled from this demo.
                                     </div>
@@ -125,7 +125,7 @@ export default function CloudOSDemo({ steps }: { steps: Step[] }) {
                             <button
                                 type="button"
                                 onClick={() => setActive(0)}
-                                className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 px-4 text-sm font-semibold text-white/50 transition hover:text-white"
+                                className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 px-4 text-sm font-semibold text-white/65 transition hover:text-white"
                             >
                                 <RotateCcw className="h-4 w-4" />
                                 Reset
@@ -138,7 +138,7 @@ export default function CloudOSDemo({ steps }: { steps: Step[] }) {
                                     )
                                 }
                                 disabled={active === steps.length - 1}
-                                className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#e21b23] px-4 text-sm font-bold transition hover:bg-[#f1252e] disabled:cursor-not-allowed disabled:opacity-35"
+                                className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#c1121f] px-4 text-sm font-bold transition hover:bg-[#a50f1a] disabled:cursor-not-allowed disabled:opacity-35"
                             >
                                 Next step
                                 <ArrowRight className="h-4 w-4" />

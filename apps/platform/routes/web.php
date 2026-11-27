@@ -15,6 +15,7 @@ use App\Services\Commerce\KmjProductCatalog;
 use App\Services\Commerce\ProductSignups;
 use App\Services\Commerce\PublicProductCatalog;
 use App\Services\Commerce\PublishedPriceList;
+use App\Services\Seo\ProductAnswers;
 use App\Services\Licensing\CodeBridge\CodeBridgeCustomerDeviceDirectory;
 use App\Services\Licensing\CodeBridge\CodeBridgeDevicePairingService;
 use App\Services\Licensing\Kslp\KslpCustomerWorkspaceQuery;
@@ -214,7 +215,7 @@ Route::get('products', function (PublicProductCatalog $products) {
     ]);
 })->name('products.index');
 
-Route::get('products/{slug}', function (string $slug, PublicProductCatalog $products, PublishedPriceList $prices) {
+Route::get('products/{slug}', function (string $slug, PublicProductCatalog $products, PublishedPriceList $prices, ProductAnswers $answers) {
     if (in_array($slug, KmjProductCatalog::LEGACY_CINEMA_VARIANT_SLUGS, true)) {
         return redirect()->route('products.show', [
             'slug' => KmjProductCatalog::CINEMA_PLATFORM_SLUG,
@@ -224,9 +225,13 @@ Route::get('products/{slug}', function (string $slug, PublicProductCatalog $prod
     $product = $products->find($slug);
     abort_if($product === null, 404);
 
+    $pricing = $prices->forProduct($slug);
+
     return Inertia::render('products/show', [
         'product' => $product,
-        'pricing' => $prices->forProduct($slug),
+        'pricing' => $pricing,
+        'access' => $answers->access($product),
+        'answers' => $answers->forProduct($product, $pricing),
     ]);
 })->name('products.show');
 
@@ -238,14 +243,14 @@ Route::get('company', fn () => Inertia::render('company'))->name('company');
 
 Route::get('capabilities', fn () => Inertia::render('capabilities'))->name('capabilities');
 
-Route::get('llms.txt', function (PublicProductCatalog $products) {
+Route::get('llms.txt', function (PublicProductCatalog $products, PublishedPriceList $prices, ProductAnswers $answers) {
     $items = collect($products->all())
-        ->map(function (array $product): string {
+        ->map(function (array $product) use ($prices, $answers): string {
             $variants = isset($product['variants']) && is_array($product['variants'])
                 ? ' | Configurations: '.implode(', ', $product['variants'])
                 : '';
 
-            return sprintf(
+            $line = sprintf(
                 '- %s | %s | %s%s | https://kmjtechno.com/products/%s',
                 $product['name'],
                 $product['category'],
@@ -253,6 +258,19 @@ Route::get('llms.txt', function (PublicProductCatalog $products) {
                 $variants,
                 $product['slug'],
             );
+
+            $summary = trim((string) preg_replace('/\s+/u', ' ', (string) ($product['summary'] ?? '')));
+            if ($summary !== '') {
+                $line .= "\n  Summary: ".$summary;
+            }
+
+            $plans = $answers->planSentences($prices->forProduct((string) $product['slug']));
+            if ($plans !== []) {
+                $label = $product['purchase_enabled'] === true ? 'Prices' : 'Planned prices (not on sale)';
+                $line .= "\n  {$label}, GST extra: ".implode('; ', $plans);
+            }
+
+            return $line;
         })
         ->implode("\n");
 
