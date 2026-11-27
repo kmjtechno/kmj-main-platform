@@ -33,6 +33,12 @@ body:has(.kmj-public-header) main {
 body:has(.kmj-public-header) main > section {
     max-width: 1680px;
 }
+/* Capped sections stay centred on screens wider than the cap. */
+.kmj-public-header > div,
+.kmj-public-footer > div,
+body:has(.kmj-public-header) main > section {
+    margin-inline: auto;
+}
 .kmj-public-header {
     background-color: #05090d;
     backdrop-filter: none;
@@ -89,10 +95,94 @@ body:has(.kmj-public-header) main > section {
     font-size: 15px;
     line-height: 1.6;
 }
-.kmj-catalog main h1 {
-    font-size: clamp(36px, 4vw, 64px);
-    line-height: 1.08;
-    letter-spacing: -0.035em;
+.kmj-public-page.kmj-catalog main h1 {
+    font-size: clamp(40px, 6.4vw, 96px);
+    line-height: 1.02;
+    letter-spacing: -0.045em;
+}
+/* The hero light spans the whole screen, not just the reading width. */
+.kmj-catalog main > section.kmj-hero {
+    max-width: none;
+}
+.kmj-hero-glow {
+    background:
+        radial-gradient(
+            ellipse 55% 60% at 50% 0%,
+            rgba(214, 22, 42, 0.32),
+            transparent 70%
+        ),
+        radial-gradient(
+            ellipse 30% 40% at 8% 70%,
+            rgba(150, 10, 28, 0.18),
+            transparent 70%
+        ),
+        radial-gradient(
+            ellipse 30% 40% at 92% 70%,
+            rgba(150, 10, 28, 0.18),
+            transparent 70%
+        );
+}
+.kmj-shine {
+    background: linear-gradient(100deg, #ff4552 5%, #ffd9dc 48%, #ff4552 95%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+.kmj-card {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.065),
+        rgba(255, 255, 255, 0.012)
+    );
+    box-shadow: 0 30px 60px -40px rgba(0, 0, 0, 0.9);
+}
+.kmj-card:hover,
+.kmj-card:focus-within {
+    border-color: rgba(255, 58, 74, 0.65);
+    box-shadow: 0 34px 80px -34px rgba(214, 22, 42, 0.55);
+}
+@media (prefers-reduced-motion: no-preference) {
+    .kmj-card {
+        transition:
+            transform 0.45s ease,
+            border-color 0.45s ease,
+            box-shadow 0.45s ease;
+    }
+    .kmj-card img {
+        transition: transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+    .kmj-card:hover {
+        transform: translateY(-6px);
+    }
+    .kmj-card:hover img {
+        transform: scale(1.05);
+    }
+    .kmj-rise {
+        animation: kmj-rise 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    }
+    .kmj-shine {
+        background-size: 200% 100%;
+        animation: kmj-shine 7s ease-in-out infinite alternate;
+    }
+}
+@keyframes kmj-rise {
+    from {
+        transform: translateY(22px);
+    }
+}
+@keyframes kmj-shine {
+    from {
+        background-position: 0% 0;
+    }
+    to {
+        background-position: 100% 0;
+    }
+}
+@media (forced-colors: active) {
+    .kmj-shine {
+        color: CanvasText;
+    }
 }
 @media (max-width: 1050px) {
     .locked-landing .lock-hero-copy {
