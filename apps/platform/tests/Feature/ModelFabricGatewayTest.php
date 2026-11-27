@@ -517,6 +517,10 @@ final class ModelFabricGatewayTest extends TestCase
     public function test_internal_mail_consent_requires_private_chat_and_never_authorizes_coding(): void
     {
         $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        // Private mail requires explicit documented no-training evidence.
+        // The generic provider test helper intentionally defaults to unknown.
+        AiModelEvidence::query()->where('ai_provider_id', $provider->id)
+            ->update(['data_handling' => 'no-training-documented']);
         Http::fake(['api.groq.com/*' => Http::response([
             'choices' => [['message' => ['content' => 'consented editable mail reply']]],
         ], 200)]);
