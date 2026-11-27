@@ -10,7 +10,6 @@ use App\Http\Middleware\ThrottlePublicRegistration;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -44,11 +43,13 @@ return Application::configure(basePath: dirname(__DIR__))
         // Web-only middleware does not protect the /api/* and health route groups.
         $middleware->append(SecurityHeaders::class);
 
+        // Do not add AddLinkHeadersForPreloadedAssets: its Link header grows with
+        // every built asset and can overflow the web server header buffer (502).
+        // @vite already writes the same preload tags into the HTML.
         $middleware->web(append: [
             HandleAppearance::class,
             SetPreferredLocale::class,
             HandleInertiaRequests::class,
-            AddLinkHeadersForPreloadedAssets::class,
             StagingDeploymentEvidence::class,
             ThrottlePublicRegistration::class,
             RegistrationBotGuardMiddleware::class,
