@@ -188,7 +188,26 @@ final class ModelFabricGateway
             $this->penalize($provider, (string) $route['model'], $last, $result['rate'] ?? null);
         }
 
-        return $this->fail($last, $attempts, $profile);
+        // A retry hint is emitted only when a CURRENT, already-admitted
+        // route is actually cooling. Account billing credits and unknown daily
+        // reset windows are never guessed or represented as a Retry-After.
+        $retryAfter = null;
+        if (in_array($last, ['rate_limited', 'model_rate_limited', 'all_routes_cooling_down'], true)) {
+            $now = now()->getTimestamp();
+            foreach ($plan['routes'] as $route) {
+                $providerId = (string) $route['provider_id'];
+                $until = max(
+                    self::coolingUntil($providerId) ?? 0,
+                    $this->modelCoolingUntil($providerId, (string) $route['model']) ?? 0,
+                );
+                if ($until > $now) {
+                    $remaining = $until - $now;
+                    $retryAfter = $retryAfter === null ? $remaining : min($retryAfter, $remaining);
+                }
+            }
+        }
+
+        return $this->fail($last, $attempts, $profile, $retryAfter);
     }
 
     /**
@@ -634,9 +653,18 @@ final class ModelFabricGateway
         return 'modelfabric:fail:'.$providerId;
     }
 
-    /** @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string} */
-    private function fail(string $code, int $attempts, string $profile): array
+    /** @return array{ok: bool, content: ?string, error_code: ?string, provider: ?string, model: ?string, attempts: int, profile: string, retry_after_seconds?: int} */
+    private function fail(string $code, int $attempts, string $profile, ?int $retryAfterSeconds = null): array
     {
-        return ['ok' => false, 'content' => null, 'error_code' => $code, 'provider' => null, 'model' => null, 'attempts' => $attempts, 'profile' => $profile];
+        return [
+            'ok' => false,
+            'content' => null,
+            'error_code' => $code,
+            'provider' => null,
+            'model' => null,
+            'attempts' => $attempts,
+            'profile' => $profile,
+            ...($retryAfterSeconds === null ? [] : ['retry_after_seconds' => $retryAfterSeconds]),
+        ];
     }
 }
