@@ -72,6 +72,13 @@ final class ModelFabricGateway
     public function complete(string $organizationId, array $messages, string $capability = 'chat', bool $privateSource = false, ?string $sessionKey = null, bool $strictFreeCloud = false, ?int $maxCodingTokens = null, ?array $nativeRoute = null, bool $publicPromptsConfirmed = false, ?array $selectedRoute = null): array
     {
         $profile = $this->profiler->classify($messages, $capability);
+        // Defense in depth: even a future internal KMJ caller cannot use a
+        // private-source capability to skip the native ticket consumed by
+        // ModelFabricApiController. An empty plan or an unverified model is
+        // not permission to upload private source.
+        if ($privateSource && (! $strictFreeCloud || $capability !== 'code' || $nativeRoute === null)) {
+            return $this->fail('native_admission_required', 0, $profile);
+        }
         if ($strictFreeCloud && ($capability !== 'code' || ! $privateSource || ($maxCodingTokens !== null && ($maxCodingTokens < 1 || $maxCodingTokens > 4096)))) {
             return $this->fail('invalid_coding_policy', 0, $profile);
         }
