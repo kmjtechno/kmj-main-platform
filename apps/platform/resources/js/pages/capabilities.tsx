@@ -67,7 +67,7 @@ export default function Capabilities() {
                 }}
             />
 
-            <div className="min-h-screen overflow-hidden bg-[#06080b] text-white selection:bg-[#e21b23] selection:text-white">
+            <div className="min-h-screen overflow-clip bg-[#06080b] text-white selection:bg-[#e21b23] selection:text-white">
                 <div className="pointer-events-none fixed inset-0">
                     <div className="absolute -top-56 right-[4%] h-[40rem] w-[40rem] rounded-full bg-[#e21b23]/10 blur-[150px]" />
                     <div className="absolute top-[66rem] -left-56 h-[34rem] w-[34rem] rounded-full bg-[#7f0d13]/9 blur-[130px]" />

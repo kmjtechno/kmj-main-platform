@@ -55,7 +55,7 @@ export default function Company() {
                 }}
             />
 
-            <div className="min-h-screen overflow-hidden bg-[#06080b] text-white selection:bg-[#e21b23] selection:text-white">
+            <div className="min-h-screen overflow-clip bg-[#06080b] text-white selection:bg-[#e21b23] selection:text-white">
                 <div className="pointer-events-none fixed inset-0">
                     <div className="absolute -top-64 left-[8%] h-[38rem] w-[38rem] rounded-full bg-[#e21b23]/10 blur-[140px]" />
                     <div className="absolute top-[54rem] -right-52 h-[32rem] w-[32rem] rounded-full bg-[#8f1016]/9 blur-[130px]" />
@@ -87,7 +87,7 @@ export default function Company() {
                             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                                 <Link
                                     href="/products"
-                                    className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#e21b23] px-6 text-sm font-black shadow-[0_12px_40px_rgba(226,27,35,0.22)] transition hover:-translate-y-0.5 hover:bg-[#f1252e]"
+                                    className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#c1121f] px-6 text-sm font-black shadow-[0_12px_40px_rgba(226,27,35,0.22)] transition hover:-translate-y-0.5 hover:bg-[#a50f1a]"
                                 >
                                     Explore products
                                     <ArrowRight className="h-4 w-4" />

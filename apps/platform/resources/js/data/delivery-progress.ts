@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'public-motion-header-20261127',
+        title: 'Cleaner public header, smooth scrolling and motion',
+        state: 'active',
+        detail: 'SOURCE ONLY: public pages have an aligned sticky header, Lenis smooth scrolling, scroll reveals and mouse hover effects. Reduced-motion requests keep native scrolling without animation. Signed-in pages are unchanged.',
+        evidence:
+            'Local browser render and source tests; owner visual acceptance and live evidence pending.',
+    },
+    {
         id: 'products-premium-visual-20261127',
         title: 'Premium product list, centred wide screens and cleaner artwork',
         state: 'active',

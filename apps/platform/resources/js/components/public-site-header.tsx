@@ -3,8 +3,10 @@ import { Menu, Search, X, ArrowRight } from 'lucide-react';
 import { useRef, useState } from 'react';
 import LockedBrand from '@/components/locked-brand';
 import PublicLanguageSwitch from '@/components/public-language-switch';
+import PublicMotion from '@/components/public-motion';
 import '../../css/locked-landing.css';
 import '../../css/public-theme.css';
+import '../../css/public-motion.css';
 
 // This shared header also renders in the standalone visual-preview build,
 // which does not generate Laravel Wayfinder route modules.
@@ -34,6 +36,7 @@ export default function PublicSiteHeader() {
             <a className="lock-skip" href="#main-content">
                 Skip to main content
             </a>
+            <PublicMotion />
             <header
                 className="lock-header kmj-public-header"
                 onKeyDown={(event) => {

@@ -44,7 +44,7 @@ export default function Trust() {
                 }}
             />
 
-            <div className="min-h-screen overflow-hidden bg-[#06080b] text-white selection:bg-[#ef2632] selection:text-white">
+            <div className="min-h-screen overflow-clip bg-[#06080b] text-white selection:bg-[#ef2632] selection:text-white">
                 <PublicSiteHeader />
                 <main id="main-content">
                     <section className="mx-auto max-w-[1440px] px-5 pt-16 pb-12 sm:px-8 lg:px-10 lg:pt-24">

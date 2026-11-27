@@ -1,0 +1,480 @@
+/* Public header, hover states and motion. Loaded after the shared theme. */
+.lock-header.kmj-public-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    height: 76px;
+    background: rgba(5, 9, 13, 0.82);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    backdrop-filter: blur(16px) saturate(1.4);
+}
+.lock-header.kmj-public-header[data-scrolled] {
+    height: 64px;
+    background: rgba(4, 7, 11, 0.92);
+    box-shadow: 0 14px 40px -18px rgba(0, 0, 0, 0.95);
+}
+/* Reading progress along the lower edge of the header. */
+.lock-header.kmj-public-header::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #8f0c1c, #ff2c48);
+    transform: scaleX(var(--kmj-progress, 0));
+    transform-origin: left;
+    pointer-events: none;
+}
+.lock-skip:focus {
+    z-index: 60;
+}
+.lock-header.kmj-public-header nav {
+    gap: 2px;
+    margin-inline: auto;
+}
+.lock-header.kmj-public-header nav a {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    height: 40px;
+    padding: 0 clamp(8px, 0.85vw, 15px);
+    border: 0;
+    border-radius: 999px;
+    color: #c3cad4;
+    font-size: 13px;
+    font-weight: 600;
+    text-shadow: none;
+}
+.lock-header.kmj-public-header nav a::after {
+    content: '';
+    position: absolute;
+    right: 50%;
+    bottom: 4px;
+    left: 50%;
+    height: 2px;
+    border-radius: 2px;
+    background: #ff2c48;
+}
+.lock-header.kmj-public-header nav a:hover,
+.lock-header.kmj-public-header nav a:focus-visible {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.07);
+}
+.lock-header.kmj-public-header nav a:hover::after,
+.lock-header.kmj-public-header nav a.active::after {
+    right: 34%;
+    left: 34%;
+}
+.lock-header.kmj-public-header nav a.active {
+    color: #fff;
+}
+.lock-header.kmj-public-header .lock-search,
+.lock-header.kmj-public-header .lock-language,
+.lock-header.kmj-public-header .lock-contact,
+.lock-header.kmj-public-header .lock-auth-login,
+.lock-header.kmj-public-header .lock-auth-register {
+    height: 40px;
+    min-height: 40px;
+    margin: 0;
+    line-height: 1;
+}
+.lock-header.kmj-public-header .lock-search {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    padding: 0;
+    border-radius: 999px;
+    border-color: rgba(255, 255, 255, 0.16);
+    color: #c3cad4;
+}
+.lock-header.kmj-public-header .lock-language {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    padding: 0 10px;
+    border-radius: 999px;
+    color: #c3cad4;
+}
+.lock-header.kmj-public-header .lock-search:hover,
+.lock-header.kmj-public-header .lock-language:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.09);
+    border-color: rgba(255, 255, 255, 0.32);
+}
+.lock-header.kmj-public-header .lock-contact,
+.lock-header.kmj-public-header .lock-auth-login,
+.lock-header.kmj-public-header .lock-auth-register {
+    padding-inline: 18px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 700;
+}
+.lock-header.kmj-public-header .lock-contact {
+    gap: 8px;
+}
+.lock-header.kmj-public-header .lock-auth {
+    margin: 0;
+}
+.lock-header.kmj-public-header .lock-auth-login {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+}
+.lock-header.kmj-public-header .lock-auth-login:hover {
+    border-color: rgba(255, 255, 255, 0.45);
+    background: rgba(255, 255, 255, 0.12);
+}
+@media (max-width: 1450px) {
+    .lock-header.kmj-public-header .lock-contact {
+        display: none;
+    }
+    .lock-header.kmj-public-header .lock-search {
+        display: none;
+    }
+}
+@media (max-width: 1050px) {
+    .lock-header.kmj-public-header nav {
+        display: none;
+        max-height: calc(100dvh - 76px);
+        overflow-y: auto;
+    }
+    .lock-header.kmj-public-header nav.is-open {
+        display: flex;
+    }
+    .lock-header.kmj-public-header nav a {
+        height: auto;
+        min-height: 44px;
+        padding: 0 14px;
+        border-radius: 10px;
+    }
+    .lock-header.kmj-public-header nav a::after {
+        display: none;
+    }
+    .lock-header.kmj-public-header nav a.active {
+        background: rgba(255, 44, 72, 0.14);
+    }
+    .lock-header.kmj-public-header .lock-language {
+        display: none;
+    }
+    .lock-header.kmj-public-header .lock-auth {
+        margin-left: auto;
+    }
+}
+@media (max-width: 560px) {
+    .lock-header.kmj-public-header {
+        height: 66px;
+    }
+    .lock-header.kmj-public-header .lock-auth-login,
+    .lock-header.kmj-public-header .lock-auth-register {
+        height: 36px;
+        min-height: 36px;
+        padding-inline: 9px;
+        font-size: 10px;
+    }
+}
+
+/* Anchored sections must not hide under the sticky header. */
+body:has(.kmj-public-header) main [id] {
+    scroll-margin-top: 92px;
+}
+
+/* Home: calmer hero lettering and one badge colour from the brand palette. */
+.locked-landing .lock-hero {
+    overflow: hidden;
+}
+.locked-landing .lock-hero-words {
+    top: 50%;
+    padding: 6px 16px 6px 0;
+    border-right: 2px solid #ff2c48;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.28em;
+    line-height: 2.2;
+    text-align: right;
+    text-shadow: 0 2px 12px #000;
+    transform: translateY(-50%);
+}
+.locked-landing .lock-product,
+.locked-landing .lock-product:nth-child(n) {
+    border-radius: 14px;
+    border-color: rgba(255, 255, 255, 0.1);
+}
+.locked-landing .lock-product .lock-product-category {
+    padding: 5px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    background: rgba(5, 9, 13, 0.82);
+    font-size: 9px;
+    font-weight: 700;
+}
+.locked-landing .lock-product > a > img {
+    overflow: hidden;
+}
+
+/* A short last row sits in the middle instead of leaving a gap. */
+.locked-landing .lock-products {
+    --kmj-columns: 4;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+}
+.locked-landing .lock-products > .lock-product {
+    flex: 0 0
+        calc((100% - 12px * (var(--kmj-columns) - 1)) / var(--kmj-columns));
+}
+@media (max-width: 900px) {
+    .locked-landing .lock-products {
+        --kmj-columns: 3;
+    }
+}
+@media (max-width: 560px) {
+    .locked-landing .lock-products {
+        --kmj-columns: 2;
+    }
+}
+@media (max-width: 420px) {
+    .locked-landing .lock-products {
+        --kmj-columns: 1;
+    }
+}
+
+/* Mouse light on cards. */
+.locked-landing .lock-product,
+.locked-landing .lock-capabilities > a,
+.locked-landing .lock-roadmap-steps > div {
+    position: relative;
+}
+.locked-landing .lock-product::after,
+.locked-landing .lock-capabilities > a::after,
+.locked-landing .lock-roadmap-steps > div::after,
+.kmj-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+        320px circle at var(--mx, 50%) var(--my, 0%),
+        rgba(255, 54, 78, 0.17),
+        transparent 62%
+    );
+    opacity: 0;
+    pointer-events: none;
+}
+@media (hover: hover) {
+    .locked-landing .lock-product:hover::after,
+    .locked-landing .lock-capabilities > a:hover::after,
+    .locked-landing .lock-roadmap-steps > div:hover::after,
+    .kmj-card:hover::after {
+        opacity: 1;
+    }
+}
+.locked-landing .lock-product:hover,
+.locked-landing .lock-product:focus-within,
+.locked-landing .lock-capabilities > a:hover,
+.locked-landing .lock-capabilities > a:focus-visible,
+.locked-landing .lock-industries > a:hover,
+.locked-landing .lock-industries > a:focus-visible {
+    border-color: rgba(255, 58, 76, 0.75);
+    box-shadow: 0 22px 48px -22px rgba(224, 20, 44, 0.65);
+}
+
+[data-reveal] {
+    opacity: 0;
+}
+[data-reveal]:focus-within {
+    opacity: 1;
+}
+@media print {
+    [data-reveal] {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .lock-header.kmj-public-header {
+        transition:
+            height 0.35s ease,
+            background-color 0.35s ease,
+            box-shadow 0.35s ease;
+    }
+    .lock-header.kmj-public-header nav a,
+    .lock-header.kmj-public-header .lock-search,
+    .lock-header.kmj-public-header .lock-language,
+    .lock-header.kmj-public-header .lock-auth-login {
+        transition:
+            color 0.25s ease,
+            background-color 0.25s ease,
+            border-color 0.25s ease,
+            transform 0.25s ease;
+    }
+    .lock-header.kmj-public-header nav a::after {
+        transition:
+            right 0.3s ease,
+            left 0.3s ease;
+    }
+
+    /* Buttons lift and catch a passing light. */
+    .locked-landing .lock-primary,
+    .locked-landing .lock-outline,
+    .lock-header.kmj-public-header .lock-contact,
+    .lock-header.kmj-public-header .lock-auth-register {
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
+        transition:
+            transform 0.3s ease,
+            box-shadow 0.3s ease,
+            background-color 0.3s ease;
+    }
+    .locked-landing .lock-primary::before,
+    .locked-landing .lock-outline::before,
+    .lock-header.kmj-public-header .lock-auth-register::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: -60%;
+        z-index: -1;
+        width: 45%;
+        background: linear-gradient(
+            100deg,
+            transparent,
+            rgba(255, 255, 255, 0.32),
+            transparent
+        );
+        transform: skewX(-20deg);
+        transition: left 0.65s ease;
+    }
+    .locked-landing .lock-primary:hover::before,
+    .locked-landing .lock-outline:hover::before,
+    .lock-header.kmj-public-header .lock-auth-register:hover::before {
+        left: 125%;
+    }
+    .locked-landing .lock-primary:hover,
+    .locked-landing .lock-outline:hover,
+    .lock-header.kmj-public-header .lock-contact:hover,
+    .lock-header.kmj-public-header .lock-auth-login:hover,
+    .lock-header.kmj-public-header .lock-auth-register:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px -12px rgba(255, 30, 60, 0.75);
+    }
+    .locked-landing .lock-primary svg,
+    .locked-landing .lock-outline svg,
+    .locked-landing .lock-product-cta svg,
+    .lock-header.kmj-public-header .lock-contact svg {
+        transition: transform 0.3s ease;
+    }
+    .locked-landing .lock-primary:hover svg:last-child,
+    .locked-landing .lock-outline:hover svg:last-child,
+    .locked-landing .lock-product:hover .lock-product-cta svg,
+    .lock-header.kmj-public-header .lock-contact:hover svg {
+        transform: translateX(5px);
+    }
+
+    /* Hero: slow settle, mouse depth and a staggered entrance. */
+    .locked-landing .lock-hero > img {
+        scale: 1.04;
+        translate: calc(var(--px, 0) * -18px) calc(var(--py, 0) * -12px);
+        transition: translate 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+        animation: kmj-settle 2.4s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+    }
+    .locked-landing .lock-hero-copy > *,
+    .locked-landing .lock-hero-words {
+        animation: kmj-enter 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+    }
+    .locked-landing .lock-hero-copy > :nth-child(2) {
+        animation-delay: 0.08s;
+    }
+    .locked-landing .lock-hero-copy > :nth-child(3) {
+        animation-delay: 0.18s;
+    }
+    .locked-landing .lock-hero-copy > :nth-child(4) {
+        animation-delay: 0.28s;
+    }
+    .locked-landing .lock-hero-words {
+        animation-name: kmj-fade;
+        animation-delay: 0.5s;
+    }
+
+    /* Card and tile hover. */
+    .locked-landing .lock-product,
+    .locked-landing .lock-capabilities > a,
+    .locked-landing .lock-industries > a,
+    .locked-landing .lock-roadmap-steps > div {
+        transition:
+            transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1),
+            border-color 0.4s ease,
+            box-shadow 0.4s ease;
+    }
+    .locked-landing .lock-product:hover,
+    .locked-landing .lock-capabilities > a:hover,
+    .locked-landing .lock-industries > a:hover,
+    .locked-landing .lock-roadmap-steps > div:hover {
+        transform: translateY(-6px);
+    }
+    .locked-landing .lock-product img,
+    .locked-landing .lock-industries img {
+        transition:
+            scale 0.9s cubic-bezier(0.2, 0.7, 0.2, 1),
+            filter 0.4s ease;
+    }
+    .locked-landing .lock-product:hover img,
+    .locked-landing .lock-industries > a:hover img {
+        scale: 1.08;
+        filter: brightness(1.12) saturate(1.1);
+    }
+    .locked-landing .lock-industries > a {
+        overflow: hidden;
+    }
+    .locked-landing .lock-capabilities svg,
+    .locked-landing .lock-trust svg {
+        transition:
+            transform 0.4s cubic-bezier(0.3, 1.5, 0.5, 1),
+            filter 0.4s ease;
+    }
+    .locked-landing .lock-capabilities > a:hover svg,
+    .locked-landing .lock-trust > div:hover svg {
+        transform: translateY(-3px) scale(1.14);
+        filter: drop-shadow(0 0 10px rgba(255, 40, 68, 0.7));
+    }
+    .locked-landing .lock-orbit > a {
+        transition:
+            scale 0.3s ease,
+            box-shadow 0.3s ease,
+            border-color 0.3s ease;
+    }
+    .locked-landing .lock-orbit > a:hover {
+        scale: 1.07;
+        border-color: #ff3a4c;
+        box-shadow: 0 0 24px rgba(255, 40, 68, 0.55);
+    }
+    .kmj-public-footer a {
+        transition:
+            color 0.25s ease,
+            translate 0.25s ease;
+    }
+    .kmj-public-footer a:hover {
+        translate: 3px 0;
+        color: #ff5c6c;
+    }
+}
+@keyframes kmj-settle {
+    from {
+        scale: 1.14;
+    }
+}
+@keyframes kmj-enter {
+    from {
+        opacity: 0;
+        translate: 0 30px;
+    }
+}
+@keyframes kmj-fade {
+    from {
+        opacity: 0;
+    }
+}
