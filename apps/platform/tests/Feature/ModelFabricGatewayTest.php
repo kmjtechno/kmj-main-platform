@@ -138,6 +138,10 @@ final class ModelFabricGatewayTest extends TestCase
         Http::assertSentCount(1);
 
         $this->travel(82800)->seconds();
+        // Model discovery itself expires after 24 hours. The normal refresh job
+        // must requalify that catalog independently before resuming inference.
+        $provider->models_checked_at = now();
+        $provider->save();
         $result = $gateway->complete($this->org, [['role' => 'user', 'content' => 'after reset']]);
         $this->assertTrue($result['ok']);
         $this->assertSame('after daily reset', $result['content']);
