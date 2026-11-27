@@ -14,11 +14,13 @@ import { store } from '@/routes/register';
 type Props = {
     passwordRules: string;
     registrationAvailable: boolean;
+    formToken: string;
 };
 
 export default function Register({
     passwordRules,
     registrationAvailable,
+    formToken,
 }: Props) {
     const [accountType, setAccountType] = useState<'individual' | 'business'>(
         'individual',
@@ -51,6 +53,31 @@ export default function Register({
                                 . Never send passwords or verification codes.
                             </p>
                         )}
+                        <input
+                            type="hidden"
+                            name="kmj_form_token"
+                            value={formToken}
+                        />
+                        {/* Honeypot: invisible to people and assistive tech, bots tend to fill it. */}
+                        <div
+                            aria-hidden="true"
+                            style={{
+                                position: 'absolute',
+                                left: '-10000px',
+                                width: '1px',
+                                height: '1px',
+                                overflow: 'hidden',
+                            }}
+                        >
+                            <input
+                                type="text"
+                                name="website_url"
+                                tabIndex={-1}
+                                autoComplete="off"
+                                defaultValue=""
+                            />
+                        </div>
+                        <InputError message={errors.registration} />
                         <div className="grid gap-6">
                             <div className="grid gap-2">
                                 <Label htmlFor="name">Name</Label>
