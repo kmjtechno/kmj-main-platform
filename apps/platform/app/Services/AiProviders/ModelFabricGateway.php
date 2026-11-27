@@ -326,7 +326,7 @@ final class ModelFabricGateway
     {
         $until = Cache::get('modelfabric:cooldown:'.$providerId);
 
-        return is_int($until) && $until > now()->timestamp ? $until : null;
+        return is_int($until) && $until > now()->getTimestamp() ? $until : null;
     }
 
     /**
@@ -441,7 +441,7 @@ final class ModelFabricGateway
         // Without a typed remaining=0 report, conservatively use provider-wide cooldown.
         if ($code === 'rate_limited' && $provider->preset === 'groq' && ($rate['requests_remaining'] ?? null) === 0) {
             $seconds = $retryAfter !== null ? max(5, min(3600, $retryAfter)) : self::RATE_LIMIT_COOLDOWN;
-            Cache::put($this->modelCooldownKey($provider->id, $model), now()->timestamp + $seconds, $seconds);
+            Cache::put($this->modelCooldownKey($provider->id, $model), now()->getTimestamp() + $seconds, $seconds);
 
             return;
         }
@@ -459,7 +459,7 @@ final class ModelFabricGateway
             $provider->save();
         }
         if ($seconds > 0) {
-            Cache::put('modelfabric:cooldown:'.$provider->id, now()->timestamp + $seconds, $seconds);
+            Cache::put('modelfabric:cooldown:'.$provider->id, now()->getTimestamp() + $seconds, $seconds);
         }
     }
 
@@ -489,7 +489,7 @@ final class ModelFabricGateway
     {
         $until = Cache::get($this->modelCooldownKey($providerId, $model));
 
-        return is_int($until) && $until > now()->timestamp ? $until : null;
+        return is_int($until) && $until > now()->getTimestamp() ? $until : null;
     }
 
     private function softFailure(string $providerId): int
