@@ -416,7 +416,7 @@ export default function ProductShow({
                                             ? '/dashboard'
                                             : `/register?product=${encodeURIComponent(product.slug)}`
                                     }
-                                    className="mt-4 inline-flex min-h-12 items-center rounded-xl bg-[#ef2632] px-6 text-sm font-black text-white"
+                                    className="mt-4 inline-flex min-h-12 items-center rounded-xl bg-[#c1121f] px-6 text-sm font-black text-white"
                                 >
                                     {product.slug === 'kmj-cloudos' &&
                                     product.purchase_enabled
