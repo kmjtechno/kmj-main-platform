@@ -350,6 +350,7 @@ final class ModelFabricGateway
             Cache::put($this->dailyRateKey($providerId, $model), [
                 'remaining' => $rate['requests_remaining'],
                 'limit' => $dailyLimit,
+                'reset_at' => now()->addSeconds($reset)->toIso8601String(),
             ], $reset);
         }
         $key = $this->rateKey($providerId, $model, $modelScoped);
@@ -359,7 +360,40 @@ final class ModelFabricGateway
             'requests' => $rate['requests_remaining'],
             'tokens' => $rate['tokens_remaining'],
             'max_requests' => $maxRequests,
+            'observed_at' => now()->toIso8601String(),
         ], 120);
+    }
+
+    /**
+     * Actual recent provider response headers only, not account billing credits or predicted quota.
+     * Unknown, expired and unobserved values must stay unknown in the UI.
+     *
+     * @param list<string> $models
+     * @return list<array<string, mixed>>
+     */
+    public function quotaObservations(AiProvider $provider, array $models): array
+    {
+        $modelScoped = $provider->preset === 'groq';
+        $observations = [];
+        foreach (array_slice($modelScoped ? $models : ['shared across models'], 0, 12) as $model) {
+            $observed = Cache::get($this->rateKey($provider->id, $model, $modelScoped));
+            $daily = $modelScoped ? Cache::get($this->dailyRateKey($provider->id, $model)) : null;
+            if (! is_array($observed) && ! is_array($daily)) {
+                continue;
+            }
+            $observations[] = [
+                'model' => $model,
+                'scope' => $modelScoped ? 'model' : 'provider',
+                'requests_remaining' => is_array($observed) && is_int($observed['requests'] ?? null) ? $observed['requests'] : null,
+                'tokens_remaining' => is_array($observed) && is_int($observed['tokens'] ?? null) ? $observed['tokens'] : null,
+                'observed_at' => is_array($observed) ? ($observed['observed_at'] ?? null) : null,
+                'daily_remaining' => is_array($daily) && is_int($daily['remaining'] ?? null) ? $daily['remaining'] : null,
+                'daily_limit' => is_array($daily) && is_int($daily['limit'] ?? null) ? $daily['limit'] : null,
+                'daily_reset_at' => is_array($daily) ? ($daily['reset_at'] ?? null) : null,
+            ];
+        }
+
+        return $observations;
     }
 
     private function nearLimit(string $providerId, string $model, bool $modelScoped): bool

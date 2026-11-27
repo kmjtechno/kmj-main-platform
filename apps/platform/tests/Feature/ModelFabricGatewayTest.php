@@ -32,6 +32,29 @@ final class ModelFabricGatewayTest extends TestCase
         $this->app->instance(EndpointGuard::class, new EndpointGuard(fn (): array => ['93.184.216.34']));
     }
 
+    public function test_quota_observations_are_from_fresh_headers_only_and_never_imply_credits(): void
+    {
+        $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        $key = 'modelfabric:rate:'.hash('sha256', $provider->id.'|model-a');
+        $gateway = app(ModelFabricGateway::class);
+
+        $this->assertSame([], $gateway->quotaObservations($provider, ['model-a']));
+        Cache::put($key, [
+            'requests' => 13,
+            'tokens' => 4500,
+            'max_requests' => 20,
+            'observed_at' => now()->toIso8601String(),
+        ], 120);
+        $observations = $gateway->quotaObservations($provider, ['model-a']);
+        $this->assertCount(1, $observations);
+        $this->assertSame(13, $observations[0]['requests_remaining']);
+        $this->assertSame(4500, $observations[0]['tokens_remaining']);
+        $this->assertNull($observations[0]['daily_reset_at']);
+        $this->assertArrayNotHasKey('credit_balance', $observations[0]);
+        Cache::forget($key);
+        $this->assertSame([], $gateway->quotaObservations($provider, ['model-a']));
+    }
+
     public function test_no_route_means_no_provider_call_at_all(): void
     {
         Http::fake();

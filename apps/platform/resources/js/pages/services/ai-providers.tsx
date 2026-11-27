@@ -27,6 +27,16 @@ export type Provider = {
     health_checked_at: string | null;
     error_code: string | null;
     last_successful_inference_at?: string | null;
+    quota_observations?: {
+        model: string;
+        scope: 'model' | 'provider';
+        requests_remaining: number | null;
+        tokens_remaining: number | null;
+        observed_at: string | null;
+        daily_remaining: number | null;
+        daily_limit: number | null;
+        daily_reset_at: string | null;
+    }[];
     used_today?: number;
     daily_request_cap?: number | null;
     shared_hourly_quota?: { used: number; limit: number; cooling: boolean };
@@ -156,6 +166,32 @@ function ProviderCard({
             <p className="text-muted-foreground text-xs">
                 {quotaText(provider)}
             </p>
+            {(provider.quota_observations ?? []).length > 0 && (
+                <details className="rounded-lg border p-2 text-xs">
+                    <summary className="cursor-pointer font-semibold">
+                        Recent provider-reported quota signals
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                        {provider.quota_observations?.map((observation) => (
+                            <p key={observation.model} className="text-muted-foreground">
+                                {observation.scope === 'model'
+                                    ? observation.model
+                                    : 'Shared connection'}
+                                {' · '}
+                                {observation.requests_remaining ?? 'Unknown'} requests left
+                                {' · '}
+                                {observation.tokens_remaining ?? 'Unknown'} tokens left
+                                {observation.daily_limit != null &&
+                                    observation.daily_remaining != null &&
+                                    ` · daily ${observation.daily_remaining}/${observation.daily_limit}`}
+                                {observation.daily_reset_at &&
+                                    ` · daily reset ${new Date(observation.daily_reset_at).toLocaleString()}`}
+                                {' · provider headers, not billing credits'}
+                            </p>
+                        ))}
+                    </div>
+                </details>
+            )
             <p className="text-muted-foreground text-xs">
                 {provider.last_successful_inference_at
                     ? `Last successful inference: ${new Date(provider.last_successful_inference_at).toLocaleString()}`
