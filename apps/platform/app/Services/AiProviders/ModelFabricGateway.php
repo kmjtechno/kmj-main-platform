@@ -374,14 +374,28 @@ final class ModelFabricGateway
     public function quotaObservations(AiProvider $provider, array $models): array
     {
         $modelScoped = $provider->preset === 'groq';
+        // Show the owner's selected eligible model first; the directory can contain
+        // more than twelve candidates and must not hide the model in actual use.
+        $modelsToShow = $modelScoped ? $models : ['shared across models'];
+        if ($modelScoped && is_string($provider->default_model) && in_array($provider->default_model, $models, true)) {
+            $modelsToShow = [$provider->default_model, ...array_values(array_filter(
+                $models,
+                fn (string $model): bool => $model !== $provider->default_model,
+            ))];
+        }
+        $providerCooling = self::coolingUntil($provider->id);
         $observations = [];
-        foreach (array_slice($modelScoped ? $models : ['shared across models'], 0, 12) as $model) {
+        foreach (array_slice($modelsToShow, 0, 12) as $model) {
             $observed = Cache::get($this->rateKey($provider->id, $model, $modelScoped));
             $daily = $modelScoped ? Cache::get($this->dailyRateKey($provider->id, $model)) : null;
-            if (! is_array($observed) && ! is_array($daily)) {
+            $modelCooling = $modelScoped ? $this->modelCoolingUntil($provider->id, $model) : null;
+            $cooling = max($providerCooling ?? 0, $modelCooling ?? 0);
+            if (! is_array($observed) && ! is_array($daily) && $cooling === 0) {
                 continue;
             }
             $observations[] = [
+                'cooling_until' => $cooling > 0 ? date('c', $cooling) : null,
+                'cooldown_scope' => $cooling === 0 ? null : ($modelCooling !== null && $modelCooling >= ($providerCooling ?? 0) ? 'model' : 'provider'),
                 'model' => $model,
                 'scope' => $modelScoped ? 'model' : 'provider',
                 'requests_remaining' => is_array($observed) && is_int($observed['requests'] ?? null) ? $observed['requests'] : null,
@@ -426,13 +440,13 @@ final class ModelFabricGateway
         // A verified Groq model's exhausted quota must not cool the entire provider.
         // Without a typed remaining=0 report, conservatively use provider-wide cooldown.
         if ($code === 'rate_limited' && $provider->preset === 'groq' && ($rate['requests_remaining'] ?? null) === 0) {
-            $seconds = $retryAfter !== null ? max(5, min(300, $retryAfter)) : self::RATE_LIMIT_COOLDOWN;
+            $seconds = $retryAfter !== null ? max(5, min(3600, $retryAfter)) : self::RATE_LIMIT_COOLDOWN;
             Cache::put($this->modelCooldownKey($provider->id, $model), time() + $seconds, $seconds);
 
             return;
         }
         $seconds = match ($code) {
-            'rate_limited' => $retryAfter !== null ? max(5, min(300, $retryAfter)) : self::RATE_LIMIT_COOLDOWN,
+            'rate_limited' => $retryAfter !== null ? max(5, min(3600, $retryAfter)) : self::RATE_LIMIT_COOLDOWN,
             'auth_failed' => self::AUTH_COOLDOWN,
             'provider_unavailable', 'connection_failed', 'empty_response', 'unexpected_status', 'response_too_large' => $this->softFailure($provider->id),
             // Admission refusals (zero_spend_blocked, model_not_discovered, ...) are not provider faults.
