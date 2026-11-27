@@ -61,10 +61,10 @@ export function paymentSetupSteps(
         {
             id: 'webhook-secret',
             title: 'Store the webhook secret',
-            why: 'Use the same secret in the provider dashboard and here, so KMJ can check that events really come from the provider.',
+            why: 'Razorpay: generate the secret in the Webhook setup card (shown once), then paste it into the Razorpay webhook. Cashfree signs with its client secret. KMJ uses it to check that events really come from the provider.',
             done: setting?.webhook_secret_stored === true,
             action: {
-                label: 'Open webhook setup',
+                label: 'Generate webhook secret',
                 href: '#webhook-setup',
             },
         },

@@ -60,10 +60,10 @@ void test('payment security state and live charging guard stay real', () => {
     assert.match(page, /sandbox_credentials_present/);
 });
 
-void test('sandbox probe and credential lifecycle files remain pinned (settings hash re-pinned only for the browser-autofill guard)', () => {
+void test('sandbox probe and credential lifecycle files remain pinned (onboarding hash re-pinned only to link the webhook secret generator; settings hash only for the browser-autofill guard)', () => {
     assert.equal(
         gitBlobHash(onboarding),
-        '65337d7a01c8b3bff1878e3a1da10dde56e17fbb',
+        '6af2bacb25f4b7fcf6381c99f4f54ff542b65e0c',
     );
     assert.equal(
         gitBlobHash(settings),
