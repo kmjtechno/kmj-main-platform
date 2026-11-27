@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'P0 issue #1233 and keyless gateway regression; consolidated release only after acceptance.',
     },
     {
+        id: 'registration-invisible-bot-guard-20261127',
+        title: 'Registration: invisible bot guard',
+        state: 'active',
+        detail: 'The public signup form now carries a hidden honeypot field and an encrypted, time-stamped, one-use form token that the server checks before any account is created (too-fast, expired, replayed, missing or filled-honeypot submissions are rejected and logged without personal data). No third-party captcha and no cost. It reduces automated signups; it does not prove a human, and OAuth signup and a post-login profile step are not built yet.',
+        evidence:
+            'Source regression and PostgreSQL feature tests on the PR; live effect on bot signups not yet measured.',
+    },
+    {
         id: 'payments-cashfree-webhook-step-20261127',
         title: 'Payments: Cashfree guided step 3 follows the client secret',
         state: 'active',

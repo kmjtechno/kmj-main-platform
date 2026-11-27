@@ -8,6 +8,7 @@ use App\Actions\Fortify\CreateNewUser;
 /* @end-chisel-registration */
 use App\Actions\Fortify\ResetUserPassword;
 use App\Http\Responses\ConfirmedPasskeyLoginResponse;
+use App\Services\Auth\RegistrationBotGuard;
 use App\Services\Mail\RegistrationMailReadiness;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -85,6 +86,7 @@ class FortifyServiceProvider extends ServiceProvider
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
             'registrationAvailable' => ! app()->isProduction()
                 || app(RegistrationMailReadiness::class)->canAttemptDelivery(),
+            'formToken' => app(RegistrationBotGuard::class)->issueToken(),
         ]));
         /* @end-chisel-registration */
 
