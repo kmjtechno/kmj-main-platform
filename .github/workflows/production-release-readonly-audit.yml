@@ -1,0 +1,33 @@
+name: KMJ Production Release Read-only Audit Contract
+on:
+  pull_request:
+    paths:
+      - 'scripts/operations/audit-production-release-blockers-readonly.py'
+      - 'scripts/test_production_release_readonly_audit.py'
+      - 'docs/operations/PRODUCTION_READ_ONLY_RELEASE_AUDIT_20261027.md'
+      - '.github/workflows/production-release-readonly-audit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/operations/audit-production-release-blockers-readonly.py'
+      - 'scripts/test_production_release_readonly_audit.py'
+      - '.github/workflows/production-release-readonly-audit.yml'
+permissions:
+  contents: read
+jobs:
+  zero-mutation-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Offline syntax, fake-witness, stale-manifest and zero-write tests
+        run: |
+          set -euo pipefail
+          python3 -B -m py_compile scripts/operations/audit-production-release-blockers-readonly.py
+          python3 -B -m unittest discover -s scripts -p test_production_release_readonly_audit.py -v
+          echo 'READ_ONLY_RELEASE_AUDIT_CONTRACT=PASS'
+          echo 'STAGING_MUTATIONS=NONE'
+          echo 'PRODUCTION_ACTIVATION=NOT_ATTEMPTED'
