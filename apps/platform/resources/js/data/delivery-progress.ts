@@ -18,6 +18,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'P0 issue #1233 and keyless gateway regression; consolidated release only after acceptance.',
     },
     {
+        id: 'registration-google-signin-20261127',
+        title: 'Registration: Google sign-up with contact details collected afterwards',
+        state: 'active',
+        detail: 'SOURCE ONLY and hidden until the owner stores a Google OAuth client in the server secrets: Continue with Google on login and register (authorization-code flow with PKCE and state, verified email required, identity fields only, no package added). A new Google user gets a verified account and organization and then fills phone, country and company on a profile page. A Google login is refused for any account with a passkey or two-factor, and a pre-registered unverified account loses its old password when the real owner signs in. No Google client is configured and no live Google sign-in has been tried.',
+        evidence:
+            'Source regression and PostgreSQL feature tests with Google calls faked on the PR; live acceptance pending the owner OAuth client.',
+    },
+    {
         id: 'registration-invisible-bot-guard-20261127',
         title: 'Registration: invisible bot guard',
         state: 'active',

@@ -1,6 +1,7 @@
 import { passwordRequirements } from '@/lib/password-rules-hint';
 import { Form, Head } from '@inertiajs/react';
 import { useState } from 'react';
+import GoogleSignInButton from '@/components/google-signin-button';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
@@ -31,6 +32,7 @@ export default function Register({
     return (
         <>
             <Head title="Register" />
+            <GoogleSignInButton label="Sign up with Google" />
             <Form
                 {...store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}

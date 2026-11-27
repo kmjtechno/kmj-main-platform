@@ -1161,3 +1161,4 @@ require __DIR__.'/developer-licenses.php';
 require __DIR__.'/payments-console.php';
 require __DIR__.'/workforce-mail.php';
 require __DIR__.'/settings.php';
+require __DIR__.'/google-auth.php';

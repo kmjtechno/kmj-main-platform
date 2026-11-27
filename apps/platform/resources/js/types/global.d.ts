@@ -14,6 +14,7 @@ declare module '@inertiajs/core' {
                 base_url: string;
                 indexable: boolean;
                 registration_available: boolean;
+                google_signin_available: boolean;
             };
             localization: {
                 locale: 'en' | 'hi';
