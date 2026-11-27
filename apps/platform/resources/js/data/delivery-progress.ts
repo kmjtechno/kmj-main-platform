@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'published-prices-20261127',
+        title: 'Owner-approved prices on product and purchase pages',
+        state: 'active',
+        detail: 'SOURCE ONLY: the owner approved the 23 Nov price list plus GST on 27 Nov. Product pages and Purchase Center show it; unready products say it is a planned price. Checkout and automatic charging stay off.',
+        evidence:
+            'Source and feature tests on the PR; not yet checked on live.',
+    },
+    {
         id: 'customer-ux-rework-20261127',
         title: 'Customer pages: plain words and one consistent story',
         state: 'active',

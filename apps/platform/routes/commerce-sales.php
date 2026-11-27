@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Services\Commerce\CommercialProductPublisher;
+use App\Services\Commerce\PublishedPriceList;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -91,8 +92,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                     'id' => (string) $product->getKey(),
                     'slug' => (string) $product->getAttribute('slug'),
                     'name' => (string) $product->getAttribute('name'),
-                    // What an approved request switches on. No price is
-                    // published here until an approved price list exists.
+                    // Owner-approved list price. The order amount is still
+                    // confirmed by an operator; nothing is charged here.
+                    'pricing' => app(PublishedPriceList::class)->forProduct((string) $product->getAttribute('slug')),
+                    // What an approved request switches on.
                     'features' => $activePolicies
                         ->where('product_id', $product->getKey())
                         ->pluck('capability')

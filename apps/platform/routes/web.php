@@ -13,6 +13,7 @@ use App\Services\CodeBridge\HostedUsagePreview;
 use App\Services\CodeBridge\OAuth\OAuthServer;
 use App\Services\Commerce\KmjProductCatalog;
 use App\Services\Commerce\PublicProductCatalog;
+use App\Services\Commerce\PublishedPriceList;
 use App\Services\Licensing\CodeBridge\CodeBridgeCustomerDeviceDirectory;
 use App\Services\Licensing\CodeBridge\CodeBridgeDevicePairingService;
 use App\Services\Licensing\Kslp\KslpCustomerWorkspaceQuery;
@@ -212,7 +213,7 @@ Route::get('products', function (PublicProductCatalog $products) {
     ]);
 })->name('products.index');
 
-Route::get('products/{slug}', function (string $slug, PublicProductCatalog $products) {
+Route::get('products/{slug}', function (string $slug, PublicProductCatalog $products, PublishedPriceList $prices) {
     if (in_array($slug, KmjProductCatalog::LEGACY_CINEMA_VARIANT_SLUGS, true)) {
         return redirect()->route('products.show', [
             'slug' => KmjProductCatalog::CINEMA_PLATFORM_SLUG,
@@ -224,6 +225,7 @@ Route::get('products/{slug}', function (string $slug, PublicProductCatalog $prod
 
     return Inertia::render('products/show', [
         'product' => $product,
+        'pricing' => $prices->forProduct($slug),
     ]);
 })->name('products.show');
 
