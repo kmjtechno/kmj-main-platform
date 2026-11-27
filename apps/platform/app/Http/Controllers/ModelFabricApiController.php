@@ -115,7 +115,24 @@ final class ModelFabricApiController extends Controller
         if (! $result['ok']) {
             $code = (string) $result['error_code'];
 
-            return $this->error($code === ModelFabricRouter::NO_ROUTE ? 503 : 502, $code, 'No verified-zero route could answer this request.');
+            // OpenAI-compatible clients must distinguish a temporary quota hold
+            // from a failed upstream response. Never turn a billing/owner cap into
+            // a paid fallback: the next request is re-admitted by the gateway.
+            $status = match (true) {
+                $code === ModelFabricRouter::NO_ROUTE => 503,
+                in_array($code, [
+                    'rate_limited',
+                    'model_rate_limited',
+                    'all_routes_cooling_down',
+                    'provider_daily_quota_exhausted',
+                    'keyless_hourly_quota_exhausted',
+                    'daily_cap_reached',
+                    'credit_cap_reached',
+                ], true) => 429,
+                default => 502,
+            };
+
+            return $this->error($status, $code, 'No verified-zero route could answer this request.');
         }
 
         $id = 'chatcmpl-mf-'.Str::lower(Str::random(24));
