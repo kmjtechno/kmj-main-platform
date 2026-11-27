@@ -23,6 +23,12 @@ type Guide = {
 
 const guides: Guide[] = [
     {
+        key: 'ovhcloud',
+        title: 'OVHcloud AI Endpoints',
+        url: 'https://docs.ovhcloud.com/en/guides/public-cloud/ai-machine-learning/ai-endpoints-capabilities',
+        helper: 'Anonymous testing: 2 requests/minute per IP and model. Production pricing and terms are unverified; inference blocked.',
+    },
+    {
         key: 'llm7',
         title: 'LLM7',
         url: 'https://dash.llm7.io/',
