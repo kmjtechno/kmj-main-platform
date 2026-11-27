@@ -264,6 +264,50 @@ final class ModelFabricApiTest extends TestCase
         $this->postJson('/api/modelfabric/v1/chat/completions', ['messages' => [['role' => 'tool', 'content' => 'x']]], $headers)->assertStatus(422);
     }
 
+    public function test_all_free_routes_rate_limited_returns_429_without_paid_fallback_and_resumes_after_reset(): void
+    {
+        $plain = $this->token(['private_source' => false]);
+        $this->evidenced('llama-free');
+        Http::fake([
+            'api.groq.com/*' => Http::sequence()
+                ->push(['error' => 'quota'], 429, ['Retry-After' => '900'])
+                ->push(['choices' => [['message' => ['content' => 'resumed']]]], 200),
+        ]);
+        $headers = ['Authorization' => 'Bearer '.$plain];
+        $body = ['messages' => [['role' => 'user', 'content' => 'public smoke']]];
+
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)
+            ->assertStatus(429)->assertJsonPath('error.code', 'rate_limited')
+            ->assertHeader('Content-Type', 'application/json');
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)
+            ->assertStatus(429)->assertJsonPath('error.code', 'all_routes_cooling_down');
+        Http::assertSentCount(1);
+
+        $this->travel(901)->seconds();
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)
+            ->assertOk()->assertJsonPath('choices.0.message.content', 'resumed');
+        Http::assertSentCount(2);
+    }
+
+    public function test_owner_daily_request_cap_reports_429_without_an_extra_provider_call(): void
+    {
+        $plain = $this->token(['private_source' => false]);
+        $this->evidenced('llama-free');
+        $provider = AiProvider::query()->firstOrFail();
+        $provider->daily_request_cap = 1;
+        $provider->save();
+        Http::fake([
+            'api.groq.com/*' => Http::response(['choices' => [['message' => ['content' => 'ok']]]], 200),
+        ]);
+        $headers = ['Authorization' => 'Bearer '.$plain];
+        $body = ['messages' => [['role' => 'user', 'content' => 'public smoke']]];
+
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)->assertOk();
+        $this->postJson('/api/modelfabric/v1/chat/completions', $body, $headers)
+            ->assertStatus(429)->assertJsonPath('error.code', 'daily_cap_reached');
+        Http::assertSentCount(1);
+    }
+
     public function test_token_is_rate_limited_per_minute(): void
     {
         $plain = $this->token();
