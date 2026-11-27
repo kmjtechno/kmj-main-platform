@@ -463,8 +463,11 @@ final class ModelFabricController extends Controller
             [['role' => 'user', 'content' => 'Reply with KMJ-OK.']],
             publicPromptsConfirmed: true,
         );
-        if (! $result['ok']) {
-            return back()->withErrors(['provider' => 'Synthetic inference was not verified. Recheck current eligibility, quota and provider health.']);
+        // A 200 from the provider is not evidence that the requested synthetic
+        // output was produced. Reject reasoning-only, unrelated or partial
+        // responses instead of marking the provider as inference-verified.
+        if (! $result['ok'] || trim((string) ($result['content'] ?? '')) !== 'KMJ-OK') {
+            return back()->withErrors(['provider' => 'Synthetic inference did not produce the expected KMJ-OK response. No inference verification was recorded.']);
         }
         $this->audit($request, 'model_fabric.synthetic_inference_passed', ['provider_id' => $row->id, 'model_id' => $model]);
 
