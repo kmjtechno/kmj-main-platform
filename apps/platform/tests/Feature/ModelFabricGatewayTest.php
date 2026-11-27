@@ -514,6 +514,39 @@ final class ModelFabricGatewayTest extends TestCase
         $this->assertSame(0, AiModelRequest::query()->count());
     }
 
+    public function test_internal_mail_consent_requires_private_chat_and_never_authorizes_coding(): void
+    {
+        $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        Http::fake(['api.groq.com/*' => Http::response([
+            'choices' => [['message' => ['content' => 'consented editable mail reply']]],
+        ], 200)]);
+        $gateway = app(ModelFabricGateway::class);
+        $messages = [['role' => 'user', 'content' => 'consented private correspondence']];
+
+        $this->assertSame('native_admission_required', $gateway->complete(
+            $this->org, $messages, capability: 'chat', privateSource: true,
+        )['error_code']);
+        $this->assertSame('native_admission_required', $gateway->complete(
+            $this->org, $messages, capability: 'code', privateSource: true,
+            strictFreeCloud: true, privateMailConsent: true,
+            nativeRoute: ['provider_id' => $provider->id, 'model' => 'model-a'],
+        )['error_code']);
+        $this->assertSame('invalid_private_mail_policy', $gateway->complete(
+            $this->org, $messages, privateMailConsent: true,
+        )['error_code']);
+        Http::assertNothingSent();
+        $this->assertSame(0, AiModelRequest::query()->count());
+
+        $result = $gateway->complete(
+            $this->org, $messages, capability: 'chat',
+            privateSource: true, privateMailConsent: true,
+        );
+        $this->assertTrue($result['ok']);
+        $this->assertSame('consented editable mail reply', $result['content']);
+        Http::assertSentCount(1);
+        $this->assertDatabaseCount('ai_model_requests', 1);
+    }
+
     public function test_keyless_inference_requires_explicit_public_prompt_confirmation(): void
     {
         AiProvider::query()->create(array_replace(
