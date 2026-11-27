@@ -22,6 +22,9 @@ void test('purchase page explains the path and no longer uses internal jargon', 
     assert.match(page, /Browse the catalog/);
     assert.match(page, /orderProgress\(order\.status\)/);
     assert.match(page, /minorDigits\(order\.currency\)/);
+    assert.match(page, /Not published yet/);
+    assert.match(page, /purchase-plan-summary/);
+    assert.doesNotMatch(page, /entitlement|Platform Owner|authority chain/);
 });
 
 void test('guests are told an account is needed before requesting access', () => {

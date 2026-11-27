@@ -20,7 +20,7 @@ export function orderProgress(status: string): OrderProgress {
                 label: 'Payment confirmed',
                 step: 2,
                 message:
-                    'Payment confirmed. The KMJ team activates your access next; it then appears on your dashboard.',
+                    'Payment confirmed. The KMJ team activates your access next; it then appears on your dashboard (My Services).',
             };
         case 'cancelled':
             return {

@@ -13,8 +13,10 @@ use App\Services\CodeBridge\HostedUsagePreview;
 use App\Services\CodeBridge\OAuth\OAuthServer;
 use App\Services\Commerce\KmjProductCatalog;
 use App\Services\Commerce\PublicProductCatalog;
+use App\Services\Commerce\PublishedPriceList;
 use App\Services\Licensing\CodeBridge\CodeBridgeCustomerDeviceDirectory;
 use App\Services\Licensing\CodeBridge\CodeBridgeDevicePairingService;
+use App\Services\Licensing\Kslp\KslpCustomerWorkspaceQuery;
 use App\Services\Licensing\LicenseAuditRecorder;
 use App\Services\Licensing\SandboxLicenseLifecycle;
 use App\Services\PlatformOwnerAccess;
@@ -211,7 +213,7 @@ Route::get('products', function (PublicProductCatalog $products) {
     ]);
 })->name('products.index');
 
-Route::get('products/{slug}', function (string $slug, PublicProductCatalog $products) {
+Route::get('products/{slug}', function (string $slug, PublicProductCatalog $products, PublishedPriceList $prices) {
     if (in_array($slug, KmjProductCatalog::LEGACY_CINEMA_VARIANT_SLUGS, true)) {
         return redirect()->route('products.show', [
             'slug' => KmjProductCatalog::CINEMA_PLATFORM_SLUG,
@@ -223,6 +225,7 @@ Route::get('products/{slug}', function (string $slug, PublicProductCatalog $prod
 
     return Inertia::render('products/show', [
         'product' => $product,
+        'pricing' => $prices->forProduct($slug),
     ]);
 })->name('products.show');
 
@@ -390,6 +393,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         EntitlementReader $entitlements,
         CustomerReleaseAccess $releaseAccess,
         PublicProductCatalog $publicProducts,
+        KslpCustomerWorkspaceQuery $licensing,
     ) {
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -498,7 +502,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->values()
             ->all();
 
+        // License records and product access are separate tables. Show both.
+        $licenseRecords = $licensing->licensesForUser($user);
+
         return Inertia::render('dashboard', [
+            'licenses' => $licenseRecords['licenses'],
+            'licenseCount' => $licenseRecords['total'],
             'discoverableProducts' => $discoverableProducts,
             'organizations' => $items,
             'hasPasskey' => $user->passkeys()->exists(),

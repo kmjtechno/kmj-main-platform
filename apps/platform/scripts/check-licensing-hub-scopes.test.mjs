@@ -49,19 +49,13 @@ void test('customers see only actual organization entitlements, never catalog-in
     assert.match(dashboard, /organizations\.flatMap/);
     assert.match(dashboard, /organization\.entitlements\.map/);
     assert.match(dashboard, /entitlement\.status === 'active'/);
-    assert.match(dashboard, /The public product catalog/);
-    assert.match(dashboard, /Super Admin licensing policies/);
+    assert.match(dashboard, /does not give you access to it/);
     assert.match(dashboard, /service\.product_slug === 'kmj-codebridge'/);
     assert.match(dashboard, /detail\?\.plan/);
-    assert.match(dashboard, /Subscription feature access/);
-    assert.match(
-        dashboard,
-        /Assigned entitlement. Product-side checks still apply/,
-    );
-    assert.match(
-        dashboard,
-        /Not active: this entitlement does not grant feature access/,
-    );
+    assert.match(dashboard, /Switched on for your organization/);
+    assert.match(dashboard, /The product may run its own checks/);
+    assert.match(dashboard, /Not active: this gives no feature access/);
+    assert.doesNotMatch(dashboard, /customers cannot change/);
 });
 
 void test('developer license management retains tenant and paid-license gates', () => {

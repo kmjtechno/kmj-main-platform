@@ -18,6 +18,22 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Draft PR #1253; exact-head CI required. No partial production release authorized.',
     },
     {
+        id: 'published-prices-20261127',
+        title: 'Owner-approved prices on product and purchase pages',
+        state: 'active',
+        detail: 'SOURCE ONLY: the owner approved the 23 Nov price list plus GST on 27 Nov. Product pages and Purchase Center show it; unready products say it is a planned price. Checkout and automatic charging stay off.',
+        evidence:
+            'Source and feature tests on the PR; not yet checked on live.',
+    },
+    {
+        id: 'customer-ux-rework-20261127',
+        title: 'Customer pages: plain words and one consistent story',
+        state: 'active',
+        detail: 'SOURCE ONLY: My Services shows license records beside product access, one shared note explains purchase, license and access, Licensing Hub is shorter with no unlaunched plan prices, and Purchase Center states the price status and what gets switched on. No published price exists yet.',
+        evidence:
+            'Source and feature regression tests on the PR; no live or real-customer check yet.',
+    },
+    {
         id: 'modelfabric-keyless-quota-20261126',
         title: 'ModelFabric: legitimate keyless free routes',
         state: 'active',

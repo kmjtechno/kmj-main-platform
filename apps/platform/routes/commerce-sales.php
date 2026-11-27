@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Services\Commerce\CommercialProductPublisher;
+use App\Services\Commerce\PublishedPriceList;
 use App\Services\PlatformOwnerAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -35,8 +36,11 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             ->map(static fn (mixed $id): string => (string) $id)
             ->all();
 
-        $fulfillableProductIds = EntitlementPolicy::query()
+        $activePolicies = EntitlementPolicy::query()
             ->where('status', 'active')
+            ->orderBy('capability')
+            ->get(['product_id', 'capability']);
+        $fulfillableProductIds = $activePolicies
             ->pluck('product_id')
             ->unique()
             ->values()
@@ -88,6 +92,16 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                     'id' => (string) $product->getKey(),
                     'slug' => (string) $product->getAttribute('slug'),
                     'name' => (string) $product->getAttribute('name'),
+                    // Owner-approved list price. The order amount is still
+                    // confirmed by an operator; nothing is charged here.
+                    'pricing' => app(PublishedPriceList::class)->forProduct((string) $product->getAttribute('slug')),
+                    // What an approved request switches on.
+                    'features' => $activePolicies
+                        ->where('product_id', $product->getKey())
+                        ->pluck('capability')
+                        ->unique()
+                        ->values()
+                        ->all(),
                 ])
                 ->all(),
             'recentOrders' => $recentOrders,

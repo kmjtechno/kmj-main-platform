@@ -1,0 +1,143 @@
+{
+    "version": "2026-11-27.1",
+    "currency": "INR",
+    "tax": "plus_gst",
+    "owner_approved_on": "2026-11-27",
+    "derived_from": "kmj-commercial-pricebook-20261123",
+    "checkout_enabled": false,
+    "products": {
+        "kmj-cloudos": [
+            {
+                "name": "Professional",
+                "monthly_minor": 49900,
+                "annual_minor": 499000,
+                "unit": "organization"
+            },
+            {
+                "name": "Business",
+                "monthly_minor": 149900,
+                "unit": "organization"
+            }
+        ],
+        "kmj-codebridge": [
+            {
+                "name": "Community",
+                "monthly_minor": 0,
+                "unit": "user"
+            },
+            {
+                "name": "Pro",
+                "monthly_minor": 29900,
+                "annual_minor": 249900,
+                "unit": "user"
+            },
+            {
+                "name": "Team",
+                "monthly_minor": 69900,
+                "unit": "user",
+                "minimum_units": 3
+            }
+        ],
+        "kmj-omnidesk": [
+            {
+                "name": "Personal",
+                "monthly_minor": 0,
+                "unit": "user"
+            },
+            {
+                "name": "Solo",
+                "monthly_minor": 14900,
+                "annual_minor": 149000,
+                "unit": "user"
+            },
+            {
+                "name": "Professional",
+                "monthly_minor": 29900,
+                "unit": "user"
+            },
+            {
+                "name": "Team",
+                "monthly_minor": 39900,
+                "annual_minor": 399000,
+                "unit": "user",
+                "minimum_units": 3
+            }
+        ],
+        "kmj-forge": [
+            {
+                "name": "Developer",
+                "monthly_minor": 19900,
+                "annual_minor": 199000,
+                "unit": "developer"
+            }
+        ],
+        "kmj-connect": [
+            {
+                "name": "Teams",
+                "monthly_minor": 9900,
+                "annual_minor": 99000,
+                "unit": "seat",
+                "minimum_units": 3
+            }
+        ],
+        "kmj-cloud-nexus": [
+            {
+                "name": "Developer",
+                "monthly_minor": 29900,
+                "annual_minor": 299000,
+                "unit": "user"
+            }
+        ],
+        "kmj-agent": [
+            {
+                "name": "Personal",
+                "monthly_minor": 14900,
+                "annual_minor": 149000,
+                "unit": "user"
+            }
+        ],
+        "kmj-creative-studio": [
+            {
+                "name": "Creator",
+                "monthly_minor": 19900,
+                "annual_minor": 199000,
+                "unit": "user"
+            }
+        ],
+        "kmj-calibration-pro": [
+            {
+                "name": "Site pilot",
+                "unit": "site",
+                "quote_from_minor": 999900
+            }
+        ],
+        "kmj-cinema-player": [
+            {
+                "name": "Site pilot",
+                "unit": "site",
+                "quote_from_minor": 499900
+            }
+        ],
+        "kmj-360-dome": [
+            {
+                "name": "Site pilot",
+                "unit": "site",
+                "quote_from_minor": 1499900
+            }
+        ],
+        "kmj-cinema-platform": [
+            {
+                "name": "Site pilot",
+                "unit": "site",
+                "quote_from_minor": 1999900
+            }
+        ],
+        "kmj-immersive-cinema-suite": [
+            {
+                "name": "Site pilot",
+                "unit": "site",
+                "quote_from_minor": 3999900
+            }
+        ]
+    }
+}
