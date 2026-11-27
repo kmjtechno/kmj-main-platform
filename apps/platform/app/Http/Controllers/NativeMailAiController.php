@@ -104,7 +104,7 @@ final class NativeMailAiController extends Controller
         $result = $this->gateway->complete($tenant, [
             ['role' => 'system', 'content' => $system],
             ['role' => 'user', 'content' => $prompt],
-        ], 'chat', true);
+        ], 'chat', true, privateMailConsent: true);
 
         if (! $result['ok']) {
             $code = (string) ($result['error_code'] ?? 'AI_UNAVAILABLE');
