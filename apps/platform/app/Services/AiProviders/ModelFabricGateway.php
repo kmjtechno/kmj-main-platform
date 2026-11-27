@@ -522,6 +522,18 @@ final class ModelFabricGateway
                 'latency_ms' => 0,
             ]);
 
+            if ($provider->preset === 'kilo-free') {
+                // Keep the shared IP budget independent of provider or tenant deletion.
+                // Both rows commit under the same PostgreSQL advisory lock.
+                DB::table('ai_shared_quota_reservations')->insert([
+                    'id' => $attempt->id,
+                    'scope' => 'kilo-free',
+                    'created_at' => now(),
+                ]);
+                DB::table('ai_shared_quota_reservations')->where('scope', 'kilo-free')
+                    ->where('created_at', '<', now()->subHours(2))->delete();
+            }
+
             return ['provider' => $provider, 'attempt' => $attempt, 'error' => null];
         });
     }
@@ -557,10 +569,16 @@ final class ModelFabricGateway
 
     private static function kiloHourlyUsage(): int
     {
-        return AiModelRequest::query()
+        $since = now()->subHour();
+        $ledger = DB::table('ai_shared_quota_reservations')->where('scope', 'kilo-free');
+        // Count any pre-ledger history once, without double-counting new reservations.
+        $legacy = AiModelRequest::query()
             ->whereIn('ai_provider_id', AiProvider::query()->select('id')->where('preset', 'kilo-free'))
-            ->where('created_at', '>=', now()->subHour())
+            ->whereNotIn('id', (clone $ledger)->select('id'))
+            ->where('created_at', '>=', $since)
             ->count();
+
+        return $legacy + (clone $ledger)->where('created_at', '>=', $since)->count();
     }
 
     private function failKey(string $providerId): string

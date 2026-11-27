@@ -113,3 +113,7 @@ AI Horde now officially documents an OpenAI-compatible GET /v1/models and chat e
 ### Shared gateway enforcement across workspace calls
 
 CodeBridge workspace preserves the selected model and provider but now uses ModelFabricGateway rather than directly dispatching ProviderManager. ProviderManager requires an exact, recent, single-use persisted reservation before every inference, atomically marks dispatch before HTTP, and separately rejects unconsented Kilo or strict-coding calls. The workspace cannot opt into public-only Kilo and does not silently select another model. Quota/cooldown enforcement now applies to workspace traffic; tests cover direct denial and reservation replay. Real upstream acceptance remains separate.
+
+### Durable keyless shared quota
+
+An additive `ai_shared_quota_reservations` table records only an opaque attempt ID, fixed scope and timestamp in the same transaction as the routed attempt under the PostgreSQL advisory lock. It has no tenant/provider foreign key, so deleting and reconnecting a provider cannot reset its shared rolling-hour budget. New reservations prune entries older than two hours. The count also considers surviving pre-ledger request rows without double counting. No prompts, responses, credentials or user IDs are retained. External clients on the same egress IP remain outside local accounting; upstream 429 is authoritative. Regression covers deletion/reconnection, quota blocking and expiry. This is a migration-bearing release: normal backup, migration and rollback gates apply.

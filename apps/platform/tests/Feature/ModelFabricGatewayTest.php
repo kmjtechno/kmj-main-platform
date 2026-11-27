@@ -321,6 +321,40 @@ final class ModelFabricGatewayTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_shared_keyless_quota_survives_connection_deletion_and_expires(): void
+    {
+        $row = array_replace(
+            $this->providerRow('kilo-free', 'Kilo', 'https://ai-gateway.kilo.ai/api/v1', 'sample/public:free'),
+            ['api_key' => '', 'key_last4' => ''],
+        );
+        $provider = AiProvider::query()->create($row);
+        for ($i = 0; $i < 199; $i++) {
+            DB::table('ai_shared_quota_reservations')->insert([
+                'id' => (string) Str::uuid(),
+                'scope' => 'kilo-free',
+                'created_at' => now(),
+            ]);
+        }
+        Http::fake(['ai-gateway.kilo.ai/*' => Http::response(['choices' => [['message' => ['content' => 'pong']]]], 200)]);
+        $gateway = app(ModelFabricGateway::class);
+        $messages = [['role' => 'user', 'content' => 'ping']];
+
+        $this->assertTrue($gateway->complete($this->org, $messages, publicPromptsConfirmed: true)['ok']);
+        $this->assertSame(200, ModelFabricGateway::kiloQuotaSnapshot()['used']);
+        $provider->delete();
+        AiProvider::query()->create($row);
+        $this->assertSame(200, ModelFabricGateway::kiloQuotaSnapshot()['used']);
+        $this->assertSame('keyless_hourly_quota_exhausted', $gateway->complete($this->org, $messages, publicPromptsConfirmed: true)['error_code']);
+        Http::assertSentCount(1);
+
+        DB::table('ai_shared_quota_reservations')->update(['created_at' => now()->subHours(3)]);
+        $this->assertSame(0, ModelFabricGateway::kiloQuotaSnapshot()['used']);
+        $this->assertTrue($gateway->complete($this->org, $messages, publicPromptsConfirmed: true)['ok']);
+        $this->assertSame(1, ModelFabricGateway::kiloQuotaSnapshot()['used']);
+        $this->assertDatabaseCount('ai_shared_quota_reservations', 1);
+        Http::assertSentCount(2);
+    }
+
     public function test_keyless_inference_requires_explicit_public_prompt_confirmation(): void
     {
         AiProvider::query()->create(array_replace(
