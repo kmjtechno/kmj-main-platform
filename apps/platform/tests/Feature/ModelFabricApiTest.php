@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\AiModelEvidence;
+use App\Models\AiModelRequest;
 use App\Models\AiModelToken;
 use App\Models\AiProvider;
 use App\Services\AiProviders\EndpointGuard;
@@ -523,6 +524,62 @@ final class ModelFabricApiTest extends TestCase
         Http::assertSentCount(5);
         $this->postJson('/api/modelfabric/v1/chat/completions', $body, $ticketHeaders)->assertStatus(403);
         Http::assertSentCount(5);
+    }
+
+    public function test_native_admission_does_not_probe_a_cooling_provider_or_model(): void
+    {
+        $this->evidenced('vendor/model:free', 'no-training-documented', [
+            'name' => 'OpenRouter', 'preset' => 'openrouter',
+            'base_url' => 'https://openrouter.ai/api/v1',
+            'models_cache' => ['vendor/model:free'],
+        ]);
+        $provider = AiProvider::query()->firstOrFail();
+        $headers = [
+            'Authorization' => 'Bearer '.$this->token(),
+            'X-ModelFabric-Policy' => 'strict-free-cloud',
+            'X-ModelFabric-Request-Digest' => str_repeat('a', 64),
+        ];
+        Http::fake();
+        Cache::put('modelfabric:cooldown:'.$provider->id, now()->addMinutes(10)->getTimestamp(), 600);
+        $this->getJson('/api/modelfabric/v1/models', $headers)->assertOk()
+            ->assertJsonPath('modelfabric.native_admission', null);
+        Cache::forget('modelfabric:cooldown:'.$provider->id);
+
+        Cache::put(
+            'modelfabric:model-cooldown:'.hash('sha256', $provider->id.'|vendor/model:free'),
+            now()->addMinutes(10)->getTimestamp(),
+            600,
+        );
+        $this->getJson('/api/modelfabric/v1/models', $headers)->assertOk()
+            ->assertJsonPath('modelfabric.native_admission', null);
+        Http::assertNothingSent();
+    }
+
+    public function test_native_admission_never_probes_an_owner_capped_route(): void
+    {
+        $this->evidenced('vendor/model:free', 'no-training-documented', [
+            'name' => 'OpenRouter', 'preset' => 'openrouter',
+            'base_url' => 'https://openrouter.ai/api/v1',
+            'models_cache' => ['vendor/model:free'],
+        ]);
+        $provider = AiProvider::query()->firstOrFail();
+        $provider->daily_request_cap = 1;
+        $provider->save();
+        AiModelRequest::query()->create([
+            'organization_id' => $this->org,
+            'ai_provider_id' => $provider->id,
+            'model_id' => 'vendor/model:free',
+            'outcome' => 'failed',
+            'error_code' => 'attempt_reserved',
+            'latency_ms' => 0,
+        ]);
+        Http::fake();
+        $this->getJson('/api/modelfabric/v1/models', [
+            'Authorization' => 'Bearer '.$this->token(),
+            'X-ModelFabric-Policy' => 'strict-free-cloud',
+            'X-ModelFabric-Request-Digest' => str_repeat('b', 64),
+        ])->assertOk()->assertJsonPath('modelfabric.native_admission', null);
+        Http::assertNothingSent();
     }
 
     public function test_native_ticket_is_not_issued_when_provider_remaining_quota_is_unknown(): void
