@@ -2,7 +2,7 @@ import Lenis from 'lenis';
 import { useEffect } from 'react';
 import 'lenis/dist/lenis.css';
 
-/** Elements that fade up the first time they are scrolled into view. */
+/** Cards that fade up the first time they are scrolled into view. */
 const REVEAL = [
     '.lock-trust > div',
     '.lock-heading',
@@ -76,10 +76,16 @@ export default function PublicMotion() {
                     .forEach((entry, index) => {
                         const element = entry.target as HTMLElement;
                         reveal.unobserve(element);
+                        // Only cards fade. Text sections slide at full
+                        // opacity so they never drop below readable contrast.
+                        const fade = element.hasAttribute('data-reveal');
                         element.removeAttribute('data-reveal');
                         element.animate(
                             [
-                                { opacity: 0, translate: '0 36px' },
+                                {
+                                    opacity: fade ? 0 : 1,
+                                    translate: '0 36px',
+                                },
                                 { opacity: 1, translate: '0 0' },
                             ],
                             {
@@ -110,7 +116,10 @@ export default function PublicMotion() {
                     window.innerHeight * 0.94,
             )
             .forEach((element) => {
-                element.setAttribute('data-reveal', '');
+                if (element.matches(REVEAL)) {
+                    element.setAttribute('data-reveal', '');
+                }
+
                 reveal.observe(element);
             });
 
