@@ -210,12 +210,10 @@ Route::get('/', function (PublicProductCatalog $products) {
 })->name('home');
 
 Route::get('products', function (PublicProductCatalog $products, PublishedPriceList $prices) {
-    $portfolio = $products->all();
-
     return Inertia::render('products/index', [
-        'products' => $portfolio,
-        'pricing' => collect($portfolio)
-            ->mapWithKeys(fn (array $product): array => [(string) $product['slug'] => $prices->forProduct((string) $product['slug'])])
+        'products' => $products->all(),
+        'pricing' => collect($products->slugs())
+            ->mapWithKeys(fn (string $slug): array => [$slug => $prices->forProduct($slug)])
             ->all(),
     ]);
 })->name('products.index');
