@@ -92,7 +92,10 @@ void test('API tokens tab shows a copy-ready connect guide without persisting th
     assert.match(page, /function ConnectGuide/);
     assert.match(page, /modelfabric-connect-guide/);
     assert.match(page, /modelfabric-auto/);
-    assert.match(page, /<ConnectGuide origin=\{origin\} token=\{newToken\}/);
+    assert.match(
+        page,
+        /<ConnectGuide\s+origin=\{origin\}\s+token=\{newToken\}\s+coding=\{/,
+    );
     assert.doesNotMatch(page, /localStorage|sessionStorage/);
 });
 
