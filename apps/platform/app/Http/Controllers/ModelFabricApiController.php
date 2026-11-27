@@ -109,6 +109,14 @@ final class ModelFabricApiController extends Controller
             }
         }
 
+        // A private-source token never authorizes a bare chat POST. Its request
+        // must carry a strict-free-cloud policy AND a fresh, single-use,
+        // exact-body admission ticket. Catalog/evidence alone is not consent to
+        // upload source, and the adapter's price check is not a replacement.
+        if ($token->private_source && (! $strictFreeCloud || $nativeRoute === null)) {
+            return $this->error(403, 'native_admission_required', 'Private source requires strict-free-cloud and a fresh native admission ticket.');
+        }
+
         // The caller's "model" field is ignored on purpose: it cannot pick a paid or unverified model.
         $capability = $token->private_source ? 'code' : 'chat';
         $result = $this->gateway->complete($token->organization_id, $messages, $capability, $token->private_source, $this->sessionKey($request), $strictFreeCloud, isset($data['max_tokens']) ? (int) $data['max_tokens'] : null, $nativeRoute, $this->publicPromptsConfirmed($request));
