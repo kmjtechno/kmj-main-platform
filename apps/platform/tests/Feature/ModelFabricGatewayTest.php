@@ -547,6 +547,28 @@ final class ModelFabricGatewayTest extends TestCase
         $this->assertDatabaseCount('ai_model_requests', 1);
     }
 
+    public function test_consent_does_not_unlock_mail_content_when_no_training_evidence_is_missing(): void
+    {
+        $provider = $this->provider('groq', 'Groq', 'https://api.groq.com/openai/v1', 'model-a');
+        AiModelEvidence::query()->where('ai_provider_id', $provider->id)
+            ->update(['data_handling' => 'unknown']);
+        Http::fake(['api.groq.com/*' => Http::response([
+            'choices' => [['message' => ['content' => 'must stay private']]],
+        ], 200)]);
+
+        $result = app(ModelFabricGateway::class)->complete(
+            $this->org,
+            [['role' => 'user', 'content' => 'private mail']],
+            capability: 'chat',
+            privateSource: true,
+            privateMailConsent: true,
+        );
+        $this->assertFalse($result['ok']);
+        $this->assertSame('NO_FREE_ROUTE_AVAILABLE', $result['error_code']);
+        $this->assertSame(0, AiModelRequest::query()->count());
+        Http::assertNothingSent();
+    }
+
     public function test_keyless_inference_requires_explicit_public_prompt_confirmation(): void
     {
         AiProvider::query()->create(array_replace(
