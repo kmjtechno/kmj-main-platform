@@ -448,7 +448,7 @@ final class ModelFabricGateway
         $seconds = match ($code) {
             'rate_limited' => $retryAfter !== null ? max(5, min(3600, $retryAfter)) : self::RATE_LIMIT_COOLDOWN,
             'auth_failed' => self::AUTH_COOLDOWN,
-            'provider_unavailable', 'connection_failed', 'empty_response', 'unexpected_status', 'response_too_large' => $this->softFailure($provider->id),
+            'provider_unavailable', 'connection_failed', 'empty_response', 'incomplete_response', 'unexpected_status', 'response_too_large' => $this->softFailure($provider->id),
             // Admission refusals (zero_spend_blocked, model_not_discovered, ...) are not provider faults.
             default => 0,
         };
