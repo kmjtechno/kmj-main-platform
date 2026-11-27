@@ -245,6 +245,40 @@ function ManualPaymentConfirmation({ order }: { order: RecentOrder }) {
  * It moves no money, does not change the order, and does not revoke any license.
  * The server (Super Admin + passkey + confirmed-amount cap) stays authoritative.
  */
+/**
+ * After a refund is recorded, the owner may revoke the access that order gave. This is a separate,
+ * explicit and audited step: a refund record alone never changes a license or entitlement.
+ */
+function RefundRevokeAccess({ order }: { order: RecentOrder }) {
+    const [busy, setBusy] = useState(false);
+
+    return (
+        <button
+            type="button"
+            data-test="revoke-access-after-refund"
+            disabled={busy}
+            className="mt-1 rounded-lg border border-red-500/40 px-3 py-1 text-[10px] font-semibold text-red-400 disabled:opacity-50"
+            onClick={() => {
+                if (
+                    !window.confirm(
+                        'Revoke the access this order gave? This ends the active entitlement for this organization and product. A refund record alone does not do this.',
+                    )
+                ) {
+                    return;
+                }
+                setBusy(true);
+                router.post(
+                    `/operator/orders/${order.id}/refund-revoke-access`,
+                    {},
+                    { preserveScroll: true, onFinish: () => setBusy(false) },
+                );
+            }}
+        >
+            Revoke access
+        </button>
+    );
+}
+
 function RefundRecord({ order }: { order: RecentOrder }) {
     const [open, setOpen] = useState(false);
     const currency = order.currency ?? 'INR';
@@ -549,6 +583,13 @@ export default function Operator({
                                                 order.refunded_minor <
                                                     order.amount_minor && (
                                                     <RefundRecord
+                                                        order={order}
+                                                    />
+                                                )}
+                                            {order.refunded_minor > 0 &&
+                                                order.fulfillment_state ===
+                                                    'entitled' && (
+                                                    <RefundRevokeAccess
                                                         order={order}
                                                     />
                                                 )}
