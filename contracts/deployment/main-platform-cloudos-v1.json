@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "contract_id": "kmj.main-platform.on-cloudos.v1",
+  "effective_date": "2026-10-13",
+  "decision_status": "owner_locked_target_not_live",
+  "platform_repository": "kmjtechno/kmj-main-platform",
+  "hosting_repository": "kmjtechno/kmj-cloudos",
+  "roles": {
+    "commercial_authority": "kmj-main-platform",
+    "hosting_runtime_and_fleet": "kmj-cloudos",
+    "infrastructure_execution_authority": "kmj-cloudos",
+    "public_identity_and_entitlement_authority": "kmj-main-platform"
+  },
+  "target": {
+    "public_hostname": "kmjtechno.com",
+    "application": "independent_cloudos_managed_linux_workload",
+    "application_processes": [
+      "frankenphp_web",
+      "queue_worker",
+      "scheduler",
+      "frontend_static_assets"
+    ],
+    "stateful_dependencies": [
+      "isolated_postgresql",
+      "isolated_redis_compatible_cache",
+      "encrypted_persistent_storage",
+      "off_node_backup"
+    ],
+    "transactional_mail": "isolated_first_party_mail_service_with_verified_delivery",
+    "portability": "provider_neutral",
+    "web_runtime": {
+      "engine": "frankenphp",
+      "php_mode": "classic_request_lifecycle",
+      "runtime_managed_by": "kmj-cloudos",
+      "backend_php_fpm_required": false,
+      "octane_worker_mode_default": false,
+      "nginx_required": false
+    },
+    "ingress": {
+      "manager": "kmj-cloudos",
+      "provider_implementation": "caddy_non_nginx",
+      "tls_and_certificate_ownership": "kmj-cloudos",
+      "workload_upstream": "private_scoped_network",
+      "nginx_in_main_platform_request_path": false,
+      "route_activation_requires_live_probe": true
+    }
+  },
+  "interfaces": {
+    "integration": "versioned_authenticated_apis_signed_contracts_events",
+    "platform_to_cloudos": "scoped_deployment_and_infra_operations",
+    "cloudos_to_platform": "commercial_and_license_verification_with_signed_bounded_offline_grace",
+    "direct_cross_repo_database_access": false,
+    "shared_application_database": false
+  },
+  "availability": {
+    "existing_workloads_continue_during_platform_outage": true,
+    "cloudos_runtime_boot_requires_live_platform": false,
+    "runtime_survives_cloudos_control_plane_restart": true,
+    "do_not_grant_perpetual_unlicensed_customer_workloads": true,
+    "platform_internal_bootstrap_workload_uses_explicit_scoped_policy": true
+  },
+  "release_policy": {
+    "current_live_production_untouched_before_cutover": true,
+    "staging_cloudos_deployment_first": true,
+    "exact_immutable_artifact_and_source_sha_required": true,
+    "current_cloudos_applicable_release_gates_required": true,
+    "database_backup_restore_rehearsal_required": true,
+    "app_migrations_rehearsed_with_rollback": true,
+    "ingress_tls_and_dns_validated": true,
+    "public_auth_and_signed_license_smoke_required": true,
+    "payment_webhooks_and_queue_smoke_required": true,
+    "real_transactional_email_and_signed_link_smoke_required": true,
+    "control_plane_outage_and_recovery_drill_required": true,
+    "progressive_switch_with_rollback_required": true,
+    "owner_approval_for_production_cutover_required": true,
+    "exact_ci_and_release_evidence_required": true,
+    "nginx_free_ingress_and_php_runtime_smoke_required": true
+  },
+  "prohibitions": {
+    "legacy_staging_homepage_mirror": true,
+    "production_dns_change_before_release_gates": true,
+    "embedding_cloudos_source_in_platform": true,
+    "cloudos_direct_query_of_platform_authority_database": true,
+    "production_customer_licensing_override": true,
+    "storing_license_signing_private_key_in_app_database": true,
+    "announcing_live_migration_without_delivery_evidence": true,
+    "nginx_in_main_platform_hosting_path": true,
+    "unverified_custom_web_server_required_for_launch": true
+  }
+}

@@ -1,0 +1,21 @@
+# KMJ Main Platform — CloudOS-managed FrankenPHP application runtime candidate
+# TLS and public routing belong to CloudOS-managed Caddy ingress.
+# This HTTP listener must remain INSIDE an isolated CloudOS workload/network.
+# Never publish this service directly on a public host port.
+{
+    frankenphp
+    admin off
+}
+
+http://:8080 {
+    root * /app/public
+    encode zstd gzip
+
+    # Only content-hashed build files may receive immutable public caching.
+    # Never cache login, session, payments, licensing, admin or Inertia HTML here.
+    @versioned_assets path /build/assets/*
+    header @versioned_assets Cache-Control "public, max-age=31536000, immutable"
+
+    # Laravel front controller; no PHP-FPM and no Nginx.
+    php_server
+}

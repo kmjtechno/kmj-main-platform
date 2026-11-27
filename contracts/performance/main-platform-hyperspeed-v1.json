@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "contract_id": "kmj.main-platform.hyperspeed.v1",
+  "effective_date": "2026-10-13",
+  "decision": "cloudos_managed_hyperspeed_target_not_measured",
+  "goals": {
+    "ten_million_concurrent_users": "aspirational_requires_distributed_provider_and_load_test_evidence",
+    "no_unconditional_zero_latency_guarantee": true,
+    "performance_defined_by_measured_latency_throughput_and_cost": true
+  },
+  "traffic_isolation": {
+    "public_static_assets": "immutable_content_hash_cache_and_edge_delivery",
+    "public_anonymous_pages": "cache_eligible_only_after_header_cookie_and_personalization_audit",
+    "identity_payments_licenses_admin": "private_no_store_never_shared_edge_cached",
+    "writes": "idempotent_scoped_backpressure_non_replay",
+    "cache_key_must_not_include_secrets": true,
+    "avoid_app_or_db_for_edge_cache_hits": true
+  },
+  "cloudos_runtime": {
+    "ingress": "caddy_non_nginx",
+    "web": "frankenphp_classic",
+    "stateless_replicas": true,
+    "minimum_production_replicas": 2,
+    "multi_node_anti_affinity_required": true,
+    "health_check_path": "/up",
+    "private_upstreams_only": true,
+    "tls_between_nodes_required": true,
+    "ingress_route_change_requires_live_probe": true,
+    "bounded_request_and_queue_concurrency": true,
+    "no_public_direct_app_listener": true
+  },
+  "capacity_control": {
+    "rps_per_replica_from_real_benchmark_only": true,
+    "headroom_fraction": 0.65,
+    "scale_by_observed_latency_error_cpu_memory_queue_depth": true,
+    "max_replicas_requires_approved_finite_cost_and_resources": true,
+    "no_paid_or_burst_capacity_auto_purchase": true,
+    "scale_down_waits_for_drain": true,
+    "insufficient_capacity_fails_closed_with_retry_after": true,
+    "cost_free_hardware_does_not_imply_unlimited_capacity": true
+  },
+  "data_and_resilience": {
+    "shared_redis_valkey_for_sessions_cache_rate_limiter": true,
+    "database_pool_budget_and_connection_pressure_gates": true,
+    "no_full_table_scan_for_public_homepage": true,
+    "analytics_search_ai_emails_and_webhooks_async_when_safe": true,
+    "outbox_idempotency_for_payments_and_entitlements": true,
+    "off_node_backup_and_restore_drill": true,
+    "control_plane_outage_existing_workload_survives": true
+  },
+  "qualification": {
+    "targets_not_achieved_results": true,
+    "slo_targets": {
+      "public_cached_edge_ttfb_p95_ms": 200,
+      "dynamic_public_ttfb_p95_ms": 500,
+      "authenticated_ttfb_p95_ms": 800,
+      "monthly_availability_percent": 99.95,
+      "request_error_rate_percent_max": 0.1
+    },
+    "traffic_profiles": [
+      "anonymous_edge_cache_hit",
+      "anonymous_cache_miss",
+      "login_and_session",
+      "purchase_webhook_and_entitlement",
+      "signed_license_validation",
+      "admin_with_authorization"
+    ],
+    "stages": [
+      "bounded_single_replica_baseline",
+      "multiple_replicas_failure_test",
+      "distributed_traffic_ramp",
+      "capacity_exhaustion_and_backpressure",
+      "regional_faults_and_recovery"
+    ],
+    "require_real_staging_distributed_load_and_evidence": true,
+    "no_load_on_production_without_scoped_approved_window": true,
+    "required_evidence": [
+      "rps",
+      "concurrent_inflight_requests",
+      "p50_p95_p99_ttfb",
+      "error_rate",
+      "edge_hit_ratio",
+      "db_connections_pool_wait",
+      "queue_depth_oldest_age",
+      "cpu_memory",
+      "node_region_failover",
+      "cost_ceiling"
+    ],
+    "unproven_claims_must_stay_blocked": true
+  }
+}
