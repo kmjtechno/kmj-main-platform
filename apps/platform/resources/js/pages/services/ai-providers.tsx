@@ -205,42 +205,49 @@ function ProviderCard({
                     ? `Last successful inference: ${formatIstStamp(provider.last_successful_inference_at)}`
                     : 'No successful inference recorded'}
             </p>
-            {canManage && provider.enabled && provider.models.length > 0 &&
+            {canManage &&
+                provider.enabled &&
+                provider.models.length > 0 &&
                 provider.error_code !== 'provider_retired' && (
-                <details className="rounded-lg border px-3 py-2 text-xs">
-                    <summary className="cursor-pointer font-semibold">
-                        Verify real free inference
-                    </summary>
-                    <label className="mt-2 flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            checked={probeConsent}
-                            onChange={(event) => setProbeConsent(event.target.checked)}
-                        />
-                        Send one fixed public synthetic prompt. No private data.
-                    </label>
-                    <button
-                        type="button"
-                        disabled={busy || !probeConsent}
-                        onClick={() =>
-                            act(() => router.post(
-                                `/operator/modelfabric/providers/${provider.id}/inference-check`,
-                                { public_prompts_confirmed: true },
-                                {
-                                    ...options,
-                                    onFinish: () => {
-                                        setBusy(false);
-                                        setProbeConsent(false);
-                                    },
-                                },
-                            ))
-                        }
-                        className="mt-2 min-h-10 rounded-xl border px-3 font-semibold disabled:opacity-50"
-                    >
-                        Run one bounded synthetic inference
-                    </button>
-                </details>
-            )}
+                    <details className="rounded-lg border px-3 py-2 text-xs">
+                        <summary className="cursor-pointer font-semibold">
+                            Verify real free inference
+                        </summary>
+                        <label className="mt-2 flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                checked={probeConsent}
+                                onChange={(event) =>
+                                    setProbeConsent(event.target.checked)
+                                }
+                            />
+                            Send one fixed public synthetic prompt. No private
+                            data.
+                        </label>
+                        <button
+                            type="button"
+                            disabled={busy || !probeConsent}
+                            onClick={() =>
+                                act(() =>
+                                    router.post(
+                                        `/operator/modelfabric/providers/${provider.id}/inference-check`,
+                                        { public_prompts_confirmed: true },
+                                        {
+                                            ...options,
+                                            onFinish: () => {
+                                                setBusy(false);
+                                                setProbeConsent(false);
+                                            },
+                                        },
+                                    ),
+                                )
+                            }
+                            className="mt-2 min-h-10 rounded-xl border px-3 font-semibold disabled:opacity-50"
+                        >
+                            Run one bounded synthetic inference
+                        </button>
+                    </details>
+                )}
             <div className="flex flex-wrap items-center gap-2">
                 {canManage && provider.error_code !== 'provider_retired' && (
                     <button
