@@ -1,0 +1,56 @@
+name: KMJ E71582 guarded owner release offline QA
+on:
+  pull_request:
+    paths:
+      - "scripts/KMJ_E71582_OWNER_RELEASE_20261115.sh"
+      - "scripts/test_KMJ_E71582_OWNER_RELEASE_20261115.py"
+      - ".github/workflows/kmj-e715-owner-release-qa.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-immutable-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact tested candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify approved candidate identity, history and absence of migrations
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          target=e715829a56cc77e7aa63418ca1539635ae24e446
+          current=bce4100d005e8624509cab989c096d7eaab1ba79
+          git cat-file -e "${target}^{commit}"
+          git cat-file -e "${current}^{commit}"
+          [[ "$(git merge-base "$current" "$target")" == "$current" ]]
+          if git diff --name-only "$current" "$target" |
+             grep -E '^apps/platform/database/migrations/'; then
+            echo MIGRATION_CHANGE_REQUIRES_SEPARATE_OWNER_REVIEW
+            exit 2
+          fi
+          echo REVIEWED_MAIN_ANCESTRY=PASS
+          echo MIGRATION_FILE_CHANGES=NONE
+      - name: Verify CodeBridge root operator byte identity and parse safety
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          printf '%s  %s\n' \
+            '1bd6884e2166086db9ed469ee21bdb8fbd7e8cb7b611b52f71ccf78e78f10265' \
+            scripts/KMJ_E71582_OWNER_RELEASE_20261115.sh |
+            sha256sum -c -
+          printf '%s  %s\n' \
+            '4a7bfd5b63c2333535af0e20417166f8be2db261859b1bf383905d12879d9ea5' \
+            scripts/test_KMJ_E71582_OWNER_RELEASE_20261115.py |
+            sha256sum -c -
+          bash -n scripts/KMJ_E71582_OWNER_RELEASE_20261115.sh
+          python3 -m py_compile scripts/test_KMJ_E71582_OWNER_RELEASE_20261115.py
+      - name: Run disposable offline source contract tests
+        run: |
+          python3 -B -m unittest discover -s scripts \
+            -p 'test_KMJ_E71582_OWNER_RELEASE_20261115.py' -v
+          echo E71582_SOURCE_ONLY_QA=PASS
+          echo PRODUCTION_DEPLOYMENT=NOT_ATTEMPTED
