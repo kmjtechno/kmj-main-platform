@@ -32,7 +32,7 @@ Against `main` 7b95b21 (after #1252). Sources: `RELEASE_GATE.md`, roadmap sectio
 | Key rotation | TESTS IN CI | `KslpKeyRotationTest` (5 tests incl. revoked kid cannot be republished, not-before/not-after) |
 | Offline grace cases | TESTS IN CI | `KslpOfflineLeaseGuardTest` (stale sequence, clock rollback, revocation during grace, excess window, forged signature) |
 | Device activation limits | TESTS IN CI | `CodeBridgeDeviceEnrollmentTest::test_device_limit_is_enforced_before_credential_creation` (CodeBridge devices; other products need their own proof) |
-| Revocation latency | NO EVIDENCE | No test or measurement of time-to-effect after revoke |
+| Revocation latency | PARTIAL | Online/server validation: a revoke is a DB row read on the very next validation (`SandboxLicenseValidationEngine`, `LicenseRevoker`), tested by `SandboxLicenseLifecycleTest::test_signed_sandbox_license_can_be_validated_and_revoked` and the first-vertical-slice acceptance test, so no cache delay. Offline clients: bounded by the signed offline window and grace (`KslpOfflineLeaseGuardTest` rejects excess windows and known revocations during grace); the real time for a disconnected client to learn of a revoke is NOT measured, and no client-side revocation sync latency test exists |
 | Rust wrapper conformance | CI job exists | "Native Rust license verifier" and interoperability jobs pass on main |
 | Live payments | NOT DONE | Razorpay sandbox only; live charging locked; manual UPI/bank details not decided |
 | Refund | PARTIAL | Owner-only record of a refund made in the provider dashboard (#1247-#1249); no provider refund call, no license revocation link |
@@ -58,7 +58,7 @@ Against `main` 7b95b21 (after #1252). Sources: `RELEASE_GATE.md`, roadmap sectio
 5. Deploy approval and production-change form.
 
 ## F. Dependency-ready for Claude
-1. Revocation-latency test and doc (what is the time between revoke and a client refusing).
+1. Document the maximum offline window per product (the real upper bound of revocation latency for disconnected clients) and add a client-sync revocation test.
 2. Refund-to-revocation explicit owner action with tests.
 3. Redirect map and privacy data inventory drafts.
 4. Check the 15:45 IST V3 run and record the receipt.
