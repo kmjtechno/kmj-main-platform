@@ -25,7 +25,7 @@ final class JmapOwnerInboxController
 
         // The only caller-controlled value is an integer page position.
         $input = $request->except('_token');
-        $position = $input['position'] ?? 0;
+        $position = array_key_exists('position', $input) ? $input['position'] : 0;
         if (array_diff(array_keys($input), ['position']) !== []
             || ! is_int($position) || $position < 0 || $position > 40000) {
             return response()->json(['status' => 'invalid_position'], 422, $headers);
