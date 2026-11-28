@@ -40,6 +40,7 @@ on:
       - "scripts/operations/migrate-elite-isolated-stage-20261128.py"
       - "scripts/operations/plan-elite-isolated-stage-route-20261128.py"
       - "scripts/operations/plan-elite-isolated-stage-hba-20261128.py"
+      - "scripts/operations/verify-elite-isolated-stage-hba-20261128.py"
       - "scripts/test_elite_stage_hba_integration.py"
       - "scripts/test_prepare_elite_isolated_stage_runtime.py"
       - "infra/server/systemd/kmj-elite-release-admission-broker.*"
