@@ -240,6 +240,38 @@ class ActivationBrokerTests(unittest.TestCase):
             self.assertTrue(p.is_symlink())
             self.assertTrue(other.exists())
 
+    def test_cleanup_rejects_changed_inode_before_unlink(self):
+        with tempfile.TemporaryDirectory() as temp:
+            p = Path(temp) / "intent.json"
+            replacement = Path(temp) / "replacement.json"
+            p.write_text(json.dumps(intent(created_at_unix=NOW - 110, expires_at_unix=NOW)))
+            p.chmod(0o640)
+            replacement.write_text(json.dumps(intent()))
+            replacement.chmod(0o640)
+            uid = p.stat().st_uid
+            real_stat = mod.os.stat
+
+            def swap_before_stat(name, *args, **kwargs):
+                if name == p.name and kwargs.get("dir_fd") is not None:
+                    replacement.replace(p)
+                return real_stat(name, *args, **kwargs)
+
+            with patch.object(mod.os, "stat", side_effect=swap_before_stat):
+                with self.assertRaisesRegex(ValueError, "INTENT_RACE"):
+                    mod.retire_expired_intent(p, uid, NOW)
+            self.assertEqual(json.loads(p.read_text()), intent())
+
+    def test_fifo_is_rejected_without_blocking(self):
+        with tempfile.TemporaryDirectory() as temp:
+            p = Path(temp) / "intent.json"
+            mod.os.mkfifo(p, 0o640)
+            uid = p.lstat().st_uid
+            with self.assertRaisesRegex(ValueError, "INTENT_IDENTITY"):
+                mod.read_owner_intent(p, uid, NOW)
+            with self.assertRaisesRegex(ValueError, "INTENT_IDENTITY"):
+                mod.retire_expired_intent(p, uid, NOW)
+            self.assertTrue(stat.S_ISFIFO(p.lstat().st_mode))
+
     def test_intent_expiring_during_preflight_cannot_be_claimed_or_started(self):
         with patch.object(mod.os, "geteuid", return_value=0), \
                 patch.object(mod.socket, "gethostname", return_value="KMJ-elite"), \
