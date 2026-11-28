@@ -92,3 +92,9 @@ has run it and a real approved-release activation has been verified.
 This is one-click execution only for a fully *pre-approved* release.
 A trusted one-click Stage/Verify orchestration, owner installation and
 future SHA-specific approvals remain separate pending work.
+
+## Expired activation intent lifecycle (source candidate)
+
+The normal fixed broker oneshot may retire a structurally valid expired request from its fixed inbox in execute mode only. Inspect remains read-only. Fresh, malformed, future, symlinked, multiply linked, wrong-owner and changed-inode inputs never become cleanup authority. Cleanup never claims an intent, starts a release, changes protected approvals, or removes the durable claim journal. Immediately before claiming a fresh intent the broker rereads it using a fresh clock and rejects drift or expiration.
+
+The unit's writable scope adds only the existing private ops inbox directory for unlink; this is a security-sensitive sandbox change. Before production installation, review exact source and unit pins, preserve the old root-owned copies, verify the sandbox and no-active-intent state, and exercise rollback and independent live readback. The previous immutable installer is not an upgrade mechanism. This source change alone does not install or enable anything on Elite.
