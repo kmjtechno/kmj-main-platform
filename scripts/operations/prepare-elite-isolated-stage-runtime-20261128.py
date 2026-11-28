@@ -11,6 +11,7 @@ auto-rollback, no silent retry).
 """
 from __future__ import annotations
 import argparse
+import importlib.util
 import os
 from pathlib import Path
 import grp
@@ -41,6 +42,11 @@ ENV = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "HOME": "/var/lib/postgresql",
        "LANG": "C", "LC_ALL": "C", "PGPASSFILE": "/dev/null",
        "PGDATABASE": "postgres", "PGHOST": "/var/run/postgresql",
        "PGPORT": "5432", "PGUSER": "postgres"}
+
+
+_hba_spec = importlib.util.spec_from_file_location("stage_hba_verify", Path(__file__).resolve().parent / "verify-elite-isolated-stage-hba-20261128.py")
+hba = importlib.util.module_from_spec(_hba_spec)
+_hba_spec.loader.exec_module(hba)
 
 
 def emit(key: str, value: str) -> None:
@@ -233,8 +239,9 @@ def main() -> int:
     stage_gid = grp.getgrnam("kmjstage").gr_gid
     if stage_uid == 0 or stage_gid == 0 or pwd.getpwnam("postgres").pw_uid == 0:
         deny("SYSTEM_USER_UNSAFE")
-    if not public_connect_isolated():
-        deny("PUBLIC_CONNECT_TO_OTHER_APPLICATION_DATABASES")
+    # ACLs can grant PUBLIC access; a loaded first-match role-specific HBA
+    # policy must independently deny every existing connectable database.
+    hba.verify_before_role()
     if args.inspect:
         emit("KMJ_STAGE_RUNTIME_BOOTSTRAP", "INSPECT_ONLY_PASS")
         emit("PRODUCTION_POINTER", "UNCHANGED")
@@ -247,16 +254,22 @@ def main() -> int:
     storage_tree(stage_uid, stage_gid)
     if not exact_pointers():
         deny("POINTER_DRIFT_BEFORE_SQL")
-    sql_stdin(f"CREATE ROLE {ROLE} WITH LOGIN NOSUPERUSER NOCREATEDB "
+    sql_stdin(f"CREATE ROLE {ROLE} WITH NOLOGIN NOSUPERUSER NOCREATEDB "
               f"NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT CONNECTION LIMIT 8 "
               f"PASSWORD '{password}';")
     sql_stdin(f"CREATE DATABASE {DB} OWNER {ROLE};")
     sql_stdin(f"REVOKE ALL ON DATABASE {DB} FROM PUBLIC;")
-    if not (catalog("role") == 1 and catalog("db") == 1 and database_owned_by_role()
-            and public_connect_isolated()):
+    if not (catalog("role") == 1 and catalog("db") == 1 and database_owned_by_role()):
         deny("POSTGRES_READBACK_FAILED")
     if not exact_pointers():
         deny("POINTER_DRIFT_AFTER_SQL")
+    hba.current_policy()
+    sql_stdin(f"ALTER ROLE {ROLE} LOGIN;")
+    try:
+        hba.verify_live()
+    except BaseException:
+        sql_stdin(f"ALTER ROLE {ROLE} NOLOGIN;")
+        deny("LIVE_HBA_PROBE_FAILED_ROLE_DISABLED")
     # Finalize newly owned root-only credential directory and root candidate
     # to traverse-only; user can access ONLY stage-owned storage subtree.
     os.chmod(RUNTIME, 0o711, follow_symlinks=False)
@@ -264,7 +277,8 @@ def main() -> int:
     emit("STAGING_CANDIDATE_SHA", SHA)
     emit("STAGING_DB_ROLE", "NEW_RESTRICTED_ROLE")
     emit("STAGING_DATABASE", "NEW_ISOLATED_DATABASE")
-    emit("STAGING_PUBLIC_DATABASE_GRANTS", "REVOKED")
+    emit("STAGING_PUBLIC_DATABASE_GRANTS", "CANDIDATE_ONLY_REVOKED")
+    emit("STAGING_HBA_LIVE_ISOLATION", "PASS")
     emit("STAGING_DB_SECRET", "ROOT_ONLY_PRIVATE_NOT_PRINTED")
     emit("STAGING_STORAGE", "NEW_STAGE_USER_ONLY")
     emit("STAGING_STORAGE_VIEWS", "NOT_COMPILED")
@@ -282,6 +296,6 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except (OSError, KeyError, ValueError):
+    except (OSError, KeyError, ValueError, subprocess.SubprocessError):
         emit("KMJ_STAGE_RUNTIME_BOOTSTRAP", "BLOCKED_IO_OR_ACCOUNT_REVIEW_REQUIRED")
         raise SystemExit(2)
