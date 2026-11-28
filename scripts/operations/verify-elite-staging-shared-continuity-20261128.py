@@ -82,9 +82,15 @@ def inventory(root, artwork=ARTWORK):
 
 
 def compare(old, new):
-    old_files = {k: v for k, v in old.items() if v[0] == "file"}
-    new_files = {k: v for k, v in new.items() if v[0] == "file"}
-    return old_files == new_files
+    # A missing canonical artwork link (or an empty scaffold at that exact
+    # path) is the only allowed structural difference before repair.
+    key = "private/product-artwork"
+    if old.get(key) != ("link", "canonical-artwork"):
+        return False
+    if new.get(key) not in (None, ("dir", ""), ("link", "canonical-artwork")):
+        return False
+    return {k: v for k, v in old.items() if k != key} == {
+        k: v for k, v in new.items() if k != key}
 
 
 def main():
@@ -102,7 +108,7 @@ def main():
         shared = exact_link(dst, SHARED)
         new = old if shared else inventory(dst)
         need(compare(old, new), "FILE_CONTENT_MISMATCH")
-        print("STAGE_REGULAR_FILE_PARITY=PASS")
+        print("STAGE_REGULAR_FILE_AND_DIRECTORY_PARITY=PASS")
         print("STAGE_SHARED_APP=" + ("EXACT" if shared else "NOT_LINKED"))
         print("STAGE_ARTWORK=" + ("EXACT" if new.get("private/product-artwork") == ("link", "canonical-artwork") else "MISSING"))
         print("STAGE_PUBLIC_MAPPING=EXTERNAL_WEB_SERVER_VERIFICATION_REQUIRED")
