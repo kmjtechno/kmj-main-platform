@@ -4,6 +4,7 @@
 
 @import './admin-premium.css';
 @import './command-os.css';
+@import './panel-theme.css';
 
 @source '../views';
 @source '../js';

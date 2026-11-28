@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'panel-dashboard-theme-20261128',
+        title: 'One dashboard theme for owner and customer panels',
+        state: 'active',
+        detail: 'SOURCE ONLY: signed-in owner and customer panels use the owner dashboard colours, font, panels, navigation, buttons and full-width layout. Panels are always dark.',
+        evidence:
+            'Local source tests and preview renders; live and owner acceptance pending.',
+    },
+    {
         id: 'owner-website-controls-team-20261128',
         title: 'Owner website controls and Team Members page',
         state: 'active',

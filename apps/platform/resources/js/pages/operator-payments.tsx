@@ -247,7 +247,7 @@ export default function OperatorPayments({
                         ))}
                 </section>
 
-                <details className="bg-card mx-auto w-full max-w-6xl rounded-2xl border p-5">
+                <details className="bg-card w-full rounded-2xl border p-5">
                     <summary className="text-foreground cursor-pointer text-sm font-semibold">
                         Other payment options (planned, not integrated)
                     </summary>
