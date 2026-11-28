@@ -26,6 +26,12 @@ def make_tree(root):
 
 
 class PrepareTests(unittest.TestCase):
+    def test_exact_full_sha_staging_path(self):
+        prev, cand = pr.tree_paths(SHA, EXP)
+        self.assertEqual(prev, pr.PREV_ROOT / EXP / 'apps' / 'platform')
+        self.assertEqual(cand, pr.CAND_ROOT / SHA / 'apps' / 'platform')
+        self.assertNotEqual(cand, pr.CAND_ROOT / ('platform-' + SHA[:12]) / 'apps' / 'platform')
+
     def test_sql_is_fixed_shape_and_rejects_unsafe_values(self):
         name = pr.names(SHA)
         sql = pr.sql_create(name, "c" * 32, "d" * 32)
