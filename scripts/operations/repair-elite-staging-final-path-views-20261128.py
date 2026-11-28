@@ -34,25 +34,31 @@ RUNNER_SHA = "27f4c1734b15f886f761f60e37b6db9ddc5922737159a1c6089ad081b3b96477"
 REMOTE = "https://github.com/kmjtechno/kmj-main-platform.git"
 ENV = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C", "GIT_TERMINAL_PROMPT": "0"}
 PHP_COMPILE = r"""<?php
+$phase = 'AUTOLOAD';
 try {
     require 'vendor/autoload.php';
     $app = require 'bootstrap/app.php';
     $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+    $phase = 'BOOTSTRAP';
     $kernel->bootstrap();
+    $phase = 'COMPILE_SCOPE';
     $target = getenv('VIEW_COMPILED_PATH');
     if (config('view.compiled') !== $target || !is_dir($target)) {
         throw new RuntimeException('compile scope');
     }
+    $phase = 'RESOLVE_COMPILER';
     $compiler = $app->make('blade.compiler');
     $source = dirname((new ReflectionClass(Illuminate\Foundation\Http\HealthCheck::class))->getFileName()).'/../resources/health-up.blade.php';
     if (dirname($compiler->getCompiledPath($source)) !== $target || !is_file($source)) {
         throw new RuntimeException('compiler scope');
     }
+    $phase = 'ARTISAN_VIEW_CACHE';
     if (Illuminate\Support\Facades\Artisan::call('view:cache') !== 0) {
         throw new RuntimeException('view cache');
     }
     // Register framework error views separately: a missing app errors path
     // must not break the ordinary view:cache Finder.
+    $phase = 'FRAMEWORK_ERROR_VIEWS';
     $errors = dirname((new ReflectionClass(Illuminate\Foundation\Exceptions\RegisterErrorViewPaths::class))->getFileName()).'/views';
     foreach (glob($errors.'/*.blade.php') ?: [] as $errorView) {
         $compiler->compile($errorView);
@@ -63,6 +69,7 @@ try {
             throw new RuntimeException('error cache expired');
         }
     }
+    $phase = 'FRAMEWORK_HEALTH_VIEW';
     // HealthCheck uses View::file with this lexical path, including /../.
     $compiler->compile($source);
     if ($compiler->isExpired($source)) {
@@ -74,6 +81,11 @@ try {
     echo "COMPILE_OK\n";
 } catch (Throwable $e) {
     echo "COMPILE_FAILED ".get_class($e)."\n";
+    echo "COMPILE_PHASE=".$phase."\n";
+    echo "COMPILE_LOCATION=".basename($e->getFile()).":".$e->getLine()."\n";
+    foreach (array_slice($e->getTrace(), 0, 8) as $t) {
+        echo "COMPILE_TRACE=".($t['class']??'')."::".($t['function']??'')."\n";
+    }
     exit(1);
 }
 """
@@ -141,6 +153,9 @@ def command(args, *, input=None, timeout=120, cwd="/"):
         marker = re.search(rb"(?m)^(?:COMPILE|HEALTH)_FAILED [A-Za-z0-9_\\]+$", p.stdout)
         if marker:
             print(marker.group().decode("ascii"), flush=True)
+        for line in p.stdout.splitlines():
+            if re.fullmatch(rb"COMPILE_(?:PHASE=[A-Z_]+|LOCATION=[A-Za-z0-9_.-]+:[0-9]+|TRACE=[A-Za-z0-9_\\:{}().-]+)", line):
+                print(line.decode("ascii"), flush=True)
         raise ValueError("COMMAND_FAILED")
     return p.stdout
 
