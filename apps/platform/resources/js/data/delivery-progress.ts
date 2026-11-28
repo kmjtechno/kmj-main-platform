@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'production-kslp-reversal-safety-20261128',
+        title: 'Reviewed checkout terms and payment reversal safety',
+        state: 'active',
+        detail: 'SOURCE ONLY: checkout is bound to reviewed order terms; signed refund and dispute signals are correlated fail-closed. No commercial activation or live migration.',
+        evidence:
+            'Regression tests ported in PR #1282; fresh CI, rollback rehearsal and merchant acceptance pending.',
+    },
+    {
         id: 'panel-dashboard-theme-20261128',
         title: 'One dashboard theme for owner and customer panels',
         state: 'active',
