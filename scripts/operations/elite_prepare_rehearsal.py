@@ -13,8 +13,9 @@ Safety properties:
   * database name/role are derived from the SHA, match the rehearsal's own
     disposable-name pattern, are loopback-only, non-superuser, and stamped with a
     random nonce comment the rehearsal independently checks;
-  * only names matching the fixed pattern are ever dropped; production databases,
-    the live pointer, approvals and releases are never touched.
+  * prepare never drops or reuses existing state; cleanup requires exact protected
+    config, both database and role nonce comments, and a verified owner. Production
+    databases, the live pointer, approvals and releases are never touched.
 """
 import json
 import os
@@ -22,6 +23,7 @@ import re
 import secrets
 import shutil
 import socket
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -29,12 +31,14 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import release_admission_receipts as ra  # noqa: E402
+import release_receipt_store as store  # noqa: E402
+import elite_collect_rollback_rehearsal_receipt as collector  # noqa: E402
 
 BASE = Path("/var/lib/kmj-release-rehearsal")
 CONFIG = Path("/etc/kmj-codebridge/release-rehearsal.json")
 PREV_ROOT = Path("/home/kmjprod/releases")
 CAND_ROOT = Path("/home/kmjstage/releases")
-OWNER = "kmjprod"
+OWNER = "root"
 NAME_RE = re.compile(r"kmj_rehearsal_[0-9a-f]{12}\Z")
 # Order matters for rsync: the single allowed .env.example comes before the .env* exclusion.
 FILTERS = (("--include", ".env.example"), ("--exclude", ".env*"),
@@ -51,7 +55,7 @@ def names(sha):
 
 def tree_paths(sha, expected):
     return (PREV_ROOT / expected / "apps" / "platform",
-            CAND_ROOT / ("platform-" + sha[:12]) / "apps" / "platform")
+            CAND_ROOT / sha / "apps" / "platform")
 
 
 def sql_create(name, password, nonce):
@@ -60,23 +64,51 @@ def sql_create(name, password, nonce):
         if not pattern.fullmatch(value):
             raise ValueError("BLOCKED_UNSAFE_SQL_INPUT")
     return [
-        'DROP DATABASE IF EXISTS "{n}" WITH (FORCE)'.format(n=name),
-        'DROP ROLE IF EXISTS "{n}"'.format(n=name),
         "CREATE ROLE \"{n}\" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD '{p}'".format(n=name, p=password),
         'CREATE DATABASE "{n}" OWNER "{n}"'.format(n=name),
         "COMMENT ON DATABASE \"{n}\" IS 'kmj-disposable-rehearsal:{x}'".format(n=name, x=nonce),
+        "COMMENT ON ROLE \"{n}\" IS 'kmj-disposable-rehearsal:{x}'".format(n=name, x=nonce),
     ]
 
 
-def sql_drop(name):
-    if not NAME_RE.fullmatch(name):
+def sql_drop(name, nonce):
+    if not NAME_RE.fullmatch(name) or not re.fullmatch(r"[0-9a-f]{32}", nonce):
         raise ValueError("BLOCKED_UNSAFE_SQL_INPUT")
-    return ['DROP DATABASE IF EXISTS "{n}" WITH (FORCE)'.format(n=name),
-            'DROP ROLE IF EXISTS "{n}"'.format(n=name)]
+    # No FORCE, no IF EXISTS: unexpected state fails closed.
+    return ['DROP DATABASE "{n}"'.format(n=name), 'DROP ROLE "{n}"'.format(n=name)]
+
+
+def cleanup_query(name, nonce):
+    if not NAME_RE.fullmatch(name) or not re.fullmatch(r"[0-9a-f]{32}", nonce):
+        raise ValueError("BLOCKED_UNSAFE_SQL_INPUT")
+    # Bind the database owner, both independent object comments and role scope.
+    return (
+        "SELECT count(*) FROM pg_database d JOIN pg_roles r ON d.datdba=r.oid "
+        "WHERE d.datname='{n}' AND r.rolname='{n}' "
+        "AND shobj_description(d.oid,'pg_database')='kmj-disposable-rehearsal:{x}' "
+        "AND shobj_description(r.oid,'pg_authid')='kmj-disposable-rehearsal:{x}' "
+        "AND NOT (r.rolsuper OR r.rolcreatedb OR r.rolcreaterole OR r.rolreplication OR r.rolbypassrls) "
+        "AND NOT EXISTS (SELECT 1 FROM pg_auth_members m WHERE m.roleid=r.oid OR m.member=r.oid)"
+    ).format(n=name, x=nonce)
+
+
+def query_cleanup_owner(name, nonce):
+    out = subprocess.run(
+        ["/usr/sbin/runuser", "-u", "postgres", "--", "/usr/bin/psql",
+         "-X", "-A", "-t", "-v", "ON_ERROR_STOP=1", "-d", "postgres"],
+        input=cleanup_query(name, nonce) + ";\n", text=True, capture_output=True,
+        cwd="/", env={"PATH": "/usr/bin:/bin", "LANG": "C"}, timeout=30, check=False)
+    return out.returncode == 0 and out.stdout.strip() == "1"
+
+
+def protected_parent(path, uid=0):
+    return (path.is_absolute() and path.resolve(strict=True) == path
+            and all(stat.S_ISDIR(p.lstat().st_mode) and p.lstat().st_uid == uid
+                    and not p.lstat().st_mode & 0o022 for p in (path, *path.parents)))
 
 
 def rsync_argv(src, dst):
-    argv = ["/usr/bin/rsync", "-a", "--no-links", "--delete"]
+    argv = ["/usr/bin/rsync", "-a", "--no-owner", "--no-group", "--no-links", "--no-devices", "--no-specials", "--delete"]
     for flag, pattern in FILTERS:
         argv += [flag, pattern]
     return argv + [str(src) + "/", str(dst) + "/"]
@@ -114,45 +146,72 @@ def psql(sql_list):
 
 def write_config(config, path=CONFIG):
     tmp = path.with_name("." + path.name + ".tmp")
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, "w") as handle:
         handle.write(json.dumps(config, sort_keys=True))
         handle.flush()
         os.fsync(handle.fileno())
     os.chmod(tmp, 0o600)
-    os.replace(tmp, path)
+    # Publish without replacing another run's configuration.
+    os.link(tmp, path, follow_symlinks=False)
+    tmp.unlink()
+
+
+def seal_workspace(work):
+    for current, dirs, files in os.walk(work, followlinks=False):
+        for name in dirs + files:
+            path = Path(current) / name
+            st = path.lstat()
+            if st.st_uid != 0 or (not stat.S_ISDIR(st.st_mode) and
+                    (not stat.S_ISREG(st.st_mode) or st.st_nlink != 1)):
+                raise ValueError("BLOCKED_WORKSPACE_UNTRUSTED")
+            os.chmod(path, 0o755 if stat.S_ISDIR(st.st_mode) else 0o644,
+                     follow_symlinks=False)
+    os.chmod(work, 0o755, follow_symlinks=False)
 
 
 def prepare(sha, expected, runner=run, sql_runner=psql, base=BASE, config_path=CONFIG,
-            check_trees=real_tree):
+            check_trees=real_tree, seal=seal_workspace):
     prev, cand = tree_paths(sha, expected)
     if not (check_trees(prev, PREV_ROOT) and check_trees(cand, CAND_ROOT)):
         raise ValueError("BLOCKED_TREE_UNTRUSTED_OR_MISSING")
     name = names(sha)
     work = base / sha[:12]
-    cleanup(sha, runner, sql_runner, base, config_path)
+    # Never delete an existing database, role, config or workspace on prepare.
+    # A failed or interrupted run requires explicit recovery, not automatic cleanup.
+    if os.path.lexists(config_path) or os.path.lexists(work):
+        raise ValueError("BLOCKED_EXISTING_REHEARSAL")
     work.mkdir(parents=True, mode=0o700)
     for label, src in (("previous", prev), ("candidate", cand)):
         runner(rsync_argv(src, work / label))
-    runner(["/usr/bin/chown", "-R", OWNER + ":" + OWNER, str(work)])
+    # The transient sandbox may read the copied source but never modify it.
+    # Strip privileged mode bits, reject special files and all links before publish.
+    seal(work)
+
     password, nonce = secrets.token_hex(16), secrets.token_hex(16)
     sql_runner(sql_create(name, password, nonce))
-    write_config(make_config(name, password, nonce, work / "previous", work / "candidate"),
-                 config_path)
+    config = make_config(name, password, nonce, work / "previous", work / "candidate")
+    config.update(approvedSha=sha, expectedCurrentRelease=expected)
+    write_config(config, config_path)
 
 
-def cleanup(sha, runner=run, sql_runner=psql, base=BASE, config_path=CONFIG):
-    name = names(sha)
-    sql_runner(sql_drop(name))
+def cleanup(sha, expected, runner=run, sql_runner=psql, base=BASE, config_path=CONFIG,
+            owner_query=query_cleanup_owner, uid=0, parent_check=protected_parent):
+    # Never accept stale, missing, legacy or cross-candidate configuration.
+    if not parent_check(base, uid) or not parent_check(config_path.parent, uid):
+        raise ValueError("BLOCKED_CLEANUP_PARENT")
+    env = collector.load_env(config_path, uid, sha, expected)
+    name, nonce = names(sha), env["KMJ_REHEARSAL_DB_NONCE"]
     work = base / sha[:12]
-    if work.exists():
-        if work.is_symlink() or work.resolve(strict=True).parent != base.resolve(strict=True):
-            raise ValueError("BLOCKED_WORKDIR_UNTRUSTED")
-        shutil.rmtree(work)
-    try:
-        config_path.unlink()
-    except FileNotFoundError:
-        pass
+    if (not work.is_dir() or work.is_symlink() or work.resolve(strict=True) != work
+            or not shutil.rmtree.avoids_symlink_attacks):
+        raise ValueError("BLOCKED_CLEANUP_WORKSPACE")
+    if not owner_query(name, nonce):
+        raise ValueError("BLOCKED_CLEANUP_OWNERSHIP_UNVERIFIED")
+    # Fail closed on active connections; preserve config/workspace on SQL failure.
+    sql_runner(sql_drop(name, nonce))
+    shutil.rmtree(work)
+    config_path.unlink()
 
 
 def main(argv):
@@ -168,9 +227,14 @@ def main(argv):
         return 2
     try:
         if argv[1] == "--write":
+            if not protected_parent(BASE.parent) or not protected_parent(CONFIG.parent):
+                raise ValueError("BLOCKED_PREPARE_PARENT")
+            BASE.mkdir(mode=0o755, exist_ok=True)
+            if not protected_parent(BASE):
+                raise ValueError("BLOCKED_PREPARE_BASE")
             prepare(sha, expected)
         else:
-            cleanup(sha)
+            cleanup(sha, expected)
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
         print("REHEARSAL_WORKSPACE=FAIL REASON=" + type(exc).__name__ + ":" + str(exc)[:60])
         return 1

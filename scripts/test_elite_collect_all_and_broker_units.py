@@ -39,6 +39,26 @@ class CollectAllTests(unittest.TestCase):
         self.assertEqual(allc.main(runner, APPROVAL), 1)
         self.assertEqual(len(calls), len(allc.STEPS))
 
+    def test_failed_workspace_never_runs_rehearsal_cleanup_or_derivation(self):
+        calls = []
+        def runner(script, mode, sha, exp):
+            calls.append((script, mode))
+            return script != "elite_prepare_rehearsal.py"
+        self.assertEqual(allc.main(runner, APPROVAL), 1)
+        self.assertIn(("elite_prepare_rehearsal.py", "--write"), calls)
+        self.assertNotIn(("elite_prepare_rehearsal.py", "--cleanup"), calls)
+        self.assertNotIn(("elite_collect_rollback_rehearsal_receipt.py", "--write"), calls)
+        self.assertNotIn(("elite_derive_migration_storage_receipt.py", "--write"), calls)
+
+    def test_failed_rehearsal_still_cleans_its_own_workspace_but_never_derives(self):
+        calls = []
+        def runner(script, mode, sha, exp):
+            calls.append((script, mode))
+            return script != "elite_collect_rollback_rehearsal_receipt.py"
+        self.assertEqual(allc.main(runner, APPROVAL), 1)
+        self.assertIn(("elite_prepare_rehearsal.py", "--cleanup"), calls)
+        self.assertNotIn(("elite_derive_migration_storage_receipt.py", "--write"), calls)
+
     def test_bad_approval_runs_nothing(self):
         for bad in (None, {}, dict(APPROVAL, backupVerified=False),
                     dict(APPROVAL, approvedSha="zz"), dict(APPROVAL, extra=1)):

@@ -26,18 +26,24 @@ def make_tree(root):
 
 
 class PrepareTests(unittest.TestCase):
+    def test_exact_full_sha_staging_path(self):
+        prev, cand = pr.tree_paths(SHA, EXP)
+        self.assertEqual(prev, pr.PREV_ROOT / EXP / 'apps' / 'platform')
+        self.assertEqual(cand, pr.CAND_ROOT / SHA / 'apps' / 'platform')
+        self.assertNotEqual(cand, pr.CAND_ROOT / ('platform-' + SHA[:12]) / 'apps' / 'platform')
+
     def test_sql_is_fixed_shape_and_rejects_unsafe_values(self):
         name = pr.names(SHA)
         sql = pr.sql_create(name, "c" * 32, "d" * 32)
-        self.assertEqual(len(sql), 5)
-        self.assertIn("NOSUPERUSER NOCREATEDB NOCREATEROLE", sql[2])
-        self.assertIn("kmj-disposable-rehearsal:" + "d" * 32, sql[4])
+        self.assertEqual(len(sql), 4)
+        self.assertIn("NOSUPERUSER NOCREATEDB NOCREATEROLE", sql[0])
+        self.assertIn("kmj-disposable-rehearsal:" + "d" * 32, sql[2])
         for bad in (("x; DROP", "c" * 32, "d" * 32), (name, "c'; --" + "c" * 26, "d" * 32),
                     (name, "c" * 32, "NOTHEX" * 6), ("production_db", "c" * 32, "d" * 32)):
             with self.assertRaises(ValueError):
                 pr.sql_create(*bad)
         with self.assertRaises(ValueError):
-            pr.sql_drop("kmj_platform")
+            pr.sql_drop("kmj_platform", "d" * 32)
 
     def test_config_is_accepted_by_the_rehearsal_collector_and_names_pass_its_pattern(self):
         cfg = pr.make_config(pr.names(SHA), "c" * 32, "d" * 32, "/p", "/c")
@@ -63,20 +69,75 @@ class PrepareTests(unittest.TestCase):
                          "storage/app/secret.txt", "public/storage"):
                 self.assertFalse(os.path.lexists(dst / gone), gone)
 
-    def test_prepare_orders_steps_and_cleans_before_creating(self):
+    def test_prepare_never_cleans_before_creating(self):
         with tempfile.TemporaryDirectory() as d:
             base = pathlib.Path(d) / "base"
             base.mkdir()
             cfg = pathlib.Path(d) / "release-rehearsal.json"
-            runs, sqls = [], []
+            runs, sqls, seals = [], [], []
             pr.prepare(SHA, EXP, lambda a, u=None: runs.append(a), lambda s: sqls.append(s), base, cfg,
-                       lambda p, r: True)
-            self.assertEqual(sqls[0][0].split()[0:3], ["DROP", "DATABASE", "IF"])
-            self.assertEqual(len(sqls), 2)
-            self.assertTrue(any(a[0] == '/usr/bin/chown' for a in runs))
+                       lambda p, r: True, seal=seals.append)
+            self.assertEqual(sqls[0][0].split()[0:2], ["CREATE", "ROLE"])
+            self.assertEqual(len(sqls), 1)
+            self.assertFalse(any("DROP " in statement for batch in sqls for statement in batch))
+            self.assertEqual(seals, [base / SHA[:12]])
+            self.assertFalse(any(a[0] == '/usr/bin/chown' for a in runs))
             self.assertEqual(sum(1 for a in runs if a[0] == '/usr/bin/rsync'), 2)
             self.assertEqual(oct(cfg.stat().st_mode & 0o777), "0o600")
             self.assertEqual(json.loads(cfg.read_text())["env"]["DB_HOST"], "127.0.0.1")
+
+    def test_existing_state_and_cleanup_fail_without_sql(self):
+        with tempfile.TemporaryDirectory() as d:
+            base = pathlib.Path(d)
+            cfg = base / "release-rehearsal.json"
+            cfg.write_text("existing")
+            sqls = []
+            with self.assertRaisesRegex(ValueError, "BLOCKED_EXISTING_REHEARSAL"):
+                pr.prepare(SHA, EXP, lambda *a: None, sqls.append, base, cfg, lambda p, r: True)
+            with self.assertRaises(ValueError):
+                pr.cleanup(SHA, EXP, lambda *a: None, sqls.append, base, cfg, uid=os.getuid(), parent_check=lambda *a: True)
+            self.assertEqual(sqls, [])
+            self.assertEqual(cfg.read_text(), "existing")
+
+    def test_cleanup_requires_both_nonce_comments_and_never_forces(self):
+        name, nonce = pr.names(SHA), "d" * 32
+        query = pr.cleanup_query(name, nonce)
+        self.assertIn("pg_database", query)
+        self.assertIn("pg_authid", query)
+        self.assertIn("pg_auth_members", query)
+        self.assertEqual(query.count("kmj-disposable-rehearsal:" + nonce), 2)
+        self.assertEqual(pr.sql_drop(name, nonce), ['DROP DATABASE "' + name + '"', 'DROP ROLE "' + name + '"'])
+        with self.assertRaises(ValueError):
+            pr.sql_drop(name, "bad")
+
+    def test_cleanup_preserves_state_without_owner_and_on_sql_error(self):
+        with tempfile.TemporaryDirectory() as d:
+            base = pathlib.Path(d)
+            cfg = base / "release-rehearsal.json"
+            work = base / SHA[:12]
+            work.mkdir()
+            name, nonce = pr.names(SHA), "d" * 32
+            fixed = pathlib.Path("/var/lib/kmj-release-rehearsal") / SHA[:12]
+            record = pr.make_config(name, "c" * 32, nonce, fixed / "previous", fixed / "candidate")
+            record.update(approvedSha=SHA, expectedCurrentRelease=EXP)
+            cfg.write_text(json.dumps(record))
+            cfg.chmod(0o600)
+            sqls = []
+            with self.assertRaisesRegex(ValueError, "BLOCKED_CLEANUP_OWNERSHIP_UNVERIFIED"):
+                pr.cleanup(SHA, EXP, sql_runner=sqls.append, base=base, config_path=cfg,
+                           owner_query=lambda *a: False, uid=os.getuid(), parent_check=lambda *a: True)
+            self.assertEqual(sqls, [])
+            self.assertTrue(work.exists() and cfg.exists())
+            def fail(sql):
+                raise ValueError("active database")
+            with self.assertRaises(ValueError):
+                pr.cleanup(SHA, EXP, sql_runner=fail, base=base, config_path=cfg,
+                           owner_query=lambda *a: True, uid=os.getuid(), parent_check=lambda *a: True)
+            self.assertTrue(work.exists() and cfg.exists())
+            pr.cleanup(SHA, EXP, sql_runner=sqls.append, base=base, config_path=cfg,
+                       owner_query=lambda *a: True, uid=os.getuid(), parent_check=lambda *a: True)
+            self.assertFalse(work.exists() or cfg.exists())
+            self.assertEqual(len(sqls), 1)
 
     def test_untrusted_tree_blocks_before_any_database_change(self):
         sqls = []

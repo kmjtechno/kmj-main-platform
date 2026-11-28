@@ -4,7 +4,8 @@ CURRENT protected approval, in a fixed order, via fixed argv (source only until 
 
 It reads the approved SHA and predecessor ONLY from the root-protected approval file,
 never from arguments. It writes receipts and nothing else: no admission, no approval
-change, no unit start, no pointer change. A failing step does not stop the others;
+change, no unit start, no pointer change. Independent steps continue after failure;
+dependent rehearsal and derived evidence steps fail closed;
 the exit code is 0 only when every step passed.
 """
 import os
@@ -61,14 +62,26 @@ def main(runner=run_step, approval=None):
         print("KMJ_COLLECT_ALL=" + str(exc))
         return 2
     failed = []
+    passed = set()
+    dependencies = {
+        'ROLLBACK_REHEARSAL': {'REHEARSAL_WORKSPACE'},
+        'REHEARSAL_CLEANUP': {'REHEARSAL_WORKSPACE'},
+        'MIGRATION_STORAGE': {'BACKUP_AND_RESTORE', 'ROLLBACK_REHEARSAL', 'REHEARSAL_CLEANUP'},
+    }
     for label, script, mode in STEPS:
+        if not dependencies.get(label, set()) <= passed:
+            print('KMJ_COLLECT_{}=BLOCKED_DEPENDENCY'.format(label))
+            failed.append(label)
+            continue
         ok = False
         try:
             ok = runner(script, mode, sha, expected)
         except (OSError, subprocess.SubprocessError):
             ok = False
         print("KMJ_COLLECT_{}={}".format(label, "PASS" if ok else "FAIL"))
-        if not ok:
+        if ok:
+            passed.add(label)
+        else:
             failed.append(label)
     print("KMJ_COLLECT_ALL=" + ("PASS" if not failed else "INCOMPLETE"))
     print("AUTHENTICATED_QA=OWNER_CLICK_REQUIRED ADMISSION_WRITTEN=NO PRODUCTION_RELEASE=NOT_ATTEMPTED")

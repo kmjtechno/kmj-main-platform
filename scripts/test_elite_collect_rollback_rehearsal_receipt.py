@@ -59,16 +59,42 @@ class RehearsalTests(unittest.TestCase):
             def write(obj, mode=0o600):
                 p.write_text(json.dumps(obj))
                 os.chmod(p, mode)
-            write({"env": {"DB_DATABASE": "kmj_rehearsal", "KMJ_REHEARSAL_X": "1"}})
-            self.assertEqual(len(col.load_env(p, os.getuid())), 2)
+            name = "kmj_rehearsal_" + SHA[:12]
+            base = "/var/lib/kmj-release-rehearsal/" + SHA[:12]
+            good = {"approvedSha": SHA, "expectedCurrentRelease": EXP, "env": {
+                "DB_DATABASE": name, "DB_USERNAME": name, "DB_HOST": "127.0.0.1", "DB_PORT": "5432",
+                "DB_PASSWORD": "c" * 32, "KMJ_REHEARSAL_DB_NONCE": "d" * 32,
+                "KMJ_REHEARSAL_PREVIOUS_APP": base + "/previous",
+                "KMJ_REHEARSAL_CANDIDATE_APP": base + "/candidate"}}
+            write(good)
+            self.assertEqual(col.load_env(p, os.getuid(), SHA, EXP), good["env"])
+            with self.assertRaises(ValueError):
+                col.load_env(p, os.getuid(), "f" * 40, EXP)
+            with self.assertRaises(ValueError):
+                col.load_env(p, os.getuid(), SHA, "platform-" + "f" * 12)
+            write(dict(good, env=dict(good["env"], DB_HOST="external")))
+            with self.assertRaises(ValueError):
+                col.load_env(p, os.getuid(), SHA, EXP)
             for bad in ({"env": {"PATH": "/x"}}, {"env": {"DB_A": "a\nb"}}, {"env": {}},
                         {"env": {"DB_A": 1}}, {"env": {"DB_A": "a"}, "x": 1}):
                 write(bad)
                 with self.assertRaises(ValueError):
-                    col.load_env(p, os.getuid())
+                    col.load_env(p, os.getuid(), SHA, EXP)
             write({"env": {"DB_A": "a"}}, 0o644)
             with self.assertRaises(ValueError):
-                col.load_env(p, os.getuid())
+                col.load_env(p, os.getuid(), SHA, EXP)
+
+    def test_sandbox_scope_and_private_payload(self):
+        argv = col.sandbox_argv()
+        for flag in ("DynamicUser=yes", "ProtectHome=yes", "ProtectSystem=strict",
+                     "IPAddressDeny=any", "IPAddressAllow=localhost", "PrivateTmp=yes"):
+            self.assertIn("--property=" + flag, argv)
+        self.assertNotIn("kmjprod", argv)
+        password = "c" * 32
+        self.assertFalse(any(password in arg for arg in argv))
+        payload = col.runner_payload({"DB_PASSWORD": password}, "print('ok')")
+        self.assertIn(password, payload)
+        compile(payload, "<test>", "exec")
 
     def test_cli_guards_and_source_safety(self):
         self.assertEqual(col.main(["x", "--check", "bad", EXP]), 2)
