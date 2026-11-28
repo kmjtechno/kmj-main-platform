@@ -7,6 +7,7 @@ Never starts production, changes approval/admission, or enables a timer.
 """
 import argparse
 import hashlib
+import fcntl
 import os
 from pathlib import Path
 import socket
@@ -192,9 +193,22 @@ def main():
         print("SHA_MAP_DEPENDENCY=INSTALLED")
     print("PRODUCTION_ACTIVATION=NOT_ATTEMPTED APPROVAL_UPDATED=NO ADMISSION_WRITTEN=NO")
 
+def locked_main():
+    require(os.geteuid() == 0 and socket.gethostname().split(".")[0] == "KMJ-elite", "BLOCKED_HOST")
+    fd = os.open("/run/lock/kmj-production-sha-map-install.lock",
+                 os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+    try:
+        info = os.fstat(fd)
+        require(stat.S_ISREG(info.st_mode) and info.st_uid == 0 and info.st_nlink == 1
+                and stat.S_IMODE(info.st_mode) == 0o600, "BLOCKED_INSTALL_LOCK")
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        main()
+    finally:
+        os.close(fd)
+
 if __name__ == "__main__":
     try:
-        main()
+        locked_main()
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
         code = str(exc) if isinstance(exc, ValueError) and str(exc).startswith("BLOCKED_") else type(exc).__name__
         print("SHA_MAP_INSTALL=BLOCKED:" + code)
