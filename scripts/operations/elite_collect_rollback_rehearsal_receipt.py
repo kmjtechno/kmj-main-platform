@@ -33,6 +33,7 @@ sys.path.insert(0, str(HERE))
 import release_admission_receipts as ra  # noqa: E402
 import release_receipt_store as store  # noqa: E402
 import elite_collect_staging_origin_receipt as common  # noqa: E402
+import elite_rehearsal_hba as isolation  # noqa: E402
 
 CONFIG = Path("/etc/kmj-codebridge/release-rehearsal.json")
 REHEARSAL = HERE / "rehearse-app-http-db-rollback-20261029.py"
@@ -150,7 +151,12 @@ def run_rehearsal(env):
 
 
 def collect(sha, expected, now, runner=run_rehearsal, env=None):
-    output = runner(env if env is not None else load_env(sha=sha, expected=expected))
+    if env is None:
+        env = load_env(sha=sha, expected=expected)
+        isolation.verify(env["DB_USERNAME"], env["DB_PASSWORD"], env["KMJ_REHEARSAL_DB_NONCE"])
+    output = runner(env)
+    if runner is run_rehearsal:
+        isolation.verify(env["DB_USERNAME"], env["DB_PASSWORD"], env["KMJ_REHEARSAL_DB_NONCE"])
     if not rehearsal_passed(output):
         raise ValueError("REHEARSAL_NOT_PASS")
     return {"schema": ra.RECEIPT_SCHEMA, "kind": "rollback-rehearsal", "host": ra.HOST,

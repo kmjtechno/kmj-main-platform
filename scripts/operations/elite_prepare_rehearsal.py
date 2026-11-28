@@ -17,6 +17,9 @@ Safety properties:
     config, both database and role nonce comments, and a verified owner. Production
     databases, the live pointer, approvals and releases are never touched.
 """
+import base64
+import hashlib
+import hmac
 import json
 import os
 import re
@@ -33,6 +36,7 @@ sys.path.insert(0, str(HERE))
 import release_admission_receipts as ra  # noqa: E402
 import release_receipt_store as store  # noqa: E402
 import elite_collect_rollback_rehearsal_receipt as collector  # noqa: E402
+import elite_rehearsal_hba as isolation  # noqa: E402
 
 BASE = Path("/var/lib/kmj-release-rehearsal")
 CONFIG = Path("/etc/kmj-codebridge/release-rehearsal.json")
@@ -58,16 +62,28 @@ def tree_paths(sha, expected):
             CAND_ROOT / sha / "apps" / "platform")
 
 
+def scram_verifier(password):
+    # Generate a PostgreSQL SCRAM verifier locally; plaintext never enters SQL.
+    salt = secrets.token_bytes(16)
+    salted = hashlib.pbkdf2_hmac("sha256", password.encode("ascii"), salt, 4096)
+    client = hmac.digest(salted, b"Client Key", "sha256")
+    stored = hashlib.sha256(client).digest()
+    server = hmac.digest(salted, b"Server Key", "sha256")
+    enc = lambda value: base64.b64encode(value).decode("ascii")
+    return "SCRAM-SHA-256$4096:" + enc(salt) + "$" + enc(stored) + ":" + enc(server)
+
+
 def sql_create(name, password, nonce):
     for value, pattern in ((name, NAME_RE), (password, re.compile(r"[0-9a-f]{32}\Z")),
                            (nonce, re.compile(r"[0-9a-f]{32}\Z"))):
         if not pattern.fullmatch(value):
             raise ValueError("BLOCKED_UNSAFE_SQL_INPUT")
     return [
-        "CREATE ROLE \"{n}\" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD '{p}'".format(n=name, p=password),
+        "CREATE ROLE \"{n}\" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD '{p}'".format(n=name, p=scram_verifier(password)),
         'CREATE DATABASE "{n}" OWNER "{n}"'.format(n=name),
         "COMMENT ON DATABASE \"{n}\" IS 'kmj-disposable-rehearsal:{x}'".format(n=name, x=nonce),
         "COMMENT ON ROLE \"{n}\" IS 'kmj-disposable-rehearsal:{x}'".format(n=name, x=nonce),
+        'REVOKE ALL ON DATABASE "{n}" FROM PUBLIC'.format(n=name),
     ]
 
 
@@ -141,7 +157,13 @@ def run(argv, user=None):
 
 def psql(sql_list):
     for sql in sql_list:
-        run(["/usr/bin/psql", "-X", "-v", "ON_ERROR_STOP=1", "-d", "postgres", "-c", sql], "postgres")
+        # Separate statements: CREATE/DROP DATABASE cannot run inside a transaction.
+        # SQL (including the SCRAM verifier) travels only over stdin.
+        out = subprocess.run(isolation.PSQL, input=(sql + ";\n").encode(),
+                             cwd="/", env=isolation.ENV, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, timeout=1800, check=False)
+        if out.returncode != 0:
+            raise ValueError("BLOCKED_STEP_FAILED")
 
 
 def write_config(config, path=CONFIG):
@@ -171,7 +193,7 @@ def seal_workspace(work):
 
 
 def prepare(sha, expected, runner=run, sql_runner=psql, base=BASE, config_path=CONFIG,
-            check_trees=real_tree, seal=seal_workspace):
+            check_trees=real_tree, seal=seal_workspace, isolation_check=isolation.verify):
     prev, cand = tree_paths(sha, expected)
     if not (check_trees(prev, PREV_ROOT) and check_trees(cand, CAND_ROOT)):
         raise ValueError("BLOCKED_TREE_UNTRUSTED_OR_MISSING")
@@ -181,6 +203,7 @@ def prepare(sha, expected, runner=run, sql_runner=psql, base=BASE, config_path=C
     # A failed or interrupted run requires explicit recovery, not automatic cleanup.
     if os.path.lexists(config_path) or os.path.lexists(work):
         raise ValueError("BLOCKED_EXISTING_REHEARSAL")
+    isolation_check(name)
     work.mkdir(parents=True, mode=0o700)
     for label, src in (("previous", prev), ("candidate", cand)):
         runner(rsync_argv(src, work / label))
@@ -190,6 +213,7 @@ def prepare(sha, expected, runner=run, sql_runner=psql, base=BASE, config_path=C
 
     password, nonce = secrets.token_hex(16), secrets.token_hex(16)
     sql_runner(sql_create(name, password, nonce))
+    isolation_check(name, password, nonce)
     config = make_config(name, password, nonce, work / "previous", work / "candidate")
     config.update(approvedSha=sha, expectedCurrentRelease=expected)
     write_config(config, config_path)

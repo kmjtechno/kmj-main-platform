@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 OPS = pathlib.Path(__file__).resolve().parent / "operations"
 sys.path.insert(0, str(OPS))
@@ -35,7 +36,10 @@ class PrepareTests(unittest.TestCase):
     def test_sql_is_fixed_shape_and_rejects_unsafe_values(self):
         name = pr.names(SHA)
         sql = pr.sql_create(name, "c" * 32, "d" * 32)
-        self.assertEqual(len(sql), 4)
+        self.assertEqual(len(sql), 5)
+        self.assertIn('SCRAM-SHA-256$4096:', sql[0])
+        self.assertNotIn('c' * 32, sql[0])
+        self.assertIn('REVOKE ALL ON DATABASE', sql[4])
         self.assertIn("NOSUPERUSER NOCREATEDB NOCREATEROLE", sql[0])
         self.assertIn("kmj-disposable-rehearsal:" + "d" * 32, sql[2])
         for bad in (("x; DROP", "c" * 32, "d" * 32), (name, "c'; --" + "c" * 26, "d" * 32),
@@ -44,6 +48,39 @@ class PrepareTests(unittest.TestCase):
                 pr.sql_create(*bad)
         with self.assertRaises(ValueError):
             pr.sql_drop("kmj_platform", "d" * 32)
+
+    def test_psql_secret_not_in_argv(self):
+        sql = pr.sql_create(pr.names(SHA), "c" * 32, "d" * 32)[0]
+        with patch.object(pr.subprocess, "run") as run:
+            run.return_value.returncode = 0
+            pr.psql([sql])
+            args, kwargs = run.call_args
+            self.assertNotIn("-c", args[0])
+            self.assertNotIn(sql, args[0])
+            self.assertIn(b"SCRAM-SHA-256", kwargs["input"])
+            self.assertNotIn(b"c" * 32, kwargs["input"])
+
+    def test_hba_prefix_and_fail_closed_before_workspace(self):
+        name = pr.names(SHA)
+        old = b"local all all peer\n"
+        planned = pr.isolation.proposal(old, name)
+        self.assertTrue(planned.endswith(old))
+        self.assertTrue(planned.startswith(pr.isolation.prefix(name)))
+        for rule in (f"host {name} {name} 127.0.0.1/32 scram-sha-256",
+                     f"local replication {name} reject", f"local all {name} reject",
+                     f"host replication {name} all reject", f"host all {name} all reject"):
+            self.assertIn(rule.encode(), planned)
+        with self.assertRaises(ValueError):
+            pr.isolation.proposal(planned, name)
+        with tempfile.TemporaryDirectory() as d:
+            base = pathlib.Path(d)
+            with self.assertRaisesRegex(ValueError, "ISOLATION_FAILED"):
+                def fail(*args):
+                    raise ValueError("ISOLATION_FAILED")
+                pr.prepare(SHA, EXP, lambda *a: self.fail("ran copy"),
+                           lambda *a: self.fail("ran SQL"), base, base / "config",
+                           lambda *a: True, isolation_check=fail)
+            self.assertFalse((base / SHA[:12]).exists())
 
     def test_config_is_accepted_by_the_rehearsal_collector_and_names_pass_its_pattern(self):
         cfg = pr.make_config(pr.names(SHA), "c" * 32, "d" * 32, "/p", "/c")
@@ -76,7 +113,7 @@ class PrepareTests(unittest.TestCase):
             cfg = pathlib.Path(d) / "release-rehearsal.json"
             runs, sqls, seals = [], [], []
             pr.prepare(SHA, EXP, lambda a, u=None: runs.append(a), lambda s: sqls.append(s), base, cfg,
-                       lambda p, r: True, seal=seals.append)
+                       lambda p, r: True, seal=seals.append, isolation_check=lambda *a: None)
             self.assertEqual(sqls[0][0].split()[0:2], ["CREATE", "ROLE"])
             self.assertEqual(len(sqls), 1)
             self.assertFalse(any("DROP " in statement for batch in sqls for statement in batch))
