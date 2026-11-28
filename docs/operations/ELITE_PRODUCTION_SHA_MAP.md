@@ -26,7 +26,7 @@ An expired intent must be retried through the ordinary owner workflow.
 Do not claim live acceptance solely from CI or from systemd unit startup.
 
 The pinned installer creates the qualification marker only during a guarded
-already-live check, requires a new successful execution timestamp, and
+already-live check, requires a fresh root-attributed journal invocation with the exact already-live SHA map marker, and
 removes the marker. A skipped unit is not a qualification success.
 
 The existing already-live release remains untouched; the already-live
