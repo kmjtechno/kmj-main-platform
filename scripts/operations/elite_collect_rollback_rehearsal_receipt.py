@@ -150,13 +150,13 @@ def run_rehearsal(env):
     return out.stdout
 
 
-def collect(sha, expected, now, runner=run_rehearsal, env=None):
+def collect(sha, expected, now, runner=run_rehearsal, env=None, isolation_check=isolation.verify):
     if env is None:
         env = load_env(sha=sha, expected=expected)
-        isolation.verify(env["DB_USERNAME"], env["DB_PASSWORD"], env["KMJ_REHEARSAL_DB_NONCE"])
+    credentials = (env["DB_USERNAME"], env["DB_PASSWORD"], env["KMJ_REHEARSAL_DB_NONCE"])
+    isolation_check(*credentials)
     output = runner(env)
-    if runner is run_rehearsal:
-        isolation.verify(env["DB_USERNAME"], env["DB_PASSWORD"], env["KMJ_REHEARSAL_DB_NONCE"])
+    isolation_check(*credentials)
     if not rehearsal_passed(output):
         raise ValueError("REHEARSAL_NOT_PASS")
     return {"schema": ra.RECEIPT_SCHEMA, "kind": "rollback-rehearsal", "host": ra.HOST,

@@ -110,10 +110,9 @@ def cleanup_query(name, nonce):
 
 def query_cleanup_owner(name, nonce):
     out = subprocess.run(
-        ["/usr/sbin/runuser", "-u", "postgres", "--", "/usr/bin/psql",
-         "-X", "-A", "-t", "-v", "ON_ERROR_STOP=1", "-d", "postgres"],
+        isolation.PSQL,
         input=cleanup_query(name, nonce) + ";\n", text=True, capture_output=True,
-        cwd="/", env={"PATH": "/usr/bin:/bin", "LANG": "C"}, timeout=30, check=False)
+        cwd="/", env=isolation.ENV, timeout=30, check=False)
     return out.returncode == 0 and out.stdout.strip() == "1"
 
 

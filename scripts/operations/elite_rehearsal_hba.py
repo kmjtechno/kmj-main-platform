@@ -14,8 +14,12 @@ import re
 import socket
 import stat
 import subprocess
+import sys
 import tempfile
 import time
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
 
 NAME = re.compile(r"kmj_rehearsal_[0-9a-f]{12}\Z")
 ENV = {"PATH": "/usr/bin:/bin", "HOME": "/var/lib/postgresql",
@@ -288,6 +292,12 @@ def main():
             path = Path(pg("SHOW hba_file"))
             trusted_parent(path)
             old = read_hba(path)
+            if old.startswith(prefix(name)):
+                require(a.plan, "REHEARSAL_HBA_ALREADY_INSTALLED")
+                verify(name)
+                print("REHEARSAL_HBA=ALREADY_ACTIVE_PRE_ROLE")
+                print("EXISTING_DATABASE_ACLS_CHANGED=NO PRODUCTION_RELEASE=NOT_ATTEMPTED")
+                return 0
             new = proposal(old, name)
             print("HBA_BASELINE_SHA256=" + sha(old))
             print("HBA_PROPOSAL_SHA256=" + sha(new))
