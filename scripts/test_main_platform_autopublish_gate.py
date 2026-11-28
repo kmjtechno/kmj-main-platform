@@ -348,6 +348,8 @@ class AutoPublishSafetyTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "approval.json"
             path.write_text("{}")
+            # Explicitly insecure parent regardless of the test runner UID.
+            path.parent.chmod(0o777)
             with patch.object(mod.os, "open", side_effect=AssertionError(
                     "untrusted parent must be rejected before opening")):
                 self.assertIsNone(mod.protected_json(path))
