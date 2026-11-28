@@ -4,6 +4,8 @@ on:
     paths:
       - 'scripts/operations/main_platform_autopublish_gate.py'
       - 'scripts/test_main_platform_autopublish_gate.py'
+      - 'scripts/operations/upgrade-elite-autopublish-live-health-20261128.py'
+      - 'scripts/test_upgrade_elite_autopublish_live_health.py'
       - 'scripts/operations/diagnose-elite-release-candidate-readonly.py'
       - 'scripts/test_elite_release_candidate_diagnostic.py'
       - 'scripts/operations/upgrade-elite-autopublish-shared-storage-20261128.py'
@@ -18,6 +20,8 @@ on:
     paths:
       - 'scripts/operations/main_platform_autopublish_gate.py'
       - 'scripts/test_main_platform_autopublish_gate.py'
+      - 'scripts/operations/upgrade-elite-autopublish-live-health-20261128.py'
+      - 'scripts/test_upgrade_elite_autopublish_live_health.py'
       - 'scripts/operations/diagnose-elite-release-candidate-readonly.py'
       - 'scripts/test_elite_release_candidate_diagnostic.py'
       - 'scripts/operations/upgrade-elite-autopublish-shared-storage-20261128.py'
@@ -47,6 +51,8 @@ jobs:
           set -Eeuo pipefail
           python3 -B -m py_compile scripts/operations/main_platform_autopublish_gate.py
           python3 -B -m unittest discover -s scripts -p test_main_platform_autopublish_gate.py -v
+          python3 -B -m py_compile scripts/operations/upgrade-elite-autopublish-live-health-20261128.py
+          python3 -B -m unittest discover -s scripts -p test_upgrade_elite_autopublish_live_health.py -v
           python3 -B -m py_compile scripts/operations/diagnose-elite-release-candidate-readonly.py
           python3 -B -m unittest discover -s scripts -p test_elite_release_candidate_diagnostic.py -v
           python3 -B -m py_compile scripts/operations/upgrade-elite-autopublish-shared-storage-20261128.py
