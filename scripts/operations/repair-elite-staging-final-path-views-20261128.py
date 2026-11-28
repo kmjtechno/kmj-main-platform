@@ -38,9 +38,12 @@ $phase = 'AUTOLOAD';
 try {
     require 'vendor/autoload.php';
     $app = require 'bootstrap/app.php';
-    $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
     $phase = 'BOOTSTRAP';
     $kernel->bootstrap();
+    if (!$app->bound('request') || !($app->make('request') instanceof Illuminate\Http\Request)) {
+        throw new RuntimeException('console request missing');
+    }
     $phase = 'COMPILE_SCOPE';
     $target = getenv('VIEW_COMPILED_PATH');
     if (config('view.compiled') !== $target || !is_dir($target)) {
@@ -53,7 +56,7 @@ try {
         throw new RuntimeException('compiler scope');
     }
     $phase = 'ARTISAN_VIEW_CACHE';
-    if (Illuminate\Support\Facades\Artisan::call('view:cache') !== 0) {
+    if ($kernel->call('view:cache') !== 0) {
         throw new RuntimeException('view cache');
     }
     // Register framework error views separately: a missing app errors path
