@@ -110,7 +110,8 @@ final class OwnerWebsiteController extends Controller
             throw ValidationException::withMessages(['photo' => 'Use a PNG, JPEG or WebP image.']);
         }
         $name = Str::uuid().'.'.$extension;
-        abort_unless(Storage::disk('local')->put('team-photos/'.$name, $file->getContent()), 503, 'Photo could not be saved.');
+        $saved = Storage::disk('local')->put('team-photos/'.$name, $file->getContent());
+        abort_if($saved === false, 503, 'Photo could not be saved.');
 
         return response()->json(['path' => '/team-photo/'.$name], 201);
     }
@@ -137,7 +138,7 @@ final class OwnerWebsiteController extends Controller
     /** The public team page. Until published, only the owner can preview it. */
     public function team(Request $request, PlatformOwnerAccess $access, WebsiteSettings $website): Response
     {
-        $team = $website->all()['team'];
+        $team = $website->team();
         $user = $request->user();
         $preview = ! $team['published'];
         abort_if($preview && ! ($user instanceof User && $access->allows($user)), 404);

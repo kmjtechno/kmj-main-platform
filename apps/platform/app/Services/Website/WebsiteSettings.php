@@ -82,7 +82,20 @@ final class WebsiteSettings
         ];
     }
 
-    /** Settings every public page may read. Team profiles are not included. */
+    /** @return array{published: bool, intro: string, members: list<array<string, mixed>>} */
+    public function team(): array
+    {
+        /** @var array{published: bool, intro: string, members: list<array<string, mixed>>} $team */
+        $team = $this->all()['team'];
+
+        return $team;
+    }
+
+    /**
+     * Settings every public page may read. Team profiles are not included.
+     *
+     * @return array<string, mixed>
+     */
     public function shared(): array
     {
         $all = $this->all();
@@ -99,9 +112,9 @@ final class WebsiteSettings
     /** True when a visible profile on the published team page uses this photo. */
     public function isPublicPhoto(string $path): bool
     {
-        $team = $this->all()['team'];
+        $team = $this->team();
 
-        return (bool) $team['published'] && collect($team['members'])
+        return $team['published'] && collect($team['members'])
             ->contains(fn (array $member): bool => ($member['visible'] ?? false) && ($member['photo'] ?? null) === $path);
     }
 
