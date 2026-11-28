@@ -17,6 +17,7 @@ import tempfile
 MAP = Path("/etc/nginx/conf.d/kmj-production-release-sha.conf")
 GATE = Path("/opt/kmj-main-platform-autopublish/main_platform_autopublish_gate.py")
 NGINX = "/usr/sbin/nginx"
+STATE = Path("/var/lib/kmj-main-platform/production-sha-map")
 
 def protected(path):
     for p in path.parents:
@@ -97,6 +98,8 @@ def load_module(name, path):
 def main():
     if os.geteuid() != 0 or socket.gethostname().split(".")[0] != "KMJ-elite":
         raise ValueError("BLOCKED_HOST")
+    if len(sys.argv) != 2 or sys.argv[1] not in ("--inspect", "--apply"):
+        raise ValueError("BLOCKED_MODE")
     gate = load_module("installed_gate", GATE)
     planner = load_module("production_release_sha_map", Path(__file__).absolute().with_name("production_release_sha_map.py"))
     fd = os.open(gate.LOCK, os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC)
@@ -112,6 +115,13 @@ def main():
         if not isinstance(target, str) or not gate.SHA_RE.fullmatch(target):
             raise ValueError("BLOCKED_SHA")
         live = gate.live_release()
+        if live == "platform-" + target[:12]:
+            old, _ = read_map(MAP)
+            if (target not in planner.parse_existing(old) or gate.candidate_sha(target) != target
+                    or not gate.exact_https_sha_ok(gate.public_https_response(), target)):
+                raise ValueError("BLOCKED_ALREADY_LIVE_MAP")
+            print("PRODUCTION_SHA_MAP=ALREADY_LIVE_VERIFIED")
+            return
         if (approval.get("expectedCurrentRelease") != live
                 or approval.get("backupVerified") is not True
                 or approval.get("rollbackVerified") is not True
@@ -131,10 +141,17 @@ def main():
             return
         if sys.argv != [sys.argv[0], "--apply"]:
             raise ValueError("BLOCKED_MODE")
-        backup = Path(tempfile.mkdtemp(prefix="kmj-release-map-", dir="/root"))
+        state = STATE.lstat()
+        if (not stat.S_ISDIR(state.st_mode) or state.st_uid != 0 or state.st_mode & 0o077):
+            raise ValueError("BLOCKED_STATE_DIR")
+        for parent in STATE.parents:
+            info = parent.lstat()
+            if not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
+                raise ValueError("BLOCKED_STATE_PARENT")
+        backup = Path(tempfile.mkdtemp(prefix="previous-", dir=STATE))
         (backup / "previous.conf").write_text(old, encoding="ascii")
         print("MAP_BACKUP=" + str(backup))
-        result = transaction(old, new, lambda: gate.live_release() == live,
+        result = transaction(old, new, lambda: (gate.live_release() == live and gate.protected_json(gate.APPROVAL) == approval),
                              lambda data: replace(MAP, data, mode),
                              lambda: command(NGINX, "-t"),
                              lambda: command("/usr/bin/systemctl", "reload", "nginx"),
