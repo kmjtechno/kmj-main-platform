@@ -15,9 +15,9 @@ dir="$(cd -- "$(dirname -- "$0")" && pwd -P)"
 root="$(dirname -- "$(dirname -- "$dir")")"
 runner="$root/deploy/staging/kmj-main-platform-staging-deploy.sh"
 unit="$root/deploy/staging/kmj-main-platform-staging-deploy.service"
-runner_blob=39fd993d4bc2cd4427fc6d460073204a7e1f82e3
+runner_blob=2fa8ef2631f48b4fd902e644cd2f7948615ffc55
 unit_blob=07d77b4e2ec9b2e3cd73d4a8aa4c4786e5927eb1
-runner_sha256=9713b608e2cd8c8c9f0ad4f56e475f035b86bf889ef0cc164f9aa9532ad2d7ab
+runner_sha256=27f4c1734b15f886f761f60e37b6db9ddc5922737159a1c6089ad081b3b96477
 unit_sha256=21e8566433cfbb7c86864844df68295fb1dd420b87ec21aa541a35a1656c9919
 sha_file() { /usr/bin/sha256sum -- "$1" | /usr/bin/cut -d ' ' -f1; }
 [[ -f "$runner" && ! -L "$runner" && -f "$unit" && ! -L "$unit" ]] || block SOURCE_ABSENT_OR_LINKED

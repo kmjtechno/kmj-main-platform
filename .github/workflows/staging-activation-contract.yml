@@ -6,6 +6,7 @@ on:
       - '.github/workflows/staging-activation-contract.yml'
       - 'deploy/staging/**'
       - 'scripts/operations/build-staging-approval-proposal-20261031.py'
+      - 'scripts/operations/upgrade-elite-staging-runner-relative-link-20261128.py'
       - 'scripts/operations/seal-staging-candidate-20261031.py'
       - 'tests/test_staging_activation_contract.py'
   push:
@@ -14,6 +15,7 @@ on:
       - '.github/workflows/staging-activation-contract.yml'
       - 'deploy/staging/**'
       - 'scripts/operations/build-staging-approval-proposal-20261031.py'
+      - 'scripts/operations/upgrade-elite-staging-runner-relative-link-20261128.py'
       - 'scripts/operations/seal-staging-candidate-20261031.py'
       - 'tests/test_staging_activation_contract.py'
 

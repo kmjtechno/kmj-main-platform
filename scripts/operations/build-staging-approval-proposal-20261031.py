@@ -35,7 +35,7 @@ RELEASE = re.compile(r"[a-z0-9][a-z0-9_-]{3,100}\Z")
 
 ELITE_RUNNER = Path("/usr/local/libexec/kmj-codebridge/kmj-main-platform-staging-deploy.sh")
 ELITE_UNIT = Path("/etc/systemd/system/kmj-main-platform-staging-deploy.service")
-RUNNER_BLOB = "39fd993d4bc2cd4427fc6d460073204a7e1f82e3"
+RUNNER_BLOB = "2fa8ef2631f48b4fd902e644cd2f7948615ffc55"
 UNIT_BLOB = "07d77b4e2ec9b2e3cd73d4a8aa4c4786e5927eb1"
 STAGE = Path("/home/kmjstage/htdocs/staging.kmjtechno.com")
 PROD = Path("/home/kmjprod/current")
@@ -81,7 +81,19 @@ def remote_approved():
 
 
 def exact_pointer(path, target):
-    return path.is_symlink() and os.readlink(path) == str(target) and path.resolve(strict=True) == target
+    # Staging remains absolute (the guarded runner's contract). Production
+    # supports exactly its canonical absolute or releases/platform-... link.
+    try:
+        allowed = {str(target)}
+        if path == PROD:
+            allowed.add("releases/" + target.name)
+        if not path.is_symlink() or not target.is_dir() or target.is_symlink():
+            return False
+        raw = os.readlink(path)
+        return (raw in allowed and path.resolve(strict=True) == target
+                and os.readlink(path) == raw)
+    except (OSError, RuntimeError):
+        return False
 
 
 def verify_live_inputs(approved, expected_current, production_release):

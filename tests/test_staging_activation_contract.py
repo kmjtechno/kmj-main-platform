@@ -42,6 +42,25 @@ class LiveProposalContract(unittest.TestCase):
                 with self.assertRaisesRegex(SystemExit, "OFFLINE_CHECKOUT_REQUIRED"):
                     mod.proposal(NEW, OLD, PROD)
 
+    def test_production_pointer_accepts_only_canonical_spellings(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target = root / "releases" / PROD
+            target.mkdir(parents=True)
+            link = root / "current"
+            with patch.object(self.mod, "PROD", link):
+                for raw, ok in ((str(target), True), ("releases/" + PROD, True),
+                                ("./releases/" + PROD, False), ("releases/../releases/" + PROD, False),
+                                ("releases/other", False)):
+                    link.symlink_to(raw)
+                    self.assertEqual(self.mod.exact_pointer(link, target), ok)
+                    link.unlink()
+                target.rmdir()
+                target.symlink_to(root)
+                link.symlink_to("releases/" + PROD)
+                self.assertFalse(self.mod.exact_pointer(link, target))
+
     def test_committed_pins(self):
         for path, pin in ((RUNNER, self.mod.RUNNER_BLOB), (UNIT, self.mod.UNIT_BLOB)):
             raw = path.read_bytes()
@@ -89,6 +108,47 @@ class LiveProposalContract(unittest.TestCase):
              patch.object(m, "pinned_bytes", side_effect=SystemExit("BLOCKED_INSTALLED_SOURCE_PIN")):
             with self.assertRaisesRegex(SystemExit, "INSTALLED_SOURCE_PIN"):
                 m.proposal(NEW, OLD, PROD, inspect_elite=True)
+
+
+class StagingRunnerUpgradeContract(unittest.TestCase):
+    def setUp(self):
+        import importlib.util
+        path = ROOT / "scripts/operations/upgrade-elite-staging-runner-relative-link-20261128.py"
+        spec = importlib.util.spec_from_file_location("runner_upgrade", path)
+        self.mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.mod)
+
+    def test_reviewed_pins_match_repository(self):
+        self.assertEqual(self.mod.blob(RUNNER.read_bytes()), self.mod.NEW)
+        self.assertEqual(self.mod.blob(UNIT.read_bytes()), self.mod.UNIT_PIN)
+        self.assertNotEqual(self.mod.OLD, self.mod.NEW)
+
+    def test_atomic_replacement_preserves_mode(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "runner"
+            original_fchown = os.fchown
+            # Offline CI is unprivileged; exercise bytes/mode/rename, not root ownership.
+            with patch.object(self.mod.os, "fchown", side_effect=lambda fd, uid, gid:
+                              original_fchown(fd, os.getuid(), os.getgid())):
+                self.mod.replace(path, b"old", 0o700, os.getgid())
+                self.mod.replace(path, b"new", 0o700, os.getgid())
+            self.assertEqual(path.read_bytes(), b"new")
+            self.assertEqual(path.stat().st_mode & 0o777, 0o700)
+
+    def test_unit_must_be_quiescent_and_exact(self):
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        m = self.mod
+        good = ("LoadState=loaded\nActiveState=inactive\nFragmentPath=" + str(m.UNIT) +
+                "\nDropInPaths=\nNeedDaemonReload=no\n")
+        with patch.object(m.subprocess, "run", return_value=SimpleNamespace(stdout=good)), \
+             patch.object(m, "protected", return_value=(UNIT.read_bytes(), 0o644, 0)):
+            m.quiet()
+        for bad in (good.replace("inactive", "active"), good.replace("DropInPaths=\n", "DropInPaths=/tmp/x\n")):
+            with patch.object(m.subprocess, "run", return_value=SimpleNamespace(stdout=bad)):
+                with self.assertRaisesRegex(ValueError, "UNIT_NOT_QUIESCENT"):
+                    m.quiet()
 
 
 class StaticContract(unittest.TestCase):
@@ -273,6 +333,26 @@ class Sandbox(unittest.TestCase):
     def test_runner_must_match_attested_digest(self):
         self.write_approval(runnerSha256="d" * 64)
         self.assertBlocked(*self.run_runner(), "RUNNER_DIGEST")
+
+    def test_canonical_relative_production_pointer_is_preserved(self):
+        link = self.d / "prod/current"
+        link.unlink()
+        raw = "releases/" + PROD
+        link.symlink_to(raw)
+        self.assertEqual(self.run_runner()[0], 0)
+        self.assertEqual(os.readlink(link), raw)
+        self.assertEqual(self.run_runner(), (0, f"KMJ_STAGE_ACTIVATE=ALREADY_ACTIVE sha={self.NEW}"))
+
+    def test_production_pointer_alias_or_broken_target_is_rejected(self):
+        link = self.d / "prod/current"
+        link.unlink()
+        for raw in ("./releases/" + PROD, "releases/../releases/" + PROD, "releases/missing"):
+            link.symlink_to(raw)
+            self.assertBlocked(*self.run_runner(), "PRODUCTION_DRIFT")
+            link.unlink()
+        (self.d / "prod/releases" / PROD).rmdir()
+        link.symlink_to("releases/" + PROD)
+        self.assertBlocked(*self.run_runner(), "PRODUCTION_DRIFT")
 
     def test_production_drift_blocks(self):
         os.unlink(self.d / "prod/current")

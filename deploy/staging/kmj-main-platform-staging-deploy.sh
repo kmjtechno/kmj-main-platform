@@ -143,8 +143,19 @@ protected_file "$UNIT_FILE" || block UNIT_FILE
 [[ "$(sha256sum -- "$UNIT_FILE" | cut -d' ' -f1)" == "$unit_sha" ]] || block UNIT_DIGEST
 [[ "$(grep -c '^ExecStart=' "$UNIT_FILE")" == 1 ]] && grep -Fxq "$EXEC_LINE" "$UNIT_FILE" || block UNIT_EXEC
 
-prod_target="$(readlink -- "$PROD")" || block PRODUCTION_POINTER
-[[ -L "$PROD" && "$prod_target" == "/home/kmjprod/releases/$expected_prod" ]] || block PRODUCTION_DRIFT
+# Accept only the two canonical production-link spellings used by Elite.
+# Require the same real release directory; aliases, traversal and broken links fail.
+prod_target_expected="/home/kmjprod/releases/$expected_prod"
+prod_target_matches() {
+  local prod_target_raw
+  [[ -L "$PROD" && -d "$prod_target_expected" && ! -L "$prod_target_expected" ]] || return 1
+  prod_target_raw="$(readlink -- "$PROD")" || return 1
+  [[ "$prod_target_raw" == "$prod_target_expected" || "$prod_target_raw" == "releases/$expected_prod" ]] || return 1
+  [[ "$(realpath -e -- "$PROD")" == "$prod_target_expected" ]] || return 1
+  [[ "$(readlink -- "$PROD")" == "$prod_target_raw" ]]
+}
+[[ -L "$PROD" ]] || block PRODUCTION_POINTER
+prod_target_matches || block PRODUCTION_DRIFT
 [[ -L "$SITE" ]] || block STAGING_POINTER
 cur_target="$(readlink -- "$SITE")"
 new_target="$RELEASES/$approved/apps/platform"
@@ -288,5 +299,5 @@ mv -T -- "$tmp" "$SITE" || { rm -f -- "$tmp"; block SWAP; }
 if [[ "$(readlink -- "$SITE")" != "$new_target" ]]; then rollback; block READBACK; fi
 if [[ "$(realpath -e -- "$SITE")" != "$new_target" ]]; then rollback; block READBACK_PATH; fi
 if ! candidate_checks; then rollback; block CANDIDATE_CHANGED; fi
-if [[ "$(readlink -- "$PROD")" != "/home/kmjprod/releases/$expected_prod" ]]; then rollback; block PRODUCTION_CHANGED; fi
+if ! prod_target_matches; then rollback; block PRODUCTION_CHANGED; fi
 echo "KMJ_STAGE_ACTIVATE=ACTIVATED sha=$approved previous=$expected_stage"
