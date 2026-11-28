@@ -13,7 +13,6 @@ import subprocess
 import sys
 import tempfile
 
-from production_release_sha_map import parse_existing, plan
 
 MAP = Path("/etc/nginx/conf.d/kmj-production-release-sha.conf")
 GATE = Path("/opt/kmj-main-platform-autopublish/main_platform_autopublish_gate.py")
@@ -88,13 +87,18 @@ def transaction(old, new, unchanged, write, validate, reload, witness):
         raise
     return "MAP_REFRESHED"
 
+def load_module(name, path):
+    protected(path)
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
 def main():
     if os.geteuid() != 0 or socket.gethostname().split(".")[0] != "KMJ-elite":
         raise ValueError("BLOCKED_HOST")
-    protected(GATE)
-    spec = importlib.util.spec_from_file_location("installed_gate", GATE)
-    gate = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(gate)
+    gate = load_module("installed_gate", GATE)
+    planner = load_module("production_release_sha_map", Path(__file__).absolute().with_name("production_release_sha_map.py"))
     fd = os.open(gate.LOCK, os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC)
     try:
         s = os.fstat(fd)
@@ -114,10 +118,10 @@ def main():
                 or gate.remote_sha() != target):
             raise ValueError("BLOCKED_APPROVAL_IDENTITY")
         old, mode = read_map(MAP)
-        current = [s for s in parse_existing(old) if live == "platform-" + s[:12]]
+        current = [s for s in planner.parse_existing(old) if live == "platform-" + s[:12]]
         if len(current) != 1:
             raise ValueError("BLOCKED_CURRENT_MAP")
-        new = plan(old, current[0], target, gate.candidate_sha)
+        new = planner.plan(old, current[0], target, gate.candidate_sha)
         def witness():
             return gate.exact_https_sha_ok(gate.public_https_response(), current[0])
         if sys.argv == [sys.argv[0], "--inspect"]:
