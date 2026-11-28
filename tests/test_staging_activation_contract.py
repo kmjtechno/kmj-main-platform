@@ -110,6 +110,47 @@ class LiveProposalContract(unittest.TestCase):
                 m.proposal(NEW, OLD, PROD, inspect_elite=True)
 
 
+class StagingRunnerUpgradeContract(unittest.TestCase):
+    def setUp(self):
+        import importlib.util
+        path = ROOT / "scripts/operations/upgrade-elite-staging-runner-relative-link-20261128.py"
+        spec = importlib.util.spec_from_file_location("runner_upgrade", path)
+        self.mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.mod)
+
+    def test_reviewed_pins_match_repository(self):
+        self.assertEqual(self.mod.blob(RUNNER.read_bytes()), self.mod.NEW)
+        self.assertEqual(self.mod.blob(UNIT.read_bytes()), self.mod.UNIT_PIN)
+        self.assertNotEqual(self.mod.OLD, self.mod.NEW)
+
+    def test_atomic_replacement_preserves_mode(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "runner"
+            original_fchown = os.fchown
+            # Offline CI is unprivileged; exercise bytes/mode/rename, not root ownership.
+            with patch.object(self.mod.os, "fchown", side_effect=lambda fd, uid, gid:
+                              original_fchown(fd, os.getuid(), os.getgid())):
+                self.mod.replace(path, b"old", 0o700, os.getgid())
+                self.mod.replace(path, b"new", 0o700, os.getgid())
+            self.assertEqual(path.read_bytes(), b"new")
+            self.assertEqual(path.stat().st_mode & 0o777, 0o700)
+
+    def test_unit_must_be_quiescent_and_exact(self):
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        m = self.mod
+        good = ("LoadState=loaded\nActiveState=inactive\nFragmentPath=" + str(m.UNIT) +
+                "\nDropInPaths=\nNeedDaemonReload=no\n")
+        with patch.object(m.subprocess, "run", return_value=SimpleNamespace(stdout=good)), \
+             patch.object(m, "protected", return_value=(UNIT.read_bytes(), 0o644, 0)):
+            m.quiet()
+        for bad in (good.replace("inactive", "active"), good.replace("DropInPaths=\n", "DropInPaths=/tmp/x\n")):
+            with patch.object(m.subprocess, "run", return_value=SimpleNamespace(stdout=bad)):
+                with self.assertRaisesRegex(ValueError, "UNIT_NOT_QUIESCENT"):
+                    m.quiet()
+
+
 class StaticContract(unittest.TestCase):
     def test_unit_is_fixed_and_not_installable(self):
         t = "\n".join(l for l in UNIT.read_text().splitlines() if not l.startswith("#")) + "\n"
