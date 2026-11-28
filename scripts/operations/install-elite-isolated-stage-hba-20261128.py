@@ -15,13 +15,13 @@ from pathlib import Path
 import re
 import socket
 import stat
+import subprocess
 import tempfile
 
 spec = importlib.util.spec_from_file_location("hba_plan", Path(__file__).resolve().parent / "plan-elite-isolated-stage-hba-20261128.py")
 plan = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(plan)
 ROLE = plan.ROLE
-LOCK = Path("/run/lock/kmj-stage-hba-install.lock")
 LIVE = Path("/home/kmjprod/current")
 EXPECTED = Path("/home/kmjprod/releases/platform-72e7c9ada190")
 
@@ -89,9 +89,9 @@ def reload():
     require(plan.pg("SELECT 1") == "1", "ADMIN_CONNECTION_FAILED")
 
 
-def install(path, old, new):
+def install(path, old, new, backup_parent=Path("/root")):
     metadata = path.lstat()
-    backup_dir = Path(tempfile.mkdtemp(prefix="kmj-stage-hba-backup-", dir="/root"))
+    backup_dir = Path(tempfile.mkdtemp(prefix="kmj-stage-hba-backup-", dir=backup_parent))
     backup = backup_dir / "pg_hba.conf.original"
     fd = os.open(backup, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, "wb") as handle:
@@ -154,7 +154,7 @@ def main():
         print("HBA_LIVE_CANDIDATE_ISOLATION=NOT_TESTED")
         print("EXISTING_DATABASE_GRANTS_CHANGED=NO CANDIDATE_ROLE_CREATED=NO")
         return 0
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, subprocess.SubprocessError) as exc:
         reason = str(exc)
         print("HBA_INSTALL=BLOCKED_" + (reason if re.fullmatch("[A-Z_]+", reason) else "SYSTEM_OR_FORMAT"))
         return 2
