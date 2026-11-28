@@ -9,6 +9,7 @@ retain only-candidate DB state for explicit review; no blind retry.
 """
 from __future__ import annotations
 import argparse
+import importlib.util
 import grp
 import os
 from pathlib import Path
@@ -38,6 +39,11 @@ F_FLAGS = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC
 PG_ENV = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "HOME": "/var/lib/postgresql",
           "LANG": "C", "LC_ALL": "C", "PGHOST": "/var/run/postgresql",
           "PGPORT": "5432", "PGUSER": "postgres", "PGPASSFILE": "/dev/null"}
+
+
+_hba_spec = importlib.util.spec_from_file_location("stage_hba_verify", Path(__file__).resolve().parent / "verify-elite-isolated-stage-hba-20261128.py")
+hba = importlib.util.module_from_spec(_hba_spec)
+_hba_spec.loader.exec_module(hba)
 
 
 def emit(key: str, value: str) -> None:
@@ -148,8 +154,8 @@ ROLE_SCOPE = (
     "AND NOT r.rolsuper AND NOT r.rolcreatedb AND NOT r.rolcreaterole "
     "AND NOT r.rolreplication AND NOT r.rolinherit AND NOT r.rolbypassrls "
     "AND NOT EXISTS (SELECT 1 FROM pg_auth_members m WHERE m.member=r.oid OR m.roleid=r.oid) "
-    "AND NOT EXISTS (SELECT 1 FROM pg_database x WHERE x.datallowconn AND NOT x.datistemplate "
-    f"AND x.datname NOT IN ('postgres','{DB}') AND has_database_privilege(r.oid,x.oid,'CONNECT'));"
+    "AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(d.datacl,acldefault('d',d.datdba))) a "
+    "WHERE a.grantee=0);"
 )
 MIGRATION_NAMES = "SELECT migration FROM public.migrations ORDER BY migration;"
 
@@ -283,6 +289,7 @@ def main() -> int:
         stop("LIVE_POINTER_DRIFT")
     stage_gid = grp.getgrnam("kmjstage").gr_gid
     catalog(stage_gid)
+    hba.verify_live()
     cache = RUNTIME / "cache"
     st = os.lstat(cache)
     if (not stat.S_ISDIR(st.st_mode) or st.st_uid != pwd.getpwnam("kmjstage").pw_uid
@@ -317,6 +324,7 @@ def main() -> int:
         stop("POINTER_DRIFT_AFTER_MIGRATION")
     if pg_query(ROLE_SCOPE) != b"1":
         stop("POST_MIGRATION_ROLE_SCOPE")
+    hba.verify_live()
     emit("KMJ_STAGE_710C6_MIGRATIONS", "PASS_CANDIDATE_DB_SCHEMA_ONLY")
     emit("STAGING_MIGRATION_TABLE", "PRESENT_NONEMPTY")
     emit("STAGING_MIGRATION_COUNT", str(int(count)))
@@ -333,6 +341,6 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except (OSError, KeyError, ValueError):
+    except (OSError, KeyError, ValueError, subprocess.SubprocessError):
         emit("KMJ_STAGE_710C6_MIGRATIONS", "BLOCKED_SYSTEM_OR_METADATA")
         raise SystemExit(2)
