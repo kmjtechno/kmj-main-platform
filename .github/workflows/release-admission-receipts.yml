@@ -46,6 +46,7 @@ on:
       - "scripts/operations/install-elite-isolated-stage-hba-20261128.py"
       - "scripts/test_elite_stage_hba_integration.py"
       - "scripts/operations/plan-elite-legacy-stage-hba-20261128.py"
+      - "scripts/operations/install-elite-legacy-stage-hba-20261128.py"
       - "scripts/test_elite_legacy_stage_hba_plan.py"
       - "scripts/test_prepare_elite_isolated_stage_runtime.py"
       - "infra/server/systemd/kmj-elite-release-admission-broker.*"
