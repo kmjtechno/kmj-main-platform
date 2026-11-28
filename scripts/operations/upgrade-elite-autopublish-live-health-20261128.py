@@ -3,7 +3,7 @@
 import argparse
 import fcntl
 import hashlib
-import importlib.util
+import types
 import os
 from pathlib import Path
 import socket
@@ -21,6 +21,8 @@ GATES = (
 )
 LOCK = Path("/run/lock/kmj-main-platform-autopublish.lock")
 CONFIRM = "OWNER_APPROVES_LIVE_HEALTH_GATE_UPGRADE"
+INTENTS = tuple(Path("/home/kmjprod/shared/storage/app/private/ops") / name for name in (
+    "release-admission-request.json", "production-activation-request.json"))
 
 def require(ok, code):
     if not ok:
@@ -55,10 +57,10 @@ def fetch():
     compile(data, URL, "exec")
     return data
 
-def load_gate():
-    spec = importlib.util.spec_from_file_location("fixed_gate", GATES[0])
-    gate = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(gate)
+def load_gate(data):
+    require(blob(data) == NEW, "BLOCKED_SOURCE_PIN")
+    gate = types.ModuleType("fixed_reviewed_gate")
+    exec(compile(data, URL, "exec"), gate.__dict__)
     return gate
 
 def verify_live(gate):
@@ -69,9 +71,9 @@ def verify_live(gate):
     current = gate.live_release()
     require(current == "platform-" + target[:12], "BLOCKED_NOT_ALREADY_LIVE")
     admission = gate.protected_json(gate.ADMISSION_DIR / ("main-platform-autopublish-" + target[:12] + ".json"))
-    # Validate historical admission with its own exact staging SHA; this is a
-    # read-only health proof, not a prospective release authorization.
-    require(gate.decision(approval, admission, current, target, gate.candidate_sha(target)) == "ALREADY_LIVE",
+    require(not any(os.path.lexists(path) for path in INTENTS), "BLOCKED_PENDING_INTENT")
+    # The new read-only path deliberately has no remote promotion observation.
+    require(gate.decision(approval, admission, current, "", gate.candidate_sha(target)) == "ALREADY_LIVE",
             "BLOCKED_HISTORICAL_ADMISSION")
     require(gate.exact_https_sha_ok(gate.public_https_response(), target), "BLOCKED_PUBLIC_SHA")
     return approval, admission, current
@@ -106,7 +108,7 @@ def run(apply):
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         old = tuple(read_gate(path) for path in GATES)
         require(old[0] == old[1], "BLOCKED_INSTALLED_COPY_DRIFT")
-        witness = verify_live(load_gate())
+        witness = verify_live(load_gate(new))
         if not apply or old[0] == new:
             print("LIVE_HEALTH_UPGRADE=" + ("ALREADY_PINNED" if old[0] == new else "INSPECT_PASS"))
             return
@@ -118,13 +120,13 @@ def run(apply):
             p.chmod(0o400)
         changed = []
         try:
-            require(verify_live(load_gate()) == witness, "BLOCKED_LIVE_DRIFT")
+            require(verify_live(load_gate(new)) == witness, "BLOCKED_LIVE_DRIFT")
             for i, path in enumerate(GATES):
                 require(read_gate(path) == old[i], "BLOCKED_GATE_CHANGED")
                 changed.append(i)
                 replace(path, new)
                 require(read_gate(path) == new, "BLOCKED_READBACK")
-            require(verify_live(load_gate()) == witness, "BLOCKED_LIVE_DRIFT")
+            require(verify_live(load_gate(new)) == witness, "BLOCKED_LIVE_DRIFT")
         except BaseException:
             for i in reversed(changed):
                 replace(GATES[i], old[i])
