@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'scripts/operations/elite_owner_activation_broker.py'
+      - 'scripts/operations/upgrade-elite-activation-broker-expiry-20261128.py'
       - 'scripts/test_elite_owner_activation_broker.py'
       - 'apps/platform/app/Services/Operations/EliteActivationIntentQueue.php'
       - 'apps/platform/tests/Feature/EliteActivationIntentTest.php'
@@ -24,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Compile source-only fixed broker and exact regression tests
-        run: python3 -m py_compile scripts/operations/elite_owner_activation_broker.py scripts/test_elite_owner_activation_broker.py
+        run: python3 -m py_compile scripts/operations/elite_owner_activation_broker.py scripts/operations/upgrade-elite-activation-broker-expiry-20261128.py scripts/test_elite_owner_activation_broker.py
       - name: Root gate, strict intent schema, replay, fixed target negative tests
         run: python3 scripts/test_elite_owner_activation_broker.py -v
       - name: PHP syntax without installing any host service
