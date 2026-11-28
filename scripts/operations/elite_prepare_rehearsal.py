@@ -51,7 +51,7 @@ def names(sha):
 
 def tree_paths(sha, expected):
     return (PREV_ROOT / expected / "apps" / "platform",
-            CAND_ROOT / ("platform-" + sha[:12]) / "apps" / "platform")
+            CAND_ROOT / sha / "apps" / "platform")
 
 
 def sql_create(name, password, nonce):
