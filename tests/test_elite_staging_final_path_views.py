@@ -62,6 +62,13 @@ class RepairTests(unittest.TestCase):
                 m.copy_views(src,dst,os.getuid())
             self.assertEqual(list(dst.iterdir()),[])
 
+    def test_compile_bootstrap_uses_console_kernel_not_http(self):
+        self.assertIn(r"Illuminate\Contracts\Console\Kernel::class", m.PHP_COMPILE)
+        self.assertNotIn(r"Illuminate\Contracts\Http\Kernel::class", m.PHP_COMPILE)
+        self.assertIn("$app->bound('request')", m.PHP_COMPILE)
+        self.assertIn("$kernel->call('view:cache')", m.PHP_COMPILE)
+        self.assertIn(r"Illuminate\Contracts\Http\Kernel::class", m.PHP_HEALTH)
+
     def test_health_template_uses_actual_lexical_path(self):
         self.assertIn("'/../resources/health-up.blade.php'",m.PHP_COMPILE)
         self.assertIn("'/../resources/health-up.blade.php'",m.PHP_HEALTH)
