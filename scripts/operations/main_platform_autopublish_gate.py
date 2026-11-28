@@ -180,23 +180,56 @@ def remote_sha():
     parts = output.split()
     return parts[0] if len(parts) == 2 and parts[1] == "refs/heads/staging-approved" and SHA_RE.fullmatch(parts[0]) else ""
 
+def exact_shared_storage(folder):
+    """Only the canonical materializer-managed storage link is exceptional."""
+    shared = RELEASES.parent / "shared/storage"
+    app = folder / "apps/platform"
+    storage = app / "storage"
+    try:
+        return (folder.resolve(strict=True) == folder
+                and app.resolve(strict=True) == app and app.is_dir()
+                and storage.is_symlink()
+                and shared.is_dir() and not shared.is_symlink()
+                and shared.resolve(strict=True) == shared
+                and storage.resolve(strict=True) == shared)
+    except (OSError, RuntimeError):
+        return False
+
+
 def candidate_sha(target):
+    if not isinstance(target, str) or not SHA_RE.fullmatch(target):
+        return ""
     folder = RELEASES / ("platform-" + target[:12])
     if folder.is_symlink() or not folder.is_dir():
         return ""
-    result = fixed_run(["/usr/sbin/runuser", "-u", "kmjprod", "--",
-                        "/usr/bin/git", "-C", str(folder), "rev-parse", "--verify", "HEAD"])
-    if result != target:
+    git = ["/usr/sbin/runuser", "-u", "kmjprod", "--", "/usr/bin/git",
+           "--no-optional-locks", "-c", "core.fsmonitor=false",
+           "-c", "core.untrackedCache=false", "-C", str(folder)]
+    head = ["rev-parse", "--verify", "HEAD"]
+    if fixed_run(git + head) != target:
         return ""
-    # HEAD identity alone cannot attest a candidate whose tracked files were
-    # edited after checkout. Check both index and worktree against exact HEAD.
-    # This is a read-only preflight, not a substitute for the privileged unit's
-    # final artifact/rollback verification or a race-free filesystem seal.
-    clean = fixed_run(["/usr/sbin/runuser", "-u", "kmjprod", "--",
-                       "/usr/bin/git", "-C", str(folder), "diff",
-                       "--no-ext-diff", "--quiet", "HEAD", "--"],
-                      return_success=True)
-    return result if clean else ""
+    diff = ["diff", "--no-ext-diff", "--no-textconv", "--quiet"]
+    # Never mask staged changes, including tracked storage entries.
+    if not fixed_run(git + diff + ["--cached", "HEAD", "--"],
+                     return_success=True):
+        return ""
+    storage = folder / "apps/platform/storage"
+    shared_layout = exact_shared_storage(folder)
+    if storage.is_symlink() and not shared_layout:
+        return ""
+    paths = [".", ":(literal,exclude)apps/platform/storage"] if shared_layout else []
+    # Match the materializer's exact shared-runtime exception, not an
+    # arbitrary ignored directory. All other tracked changes still block.
+    # Read-only preflight; final privileged unit retains artifact checks.
+    if not fixed_run(git + diff + ["HEAD", "--"] + paths,
+                     return_success=True):
+        return ""
+    if shared_layout and not exact_shared_storage(folder):
+        return ""
+    if not shared_layout and storage.is_symlink():
+        return ""
+    return target if fixed_run(git + head) == target else ""
+
 
 def exact_https_sha_ok(response, target):
     """Require one HTTP 200 response and one matching public deploy SHA."""
