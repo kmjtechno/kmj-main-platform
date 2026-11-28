@@ -7,6 +7,9 @@ Never starts production, changes approval/admission, or enables a timer.
 """
 import argparse
 import hashlib
+import json
+import re
+import time
 import fcntl
 import os
 from pathlib import Path
@@ -157,27 +160,55 @@ def apply(entries, live_snapshot):
         raise
     print("INSTALL_BACKUP=" + str(backup))
 
-def unit_property(name):
-    return subprocess.run(
-        ["/usr/bin/systemctl", "show", UNIT, "-p", name, "--value"],
-        cwd="/", env={"PATH":"/usr/sbin:/usr/bin:/sbin:/bin","LANG":"C"},
-        check=True, capture_output=True, text=True, timeout=15
-    ).stdout.strip()
+def qualification_invocation(output, after_us):
+    """Accept only a fresh root service stdout witness from this boot."""
+    if len(output) > 262144:
+        return None
+    matches = set()
+    for line in output.splitlines():
+        try:
+            entry = json.loads(line)
+            invocation = entry.get("_SYSTEMD_INVOCATION_ID", "")
+            if (entry.get("_SYSTEMD_UNIT") == UNIT
+                    and entry.get("_UID") == "0"
+                    and entry.get("MESSAGE") == "PRODUCTION_SHA_MAP=ALREADY_LIVE_VERIFIED"
+                    and isinstance(invocation, str) and re.fullmatch(r"[0-9a-f]{32}", invocation)
+                    and int(entry.get("__MONOTONIC_TIMESTAMP", "0")) >= after_us):
+                matches.add(invocation)
+        except (ValueError, TypeError, AttributeError):
+            continue
+    return next(iter(matches)) if len(matches) == 1 else None
+
+def journal_witness(after_us):
+    # Inactive oneshot units may be garbage collected by systemd. Journal
+    # metadata survives that and is attributed to the actual service cgroup.
+    for _ in range(10):
+        result = subprocess.run(
+            ["/usr/bin/journalctl", "-b", "-u", UNIT, "-n", "80",
+             "--output=json", "--no-pager", "--quiet"],
+            cwd="/", env={"PATH":"/usr/sbin:/usr/bin:/sbin:/bin","LANG":"C"},
+            check=True, capture_output=True, text=True, timeout=15
+        )
+        invocation = qualification_invocation(result.stdout, after_us)
+        if invocation:
+            return invocation
+        time.sleep(0.5)
+    return None
 
 def qualify_service(snapshot):
     protected_dir(QUALIFICATION.parent)
     require(guard_live() == snapshot, "BLOCKED_LIVE_DRIFT")
-    before = int(unit_property("ExecMainStartTimestampMonotonic") or "0")
     fd = os.open(QUALIFICATION, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
     try:
         os.close(fd)
+        before = time.monotonic_ns() // 1000
         fixed("/usr/bin/systemctl", "start", UNIT)
-        after = int(unit_property("ExecMainStartTimestampMonotonic") or "0")
-        require(after > before and unit_property("Result") == "success"
-                and unit_property("ExecMainStatus") == "0", "BLOCKED_SERVICE_NOT_EXECUTED")
+        invocation = journal_witness(before)
+        require(invocation is not None, "BLOCKED_SERVICE_NOT_EXECUTED")
         require(guard_live() == snapshot, "BLOCKED_LIVE_DRIFT")
     finally:
         QUALIFICATION.unlink()
+    print("SHA_MAP_SERVICE_INVOCATION=" + invocation)
     print("SHA_MAP_SERVICE_WITNESS=PASS")
 
 def main():
