@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read-only diagnostic for the Elite autopublish candidate identity check.
 
-No deploy, repair, approval, backup, network access or source mutation.
+No deploy, repair, approval, backup, explicit network calls or source mutation.
 Run as root on KMJ-elite with the exact expected live SHA. Git runs as
 kmjprod. Output is categorical only; no paths, diff, config or secrets.
 """
@@ -22,6 +22,8 @@ STORAGE = "apps/platform/storage"
 
 
 def git_probe(folder, *args):
+    if args and args[0] == "diff":
+        args = ("diff", "--no-textconv", *args[1:])
     try:
         result = subprocess.run(
             ["/usr/sbin/runuser", "-u", "kmjprod", "--", "/usr/bin/git",
