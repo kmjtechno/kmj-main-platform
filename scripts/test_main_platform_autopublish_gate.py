@@ -126,7 +126,7 @@ class AutoPublishSafetyTest(unittest.TestCase):
                 ("live_release", lambda: "platform-" + SHA[:12]),
                 ("protected_json", lambda p: BASE_APPROVAL if p == mod.APPROVAL else ELITE_EVIDENCE),
                 ("candidate_sha", lambda target: SHA),
-                ("public_https_response", lambda: "HTTP/2 200\\r\\nx-kmj-deploy-sha: " + SHA + "\\r\\n\\r\\nKMJ_HTTP_STATUS=200"),
+                ("public_https_response", lambda: "HTTP/2 200\r\nx-kmj-deploy-sha: " + SHA + "\r\n\r\nKMJ_HTTP_STATUS=200"),
             )
             for name, value in patches:
                 stack.enter_context(patch.object(mod, name, value))
