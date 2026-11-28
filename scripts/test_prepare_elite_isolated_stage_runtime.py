@@ -13,8 +13,24 @@ def load(name):
 
 runtime = load("prepare-elite-isolated-stage-runtime-20261128.py")
 env = load("prepare-elite-isolated-stage-env-20261128.py")
+fpm = load("prepare-elite-isolated-stage-fpm-20261128.py")
 
 class StageRuntimeTests(unittest.TestCase):
+    def test_candidate_fpm_exact_scope(self):
+        raw = env.env_bytes("a"*64, "base64:"+"A"*43+"=")
+        self.assertTrue(fpm.valid_candidate_env(raw))
+        self.assertFalse(fpm.valid_candidate_env(raw+b"DB_URL=postgres://unexpected\n"))
+        self.assertFalse(fpm.valid_candidate_env(raw.replace(b"MAIL_MAILER=log", b"MAIL_MAILER=smtp")))
+        self.assertFalse(fpm.valid_candidate_env(raw.replace(runtime.DB.encode(), b"other_db")))
+        self.assertEqual(fpm.STORAGE, runtime.STORAGE)
+        self.assertNotEqual(fpm.NEW_SOCKET, fpm.OLD_SOCKET)
+        config = fpm.config_bytes().decode()
+        self.assertIn("clear_env = yes", config)
+        self.assertIn("env[LARAVEL_STORAGE_PATH] = "+str(runtime.STORAGE), config)
+        self.assertIn("listen = "+str(fpm.NEW_SOCKET), config)
+        self.assertNotIn(str(fpm.OLD_SOCKET), config)
+        self.assertIn("pm.max_children = 2", config)
+
     def test_candidate_scope(self):
         self.assertEqual(runtime.SHA, "710c6f3ca10310457bc7243caabc0e48476ec110")
         self.assertEqual(runtime.OLD_PROD, "platform-72e7c9ada190")
