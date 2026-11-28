@@ -197,6 +197,64 @@ class ActivationBrokerTests(unittest.TestCase):
             self.assertEqual(mod.run(execute=True, now=NOW), 0)
             self.assertEqual(events, ["CLAIM", "START"])
 
+    def test_expired_intent_is_retired_only_on_execute_without_deploy(self):
+        with tempfile.TemporaryDirectory() as temp:
+            p = Path(temp) / "intent.json"
+            p.write_text(json.dumps(intent(created_at_unix=NOW - 110, expires_at_unix=NOW)))
+            p.chmod(0o640)
+            uid = p.stat().st_uid
+            with patch.object(mod, "INTENT", p), patch.object(mod.os, "geteuid", return_value=0), \
+                    patch.object(mod.socket, "gethostname", return_value="KMJ-elite"), \
+                    patch.object(mod.pwd, "getpwnam") as person, \
+                    patch.object(mod, "trigger_fixed_unit") as trigger, \
+                    patch.object(mod, "claim_once") as claim:
+                person.return_value.pw_uid = uid
+                self.assertEqual(mod.run(execute=False, now=NOW), 2)
+                self.assertTrue(p.exists())
+                self.assertEqual(mod.run(execute=True, now=NOW), 0)
+                self.assertFalse(p.exists())
+                trigger.assert_not_called()
+                claim.assert_not_called()
+
+    def test_cleanup_does_not_remove_fresh_future_malformed_or_linked_intents(self):
+        with tempfile.TemporaryDirectory() as temp:
+            p = Path(temp) / "intent.json"
+            for obj in (intent(), intent(created_at_unix=NOW + 50, expires_at_unix=NOW + 100)):
+                p.write_text(json.dumps(obj))
+                p.chmod(0o640)
+                self.assertFalse(mod.retire_expired_intent(p, p.stat().st_uid, NOW))
+                self.assertTrue(p.exists())
+            p.write_text(json.dumps(intent(created_at_unix=NOW - 200, expires_at_unix=NOW - 1)))
+            with self.assertRaisesRegex(ValueError, "EXPIRED_OR_FUTURE"):
+                mod.retire_expired_intent(p, p.stat().st_uid, NOW)
+            self.assertTrue(p.exists())
+            p.write_text(json.dumps(intent(created_at_unix=NOW - 110, expires_at_unix=NOW)))
+            other = Path(temp) / "other.json"
+            other.hardlink_to(p)
+            with self.assertRaisesRegex(ValueError, "INTENT_IDENTITY"):
+                mod.retire_expired_intent(p, p.stat().st_uid, NOW)
+            p.unlink()
+            p.symlink_to(other)
+            with self.assertRaises(OSError):
+                mod.retire_expired_intent(p, other.stat().st_uid, NOW)
+            self.assertTrue(p.is_symlink())
+            self.assertTrue(other.exists())
+
+    def test_intent_expiring_during_preflight_cannot_be_claimed_or_started(self):
+        with patch.object(mod.os, "geteuid", return_value=0), \
+                patch.object(mod.socket, "gethostname", return_value="KMJ-elite"), \
+                patch.object(mod.pwd, "getpwnam"), \
+                patch.object(mod, "read_owner_intent", side_effect=[
+                    intent(), ValueError("BLOCKED_INTENT_EXPIRED_OR_FUTURE")]), \
+                patch.object(mod, "previously_claimed", return_value=False), \
+                patch.object(mod, "trusted_gate", return_value=FakeGate()), \
+                patch.object(mod, "fixed_unit_status", return_value=True), \
+                patch.object(mod, "claim_once") as claim, \
+                patch.object(mod, "trigger_fixed_unit") as trigger:
+            self.assertEqual(mod.run(execute=True, now=NOW), 2)
+            claim.assert_not_called()
+            trigger.assert_not_called()
+
     def test_immutable_fixed_unit_and_no_bypass_paths(self):
         text = SOURCE.read_text()
         self.assertEqual(mod.UNIT, "kmj-main-platform-production-release.service")
