@@ -13,8 +13,9 @@ Safety properties:
   * database name/role are derived from the SHA, match the rehearsal's own
     disposable-name pattern, are loopback-only, non-superuser, and stamped with a
     random nonce comment the rehearsal independently checks;
-  * only names matching the fixed pattern are ever dropped; production databases,
-    the live pointer, approvals and releases are never touched.
+  * prepare never drops or reuses existing state; cleanup is disabled until
+    ownership-bound cleanup is qualified. Production databases, the live pointer,
+    approvals and releases are never touched.
 """
 import json
 import os
@@ -60,8 +61,6 @@ def sql_create(name, password, nonce):
         if not pattern.fullmatch(value):
             raise ValueError("BLOCKED_UNSAFE_SQL_INPUT")
     return [
-        'DROP DATABASE IF EXISTS "{n}" WITH (FORCE)'.format(n=name),
-        'DROP ROLE IF EXISTS "{n}"'.format(n=name),
         "CREATE ROLE \"{n}\" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD '{p}'".format(n=name, p=password),
         'CREATE DATABASE "{n}" OWNER "{n}"'.format(n=name),
         "COMMENT ON DATABASE \"{n}\" IS 'kmj-disposable-rehearsal:{x}'".format(n=name, x=nonce),
@@ -71,8 +70,7 @@ def sql_create(name, password, nonce):
 def sql_drop(name):
     if not NAME_RE.fullmatch(name):
         raise ValueError("BLOCKED_UNSAFE_SQL_INPUT")
-    return ['DROP DATABASE IF EXISTS "{n}" WITH (FORCE)'.format(n=name),
-            'DROP ROLE IF EXISTS "{n}"'.format(n=name)]
+    raise ValueError("BLOCKED_CLEANUP_OWNERSHIP_UNVERIFIED")
 
 
 def rsync_argv(src, dst):
@@ -114,13 +112,15 @@ def psql(sql_list):
 
 def write_config(config, path=CONFIG):
     tmp = path.with_name("." + path.name + ".tmp")
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, "w") as handle:
         handle.write(json.dumps(config, sort_keys=True))
         handle.flush()
         os.fsync(handle.fileno())
     os.chmod(tmp, 0o600)
-    os.replace(tmp, path)
+    # Publish without replacing another run's configuration.
+    os.link(tmp, path, follow_symlinks=False)
+    tmp.unlink()
 
 
 def prepare(sha, expected, runner=run, sql_runner=psql, base=BASE, config_path=CONFIG,
@@ -130,7 +130,10 @@ def prepare(sha, expected, runner=run, sql_runner=psql, base=BASE, config_path=C
         raise ValueError("BLOCKED_TREE_UNTRUSTED_OR_MISSING")
     name = names(sha)
     work = base / sha[:12]
-    cleanup(sha, runner, sql_runner, base, config_path)
+    # Never delete an existing database, role, config or workspace on prepare.
+    # A failed or interrupted run requires explicit recovery, not automatic cleanup.
+    if os.path.lexists(config_path) or os.path.lexists(work):
+        raise ValueError("BLOCKED_EXISTING_REHEARSAL")
     work.mkdir(parents=True, mode=0o700)
     for label, src in (("previous", prev), ("candidate", cand)):
         runner(rsync_argv(src, work / label))
@@ -142,17 +145,7 @@ def prepare(sha, expected, runner=run, sql_runner=psql, base=BASE, config_path=C
 
 
 def cleanup(sha, runner=run, sql_runner=psql, base=BASE, config_path=CONFIG):
-    name = names(sha)
-    sql_runner(sql_drop(name))
-    work = base / sha[:12]
-    if work.exists():
-        if work.is_symlink() or work.resolve(strict=True).parent != base.resolve(strict=True):
-            raise ValueError("BLOCKED_WORKDIR_UNTRUSTED")
-        shutil.rmtree(work)
-    try:
-        config_path.unlink()
-    except FileNotFoundError:
-        pass
+    raise ValueError("BLOCKED_CLEANUP_OWNERSHIP_UNVERIFIED")
 
 
 def main(argv):
@@ -170,7 +163,10 @@ def main(argv):
         if argv[1] == "--write":
             prepare(sha, expected)
         else:
-            cleanup(sha)
+            # Disable the legacy destructive cleanup until nonce and ownership
+            # verification is implemented and independently exercised.
+            print("REHEARSAL_WORKSPACE=BLOCKED_CLEANUP_OWNERSHIP_UNVERIFIED")
+            return 2
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
         print("REHEARSAL_WORKSPACE=FAIL REASON=" + type(exc).__name__ + ":" + str(exc)[:60])
         return 1
