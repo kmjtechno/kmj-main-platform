@@ -5,6 +5,7 @@ import stat
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 import uuid
 
 OPS = pathlib.Path(__file__).resolve().parent / "operations"
@@ -61,6 +62,18 @@ class BrokerTests(unittest.TestCase):
         adm, b = self.decide()
         self.assertEqual(b, [])
         self.assertEqual(gate.decision(APPROVAL, adm, PREV, SHA, SHA), "READY_APPROVED_RELEASE")
+
+    def test_admission_requires_exact_current_and_candidate_map(self):
+        it = intent()
+        previous = "b" * 40
+        good = br.sha_map.render([SHA, previous])
+        with patch.object(br.map_refresh, "read_map", return_value=(good, 0o644)):
+            br.verify_admission_map(it)
+        for values in ([SHA], [previous], [SHA, "c" * 40]):
+            with patch.object(br.map_refresh, "read_map",
+                              return_value=(br.sha_map.render(values), 0o644)):
+                with self.assertRaisesRegex(ValueError, "SHA_MAP_NOT_READY"):
+                    br.verify_admission_map(it)
 
     def test_missing_receipt_blocks(self):
         (self.rec / "public-qa-{}.json".format(SHA[:12])).unlink()
