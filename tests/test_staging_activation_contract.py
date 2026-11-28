@@ -11,6 +11,62 @@ KEYS = {"schema", "approvedSha", "expectedCurrentSha", "expectedProductionReleas
 OLD, NEW, PROD = "a" * 40, "b" * 40, "platform-574e443a2c75"
 
 
+class LiveProposalContract(unittest.TestCase):
+    def setUp(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("proposal_live", PROPOSAL)
+        self.mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.mod)
+
+    def test_committed_pins(self):
+        for path, pin in ((RUNNER, self.mod.RUNNER_BLOB), (UNIT, self.mod.UNIT_BLOB)):
+            raw = path.read_bytes()
+            self.assertEqual(hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest(), pin)
+
+    def test_live_proposal_uses_actual_pins_but_never_approves(self):
+        from unittest.mock import patch
+        m = self.mod
+        with patch.object(m.os, "geteuid", return_value=0), \
+             patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \
+             patch.object(m, "exact_pointer", return_value=True), \
+             patch.object(m, "remote_approved", return_value=NEW), \
+             patch.object(m, "pinned_bytes", side_effect=[b"runner", b"unit"]):
+            p = m.proposal(NEW, OLD, PROD, inspect_elite=True)
+        self.assertEqual(set(p), KEYS)
+        self.assertEqual(p["runnerSha256"], hashlib.sha256(b"runner").hexdigest())
+        self.assertEqual(p["unitSha256"], hashlib.sha256(b"unit").hexdigest())
+        self.assertTrue(all(p[k] is False for k in KEYS if k.endswith("Verified")))
+
+    def test_live_inspection_rejects_pointer_and_ref_drift(self):
+        from unittest.mock import patch
+        m = self.mod
+        with patch.object(m.os, "geteuid", return_value=0), \
+             patch.object(m.socket, "gethostname", return_value="KMJ-elite"):
+            with patch.object(m, "exact_pointer", side_effect=[True, False]):
+                with self.assertRaisesRegex(SystemExit, "PRODUCTION_POINTER_DRIFT"):
+                    m.proposal(NEW, OLD, PROD, inspect_elite=True)
+            with patch.object(m, "exact_pointer", return_value=True), \
+                 patch.object(m, "remote_approved", side_effect=[NEW, OLD]), \
+                 patch.object(m, "pinned_bytes", return_value=b"verified"):
+                with self.assertRaisesRegex(SystemExit, "REMOTE_APPROVED_SHA_DRIFT"):
+                    m.proposal(NEW, OLD, PROD, inspect_elite=True)
+
+    def test_live_inspection_rejects_wrong_host_and_unpinned_source(self):
+        from unittest.mock import patch
+        m = self.mod
+        with patch.object(m.os, "geteuid", return_value=0), \
+             patch.object(m.socket, "gethostname", return_value="other"):
+            with self.assertRaisesRegex(SystemExit, "ELITE_ROOT"):
+                m.proposal(NEW, OLD, PROD, inspect_elite=True)
+        with patch.object(m.os, "geteuid", return_value=0), \
+             patch.object(m.socket, "gethostname", return_value="KMJ-elite"), \
+             patch.object(m, "exact_pointer", return_value=True), \
+             patch.object(m, "remote_approved", return_value=NEW), \
+             patch.object(m, "pinned_bytes", side_effect=SystemExit("BLOCKED_INSTALLED_SOURCE_PIN")):
+            with self.assertRaisesRegex(SystemExit, "INSTALLED_SOURCE_PIN"):
+                m.proposal(NEW, OLD, PROD, inspect_elite=True)
+
+
 class StaticContract(unittest.TestCase):
     def test_unit_is_fixed_and_not_installable(self):
         t = "\n".join(l for l in UNIT.read_text().splitlines() if not l.startswith("#")) + "\n"
