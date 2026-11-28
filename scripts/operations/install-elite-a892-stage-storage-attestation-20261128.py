@@ -143,16 +143,9 @@ def main():
         enabled=Path("/etc/systemd/system/multi-user.target.wants")/name
         unitraw=m["unit_bytes"]()
         need(hashlib.sha256(unitraw).hexdigest()==UNIT_SHA,"UNIT_PIN")
-        # Reuse read-only planner preconditions, avoiding its argparse entry.
-        import sys
-        argv=sys.argv
-        try:
-            sys.argv=[str(a.plan)]
-            m["main"]()
-        finally:
-            sys.argv=argv
+        # Reuse exact read-only planner preconditions.
+        m["main"]()
         need(not os.path.lexists(unit) and not os.path.lexists(enabled),"UNIT_EXISTS")
-        need(system("is-system-running") in ("running","degraded"),"SYSTEMD_STATE")
         print("ORIGINAL_SEAL=PASS TRACKED_DELETIONS_EXACT=PASS",flush=True)
         if not a.apply:
             print("STORAGE_ATTESTATION_INSTALL=DRY_RUN_NO_CHANGES")
@@ -161,9 +154,13 @@ def main():
         create(backup/"original.sha256",old,0o600)
         create(backup/"original-link.txt",(os.readlink(target)+"\n").encode(),0o600)
         r["sync_dir"](backup)
-        print("RECOVERY_BACKUP="+str(backup),flush=True)
         saved=target.parent/("app.before-bind-"+backup.name)
         need(not os.path.lexists(saved),"BACKUP_LINK_EXISTS")
+        create(backup/"layout.json",json.dumps({"saved_link":str(saved),"mountpoint":str(target),
+               "unit":str(unit),"enabled_link":str(enabled),"marker":str(marker),
+               "view_placeholder":str(view),"old_seal":old.decode().strip()}).encode()+b"\n",0o600)
+        r["sync_dir"](backup)
+        print("RECOVERY_BACKUP="+str(backup),flush=True)
         created={}
         new=None
         renamed=False
@@ -183,6 +180,7 @@ def main():
             need(enabled.is_symlink() and enabled.resolve(strict=True)==unit,"ENABLE_READBACK")
             need(system("is-enabled",name)=="enabled" and system("is-active",name)=="active","MOUNT_UNIT_STATE")
             fpm_visibility()
+            need(b["seal_sha"](app)==old.decode().strip(),"UNCHANGED_SEAL_BEFORE_PLACEHOLDERS")
             created[view]=create(view,files[str(view.relative_to(t["RELEASE"]))],0o444)
             created[marker]=create(marker,(t["SHA"]+"\n").encode(),0o444)
             r["sync_dir"](view.parent)
