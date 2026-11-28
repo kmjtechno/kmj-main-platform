@@ -15,6 +15,7 @@ runtime = load("prepare-elite-isolated-stage-runtime-20261128.py")
 env = load("prepare-elite-isolated-stage-env-20261128.py")
 fpm = load("prepare-elite-isolated-stage-fpm-20261128.py")
 migrate = load("migrate-elite-isolated-stage-20261128.py")
+route = load("plan-elite-isolated-stage-route-20261128.py")
 
 class StageRuntimeTests(unittest.TestCase):
     def test_candidate_fpm_exact_scope(self):
@@ -45,6 +46,31 @@ class StageRuntimeTests(unittest.TestCase):
             value = str(runtime.RUNTIME / "cache" / (k + ".php"))
             self.assertIn(key+"="+value, raw.decode())
             self.assertIn("env["+key+"] = "+value, fpm.config_bytes().decode())
+
+    def test_route_proposal_preserves_non_target_directives(self):
+        baseline = (
+            "server {\n    server_name staging.kmjtechno.com;\n"
+            "    location / { return 308 https://staging.kmjtechno.com$request_uri; }\n}\n"
+            "server {\n    server_name staging.kmjtechno.com;\n"
+            "    root "+route.BASE+route.OLD+"/public;\n"
+            "    location = /index.php {\n"
+            "        fastcgi_param SCRIPT_FILENAME "+route.BASE+route.OLD+"/code/public/index.php;\n"
+            "        fastcgi_pass unix:"+route.OLD_SOCKET+";\n"
+            "    }\n    location = /register { return 403; }\n}\n"
+        ).encode()
+        planned = route.proposal(baseline)
+        self.assertIn(route.NEW.encode(), planned)
+        self.assertIn(route.NEW_SOCKET.encode(), planned)
+        self.assertNotIn(route.OLD.encode(), planned)
+        self.assertIn(b"location = /register { return 403; }", planned)
+        self.assertIn(b"add_header X-KMJ-Deploy-SHA ", planned)
+        self.assertNotEqual(route.digest(planned), route.digest(baseline))
+        with self.assertRaisesRegex(ValueError, "ROUTE_BASELINE_MISMATCH"):
+            route.proposal(baseline.replace(route.OLD_SOCKET.encode(), b"/unexpected.sock"))
+        with self.assertRaisesRegex(ValueError, "EXISTING_DEPLOY_HEADER"):
+            route.proposal(baseline+b"add_header X-KMJ-Deploy-SHA old;\n")
+        with self.assertRaisesRegex(ValueError, "STAGE_HOST_SCOPE"):
+            route.proposal(baseline.replace(b"server_name staging.kmjtechno.com;", b"server_name other.example;"))
 
     def test_candidate_scope(self):
         self.assertEqual(runtime.SHA, "710c6f3ca10310457bc7243caabc0e48476ec110")
