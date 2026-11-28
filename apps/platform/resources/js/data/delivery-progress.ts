@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'production-inbox-contract-20261128',
+        title: 'Owner Inbox request validation and private response safety',
+        state: 'active',
+        detail: 'SOURCE ONLY: explicit null and invalid page positions are rejected before JMAP access. Owner summary responses remain private and provider errors stay generic.',
+        evidence:
+            'Regression tests ported in PR #1281; fresh CI and authenticated mailbox qualification pending.',
+    },
+    {
         id: 'panel-dashboard-theme-20261128',
         title: 'One dashboard theme for owner and customer panels',
         state: 'active',
