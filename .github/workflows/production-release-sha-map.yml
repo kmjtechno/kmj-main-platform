@@ -2,6 +2,8 @@ name: Production Release SHA Map Contract
 on:
   pull_request:
     paths:
+      - 'scripts/operations/elite_admission_broker.py'
+      - 'scripts/test_elite_admission_broker.py'
       - 'scripts/operations/production_release_sha_map.py'
       - 'scripts/operations/refresh_production_release_sha_map.py'
       - 'scripts/test_refresh_production_release_sha_map.py'
@@ -12,6 +14,8 @@ on:
   push:
     branches: [main]
     paths:
+      - 'scripts/operations/elite_admission_broker.py'
+      - 'scripts/test_elite_admission_broker.py'
       - 'scripts/operations/production_release_sha_map.py'
       - 'scripts/operations/refresh_production_release_sha_map.py'
       - 'scripts/test_refresh_production_release_sha_map.py'
@@ -37,3 +41,4 @@ jobs:
         run: |
           python3 -B -m unittest discover -s scripts -p test_production_release_sha_map.py -v
           python3 -B -m unittest discover -s scripts -p test_refresh_production_release_sha_map.py -v
+          python3 -B -m unittest discover -s scripts -p test_elite_admission_broker.py -v
