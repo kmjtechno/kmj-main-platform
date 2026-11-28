@@ -45,8 +45,7 @@ const sectionLabels: Record<WebsiteSection, string> = {
     roadmap: 'Roadmap',
 };
 
-const card =
-    'bg-card border-border rounded-2xl border p-5 shadow-[0_24px_50px_-36px_rgba(0,0,0,0.8)] sm:p-6';
+const card = 'bg-card border-border rounded-xl border p-4 sm:p-5';
 const saveBar =
     'bg-card/95 border-border sticky bottom-3 z-20 flex flex-wrap items-center gap-3 rounded-2xl border p-3 shadow-[0_18px_44px_-18px_rgba(0,0,0,0.75)] backdrop-blur';
 const input =
@@ -169,7 +168,7 @@ function SiteForm({ settings, ready }: { settings: Settings; ready: boolean }) {
 
     return (
         <form
-            className="space-y-5"
+            className="space-y-3"
             onSubmit={(event) => {
                 event.preventDefault();
                 form.put('/operator/website/site', { preserveScroll: true });
@@ -354,7 +353,7 @@ function TeamForm({ team, ready }: { team: Team; ready: boolean }) {
 
     return (
         <form
-            className="space-y-5"
+            className="space-y-3"
             onSubmit={(event) => {
                 event.preventDefault();
                 form.transform((values) => ({
@@ -624,7 +623,7 @@ export default function OperatorWebsite({
     return (
         <>
             <Head title="Website controls" />
-            <div className="mx-auto w-full max-w-6xl space-y-5 p-4 sm:p-6">
+            <div className="w-full space-y-3 p-3">
                 <OperatorModuleNavigation active="website" />
                 <header>
                     <h1 className="text-2xl font-black">Website controls</h1>

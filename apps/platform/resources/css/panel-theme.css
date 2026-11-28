@@ -1,0 +1,121 @@
+/*
+ * One theme for every signed-in panel (owner and customer), taken from the
+ * owner dashboard. Public marketing pages never carry .kmj-panel.
+ *
+ * Tokens sit on the root element because Tailwind resolves --color-* where
+ * they are declared; overriding --card lower down does not change bg-card.
+ * Dialogs and menus rendered in <body> pick up the same colours.
+ */
+:root:has(.kmj-panel),
+.kmj-panel.kmj-panel,
+.kmj-panel.kmj-panel :is(.kmj-admin-shell, .kmj-premium-dashboard) {
+    color-scheme: dark;
+    --background: #070c11;
+    --foreground: #eef2f7;
+    --card: #0b1016;
+    --card-foreground: #eef2f7;
+    --popover: #0b1016;
+    --popover-foreground: #eef2f7;
+    --primary: #c80b32;
+    --primary-foreground: #ffffff;
+    --secondary: #171e26;
+    --secondary-foreground: #eef2f7;
+    --muted: #171e26;
+    --muted-foreground: #a3afbc;
+    --accent: #1b1520;
+    --accent-foreground: #ffffff;
+    --destructive: #b3122f;
+    --destructive-foreground: #ff7a8c;
+    --border: #303b47;
+    --input: #394451;
+    --ring: #ff3456;
+    --sidebar: #070c11;
+    --sidebar-foreground: #ced4de;
+    --sidebar-primary: #ea002a;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #1b1520;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #24282e;
+    --sidebar-ring: #ff3456;
+    --kmj-workspace-border: #303b47;
+    --kmj-workspace-highlight: transparent;
+    --kmj-workspace-shadow: none;
+}
+:root:has(.kmj-panel) body {
+    background: #070c11;
+    color: #eef2f7;
+}
+.kmj-panel {
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Full-width workspaces, like the dashboard. */
+.kmj-panel .owner-module-content > *,
+.kmj-panel .owner-module-content > * > main,
+.kmj-panel [data-slot='sidebar-inset'] > :not(header) {
+    width: 100%;
+    max-width: none;
+}
+
+/* Panels. */
+.kmj-panel .bg-card:not(input, textarea, select, button, a) {
+    background-image: linear-gradient(130deg, #0b1016, #070c11);
+}
+.kmj-panel :is(.rounded-2xl, .rounded-3xl, .rounded-\[1\.65rem\], .rounded-xl) {
+    border-radius: 11px;
+}
+.kmj-panel .kmj-admin-hero {
+    background:
+        radial-gradient(
+            ellipse at 92% 0%,
+            rgb(242 11 53 / 16%),
+            transparent 46%
+        ),
+        linear-gradient(135deg, #111821, #070c11);
+    border: 1px solid #38232c;
+    box-shadow: none;
+}
+.kmj-panel .kmj-premium-dashboard {
+    background: transparent;
+    gap: 12px;
+    padding: 12px;
+}
+
+/* Fields. */
+.kmj-panel
+    :is(
+        input:not([type='checkbox'], [type='radio'], [type='range']),
+        textarea,
+        select
+    ):not(.owner-lock input, .kmj-mail-approved-shell *) {
+    background-color: #0e141c;
+}
+
+/* Primary actions use the dashboard red. */
+.kmj-panel :is(a, button)[class*='bg-red-6'],
+.kmj-panel :is(a, button).bg-primary,
+.kmj-panel :is(a, button)[class*='bg-[#c1121f]'] {
+    background-image: linear-gradient(100deg, #d20a31, #951026);
+    color: #fff;
+}
+
+/* Customer navigation matches the owner sidebar. */
+.kmj-panel [data-sidebar='menu-button'][data-active='true'] {
+    background: linear-gradient(100deg, #ea002a, #b70927);
+    box-shadow: 0 0 16px #f0002933;
+    color: #fff;
+    font-weight: 700;
+}
+.kmj-panel [data-slot='sidebar-inset'] {
+    background: #070c11;
+}
+.kmj-panel [data-slot='sidebar-inset'] > header {
+    background: linear-gradient(100deg, #0a1016, #080c12);
+    border-bottom: 1px solid #38232c;
+    border-radius: 0 0 20px 20px;
+}
+
+/* Red text stays readable on the dark panels. */
+.kmj-panel :is(.text-red-600, .text-red-700) {
+    color: #ff5a6e;
+}

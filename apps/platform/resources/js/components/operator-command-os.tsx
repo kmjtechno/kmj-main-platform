@@ -278,7 +278,7 @@ export default function OperatorCommandOs({
         )
         .join(' ');
     return (
-        <div className="owner-lock">
+        <div className="owner-lock kmj-panel dark">
             <a className="owner-skip" href="#owner-main">
                 Skip to dashboard
             </a>

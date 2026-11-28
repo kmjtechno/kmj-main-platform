@@ -122,7 +122,7 @@ export default function OperatorMailSmtp({
     return (
         <>
             <Head title="KMJ Mail SMTP settings" />
-            <div className="mx-auto max-w-5xl space-y-5 p-4 sm:p-6">
+            <div className="w-full space-y-3 p-3">
                 <Link
                     href="/operator/mail"
                     className="text-muted-foreground inline-flex items-center gap-2 text-sm"

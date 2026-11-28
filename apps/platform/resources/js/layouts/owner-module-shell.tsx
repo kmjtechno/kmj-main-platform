@@ -234,7 +234,7 @@ export default function OwnerModuleShell({
 
     return (
         <div
-            className="owner-lock owner-module-shell"
+            className="owner-lock owner-module-shell kmj-panel dark"
             data-owner-design="command-center-v1"
             data-owner-mail={isMailPage ? 'true' : undefined}
         >
