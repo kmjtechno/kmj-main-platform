@@ -163,6 +163,8 @@ def valid_candidate_env(raw: bytes) -> bool:
         "DB_HOST": "127.0.0.1", "DB_PORT": "5432", "DB_URL": "",
         "DB_DATABASE": "kmj_stage_710c6f3ca103", "DB_USERNAME": "kmjstage_710c6f3ca103",
         "LARAVEL_STORAGE_PATH": str(STORAGE), "MAIL_MAILER": "log",
+        **{"APP_" + k.upper() + "_CACHE": str(RUNTIME / "cache" / (k + ".php"))
+           for k in ("packages", "services", "config", "routes", "events")},
         "QUEUE_CONNECTION": "sync", "CODEBRIDGE_OAUTH_ENABLED": "false",
     }
     return all(fields.get(k) == v for k, v in expected.items())
@@ -215,6 +217,8 @@ def config_bytes() -> bytes:
         "chdir = " + str(CODE) + "\n"
         "env[APP_ENV] = staging\n"
         "env[LARAVEL_STORAGE_PATH] = " + str(STORAGE) + "\n"
+        + "".join("env[APP_" + k.upper() + "_CACHE] = " + str(RUNTIME / "cache" / (k + ".php")) + "\n"
+                  for k in ("packages", "services", "config", "routes", "events")) +
         "pm = ondemand\n"
         "pm.max_children = 2\n"
         "pm.process_idle_timeout = 10s\n"
