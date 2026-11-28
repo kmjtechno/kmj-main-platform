@@ -88,6 +88,46 @@ class LegacyStageHbaInstaller(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "OTHER_DB_NOT_EXPLICITLY_REJECTED"):
                 self.installer.live_proof(m, DB, ROLE, "127.0.0.1", "test-only", [DB, "postgres"])
 
+    def test_absent_ipv6_requires_kernel_inventory_and_refusal(self):
+        import errno
+        from unittest.mock import patch, MagicMock
+        i = self.installer
+        for rc, v6, expected in ((errno.ECONNREFUSED, "", "absent"),
+                                 (0, "LISTEN 0 244 [::1]:5432 [::]:*\n", "present"),
+                                 (errno.ETIMEDOUT, "", "blocked"),
+                                 (errno.ECONNREFUSED, "LISTEN 0 244 [::]:5432 [::]:*\n", "blocked"),
+                                 (0, "", "blocked")):
+            with self.subTest(rc=rc, v6=v6):
+                s4, s6 = MagicMock(), MagicMock()
+                s4.__enter__.return_value.connect_ex.return_value = 0
+                s6.__enter__.return_value.connect_ex.return_value = rc
+                with patch.object(m, "pg", side_effect=["5432", "localhost"]), \
+                     patch.object(i.subprocess, "run", side_effect=[
+                         SimpleNamespace(stdout="LISTEN 0 244 127.0.0.1:5432 0.0.0.0:*\n"),
+                         SimpleNamespace(stdout=v6)]), \
+                     patch.object(i.socket, "socket", side_effect=[s4, s6]):
+                    if expected == "blocked":
+                        with self.assertRaisesRegex(ValueError, "IPV6"):
+                            i.listener_evidence(m)
+                    else:
+                        evidence = i.listener_evidence(m)
+                        self.assertEqual("::1" in evidence[-1], expected == "present")
+
+    def test_absent_ipv6_still_requires_all_reachable_denials(self):
+        from unittest.mock import patch
+        i = self.installer
+        seen = []
+        def probe(db, role, host, password=None):
+            seen.append((db, host, password))
+            if db == DB and host == "127.0.0.1":
+                return SimpleNamespace(returncode=0, stdout=(DB+":"+ROLE).encode(), stderr=b"")
+            return SimpleNamespace(returncode=2, stderr=b"pg_hba.conf rejects connection")
+        with patch.object(m, "probe", side_effect=probe), patch.object(m, "catalog", return_value=[DB, "postgres"]):
+            self.assertEqual(i.live_proof(m, DB, ROLE, "127.0.0.1", "test-only",
+                                         [DB, "postgres"], ("127.0.0.1", "/var/run/postgresql")), 3)
+        self.assertTrue(all(host != "::1" for _, host, _ in seen))
+        self.assertTrue(all(password is None for _, _, password in seen[1:]))
+
     def test_failed_live_proof_restores_original_bytes(self):
         import tempfile
         from unittest.mock import patch
@@ -103,6 +143,7 @@ class LegacyStageHbaInstaller(unittest.TestCase):
                 self.assertEqual(path.read_bytes(), expected)
                 path.write_bytes(payload)
             with patch.object(i, "snapshot", return_value=original), \
+                 patch.object(i, "listener_evidence", return_value=("localhost", ("v4",), (), ("127.0.0.1", "/var/run/postgresql"))), \
                  patch.object(i, "own_login"), patch.object(i, "replace", side_effect=replace), \
                  patch.object(i, "reload_config") as reload, \
                  patch.object(i, "validate_loaded", side_effect=ValueError("TEST_DENIAL")), \
