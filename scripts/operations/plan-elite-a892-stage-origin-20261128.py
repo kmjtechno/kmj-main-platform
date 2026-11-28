@@ -45,10 +45,20 @@ def proposal(raw):
     need("\r" not in text and "\x00" not in text, "CONFIG_FORMAT")
     need(len(re.findall(r"(?m)^[ \t]*server_name[ \t]+staging\.kmjtechno\.com[ \t]*;[ \t]*$", text)) == 2,
          "STAGING_HOST_SCOPE")
-    # Refuse unreviewed storage mapping or header override; never inject an
-    # origin attestation header solely to make HTTP qualification pass.
-    need(not re.search(r"(?im)^[ \t]*(?:add_header|more_set_headers)[^\n]*X-KMJ-Deploy-SHA", text),
-         "EXISTING_DEPLOY_HEADER")
+    # Remove only the exact literal OLD origin marker, if present. Do not
+    # replace it with NEW: the application must attest its own release.
+    # Reject duplicate, dynamic, unknown and hide-header directives.
+    header_lines = list(re.finditer(r"(?im)^[ \t]*(?!#)[^\n]*\bX-KMJ-Deploy-SHA\b[^\n]*$", text))
+    if header_lines:
+        need(len(header_lines) == 1, "DEPLOY_HEADER_MULTIPLE_OR_HIDDEN")
+        h = header_lines[0]
+        literal = r"(?:%s|\"%s\"|'%s')" % (OLD, OLD, OLD)
+        need(re.fullmatch(r"[ \t]*add_header[ \t]+X-KMJ-Deploy-SHA[ \t]+" +
+                          literal + r"[ \t]+always;[ \t]*", h.group(), re.I) is not None,
+             "DEPLOY_HEADER_UNKNOWN_OR_HIDDEN")
+        # Preserve surrounding configuration byte-for-byte; this is a plan
+        # only. Effective add_header inheritance requires later live review.
+        text = text[:h.start()] + text[h.end():]
     need(not re.search(r"(?im)^[ \t]*location[^\n{]*?/storage(?:[/ \t{]|$)", text),
          "STORAGE_ROUTE_REQUIRES_REVIEW")
     changes = [
@@ -113,8 +123,13 @@ def main():
     before = protected_read(AVAILABLE, 65536)
     after = proposal(before)
     protected_chain(APP / "public/build")
-    attestation = protected_read(APP / "public/build/.kmj-deploy-sha", 41)
-    need(attestation in (NEW.encode(), (NEW+"\n").encode()), "DEPLOY_ATTESTATION")
+    marker = APP / "public/build/.kmj-deploy-sha"
+    if not os.path.lexists(marker):
+        attested = False
+    else:
+        attestation = protected_read(marker, 41)
+        need(attestation in (NEW.encode(), (NEW+"\n").encode()), "DEPLOY_ATTESTATION_MISMATCH")
+        attested = True
     need(stat.S_ISSOCK(os.lstat(NEW_SOCKET).st_mode) and stat.S_ISSOCK(os.lstat(OLD_SOCKET).st_mode),
          "SOCKET_SCOPE")
     refs = command(["/usr/bin/git","ls-remote","--exit-code",REMOTE,
@@ -126,12 +141,16 @@ def main():
     need(protected_read(AVAILABLE,65536) == before, "CONFIG_DRIFT")
     print("STAGE_ROUTE_BASELINE_SHA256="+digest(before))
     print("STAGE_ROUTE_PROPOSAL_SHA256="+digest(after))
-    print("DEPLOY_ATTESTATION=PASS")
-    print("STAGE_ROUTE_PLAN=PASS_READ_ONLY")
+    print("STATIC_DEPLOY_HEADER="+("REMOVED_IN_PROPOSAL" if re.search(rb"(?im)^[ \t]*add_header[ \t]+X-KMJ-Deploy-SHA\b", before) else "ABSENT"))
+    print("HEADER_INHERITANCE=REQUIRES_REVIEW")
+    print("DEPLOY_ATTESTATION="+("PASS" if attested else "MISSING"))
+    print("STAGE_ROUTE_PLAN="+("PASS_READ_ONLY" if attested else "BLOCKED_DEPLOY_ATTESTATION_MISSING"))
     print("PUBLIC_STORAGE_MAPPING=NOT_QUALIFIED")
     print("DATABASE_CHOICE=NOT_AUTHORIZED_BY_PLAN")
     print("STAGE_ROUTE_ACTIVATION=NOT_ATTEMPTED")
     print("PRODUCTION_POINTER=UNCHANGED")
+    if not attested:
+        raise SystemExit(2)
 
 
 if __name__ == "__main__":
