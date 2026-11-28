@@ -16,9 +16,19 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-RUNNER = ROOT / "deploy/staging/kmj-main-platform-staging-deploy.sh"
-UNIT = ROOT / "deploy/staging/kmj-main-platform-staging-deploy.service"
+def repository_inputs():
+    """Resolve checkout paths only in offline mode; Elite mode is standalone."""
+    parents = Path(__file__).resolve().parents
+    if len(parents) < 3:
+        raise SystemExit("BLOCKED_OFFLINE_CHECKOUT_REQUIRED")
+    root = parents[2]
+    runner = root / "deploy/staging/kmj-main-platform-staging-deploy.sh"
+    unit = root / "deploy/staging/kmj-main-platform-staging-deploy.service"
+    if not runner.is_file() or not unit.is_file():
+        raise SystemExit("BLOCKED_OFFLINE_CHECKOUT_REQUIRED")
+    return runner.read_bytes(), unit.read_bytes()
+
+
 SHA = re.compile(r"[a-f0-9]{40}\Z")
 RELEASE = re.compile(r"[a-z0-9][a-z0-9_-]{3,100}\Z")
 
@@ -96,7 +106,7 @@ def proposal(approved, expected_current, production_release, *, inspect_elite=Fa
     if not RELEASE.match(production_release):
         raise SystemExit("BLOCKED_PRODUCTION_RELEASE")
     runner, unit = (verify_live_inputs(approved, expected_current, production_release)
-                    if inspect_elite else (RUNNER.read_bytes(), UNIT.read_bytes()))
+                    if inspect_elite else repository_inputs())
     return {
         "schema": "kmj.main-platform.staging-approval.v1",
         "approvedSha": approved,
