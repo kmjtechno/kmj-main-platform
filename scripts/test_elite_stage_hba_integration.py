@@ -14,13 +14,29 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
+from types import SimpleNamespace
 
 spec = importlib.util.spec_from_file_location("hba", Path(__file__).resolve().parent / "operations/plan-elite-isolated-stage-hba-20261128.py")
 hba = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(hba)
+verify_spec = importlib.util.spec_from_file_location("hba_verify", Path(__file__).resolve().parent / "operations/verify-elite-isolated-stage-hba-20261128.py")
+verify = importlib.util.module_from_spec(verify_spec)
+verify_spec.loader.exec_module(verify)
 
 
 class HbaPolicyTests(unittest.TestCase):
+    def test_live_probe_requires_explicit_rejection(self):
+        self.assertTrue(verify.rejected(SimpleNamespace(returncode=2, stderr=b"pg_hba.conf rejects connection")))
+        for error in (b"password authentication failed", b"connection refused", b"database does not exist"):
+            self.assertFalse(verify.rejected(SimpleNamespace(returncode=2, stderr=error)))
+        self.assertFalse(verify.rejected(SimpleNamespace(returncode=0, stderr=b"pg_hba.conf rejects connection")))
+        with patch.object(verify.plan, "pg", return_value=verify.DB+"\nother_app"):
+            self.assertEqual(verify.database_names(), [verify.DB, "other_app"])
+        with patch.object(verify.plan, "pg", return_value=verify.DB+"\nhost=bad"):
+            with self.assertRaisesRegex(ValueError, "DATABASE_NAME_UNSUPPORTED"):
+                verify.database_names()
+
     def test_exact_role_first_match_and_original_bytes(self):
         old = b"local all all peer\nhost all all 127.0.0.1/32 scram-sha-256\n"
         planned = hba.proposal(old)
@@ -110,7 +126,7 @@ class HbaRealIntegration(unittest.TestCase):
 if __name__ == "__main__":
     if "--pure" in sys.argv:
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(HbaPolicyTests)
-        expected = 1
+        expected = 2
     else:
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(HbaRealIntegration)
         expected = 1
