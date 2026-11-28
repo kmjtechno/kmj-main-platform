@@ -45,13 +45,16 @@ const sectionLabels: Record<WebsiteSection, string> = {
     roadmap: 'Roadmap',
 };
 
-const card = 'bg-card border-border rounded-2xl border p-5 sm:p-6';
+const card =
+    'bg-card border-border rounded-2xl border p-5 shadow-[0_24px_50px_-36px_rgba(0,0,0,0.8)] sm:p-6';
+const saveBar =
+    'bg-card/95 border-border sticky bottom-3 z-20 flex flex-wrap items-center gap-3 rounded-2xl border p-3 shadow-[0_18px_44px_-18px_rgba(0,0,0,0.75)] backdrop-blur';
 const input =
     'bg-background border-border focus-visible:ring-ring min-h-11 w-full rounded-lg border px-3 py-2 text-sm outline-none focus-visible:ring-2';
 const primary =
-    'inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#c1121f] px-5 text-sm font-bold text-white disabled:opacity-50';
+    'inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#c1121f] px-5 text-sm font-bold text-white transition-colors hover:bg-[#a30f19] disabled:opacity-50';
 const quiet =
-    'border-border inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-xs font-bold disabled:opacity-40';
+    'border-border inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-xs font-bold transition-colors hover:border-[#c1121f] disabled:opacity-40';
 
 function Toggle({
     label,
@@ -74,13 +77,21 @@ function Toggle({
                     </span>
                 )}
             </span>
-            <input
-                type="checkbox"
-                role="switch"
-                checked={checked}
-                onChange={(event) => onChange(event.target.checked)}
-                className="h-5 w-5 shrink-0 accent-[#c1121f]"
-            />
+            <span className="relative inline-flex shrink-0">
+                <input
+                    type="checkbox"
+                    role="switch"
+                    checked={checked}
+                    onChange={(event) => onChange(event.target.checked)}
+                    className="peer absolute inset-0 z-10 cursor-pointer opacity-0"
+                />
+                <span
+                    aria-hidden="true"
+                    className="bg-muted-foreground/40 peer-focus-visible:ring-ring h-7 w-12 rounded-full p-1 transition-colors peer-checked:bg-[#c1121f] peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2 peer-checked:[&>span]:translate-x-5"
+                >
+                    <span className="block h-5 w-5 rounded-full bg-white shadow transition-transform" />
+                </span>
+            </span>
         </label>
     );
 }
@@ -104,6 +115,14 @@ function Errors({ errors }: { errors: Record<string, string | undefined> }) {
             ))}
         </ul>
     ) : null;
+}
+
+function SaveState({ dirty, saved }: { dirty: boolean; saved: boolean }) {
+    return (
+        <p role="status" className="text-muted-foreground text-xs font-bold">
+            {saved ? 'Saved.' : dirty ? 'Unsaved changes' : ''}
+        </p>
+    );
 }
 
 async function uploadPhoto(file: File): Promise<string> {
@@ -293,19 +312,20 @@ function SiteForm({ settings, ready }: { settings: Settings; ready: boolean }) {
                 </div>
             </section>
             <Errors errors={form.errors} />
-            <button
-                type="submit"
-                className={primary}
-                disabled={!ready || form.processing}
-            >
-                <Save aria-hidden="true" size={16} />
-                Save website settings
-            </button>
-            {form.recentlySuccessful && (
-                <p role="status" className="text-sm font-bold">
-                    Saved.
-                </p>
-            )}
+            <div className={saveBar}>
+                <button
+                    type="submit"
+                    className={primary}
+                    disabled={!ready || form.processing}
+                >
+                    <Save aria-hidden="true" size={16} />
+                    Save website settings
+                </button>
+                <SaveState
+                    dirty={form.isDirty}
+                    saved={form.recentlySuccessful}
+                />
+            </div>
         </form>
     );
 }
@@ -553,7 +573,7 @@ function TeamForm({ team, ready }: { team: Team; ready: boolean }) {
                 </p>
             )}
             <Errors errors={form.errors} />
-            <div className="flex flex-wrap gap-3">
+            <div className={saveBar}>
                 <button
                     type="button"
                     className={quiet}
@@ -583,12 +603,11 @@ function TeamForm({ team, ready }: { team: Team; ready: boolean }) {
                     <Save aria-hidden="true" size={16} />
                     Save team page
                 </button>
+                <SaveState
+                    dirty={form.isDirty}
+                    saved={form.recentlySuccessful}
+                />
             </div>
-            {form.recentlySuccessful && (
-                <p role="status" className="text-sm font-bold">
-                    Saved.
-                </p>
-            )}
         </form>
     );
 }
