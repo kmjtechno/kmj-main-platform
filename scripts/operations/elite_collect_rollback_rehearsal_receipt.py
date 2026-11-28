@@ -2,7 +2,7 @@
 """Collector 4: rollback-rehearsal receipt (source only until installed).
 
 Runs the EXISTING isolated app HTTP + database migrate/rollback rehearsal as the
-unprivileged project user against an owner-provisioned DISPOSABLE database and
+transient sandbox identity against an owner-provisioned DISPOSABLE database and
 the previous/candidate code trees named in a root-protected config, then accepts
 the result only if every required marker says PASS and nothing says FAIL.
 
@@ -18,6 +18,8 @@ Config: /etc/kmj-codebridge/release-rehearsal.json  (root, 0600, single link):
   --check <sha> <expected-release> | --write <sha> <expected-release>
 """
 import hashlib
+import json
+import stat
 import os
 import re
 import socket
@@ -100,12 +102,46 @@ def load_env(config=CONFIG, uid=0, sha=None, expected=None):
     return env
 
 
+def sandbox_argv():
+    return ["/usr/bin/systemd-run", "--quiet", "--wait", "--pipe", "--collect",
+            "--property=DynamicUser=yes", "--property=NoNewPrivileges=yes",
+            "--property=ProtectSystem=strict", "--property=ProtectHome=yes",
+            "--property=PrivateTmp=yes", "--property=PrivateDevices=yes",
+            "--property=RestrictSUIDSGID=yes", "--property=CapabilityBoundingSet=",
+            "--property=ProtectKernelTunables=yes", "--property=ProtectKernelModules=yes",
+            "--property=ProtectControlGroups=yes", "--property=IPAddressDeny=any",
+            "--property=IPAddressAllow=localhost",
+            "--property=RestrictAddressFamilies=AF_INET AF_INET6",
+            "--property=RuntimeMaxSec=3500",
+            "--property=InaccessiblePaths=-/etc/kmj-codebridge -/opt/kmj-main-platform-release-evidence -/var/backups",
+            "/usr/bin/python3", "-I", "-B", "-"]
+
+
+def runner_payload(env, source):
+    # Credentials travel over a private stdin pipe, not command-line arguments
+    # or systemd unit environment properties. The runner is stdlib-only.
+    return ("import os, json, sys\n"
+            "os.environ.clear()\n"
+            "os.environ.update(json.loads(" + repr(json.dumps({
+                "PATH": "/usr/local/bin:/usr/bin:/bin", "LANG": "C", **env
+            })) + "))\n"
+            "sys.argv[:] = ['rehearsal']\n"
+            "exec(compile(" + repr(source) + ", 'rehearsal', 'exec'), "
+            "{'__name__': '__main__'})\n")
+
+
 def run_rehearsal(env):
-    argv = ["/usr/sbin/runuser", "-u", "kmjprod", "--", "/usr/bin/env", "-i",
-            "PATH=/usr/local/bin:/usr/bin:/bin", "LANG=C"]
-    argv += ["{}={}".format(k, v) for k, v in sorted(env.items())]
-    argv += ["/usr/bin/python3", "-I", "-B", str(REHEARSAL)]
-    out = subprocess.run(argv, cwd="/", env={"PATH": "/usr/bin:/bin", "LANG": "C"},
+    # Installed source is root-only. Read it as root, then send it to the
+    # transient unprivileged process; do not relax the installed file mode.
+    fd = os.open(REHEARSAL, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    with os.fdopen(fd, "r", encoding="utf-8") as stream:
+        st = os.fstat(stream.fileno())
+        if (not stat.S_ISREG(st.st_mode) or st.st_uid != 0 or st.st_nlink != 1
+                or st.st_mode & 0o022 or not 0 < st.st_size < 65536):
+            raise ValueError("REHEARSAL_RUNNER_UNTRUSTED")
+        source = stream.read(65536)
+    out = subprocess.run(sandbox_argv(), input=runner_payload(env, source), cwd="/",
+                         env={"PATH": "/usr/bin:/bin", "LANG": "C"},
                          stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
                          check=False, timeout=3600)
     if out.returncode != 0:
