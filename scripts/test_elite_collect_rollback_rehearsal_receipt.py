@@ -13,6 +13,8 @@ import release_admission_receipts as ra  # noqa: E402
 SHA = "a" * 40
 EXP = "platform-" + "b" * 12
 NOW = 1_800_000_000
+TEST_ENV = {"DB_USERNAME": "kmj_rehearsal_" + SHA[:12], "DB_PASSWORD": "c" * 32,
+            "KMJ_REHEARSAL_DB_NONCE": "d" * 32}
 GOOD = "\n".join([
     "REHEARSAL_DATABASE=DISPOSABLE_ATTESTED", "PREVIOUS_MIGRATE=PASS", "CANDIDATE_MIGRATE=PASS",
     "NEW_MIGRATIONS=2", "SCHEMA_CHANGE_ADDITIVE_ONLY=PASS",
@@ -24,9 +26,25 @@ GOOD = "\n".join([
 
 class RehearsalTests(unittest.TestCase):
     def test_good_output_issues_valid_receipt_only_for_rollback(self):
-        r = col.collect(SHA, EXP, NOW, lambda e: GOOD, {"DB_X": "1"})
+        checks = []
+        r = col.collect(SHA, EXP, NOW, lambda e: GOOD, TEST_ENV, lambda *a: checks.append(a))
+        self.assertEqual(checks, [tuple(TEST_ENV.values())] * 2)
         self.assertIsNone(ra.receipt_problem(r, SHA, EXP, NOW))
         self.assertEqual(r["kind"], "rollback-rehearsal")
+
+    def test_isolation_failure_blocks_runner_or_receipt(self):
+        def fail(*a):
+            raise ValueError("HBA_BLOCKED")
+        with self.assertRaisesRegex(ValueError, "HBA_BLOCKED"):
+            col.collect(SHA, EXP, NOW, lambda e: self.fail("runner started"),
+                        TEST_ENV, fail)
+        checks = []
+        def drift(*a):
+            checks.append(a)
+            if len(checks) == 2:
+                fail()
+        with self.assertRaisesRegex(ValueError, "HBA_BLOCKED"):
+            col.collect(SHA, EXP, NOW, lambda e: GOOD, TEST_ENV, drift)
 
     def test_zero_new_migrations_needs_no_schema_rollback_markers(self):
         out = GOOD.replace("NEW_MIGRATIONS=2", "NEW_MIGRATIONS=0")
@@ -49,7 +67,7 @@ class RehearsalTests(unittest.TestCase):
         for out in defects:
             self.assertFalse(col.rehearsal_passed(out), out[:60])
             with self.assertRaises(ValueError):
-                col.collect(SHA, EXP, NOW, lambda e, o=out: o, {"DB_X": "1"})
+                col.collect(SHA, EXP, NOW, lambda e, o=out: o, TEST_ENV, lambda *a: None)
 
     def test_config_is_strict(self):
         with tempfile.TemporaryDirectory() as d:

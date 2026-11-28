@@ -140,6 +140,9 @@ def clean_env(db: dict[str, str], scratch: Path, port: int) -> dict[str, str]:
         "HOME": str(scratch),
         "TMPDIR": str(scratch),
         "LARAVEL_STORAGE_PATH": str(storage),
+        # The read-only copied trees deliberately have no storage directory.
+        # Laravel default view config uses realpath(), which otherwise returns false.
+        "VIEW_COMPILED_PATH": str(storage / "framework/views"),
         "APP_PACKAGES_CACHE": str(scratch / "packages.php"),
         "APP_SERVICES_CACHE": str(scratch / "services.php"),
         "APP_CONFIG_CACHE": str(scratch / "config.php"),
@@ -209,7 +212,7 @@ def additive_only(before: frozenset, after: frozenset) -> bool:
 def artisan(tree: Path, env: dict[str, str], *args: str, log: Path) -> bool:
     with log.open("ab") as out:
         done = subprocess.run(
-            ["php", "artisan", *args, "--no-interaction", "--no-ansi"],
+            ["php", "-d", "variables_order=EGPCS", "artisan", *args, "--no-interaction", "--no-ansi"],
             cwd=tree, env=env, stdout=out, stderr=subprocess.STDOUT,
             timeout=ARTISAN_TIMEOUT, check=False,
         )
@@ -227,7 +230,7 @@ class Server:
         self.port = port
         self.log = log.open("ab")
         self.proc = subprocess.Popen(
-            ["php", "-S", f"127.0.0.1:{port}", "-t", "public", "public/index.php"],
+            ["php", "-d", "variables_order=EGPCS", "-S", f"127.0.0.1:{port}", "-t", "public", "public/index.php"],
             cwd=tree, env=env, stdout=self.log, stderr=subprocess.STDOUT,
             start_new_session=True,
         )

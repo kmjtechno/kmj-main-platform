@@ -14,6 +14,8 @@ import sys
 import tempfile
 import time
 import unittest
+sys.path.insert(0, str(Path(__file__).resolve().parent / 'operations'))
+import elite_prepare_rehearsal as rehearsal
 from unittest.mock import patch
 from types import SimpleNamespace
 
@@ -140,6 +142,30 @@ class HbaRealIntegration(unittest.TestCase):
                 self.assertEqual(query("other_app", "postgres", sock).returncode, 0)
                 self.assertEqual(query("postgres", "postgres", sock,
                     "SELECT count(*) FROM pg_hba_file_rules WHERE error IS NOT NULL;").stdout.strip(), b"0")
+                # Exercise actual rehearsal rules and locally-generated SCRAM verifier
+                # in this independent temporary cluster, preserving prior stage policy.
+                name = rehearsal.names(secrets.token_hex(20))
+                pw, nonce = secrets.token_hex(16), secrets.token_hex(16)
+                with passfile.open("a") as f:
+                    f.write("*:*:*:" + name + ":" + pw + "\n")
+                current = hba_file.read_bytes()
+                hba_file.write_bytes(rehearsal.isolation.proposal(current, name))
+                as_pg("pg_ctl", "-D", data, "reload")
+                for _ in range(30):
+                    denied = query("other_app", name, "127.0.0.1")
+                    if rehearsal.isolation.rejected(denied):
+                        break
+                    time.sleep(0.2)
+                else:
+                    self.fail("rehearsal role rejection not active before creation")
+                for sql in rehearsal.sql_create(name, pw, nonce):
+                    self.assertEqual(query("postgres", "postgres", sock, sql).returncode, 0)
+                self.assertEqual(query(name, name, "127.0.0.1").stdout.strip(),
+                                 f"{name}:{name}".encode())
+                for database, host in (("other_app", "127.0.0.1"), ("postgres", "127.0.0.1"),
+                                       ("other_app", sock), (name, sock)):
+                    self.assertTrue(rehearsal.isolation.rejected(query(database, name, host)))
+                self.assertEqual(query("other_app", "postgres", sock).returncode, 0)
             finally:
                 if running:
                     as_pg("pg_ctl", "-D", data, "-m", "fast", "-w", "stop")

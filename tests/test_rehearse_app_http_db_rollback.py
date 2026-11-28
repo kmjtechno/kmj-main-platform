@@ -107,9 +107,26 @@ class Env(unittest.TestCase):
                 self.assertEqual(env["QUEUE_CONNECTION"], "sync")
                 self.assertEqual(env["APP_DEBUG"], "false")
                 self.assertTrue(env["LARAVEL_STORAGE_PATH"].startswith(d))
+                compiled = Path(env["VIEW_COMPILED_PATH"])
+                self.assertEqual(compiled, Path(d) / "storage/framework/views")
+                self.assertTrue(compiled.is_dir())
+                self.assertTrue(os.access(compiled, os.W_OK))
         finally:
             del os.environ["STRIPE_SECRET"]
             os.environ.pop("APP_KEY", None)
+
+
+    def test_php_cli_server_imports_private_environment(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            with patch.object(mod.subprocess, "Popen") as popen:
+                server = mod.Server(root, {"VIEW_COMPILED_PATH": str(root)}, 1234, root / "server.log")
+                try:
+                    args, kwargs = popen.call_args
+                    self.assertEqual(args[0][:4], ["php", "-d", "variables_order=EGPCS", "-S"])
+                    self.assertEqual(kwargs["env"], {"VIEW_COMPILED_PATH": str(root)})
+                finally:
+                    server.log.close()
 
 
 class Schema(unittest.TestCase):
