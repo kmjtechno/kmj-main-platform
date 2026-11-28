@@ -2,7 +2,9 @@
 """Publish *read-only* exact-approval Elite release preflight for owner Ops UI.
 
 This is NOT a deploy broker. It never creates approval, stages, deploys,
-starts a unit, or treats a GH branch as a verified staging origin.
+starts a release unit, or treats a GH branch as a verified staging origin.
+The fixed gate may use a bounded unprivileged transient unit for local Git
+verification under systemd hardening; this is read-only, not deployment.
 Install only as an independently reviewed, root-owned fixed executable.
 """
 from __future__ import annotations
