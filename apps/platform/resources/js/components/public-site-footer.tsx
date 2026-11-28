@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import LockedBrand from '@/components/locked-brand';
 import KristiSupport from '@/components/public/kristi-support';
+import { useWebsite } from '@/lib/website';
 import '../../css/locked-landing.css';
 import '../../css/public-theme.css';
 
@@ -62,9 +63,10 @@ export default function PublicSiteFooter({
 }) {
     const { auth, operator } = usePage().props;
     const ownerEnabled = (operator as { enabled?: boolean })?.enabled === true;
+    const website = useWebsite();
     return (
         <>
-            {support && <KristiSupport />}
+            {support && website.features.kristi && <KristiSupport />}
             <footer className="lock-footer kmj-public-footer">
                 <div className="lock-footer-main">
                     <div>
@@ -108,6 +110,10 @@ export default function PublicSiteFooter({
                                         {label}
                                     </Link>
                                 ))}
+                                {title === 'Company' &&
+                                    website.team_published && (
+                                        <Link href="/team">Team</Link>
+                                    )}
                             </div>
                         );
                     })}

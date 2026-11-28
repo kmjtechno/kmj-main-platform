@@ -25,6 +25,7 @@ use App\Services\Releases\CustomerReleaseAccess;
 use App\Services\Releases\ReleaseArtifactDelivery;
 use App\Services\Seo\ProductAnswers;
 use App\Services\SuperAdminDevelopmentPolicy;
+use App\Services\Website\WebsiteSettings;
 use DateTimeImmutable as ImmutableDateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -316,6 +317,7 @@ Route::get('sitemap.xml', function (PublicProductCatalog $products) {
         '/',
         '/company',
         '/capabilities',
+        ...(app(WebsiteSettings::class)->shared()['team_published'] ? ['/team'] : []),
         '/products',
         '/trust',
         '/legal',
@@ -1206,3 +1208,4 @@ require __DIR__.'/workforce-mail.php';
 require __DIR__.'/settings.php';
 require __DIR__.'/google-auth.php';
 require __DIR__.'/product-signups.php';
+require __DIR__.'/website.php';

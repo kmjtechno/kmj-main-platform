@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\Auth\GoogleSignIn;
 use App\Services\Mail\RegistrationMailReadiness;
 use App\Services\PlatformOwnerAccess;
+use App\Services\Website\WebsiteSettings;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -60,6 +61,7 @@ class HandleInertiaRequests extends Middleware
                 // Google sign-in verifies the email itself, so it does not depend on our mailer.
                 'google_signin_available' => app(GoogleSignIn::class)->enabled(),
             ],
+            'website' => fn (): array => app(WebsiteSettings::class)->shared(),
             'localization' => [
                 'locale' => $locale,
                 'supported' => ['en', 'hi'],

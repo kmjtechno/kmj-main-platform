@@ -10,6 +10,7 @@ import {
     ShieldCheck,
     ShoppingCart,
     Users,
+    Globe,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
@@ -27,6 +28,13 @@ const modules = [
         href: '/operator/products',
         icon: Package,
         help: 'Catalog and pricing controls',
+    },
+    {
+        key: 'website',
+        label: 'Website',
+        href: '/operator/website',
+        icon: Globe,
+        help: 'Public pages, features and team members',
     },
     {
         key: 'orders',
@@ -116,7 +124,7 @@ export default function OperatorModuleNavigation({
                             KMJ TECHNO · Owner Workspace
                         </p>
                         <p className="text-muted-foreground mt-0.5 text-xs">
-                            Nine connected modules. Every privileged action
+                            Ten connected modules. Every privileged action
                             remains authorization-gated.
                         </p>
                     </div>

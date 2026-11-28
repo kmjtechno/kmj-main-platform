@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'owner-website-controls-team-20261128',
+        title: 'Owner website controls and Team Members page',
+        state: 'active',
+        detail: 'SOURCE ONLY: the owner can switch public page features and home sections, edit section headings and roadmap steps, and manage team profiles. The Team page starts with sample profiles and is hidden until published. Saving needs the release database migration.',
+        evidence:
+            'Local source tests and render; PHP tests in CI; live and owner acceptance pending.',
+    },
+    {
         id: 'public-language-button-removed-20261127',
         title: 'Hindi button removed from public page headers',
         state: 'active',

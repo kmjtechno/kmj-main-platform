@@ -10,6 +10,7 @@ import {
 import PublicSeo from '@/components/public-seo';
 import PublicSiteFooter from '@/components/public-site-footer';
 import PublicSiteHeader from '@/components/public-site-header';
+import { useWebsite } from '@/lib/website';
 
 const operatingPrinciples = [
     {
@@ -42,6 +43,8 @@ const companyCommitments = [
 ];
 
 export default function Company() {
+    const { team_published: teamPublished } = useWebsite();
+
     return (
         <>
             <PublicSeo
@@ -99,6 +102,15 @@ export default function Company() {
                                     View capabilities
                                     <ArrowRight className="h-4 w-4" />
                                 </Link>
+                                {teamPublished && (
+                                    <Link
+                                        href="/team"
+                                        className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-6 text-sm font-bold text-white/78 transition hover:border-white/20 hover:bg-white/[0.07]"
+                                    >
+                                        Meet the team
+                                        <ArrowRight className="h-4 w-4" />
+                                    </Link>
+                                )}
                             </div>
                             <a
                                 href="https://www.linkedin.com/company/kmj-techno/"

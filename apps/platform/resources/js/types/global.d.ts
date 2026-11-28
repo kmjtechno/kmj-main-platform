@@ -16,6 +16,7 @@ declare module '@inertiajs/core' {
                 registration_available: boolean;
                 google_signin_available: boolean;
             };
+            website?: import('@/lib/website').Website;
             localization: {
                 locale: 'en' | 'hi';
                 supported: Array<'en' | 'hi'>;

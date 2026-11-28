@@ -56,6 +56,11 @@ const groups: { title: string; items: Workspace[] }[] = [
                 icon: Package,
             },
             {
+                label: 'Website & Team',
+                href: '/operator/website',
+                icon: Globe2,
+            },
+            {
                 label: 'Customers & Orgs',
                 href: '/operator/directory',
                 icon: Users,
