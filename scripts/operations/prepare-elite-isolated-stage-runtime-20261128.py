@@ -190,6 +190,8 @@ def private_password() -> str:
 def storage_tree(stage_uid: int, stage_gid: int) -> None:
     # Construct under root control then assign each subtree to stage user.
     new_dir(RUNTIME, "storage", 0o700)
+    cache = new_dir(RUNTIME, "cache", 0o700)
+    os.chown(cache, stage_uid, stage_gid, follow_symlinks=False)
     dirs = (
         "app", "app/private", "app/public",
         "framework", "framework/cache", "framework/cache/data",
