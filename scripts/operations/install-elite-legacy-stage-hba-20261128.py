@@ -74,13 +74,44 @@ def own_login(plan, db, role, host, password):
             "OWN_STAGE_LOGIN")
 
 
-def live_proof(plan, db, role, host, password, names):
+def listener_evidence(plan):
+    # An absent IPv6 listener is not an HBA rejection. Prove its absence
+    # separately using the kernel socket inventory and a specific refusal.
+    require(plan.pg("SHOW port") == "5432", "PG_PORT")
+    config = plan.pg("SHOW listen_addresses")
+    require(bool(config) and len(config) <= 1024, "LISTENER_CONFIG")
+    def listeners(family):
+        r = subprocess.run(["/usr/bin/ss", "-H", "-ltn" + family,
+                            "sport", "=", ":5432"],
+                           env={"PATH": "/usr/bin:/bin", "LC_ALL": "C"},
+                           capture_output=True, text=True, timeout=10, check=True)
+        require(len(r.stdout) <= 16384, "LISTENER_INVENTORY")
+        return tuple(sorted(line.strip() for line in r.stdout.splitlines() if line.strip()))
+    v4, v6 = listeners("4"), listeners("6")
+    require(bool(v4), "IPV4_LISTENER_MISSING")
+    def connect_result(family, addr):
+        with socket.socket(family, socket.SOCK_STREAM) as s:
+            s.settimeout(3)
+            return s.connect_ex((addr, 5432))
+    require(connect_result(socket.AF_INET, "127.0.0.1") == 0, "IPV4_UNREACHABLE")
+    result = connect_result(socket.AF_INET6, "::1")
+    if result == 0:
+        require(bool(v6), "IPV6_INVENTORY_MISMATCH")
+        transports = ("127.0.0.1", "::1", "/var/run/postgresql")
+    else:
+        import errno
+        require(result == errno.ECONNREFUSED and not v6, "IPV6_STATE_UNVERIFIED")
+        transports = ("127.0.0.1", "/var/run/postgresql")
+    return config, v4, v6, transports
+
+
+def live_proof(plan, db, role, host, password, names, transports=("127.0.0.1", "::1", "/var/run/postgresql")):
     own_login(plan, db, role, host, password)
     total = 0
     for name in names:
         if name == db:
             continue
-        for transport in ("127.0.0.1", "::1", "/var/run/postgresql"):
+        for transport in transports:
             # Never send the real password to a different database.
             require(plan.explicitly_rejected(plan.probe(name, role, transport)),
                     "OTHER_DB_NOT_EXPLICITLY_REJECTED")
@@ -88,7 +119,7 @@ def live_proof(plan, db, role, host, password, names):
     allowed = {host}
     if host == "localhost":
         allowed = {"127.0.0.1", "::1"}
-    for transport in ("127.0.0.1", "::1", "/var/run/postgresql"):
+    for transport in transports:
         if transport not in allowed:
             require(plan.explicitly_rejected(plan.probe(db, role, transport)),
                     "OWN_DB_OTHER_TRANSPORT_NOT_REJECTED")
@@ -134,13 +165,13 @@ def reload_config(plan):
     require(plan.pg("SELECT pg_reload_conf()") == "t", "RELOAD_SIGNAL")
 
 
-def validate_loaded(plan, db, role, host, password, names):
+def validate_loaded(plan, db, role, host, password, names, transports):
     # pg_reload_conf only acknowledges a signal. Require actual connections.
     for i in range(5):
         try:
             require(plan.pg("SELECT count(*) FROM pg_hba_file_rules WHERE error IS NOT NULL") == "0",
                     "HBA_PARSE_ERRORS")
-            return live_proof(plan, db, role, host, password, names)
+            return live_proof(plan, db, role, host, password, names, transports)
         except ValueError:
             if i == 4:
                 raise
@@ -150,6 +181,7 @@ def validate_loaded(plan, db, role, host, password, names):
 def install(plan, original, new, baseline_pin, proposal_pin, root=Path("/root")):
     raw, db, role, host, password, names, path, old = original
     require(sha(old) == baseline_pin and sha(new) == proposal_pin, "REVIEWED_PINS_MISMATCH")
+    listeners = listener_evidence(plan)
     own_login(plan, db, role, host, password)
     require(snapshot(plan) == original, "PRE_APPLY_DRIFT")
     backup = Path(tempfile.mkdtemp(prefix="kmj-legacy-stage-hba-backup-", dir=root))
@@ -164,12 +196,15 @@ def install(plan, original, new, baseline_pin, proposal_pin, root=Path("/root"))
     print("HBA_BACKUP=" + str(backup), flush=True)
     try:
         require(snapshot(plan) == original, "PRE_REPLACE_DRIFT")
+        require(listener_evidence(plan) == listeners, "LISTENER_DRIFT")
         replace(plan, path, old, new)
         require(plan.hba() == (path, new), "HBA_WRITE_READBACK")
         require(plan.pg("SELECT count(*) FROM pg_hba_file_rules WHERE error IS NOT NULL") == "0",
                 "HBA_PARSE_ERRORS")
         reload_config(plan)
-        total = validate_loaded(plan, db, role, host, password, names)
+        total = validate_loaded(plan, db, role, host, password, names, listeners[-1])
+        require(listener_evidence(plan) == listeners, "LISTENER_DRIFT")
+        print("IPV6_TRANSPORT=" + ("LIVE_HBA_TESTED" if "::1" in listeners[-1] else "NO_LISTENER_VERIFIED"))
         require(snapshot(plan) == (*original[:-1], new), "POST_APPLY_DRIFT")
         return total
     except BaseException:
