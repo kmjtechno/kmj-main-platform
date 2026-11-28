@@ -348,6 +348,8 @@ class AutoPublishSafetyTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "approval.json"
             path.write_text("{}")
+            # Explicitly insecure parent regardless of the test runner UID.
+            path.parent.chmod(0o777)
             with patch.object(mod.os, "open", side_effect=AssertionError(
                     "untrusted parent must be rejected before opening")):
                 self.assertIsNone(mod.protected_json(path))
@@ -356,6 +358,46 @@ class AutoPublishSafetyTest(unittest.TestCase):
         self.assertIn("os.fstat(fd)", source)
         self.assertIn("os.read(fd, 4097)", source)
         self.assertNotIn("path.read_bytes()", source)
+
+    def test_hardened_systemd_only_translates_fixed_nonroot_git(self):
+        from unittest.mock import patch
+        git = ["/usr/sbin/runuser", "-u", "kmjprod", "--", "/usr/bin/git",
+               "--no-optional-locks", "-C", "/home/kmjprod/releases/platform-" + SHA[:12],
+               "rev-parse", "--verify", "HEAD"]
+        with patch.dict(mod.os.environ, {}, clear=True):
+            self.assertEqual(mod.candidate_git_execution_argv(git), git)
+        with patch.dict(mod.os.environ, {"INVOCATION_ID": "fixture"}, clear=True):
+            args = mod.candidate_git_execution_argv(git)
+            self.assertEqual(args[0], "/usr/bin/systemd-run")
+            for option in (
+                "--uid=kmjprod", "--gid=kmjprod", "--wait", "--pipe", "--collect",
+                "--property=ProtectSystem=strict", "--property=ProtectHome=read-only",
+                "--property=NoNewPrivileges=true", "--property=RestrictSUIDSGID=true",
+                "--property=CapabilityBoundingSet=", "--property=RuntimeMaxSec=12s",
+            ):
+                self.assertIn(option, args)
+            self.assertEqual(args[args.index("--") + 1:], git[4:])
+            for other in (
+                ["/usr/bin/git", "ls-remote", mod.REMOTE],
+                ["/usr/bin/systemctl", "start", mod.UNIT],
+                ["/usr/sbin/runuser", "-u", "kmjprod", "--", "/bin/sh"],
+            ):
+                self.assertEqual(mod.candidate_git_execution_argv(other), other)
+
+    def test_transient_git_failure_never_retries_or_passes(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        git = ["/usr/sbin/runuser", "-u", "kmjprod", "--", "/usr/bin/git",
+               "rev-parse", "--verify", "HEAD"]
+        with patch.dict(mod.os.environ, {"INVOCATION_ID": "fixture"}, clear=True):
+            with patch.object(mod.subprocess, "run", return_value=SimpleNamespace(
+                    returncode=1, stdout=SHA)) as run:
+                self.assertEqual(mod.fixed_run(git), "")
+                run.assert_called_once()
+                self.assertEqual(run.call_args.args[0][0], "/usr/bin/systemd-run")
+            with patch.object(mod.subprocess, "run", side_effect=OSError) as run:
+                self.assertFalse(mod.fixed_run(git, return_success=True))
+                run.assert_called_once()
 
     def test_systemctl_exit_code_cannot_be_ignored(self):
         from types import SimpleNamespace

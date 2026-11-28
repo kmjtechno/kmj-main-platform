@@ -147,10 +147,35 @@ def protected_json(path):
     except (OSError, ValueError, UnicodeError):
         return None
 
+def candidate_git_execution_argv(argv):
+    """Systemd starts only the existing fixed, unprivileged local Git check.
+
+    Hardened service sandboxes can prohibit a root process from changing UID
+    (EPERM). Do not relax their restrictions or run repository Git as root.
+    A failed transient check remains a failed check; never retry as root.
+    """
+    if (argv[:5] != ["/usr/sbin/runuser", "-u", "kmjprod", "--", "/usr/bin/git"]
+            or not os.environ.get("INVOCATION_ID")):
+        return argv
+    return [
+        "/usr/bin/systemd-run", "--quiet", "--wait", "--pipe", "--collect",
+        "--uid=kmjprod", "--gid=kmjprod", "--working-directory=/",
+        "--property=ProtectSystem=strict", "--property=ProtectHome=read-only",
+        "--property=NoNewPrivileges=true", "--property=RestrictSUIDSGID=true",
+        "--property=CapabilityBoundingSet=", "--property=PrivateTmp=true",
+        "--property=RuntimeMaxSec=12s",
+        "--setenv=HOME=/home/kmjprod", "--setenv=LANG=C",
+        "--setenv=GIT_TERMINAL_PROMPT=0", "--setenv=GIT_CONFIG_NOSYSTEM=1",
+        "--setenv=GIT_CONFIG_GLOBAL=/dev/null",
+        "--setenv=GIT_NO_REPLACE_OBJECTS=1", "--",
+        *argv[4:],
+    ]
+
+
 def fixed_run(argv, timeout=15, return_success=False):
     try:
         p = subprocess.run(
-            argv, cwd="/", env={
+            candidate_git_execution_argv(argv), cwd="/", env={
                 "PATH": "/usr/sbin:/usr/bin:/sbin:/bin",
                 "HOME": "/root", "LANG": "C", "GIT_TERMINAL_PROMPT": "0",
             },
