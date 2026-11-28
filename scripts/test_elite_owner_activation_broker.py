@@ -197,6 +197,96 @@ class ActivationBrokerTests(unittest.TestCase):
             self.assertEqual(mod.run(execute=True, now=NOW), 0)
             self.assertEqual(events, ["CLAIM", "START"])
 
+    def test_expired_intent_is_retired_only_on_execute_without_deploy(self):
+        with tempfile.TemporaryDirectory() as temp:
+            p = Path(temp) / "intent.json"
+            p.write_text(json.dumps(intent(created_at_unix=NOW - 110, expires_at_unix=NOW)))
+            p.chmod(0o640)
+            uid = p.stat().st_uid
+            with patch.object(mod, "INTENT", p), patch.object(mod.os, "geteuid", return_value=0), \
+                    patch.object(mod.socket, "gethostname", return_value="KMJ-elite"), \
+                    patch.object(mod.pwd, "getpwnam") as person, \
+                    patch.object(mod, "trigger_fixed_unit") as trigger, \
+                    patch.object(mod, "claim_once") as claim:
+                person.return_value.pw_uid = uid
+                self.assertEqual(mod.run(execute=False, now=NOW), 2)
+                self.assertTrue(p.exists())
+                self.assertEqual(mod.run(execute=True, now=NOW), 0)
+                self.assertFalse(p.exists())
+                trigger.assert_not_called()
+                claim.assert_not_called()
+
+    def test_cleanup_does_not_remove_fresh_future_malformed_or_linked_intents(self):
+        with tempfile.TemporaryDirectory() as temp:
+            p = Path(temp) / "intent.json"
+            for obj in (intent(), intent(created_at_unix=NOW + 50, expires_at_unix=NOW + 100)):
+                p.write_text(json.dumps(obj))
+                p.chmod(0o640)
+                self.assertFalse(mod.retire_expired_intent(p, p.stat().st_uid, NOW))
+                self.assertTrue(p.exists())
+            p.write_text(json.dumps(intent(created_at_unix=NOW - 200, expires_at_unix=NOW - 1)))
+            with self.assertRaisesRegex(ValueError, "EXPIRED_OR_FUTURE"):
+                mod.retire_expired_intent(p, p.stat().st_uid, NOW)
+            self.assertTrue(p.exists())
+            p.write_text(json.dumps(intent(created_at_unix=NOW - 110, expires_at_unix=NOW)))
+            other = Path(temp) / "other.json"
+            other.hardlink_to(p)
+            with self.assertRaisesRegex(ValueError, "INTENT_IDENTITY"):
+                mod.retire_expired_intent(p, p.stat().st_uid, NOW)
+            p.unlink()
+            p.symlink_to(other)
+            with self.assertRaises(OSError):
+                mod.retire_expired_intent(p, other.stat().st_uid, NOW)
+            self.assertTrue(p.is_symlink())
+            self.assertTrue(other.exists())
+
+    def test_cleanup_rejects_changed_inode_before_unlink(self):
+        with tempfile.TemporaryDirectory() as temp:
+            p = Path(temp) / "intent.json"
+            replacement = Path(temp) / "replacement.json"
+            p.write_text(json.dumps(intent(created_at_unix=NOW - 110, expires_at_unix=NOW)))
+            p.chmod(0o640)
+            replacement.write_text(json.dumps(intent()))
+            replacement.chmod(0o640)
+            uid = p.stat().st_uid
+            real_stat = mod.os.stat
+
+            def swap_before_stat(name, *args, **kwargs):
+                if name == p.name and kwargs.get("dir_fd") is not None:
+                    replacement.replace(p)
+                return real_stat(name, *args, **kwargs)
+
+            with patch.object(mod.os, "stat", side_effect=swap_before_stat):
+                with self.assertRaisesRegex(ValueError, "INTENT_RACE"):
+                    mod.retire_expired_intent(p, uid, NOW)
+            self.assertEqual(json.loads(p.read_text()), intent())
+
+    def test_fifo_is_rejected_without_blocking(self):
+        with tempfile.TemporaryDirectory() as temp:
+            p = Path(temp) / "intent.json"
+            mod.os.mkfifo(p, 0o640)
+            uid = p.lstat().st_uid
+            with self.assertRaisesRegex(ValueError, "INTENT_IDENTITY"):
+                mod.read_owner_intent(p, uid, NOW)
+            with self.assertRaisesRegex(ValueError, "INTENT_IDENTITY"):
+                mod.retire_expired_intent(p, uid, NOW)
+            self.assertTrue(stat.S_ISFIFO(p.lstat().st_mode))
+
+    def test_intent_expiring_during_preflight_cannot_be_claimed_or_started(self):
+        with patch.object(mod.os, "geteuid", return_value=0), \
+                patch.object(mod.socket, "gethostname", return_value="KMJ-elite"), \
+                patch.object(mod.pwd, "getpwnam"), \
+                patch.object(mod, "read_owner_intent", side_effect=[
+                    intent(), ValueError("BLOCKED_INTENT_EXPIRED_OR_FUTURE")]), \
+                patch.object(mod, "previously_claimed", return_value=False), \
+                patch.object(mod, "trusted_gate", return_value=FakeGate()), \
+                patch.object(mod, "fixed_unit_status", return_value=True), \
+                patch.object(mod, "claim_once") as claim, \
+                patch.object(mod, "trigger_fixed_unit") as trigger:
+            self.assertEqual(mod.run(execute=True, now=NOW), 2)
+            claim.assert_not_called()
+            trigger.assert_not_called()
+
     def test_immutable_fixed_unit_and_no_bypass_paths(self):
         text = SOURCE.read_text()
         self.assertEqual(mod.UNIT, "kmj-main-platform-production-release.service")
@@ -209,6 +299,49 @@ class ActivationBrokerTests(unittest.TestCase):
         self.assertIn("O_NOFOLLOW", text)
         self.assertIn("O_EXCL", text)
         self.assertIn("BLOCKED_PROTECTED_GATE_", text)
+
+
+
+class UpgradePinTests(unittest.TestCase):
+    def setUp(self):
+        self.path = SOURCE.parent / "upgrade-elite-activation-broker-expiry-20261128.py"
+        spec = importlib.util.spec_from_file_location("expiry_upgrade", self.path)
+        self.up = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.up)
+
+    def test_exact_repo_pins_and_fixed_targets(self):
+        root = SOURCE.parent.parent.parent
+        for source, target, mode, old, new in self.up.TARGETS:
+            self.assertEqual(self.up.blob((root / source).read_bytes()), new)
+            self.assertTrue(target.is_absolute())
+        self.assertEqual(self.up.TARGETS[2][3], self.up.TARGETS[2][4])
+        self.assertEqual(self.up.SERVICE, "kmj-elite-owner-activation-broker.service")
+
+    def test_installed_refuses_mixed_or_unknown_pins(self):
+        with patch.object(self.up, "read_file", return_value=b"unknown"):
+            with self.assertRaisesRegex(ValueError, "UNKNOWN_OR_MIXED"):
+                self.up.installed()
+
+    def test_quiet_requires_inactive_broker_and_no_pending_intents(self):
+        with patch.object(self.up, "unit_state", return_value="active"):
+            with self.assertRaisesRegex(ValueError, "BROKER_RUNNING"):
+                self.up.quiet()
+        with patch.object(self.up, "unit_state", return_value="inactive"), \
+                patch.object(self.up.os.path, "lexists", return_value=True):
+            with self.assertRaisesRegex(ValueError, "PENDING_INTENT"):
+                self.up.quiet()
+        with patch.object(self.up, "unit_state", return_value="inactive"), \
+                patch.object(self.up.os.path, "lexists", return_value=False):
+            self.up.quiet()
+
+    def test_atomic_replace_and_readback_in_disposable_directory(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "target"
+            with patch.object(self.up, "protected_dir"):
+                self.up.replace(path, 0o500, b"old")
+                self.up.replace(path, 0o500, b"new")
+            self.assertEqual(path.read_bytes(), b"new")
+            self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o500)
 
 
 if __name__ == "__main__":
