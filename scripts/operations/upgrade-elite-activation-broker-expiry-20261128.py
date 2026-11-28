@@ -181,9 +181,14 @@ def upgrade(apply):
         if paused:
             # A timer restart could run a newly submitted intent. Leave it paused
             # if one appeared; never discard an intent or start the release unit.
-            quiet()
-            ctl("start", TIMER)
-            require(unit_state(TIMER, TARGETS[2][1]) == "active", "BLOCKED_TIMER_RESTORE")
+            try:
+                quiet()
+                ctl("start", TIMER)
+                require(unit_state(TIMER, TARGETS[2][1]) == "active", "BLOCKED_TIMER_RESTORE")
+            except BaseException:
+                print("BROKER_TIMER=RESTORE_UNVERIFIED_OWNER_REVIEW_REQUIRED")
+                print("BROKER_FILES=NEW_PINS_VERIFIED")
+                raise
         print("ACTIVATION_BROKER_UPGRADE=PASS_PINNED")
         print("BROKER_TIMER=" + ("RESTORED_ACTIVE" if paused else "PRESERVED_INACTIVE"))
 
