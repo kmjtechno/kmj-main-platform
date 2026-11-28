@@ -42,6 +42,14 @@ export const deliveryMilestones: DeliveryMilestone[] = [
             'Local source tests; owner visual acceptance and live evidence pending.',
     },
     {
+        id: 'production-kslp-reversal-safety-20261128',
+        title: 'Reviewed checkout terms and payment reversal safety',
+        state: 'active',
+        detail: 'SOURCE ONLY: checkout is bound to reviewed order terms; signed refund and dispute signals are correlated fail-closed. No commercial activation or live migration.',
+        evidence:
+            'Regression tests ported in PR #1282; exact-head CI and rollback rehearsal passed on the prior PR revision; fresh integrated CI and merchant acceptance pending.',
+    },
+    {
         id: 'public-home-502-link-header-20261127',
         title: 'Home page response headers kept within web server limits',
         state: 'active',

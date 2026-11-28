@@ -150,6 +150,67 @@ final class KslpResellerSettlementReadinessInspectorTest extends TestCase
         $this->assertDatabaseCount('kslp_licenses', 0);
     }
 
+    public function test_orderless_reversal_correlates_only_to_same_provider_and_reconciled_payment(): void
+    {
+        $actor = User::factory()->create(['email_verified_at' => now()]);
+        [$org, $product, $order] = $this->seedOrder($actor, 'REVERSAL');
+        app(CommercialOrderService::class)->confirm(
+            $order, $actor->id, 'INR', 25000, 'razorpay:pay_FUNDING1'
+        );
+        $this->providerLink($order);
+        $this->receipt();
+        $this->receipt([
+            'event_id' => 'refund_matching',
+            'event_type' => 'refund.processed',
+            'provider_order_id' => null,
+            'processing_status' => 'received',
+        ]);
+        $this->receipt([
+            'event_id' => 'dispute_matching',
+            'event_type' => 'payment.dispute.created',
+            'provider_order_id' => null,
+            'processing_status' => 'received',
+        ]);
+        $this->receipt([
+            'event_id' => 'refund_other_payment',
+            'event_type' => 'refund.processed',
+            'provider_order_id' => null,
+            'provider_payment_id' => 'pay_FOREIGN',
+            'processing_status' => 'received',
+        ]);
+        $this->receipt([
+            'event_id' => 'refund_other_provider',
+            'provider' => 'cashfree',
+            'event_type' => 'refund.processed',
+            'provider_order_id' => null,
+            'processing_status' => 'received',
+        ]);
+        $this->receipt([
+            'event_id' => 'refund_explicit_foreign_order',
+            'event_type' => 'refund.processed',
+            'provider_order_id' => 'order_FOREIGN',
+            'processing_status' => 'received',
+        ]);
+
+        $inspector = app(KslpResellerSettlementReadinessInspector::class);
+        $evidence = $inspector->inspect($actor->id, $org, $product, $order);
+        self::assertSame(2, $evidence['reversal_signals']);
+        self::assertSame(1, $evidence['reconciled_webhook_receipts']);
+        self::assertContains('PAYMENT_REVERSAL_SIGNAL_PRESENT', $evidence['blocked_reasons']);
+        self::assertFalse($evidence['verified_live_settlement']);
+        self::assertFalse($evidence['paid_issuance_enabled']);
+        self::assertNull($evidence['available_credits']);
+
+        DB::table('payment_webhook_events')->where('event_id', 'evt_FUNDING1')
+            ->update(['processing_status' => 'received']);
+        $unreconciled = $inspector->inspect($actor->id, $org, $product, $order);
+        self::assertSame(0, $unreconciled['reversal_signals']);
+        self::assertContains('RECONCILED_PROVIDER_RECEIPT_MISSING', $unreconciled['blocked_reasons']);
+        self::assertFalse($unreconciled['paid_issuance_enabled']);
+        $this->assertDatabaseCount('kslp_licenses', 0);
+        $this->assertDatabaseCount('kslp_reseller_credit_ledger', 0);
+    }
+
     public function test_forged_live_link_with_reconciled_inbox_stays_blocked_without_real_settlement(): void
     {
         $actor = User::factory()->create(['email_verified_at' => now()]);
