@@ -1,6 +1,9 @@
 import importlib.util
 from pathlib import Path
 import unittest
+import shutil
+import subprocess
+import tempfile
 from unittest.mock import Mock
 
 spec = importlib.util.spec_from_file_location(
@@ -50,6 +53,43 @@ class TransactionTests(unittest.TestCase):
                          "MAP_ALREADY_READY")
         write.assert_not_called()
         reload.assert_not_called()
+
+class UnitContractTests(unittest.TestCase):
+    def test_admission_depends_on_fixed_preparation_unit(self):
+        root = Path(__file__).resolve().parents[1] / "infra/server/systemd"
+        unit = (root / "kmj-elite-production-sha-map.service").read_text()
+        dep = (root / "kmj-elite-release-admission-broker.service.d/20-production-sha-map.conf").read_text()
+        self.assertIn("Requires=kmj-elite-production-sha-map.service", dep)
+        self.assertIn("After=kmj-elite-production-sha-map.service", dep)
+        self.assertIn("refresh_production_release_sha_map.py --apply", unit)
+        self.assertIn("ReadWritePaths=/etc/nginx/conf.d", unit)
+        self.assertIn("NoNewPrivileges=true", unit)
+        self.assertNotIn("production-release.service", unit)
+        self.assertNotIn("RemainAfterExit=true", unit)
+
+    @unittest.skipUnless(shutil.which("nginx"), "Nginx not installed on local test host")
+    def test_real_nginx_accepts_long_regex_map(self):
+        planner_spec = importlib.util.spec_from_file_location(
+            "planner", Path(__file__).parent / "operations/production_release_sha_map.py")
+        planner = importlib.util.module_from_spec(planner_spec)
+        planner_spec.loader.exec_module(planner)
+        with tempfile.TemporaryDirectory() as folder:
+            p = Path(folder)
+            (p / "map.conf").write_text(planner.render(["a" * 40, "b" * 40]))
+            conf = (
+                "pid " + str(p / "nginx.pid") + ";\n"
+                "error_log stderr;\nevents {}\nhttp {\n"
+                "access_log off;\ninclude " + str(p / "map.conf") + ";\n"
+                "server { listen 127.0.0.1:18081; "
+                "root /home/kmjprod/current/apps/platform/public; "
+                "add_header X-KMJ-Deploy-SHA $kmj_production_release_sha; "
+                "location / { return 200 ok; } }\n}\n"
+            )
+            (p / "nginx.conf").write_text(conf)
+            r = subprocess.run([shutil.which("nginx"), "-t", "-p", folder + "/",
+                                "-c", str(p / "nginx.conf")],
+                               capture_output=True, text=True, timeout=15)
+            self.assertEqual(r.returncode, 0, r.stderr)
 
 if __name__ == "__main__":
     unittest.main()
