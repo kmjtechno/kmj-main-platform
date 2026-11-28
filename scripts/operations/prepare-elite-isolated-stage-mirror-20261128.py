@@ -8,6 +8,7 @@ Neither group can write. No credentials, storage, executable cache, approval,
 Nginx changes, database, service, shell or application execution.
 """
 from __future__ import annotations
+import argparse
 import ctypes
 import errno
 import grp
@@ -249,8 +250,16 @@ def verify_source_seal():
         fail("SOURCE_HEAD_MISMATCH")
 
 def main() -> int:
-    if len(sys.argv) != 1 or os.geteuid() != 0 or socket.gethostname().split(".")[0].lower() != "kmj-elite":
+    parser = argparse.ArgumentParser(description=__doc__)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--inspect", action="store_true")
+    mode.add_argument("--prepare", action="store_true")
+    parser.add_argument("--confirm", default="")
+    args = parser.parse_args()
+    if os.geteuid() != 0 or socket.gethostname().split(".")[0].lower() != "kmj-elite":
         fail("ROOT_HOST_ARGS")
+    if args.prepare and args.confirm != "OWNER_APPROVES_REVIEWED_ISOLATED_STAGE_MIRROR":
+        fail("OWNER_CONFIRMATION")
     if not exact_pointers():
         fail("LIVE_POINTER_CHANGED")
     trusted_dir(ROOT_SOURCE)
@@ -267,6 +276,11 @@ def main() -> int:
     except KeyError:
         fail("GROUP_MISSING")
     trusted_dir(BASE.parent)
+    if args.inspect:
+        emit("KMJ_STAGE_SERVING_MIRROR", "SOURCE_SEAL_PASS_INSPECT_ONLY")
+        emit("STAGING_TARGET_PRESENT", "YES" if os.path.lexists(BASE / SHA) else "NO")
+        emit("PRODUCTION_POINTER", "UNCHANGED")
+        return 0
     if not BASE.exists():
         os.mkdir(BASE, 0o700)
         os.chmod(BASE, 0o711)
@@ -337,6 +351,6 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except (OSError, ValueError):
+    except (OSError, ValueError, subprocess.SubprocessError):
         emit("KMJ_STAGE_SERVING_MIRROR", "BLOCKED_FS_OR_CONTENT")
         raise SystemExit(2)
