@@ -226,7 +226,8 @@ def verify_source_seal():
     try:
         st = os.fstat(fd)
         if (not stat.S_ISREG(st.st_mode) or st.st_uid != 0 or st.st_nlink != 1
-                or st.st_mode & 0o077 or st.st_size not in (64, 65)):
+                or stat.S_IMODE(st.st_mode) not in (0o600, 0o640, 0o644)
+                or st.st_size not in (64, 65)):
             fail("SOURCE_SEAL_UNTRUSTED")
         expected = os.read(fd, 66).decode("ascii").strip()
     finally:
