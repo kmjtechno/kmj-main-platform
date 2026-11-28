@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "operations"))
 import elite_collect_rollback_rehearsal_receipt as collector
@@ -22,15 +23,15 @@ class SandboxIntegration(unittest.TestCase):
             fixture.write_text("readonly")
             fixture.chmod(0o644)
             source = """
-import os, pathlib, socket, tempfile
+import errno, os, pathlib, socket, tempfile
 assert os.geteuid() != 0
 assert os.environ["DB_PASSWORD"] == "synthetic_ci_only"
 p = pathlib.Path(os.environ["TEST_FIXTURE"])
 assert p.read_text() == "readonly"
 try:
     p.write_text("unexpected")
-except PermissionError:
-    pass
+except OSError as exc:
+    assert exc.errno in (errno.EACCES, errno.EPERM, errno.EROFS), exc.errno
 else:
     raise AssertionError("workspace writable")
 try:
@@ -51,8 +52,19 @@ print("SANDBOX_RUNTIME=PASS")
             original = collector.REHEARSAL
             try:
                 collector.REHEARSAL = runner
-                output = collector.run_rehearsal({"TEST_FIXTURE": str(fixture),
-                                                  "DB_PASSWORD": "synthetic_ci_only"})
+                # Only this hosted CI synthetic payload may expose stderr;
+                # production collector continues to suppress secret-bearing errors.
+                real_run = subprocess.run
+                def ci_diagnostic(*args, **kwargs):
+                    kwargs["stderr"] = subprocess.PIPE
+                    result = real_run(*args, **kwargs)
+                    if result.returncode:
+                        self.fail("sandbox synthetic diagnostic: exit=" +
+                                  str(result.returncode) + " stderr=" + result.stderr[-4000:])
+                    return result
+                with patch.object(collector.subprocess, "run", side_effect=ci_diagnostic):
+                    output = collector.run_rehearsal({"TEST_FIXTURE": str(fixture),
+                                                      "DB_PASSWORD": "synthetic_ci_only"})
             finally:
                 collector.REHEARSAL = original
             self.assertEqual(output.strip(), "SANDBOX_RUNTIME=PASS")
