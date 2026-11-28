@@ -68,7 +68,11 @@ def decision(approval, admission, current_release, approved_remote_sha, candidat
         return "BLOCKED_PROTECTED_APPROVAL"
     if current_release != expected and current_release != "platform-" + sha[:12]:
         return "BLOCKED_CURRENT_RELEASE_DRIFT"
-    if approved_remote_sha != sha:
+    already_live = current_release == "platform-" + sha[:12]
+    # Staging promotion is required for a prospective activation, not for
+    # proving a previously admitted release that is already serving traffic.
+    # All historical admission, exact Git and fresh public HTTP checks remain.
+    if not already_live and approved_remote_sha != sha:
         return "BLOCKED_STAGING_APPROVAL_DRIFT"
     if candidate_sha != sha:
         return "BLOCKED_CANDIDATE_IDENTITY"
@@ -95,7 +99,7 @@ def decision(approval, admission, current_release, approved_remote_sha, candidat
         return "BLOCKED_OWNER_AUTHORIZATION"
     if any(admission.get(key) is not True for key in required):
         return "BLOCKED_ACCEPTANCE_EVIDENCE"
-    if current_release == "platform-" + sha[:12]:
+    if already_live:
         return "ALREADY_LIVE"
     return "READY_APPROVED_RELEASE"
 
@@ -306,12 +310,12 @@ def run(mode):
             return 2
         approval = protected_json(APPROVAL)
         target = approval.get("approvedSha", "") if isinstance(approval, dict) else ""
-        admissible = bool(SHA_RE.fullmatch(target))
+        admissible = isinstance(target, str) and bool(SHA_RE.fullmatch(target))
         admission = protected_json(
             ADMISSION_DIR / ("main-platform-autopublish-" + target[:12] + ".json")
         ) if admissible else None
         current = live_release()
-        remote = remote_sha() if admissible else ""
+        remote = remote_sha() if admissible and current != "platform-" + target[:12] else ""
         candidate = candidate_sha(target) if admissible else ""
         result = decision(approval, admission, current, remote, candidate)
         print("KMJ_AUTOPUBLISH=" + result)
