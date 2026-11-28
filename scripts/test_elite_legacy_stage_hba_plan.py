@@ -51,5 +51,68 @@ class LegacyStageHbaPlan(unittest.TestCase):
         self.assertFalse(m.explicitly_rejected(SimpleNamespace(returncode=0, stderr=b"")))
 
 
+class LegacyStageHbaInstaller(unittest.TestCase):
+    def setUp(self):
+        path = Path(__file__).resolve().parent / "operations/install-elite-legacy-stage-hba-20261128.py"
+        spec = importlib.util.spec_from_file_location("installer", path)
+        self.installer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.installer)
+
+    def test_plan_pin_matches(self):
+        import hashlib
+        raw = Path(m.__file__).read_bytes()
+        self.assertEqual(hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest(),
+                         self.installer.PLAN_BLOB)
+
+    def test_live_proof_never_sends_password_to_other_database(self):
+        from unittest.mock import patch
+        secret = "test-only"
+        seen = []
+        def probe(db, role, host, password=None):
+            seen.append((db, host, password))
+            if db == DB and host == "127.0.0.1":
+                return SimpleNamespace(returncode=0, stdout=(DB+":"+ROLE).encode(), stderr=b"")
+            return SimpleNamespace(returncode=2, stderr=b"pg_hba.conf rejects connection")
+        with patch.object(m, "probe", side_effect=probe), patch.object(m, "catalog", return_value=[DB, "postgres"]):
+            self.assertEqual(self.installer.live_proof(m, DB, ROLE, "127.0.0.1", secret, [DB, "postgres"]), 5)
+        self.assertEqual(seen[0], (DB, "127.0.0.1", secret))
+        self.assertTrue(all(p is None for _, _, p in seen[1:]))
+
+    def test_auth_challenge_is_not_isolation(self):
+        from unittest.mock import patch
+        def probe(db, role, host, password=None):
+            if db == DB and password is not None:
+                return SimpleNamespace(returncode=0, stdout=(DB+":"+ROLE).encode(), stderr=b"")
+            return SimpleNamespace(returncode=2, stderr=b"no password supplied")
+        with patch.object(m, "probe", side_effect=probe):
+            with self.assertRaisesRegex(ValueError, "OTHER_DB_NOT_EXPLICITLY_REJECTED"):
+                self.installer.live_proof(m, DB, ROLE, "127.0.0.1", "test-only", [DB, "postgres"])
+
+    def test_failed_live_proof_restores_original_bytes(self):
+        import tempfile
+        from unittest.mock import patch
+        i = self.installer
+        old, new = b"old", b"new"
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            path = root / "pg_hba.conf"
+            path.write_bytes(old)
+            names = [DB, "postgres"]
+            original = (b"env", DB, ROLE, "127.0.0.1", "test-only", names, path, old)
+            def replace(_plan, _path, expected, payload):
+                self.assertEqual(path.read_bytes(), expected)
+                path.write_bytes(payload)
+            with patch.object(i, "snapshot", return_value=original), \
+                 patch.object(i, "own_login"), patch.object(i, "replace", side_effect=replace), \
+                 patch.object(i, "reload_config") as reload, \
+                 patch.object(i, "validate_loaded", side_effect=ValueError("TEST_DENIAL")), \
+                 patch.object(m, "hba", side_effect=lambda: (path, path.read_bytes())), \
+                 patch.object(m, "pg", return_value="0"):
+                with self.assertRaisesRegex(ValueError, "TEST_DENIAL"):
+                    i.install(m, original, new, i.sha(old), i.sha(new), root=root)
+            self.assertEqual(path.read_bytes(), old)
+            self.assertEqual(reload.call_count, 2)
+
+
 if __name__ == "__main__":
     unittest.main()
