@@ -45,6 +45,8 @@ on:
       - "scripts/operations/verify-elite-isolated-stage-hba-20261128.py"
       - "scripts/operations/install-elite-isolated-stage-hba-20261128.py"
       - "scripts/test_elite_stage_hba_integration.py"
+      - "scripts/operations/plan-elite-legacy-stage-hba-20261128.py"
+      - "scripts/test_elite_legacy_stage_hba_plan.py"
       - "scripts/test_prepare_elite_isolated_stage_runtime.py"
       - "infra/server/systemd/kmj-elite-release-admission-broker.*"
       - "scripts/operations/elite_release_prepare_broker.py"
@@ -84,6 +86,7 @@ jobs:
           python3 -B scripts/test_prepare_elite_isolated_stage_mirror.py -v
           python3 -B scripts/test_prepare_elite_isolated_stage_runtime.py -v
           python3 -B scripts/test_elite_stage_hba_integration.py --pure
+          python3 -B scripts/test_elite_legacy_stage_hba_plan.py
           echo "RELEASE_ADMISSION_RECEIPTS_QA=PASS"
           echo "INSTALLED=NO ADMISSION_WRITTEN=NO PRODUCTION_RELEASE=UNCHANGED"
 
