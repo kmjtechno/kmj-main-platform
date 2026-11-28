@@ -110,14 +110,17 @@ def main():
     # Ensure a bind mount cannot propagate back to the parent namespace.
     call(["/usr/bin/mount","--make-rprivate","/"])
     source=baseline()
-    with tempfile.TemporaryDirectory(prefix="kmj-stage-mount-rehearsal-",dir="/run") as tmp:
-        tree=Path(tmp)
+    # Do NOT use automatic recursive temporary-directory cleanup: if a
+    # bind unmount fails it could traverse the shared source. Leave the
+    # scratch directory behind on any mount/unmount ambiguity.
+    tree=Path(tempfile.mkdtemp(prefix="kmj-stage-mount-rehearsal-",dir="/run"))
+    mounted=False
+    try:
         target=tree/"apps/platform/storage/app"
         target.mkdir(parents=True)
         view=tree/"apps/platform/storage/framework/views/.gitignore"
         view.parent.mkdir(parents=True)
         view.write_bytes(source[str(VIEWS_IGNORE.relative_to(RELEASE))])
-        mounted=False
         try:
             call(["/usr/bin/mount","--bind",str(SHARED),str(target)])
             mounted=True
@@ -135,6 +138,22 @@ def main():
         finally:
             if mounted:
                 call(["/usr/bin/umount",str(target)])
+                mounted=False
+    finally:
+        # Even a timed-out mount command can have completed. Check the
+        # actual mount table before cleanup; do not recurse into a mount.
+        if not mounted and not os.path.ismount(tree/"apps/platform/storage/app"):
+            # Remove only our known file and empty scratch directories.
+            # No recursive deletion of any kind.
+            view=tree/"apps/platform/storage/framework/views/.gitignore"
+            if view.is_file() and not view.is_symlink():
+                view.unlink()
+            for rel in ("apps/platform/storage/framework/views","apps/platform/storage/framework",
+                        "apps/platform/storage/app","apps/platform/storage",
+                        "apps/platform","apps",""):
+                d=tree/rel
+                if d.is_dir():
+                    d.rmdir()
     need(baseline()==source,"BASELINE_DRIFT")
     print("HOST_MOUNT_CHANGED=NO")
     print("CANDIDATE_MODIFIED=NO")
