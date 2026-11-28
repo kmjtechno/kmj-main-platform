@@ -301,5 +301,48 @@ class ActivationBrokerTests(unittest.TestCase):
         self.assertIn("BLOCKED_PROTECTED_GATE_", text)
 
 
+
+class UpgradePinTests(unittest.TestCase):
+    def setUp(self):
+        self.path = SOURCE.parent / "upgrade-elite-activation-broker-expiry-20261128.py"
+        spec = importlib.util.spec_from_file_location("expiry_upgrade", self.path)
+        self.up = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.up)
+
+    def test_exact_repo_pins_and_fixed_targets(self):
+        root = SOURCE.parent.parent.parent
+        for source, target, mode, old, new in self.up.TARGETS:
+            self.assertEqual(self.up.blob((root / source).read_bytes()), new)
+            self.assertTrue(target.is_absolute())
+        self.assertEqual(self.up.TARGETS[2][3], self.up.TARGETS[2][4])
+        self.assertEqual(self.up.SERVICE, "kmj-elite-owner-activation-broker.service")
+
+    def test_installed_refuses_mixed_or_unknown_pins(self):
+        with patch.object(self.up, "read_file", return_value=b"unknown"):
+            with self.assertRaisesRegex(ValueError, "UNKNOWN_OR_MIXED"):
+                self.up.installed()
+
+    def test_quiet_requires_inactive_broker_and_no_pending_intents(self):
+        with patch.object(self.up, "unit_state", return_value="active"):
+            with self.assertRaisesRegex(ValueError, "BROKER_RUNNING"):
+                self.up.quiet()
+        with patch.object(self.up, "unit_state", return_value="inactive"), \
+                patch.object(self.up.os.path, "lexists", return_value=True):
+            with self.assertRaisesRegex(ValueError, "PENDING_INTENT"):
+                self.up.quiet()
+        with patch.object(self.up, "unit_state", return_value="inactive"), \
+                patch.object(self.up.os.path, "lexists", return_value=False):
+            self.up.quiet()
+
+    def test_atomic_replace_and_readback_in_disposable_directory(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "target"
+            with patch.object(self.up, "protected_dir"):
+                self.up.replace(path, 0o500, b"old")
+                self.up.replace(path, 0o500, b"new")
+            self.assertEqual(path.read_bytes(), b"new")
+            self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o500)
+
+
 if __name__ == "__main__":
     unittest.main()
