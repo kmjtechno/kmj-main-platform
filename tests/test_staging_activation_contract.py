@@ -18,6 +18,30 @@ class LiveProposalContract(unittest.TestCase):
         self.mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.mod)
 
+    def test_standalone_shallow_path_import_and_live_mode(self):
+        import importlib.util
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temp:
+            standalone = Path(temp) / "proposal.py"
+            shutil.copyfile(PROPOSAL, standalone)
+            # /root/proposal.py has just two ancestors. Simulate that exact
+            # deployment shape without requiring root or touching /root.
+            shallow = Path("/root/proposal.py")
+            spec = importlib.util.spec_from_file_location("standalone_proposal", standalone)
+            mod = importlib.util.module_from_spec(spec)
+            original_resolve = Path.resolve
+            def resolve(path, *args, **kwargs):
+                if path == standalone:
+                    return shallow
+                return original_resolve(path, *args, **kwargs)
+            with patch.object(Path, "resolve", resolve):
+                spec.loader.exec_module(mod)
+                with patch.object(mod, "verify_live_inputs", return_value=(b"runner", b"unit")):
+                    result = mod.proposal(NEW, OLD, PROD, inspect_elite=True)
+                self.assertIs(result["backupVerified"], False)
+                with self.assertRaisesRegex(SystemExit, "OFFLINE_CHECKOUT_REQUIRED"):
+                    mod.proposal(NEW, OLD, PROD)
+
     def test_committed_pins(self):
         for path, pin in ((RUNNER, self.mod.RUNNER_BLOB), (UNIT, self.mod.UNIT_BLOB)):
             raw = path.read_bytes()
