@@ -2,6 +2,9 @@
 Description=KMJ Elite verified current and approved candidate Nginx SHA map
 After=network-online.target nginx.service
 Wants=network-online.target
+# Avoid recurring Git/Nginx work on idle admission-timer ticks.
+ConditionPathExists=|/home/kmjprod/shared/storage/app/private/ops/release-admission-request.json
+ConditionPathExists=|/run/kmj-production-sha-map-qualification
 
 [Service]
 Type=oneshot
