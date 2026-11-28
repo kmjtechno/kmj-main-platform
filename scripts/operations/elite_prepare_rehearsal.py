@@ -38,7 +38,7 @@ BASE = Path("/var/lib/kmj-release-rehearsal")
 CONFIG = Path("/etc/kmj-codebridge/release-rehearsal.json")
 PREV_ROOT = Path("/home/kmjprod/releases")
 CAND_ROOT = Path("/home/kmjstage/releases")
-OWNER = "kmjprod"
+OWNER = "root"
 NAME_RE = re.compile(r"kmj_rehearsal_[0-9a-f]{12}\Z")
 # Order matters for rsync: the single allowed .env.example comes before the .env* exclusion.
 FILTERS = (("--include", ".env.example"), ("--exclude", ".env*"),
@@ -108,7 +108,7 @@ def protected_parent(path, uid=0):
 
 
 def rsync_argv(src, dst):
-    argv = ["/usr/bin/rsync", "-a", "--no-links", "--delete"]
+    argv = ["/usr/bin/rsync", "-a", "--no-owner", "--no-group", "--no-links", "--no-devices", "--no-specials", "--delete"]
     for flag, pattern in FILTERS:
         argv += [flag, pattern]
     return argv + [str(src) + "/", str(dst) + "/"]
@@ -157,8 +157,21 @@ def write_config(config, path=CONFIG):
     tmp.unlink()
 
 
+def seal_workspace(work):
+    for current, dirs, files in os.walk(work, followlinks=False):
+        for name in dirs + files:
+            path = Path(current) / name
+            st = path.lstat()
+            if st.st_uid != 0 or (not stat.S_ISDIR(st.st_mode) and
+                    (not stat.S_ISREG(st.st_mode) or st.st_nlink != 1)):
+                raise ValueError("BLOCKED_WORKSPACE_UNTRUSTED")
+            os.chmod(path, 0o755 if stat.S_ISDIR(st.st_mode) else 0o644,
+                     follow_symlinks=False)
+    os.chmod(work, 0o755, follow_symlinks=False)
+
+
 def prepare(sha, expected, runner=run, sql_runner=psql, base=BASE, config_path=CONFIG,
-            check_trees=real_tree):
+            check_trees=real_tree, seal=seal_workspace):
     prev, cand = tree_paths(sha, expected)
     if not (check_trees(prev, PREV_ROOT) and check_trees(cand, CAND_ROOT)):
         raise ValueError("BLOCKED_TREE_UNTRUSTED_OR_MISSING")
@@ -171,7 +184,10 @@ def prepare(sha, expected, runner=run, sql_runner=psql, base=BASE, config_path=C
     work.mkdir(parents=True, mode=0o700)
     for label, src in (("previous", prev), ("candidate", cand)):
         runner(rsync_argv(src, work / label))
-    runner(["/usr/bin/chown", "-R", OWNER + ":" + OWNER, str(work)])
+    # The transient sandbox may read the copied source but never modify it.
+    # Strip privileged mode bits, reject special files and all links before publish.
+    seal(work)
+
     password, nonce = secrets.token_hex(16), secrets.token_hex(16)
     sql_runner(sql_create(name, password, nonce))
     config = make_config(name, password, nonce, work / "previous", work / "candidate")
