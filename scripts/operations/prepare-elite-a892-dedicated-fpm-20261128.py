@@ -7,6 +7,7 @@ enables the service, reloads systemd, changes nginx, or touches production.
 A separate guarded start/readback must verify the new namespace and HTTP.
 """
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -147,6 +148,12 @@ def snapshot():
     refs=call(["git","ls-remote","--exit-code","https://github.com/kmjtechno/kmj-main-platform.git",
                "refs/heads/main","refs/heads/staging-approved"])
     need(set(refs.splitlines())=={SHA+"\trefs/heads/main",SHA+"\trefs/heads/staging-approved"},"SOURCE_DRIFT")
+    runner=read(Path("/usr/local/libexec/kmj-codebridge/kmj-main-platform-staging-deploy.sh"))
+    need(hashlib.sha256(runner).hexdigest()=="27f4c1734b15f886f761f60e37b6db9ddc5922737159a1c6089ad081b3b96477","RUNNER_PIN")
+    program=re.search(rb"<<\x27DIGEST_PY\x27\n(.*?)\nDIGEST_PY\n",runner,re.S)
+    need(program is not None,"SEAL_PROGRAM")
+    seal=read(Path("/etc/kmj-codebridge")/("main-platform-staging-seal-"+SHA+".sha256"),65).decode().strip()
+    need(re.fullmatch(r"[a-f0-9]{64}",seal) and call(["/usr/bin/python3","-I","-c",program.group(1).decode("ascii"),str(APP)],timeout=240)=="OK "+seal,"CANDIDATE_SEAL")
     approval=json.loads(read(Path("/etc/kmj-codebridge/main-platform-staging-approval.json")))
     need(approval.get("approvedSha")!=SHA,"ALREADY_APPROVED")
     need(call(["systemctl","is-active","php8.4-fpm.service"])=="active","PRODUCTION_FPM_STATE")
@@ -189,6 +196,21 @@ def main():
     for path in (BASE,UNIT,RUN,Path("/etc/systemd/system/multi-user.target.wants")/SERVICE,
                  Path("/run/systemd/system")/SERVICE,Path("/usr/lib/systemd/system")/SERVICE):
         need(not os.path.lexists(path),"CANDIDATE_SERVICE_ALREADY_EXISTS")
+    for directory in ("/etc/systemd/system","/run/systemd/system","/usr/lib/systemd/system","/run/systemd/generator","/run/systemd/generator.early","/run/systemd/generator.late"):
+        need(not os.path.lexists(Path(directory)/(SERVICE+".d")) and not os.path.lexists(Path(directory)/SERVICE),"UNIT_CONFLICT")
+    lockpath=Path("/run/kmj-main-platform-staging/deploy.lock")
+    chain(lockpath.parent)
+    fd=os.open(lockpath,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK|os.O_CLOEXEC)
+    with os.fdopen(fd,"rb") as lock:
+        s=os.fstat(lock.fileno())
+        n=lockpath.lstat()
+        need(stat.S_ISREG(s.st_mode) and s.st_uid==0 and s.st_nlink==1 and stat.S_IMODE(s.st_mode)==0o600 and (s.st_dev,s.st_ino)==(n.st_dev,n.st_ino),"LOCK_SCOPE")
+        fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        need(call(["systemctl","show","kmj-main-platform-staging-deploy.service","-p","ActiveState","--value"])=="inactive","STAGE_UNIT_BUSY")
+        prepare(a,guard)
+
+
+def prepare(a,guard):
     before=snapshot()
     call(["/usr/bin/php8.4","-l",str(a.guard)])
     print("SOURCE_AND_HOST_MOUNT=PASS")
