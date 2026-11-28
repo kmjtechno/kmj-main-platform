@@ -74,13 +74,14 @@ class PrepareTests(unittest.TestCase):
             base = pathlib.Path(d) / "base"
             base.mkdir()
             cfg = pathlib.Path(d) / "release-rehearsal.json"
-            runs, sqls = [], []
+            runs, sqls, seals = [], [], []
             pr.prepare(SHA, EXP, lambda a, u=None: runs.append(a), lambda s: sqls.append(s), base, cfg,
-                       lambda p, r: True)
+                       lambda p, r: True, seal=seals.append)
             self.assertEqual(sqls[0][0].split()[0:2], ["CREATE", "ROLE"])
             self.assertEqual(len(sqls), 1)
             self.assertFalse(any("DROP " in statement for batch in sqls for statement in batch))
-            self.assertTrue(any(a[0] == '/usr/bin/chown' for a in runs))
+            self.assertEqual(seals, [base / SHA[:12]])
+            self.assertFalse(any(a[0] == '/usr/bin/chown' for a in runs))
             self.assertEqual(sum(1 for a in runs if a[0] == '/usr/bin/rsync'), 2)
             self.assertEqual(oct(cfg.stat().st_mode & 0o777), "0o600")
             self.assertEqual(json.loads(cfg.read_text())["env"]["DB_HOST"], "127.0.0.1")
