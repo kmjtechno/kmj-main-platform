@@ -24,6 +24,7 @@ on:
       - "scripts/operations/elite_collect_all_receipts.py"
       - "scripts/test_elite_collect_all_and_broker_units.py"
       - "scripts/operations/elite_prepare_rehearsal.py"
+      - "scripts/operations/rehearse-app-http-db-rollback-20261029.py"
       - "scripts/test_elite_prepare_rehearsal.py"
       - "scripts/test_elite_rehearsal_postgres_integration.py"
       - "infra/server/systemd/kmj-elite-release-admission-broker.*"
