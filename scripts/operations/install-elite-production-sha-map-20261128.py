@@ -16,11 +16,12 @@ import subprocess
 import tempfile
 import urllib.request
 
-SOURCE = "0e0889ba9a59c596f76dba9888fcce582d16963e"
+SOURCE = "0ea9f019fcfeeeb64bad9ad6714e650a8947264b"
 BASE = "https://raw.githubusercontent.com/kmjtechno/kmj-main-platform/" + SOURCE + "/"
 DEST = Path("/opt/kmj-main-platform-release-evidence")
 UNIT_DIR = Path("/etc/systemd/system")
 UNIT = "kmj-elite-production-sha-map.service"
+QUALIFICATION = Path("/run/kmj-production-sha-map-qualification")
 BROKER = "elite_admission_broker.py"
 DROP = "kmj-elite-release-admission-broker.service.d/20-production-sha-map.conf"
 OLD_BROKER = "71f4eae8588441f08dd6f17a84d3c512226d7df5"
@@ -32,7 +33,7 @@ INTENTS = (
 STAGE = (
     ("scripts/operations/production_release_sha_map.py", DEST / "production_release_sha_map.py", "7e04e9eb8a4aeeed5067518d3e5dc4b2e29df4c2", 0o500),
     ("scripts/operations/refresh_production_release_sha_map.py", DEST / "refresh_production_release_sha_map.py", "989c55dc74dc4b1e8f0535561ac358e62d22adb3", 0o500),
-    ("infra/server/systemd/" + UNIT, UNIT_DIR / UNIT, "0a54b3bdd97fddf1592078e69d7727b766b48230", 0o644),
+    ("infra/server/systemd/" + UNIT, UNIT_DIR / UNIT, "fdc0d295f353bae8864b5d617d571f1a7d3e7d29", 0o644),
 )
 ENABLE = (
     ("scripts/operations/" + BROKER, DEST / BROKER, "d421469831ccb051796e932742107066e02a47ab", 0o500),
@@ -156,6 +157,29 @@ def apply(entries, live_snapshot):
         raise
     print("INSTALL_BACKUP=" + str(backup))
 
+def unit_property(name):
+    return subprocess.run(
+        ["/usr/bin/systemctl", "show", UNIT, "-p", name, "--value"],
+        cwd="/", env={"PATH":"/usr/sbin:/usr/bin:/sbin:/bin","LANG":"C"},
+        check=True, capture_output=True, text=True, timeout=15
+    ).stdout.strip()
+
+def qualify_service(snapshot):
+    protected_dir(QUALIFICATION.parent)
+    require(guard_live() == snapshot, "BLOCKED_LIVE_DRIFT")
+    before = int(unit_property("ExecMainStartTimestampMonotonic") or "0")
+    fd = os.open(QUALIFICATION, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+    try:
+        os.close(fd)
+        fixed("/usr/bin/systemctl", "start", UNIT)
+        after = int(unit_property("ExecMainStartTimestampMonotonic") or "0")
+        require(after > before and unit_property("Result") == "success"
+                and unit_property("ExecMainStatus") == "0", "BLOCKED_SERVICE_NOT_EXECUTED")
+        require(guard_live() == snapshot, "BLOCKED_LIVE_DRIFT")
+    finally:
+        QUALIFICATION.unlink()
+    print("SHA_MAP_SERVICE_WITNESS=PASS")
+
 def main():
     parser = argparse.ArgumentParser()
     modes = parser.add_mutually_exclusive_group(required=True)
@@ -183,8 +207,7 @@ def main():
         for _, path, pin, mode in STAGE:
             data = read_existing(path, mode)
             require(data is not None and blob(data) == pin, "BLOCKED_STAGE_NOT_PINNED")
-        fixed("/usr/bin/systemctl", "start", UNIT)
-        require(guard_live() == snapshot, "BLOCKED_LIVE_DRIFT")
+        qualify_service(snapshot)
         parent = (UNIT_DIR / DROP).parent
         if not parent.exists():
             parent.mkdir(mode=0o755)
