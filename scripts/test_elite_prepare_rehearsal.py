@@ -35,7 +35,7 @@ class PrepareTests(unittest.TestCase):
     def test_sql_is_fixed_shape_and_rejects_unsafe_values(self):
         name = pr.names(SHA)
         sql = pr.sql_create(name, "c" * 32, "d" * 32)
-        self.assertEqual(len(sql), 3)
+        self.assertEqual(len(sql), 4)
         self.assertIn("NOSUPERUSER NOCREATEDB NOCREATEROLE", sql[0])
         self.assertIn("kmj-disposable-rehearsal:" + "d" * 32, sql[2])
         for bad in (("x; DROP", "c" * 32, "d" * 32), (name, "c'; --" + "c" * 26, "d" * 32),
@@ -43,7 +43,7 @@ class PrepareTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 pr.sql_create(*bad)
         with self.assertRaises(ValueError):
-            pr.sql_drop("kmj_platform")
+            pr.sql_drop("kmj_platform", "d" * 32)
 
     def test_config_is_accepted_by_the_rehearsal_collector_and_names_pass_its_pattern(self):
         cfg = pr.make_config(pr.names(SHA), "c" * 32, "d" * 32, "/p", "/c")
@@ -93,10 +93,50 @@ class PrepareTests(unittest.TestCase):
             sqls = []
             with self.assertRaisesRegex(ValueError, "BLOCKED_EXISTING_REHEARSAL"):
                 pr.prepare(SHA, EXP, lambda *a: None, sqls.append, base, cfg, lambda p, r: True)
-            with self.assertRaisesRegex(ValueError, "BLOCKED_CLEANUP_OWNERSHIP_UNVERIFIED"):
-                pr.cleanup(SHA, lambda *a: None, sqls.append, base, cfg)
+            with self.assertRaises(ValueError):
+                pr.cleanup(SHA, EXP, lambda *a: None, sqls.append, base, cfg, uid=os.getuid(), parent_check=lambda *a: True)
             self.assertEqual(sqls, [])
             self.assertEqual(cfg.read_text(), "existing")
+
+    def test_cleanup_requires_both_nonce_comments_and_never_forces(self):
+        name, nonce = pr.names(SHA), "d" * 32
+        query = pr.cleanup_query(name, nonce)
+        self.assertIn("pg_database", query)
+        self.assertIn("pg_authid", query)
+        self.assertIn("pg_auth_members", query)
+        self.assertEqual(query.count("kmj-disposable-rehearsal:" + nonce), 2)
+        self.assertEqual(pr.sql_drop(name, nonce), ['DROP DATABASE "' + name + '"', 'DROP ROLE "' + name + '"'])
+        with self.assertRaises(ValueError):
+            pr.sql_drop(name, "bad")
+
+    def test_cleanup_preserves_state_without_owner_and_on_sql_error(self):
+        with tempfile.TemporaryDirectory() as d:
+            base = pathlib.Path(d)
+            cfg = base / "release-rehearsal.json"
+            work = base / SHA[:12]
+            work.mkdir()
+            name, nonce = pr.names(SHA), "d" * 32
+            fixed = pathlib.Path("/var/lib/kmj-release-rehearsal") / SHA[:12]
+            record = pr.make_config(name, "c" * 32, nonce, fixed / "previous", fixed / "candidate")
+            record.update(approvedSha=SHA, expectedCurrentRelease=EXP)
+            cfg.write_text(json.dumps(record))
+            cfg.chmod(0o600)
+            sqls = []
+            with self.assertRaisesRegex(ValueError, "BLOCKED_CLEANUP_OWNERSHIP_UNVERIFIED"):
+                pr.cleanup(SHA, EXP, sql_runner=sqls.append, base=base, config_path=cfg,
+                           owner_query=lambda *a: False, uid=os.getuid(), parent_check=lambda *a: True)
+            self.assertEqual(sqls, [])
+            self.assertTrue(work.exists() and cfg.exists())
+            def fail(sql):
+                raise ValueError("active database")
+            with self.assertRaises(ValueError):
+                pr.cleanup(SHA, EXP, sql_runner=fail, base=base, config_path=cfg,
+                           owner_query=lambda *a: True, uid=os.getuid(), parent_check=lambda *a: True)
+            self.assertTrue(work.exists() and cfg.exists())
+            pr.cleanup(SHA, EXP, sql_runner=sqls.append, base=base, config_path=cfg,
+                       owner_query=lambda *a: True, uid=os.getuid(), parent_check=lambda *a: True)
+            self.assertFalse(work.exists() or cfg.exists())
+            self.assertEqual(len(sqls), 1)
 
     def test_untrusted_tree_blocks_before_any_database_change(self):
         sqls = []
