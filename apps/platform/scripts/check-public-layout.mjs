@@ -26,6 +26,7 @@ const { isPublicMarketingPage } = await import(url);
 const publicPages = [
     'welcome',
     'company',
+    'team',
     'capabilities',
     'trust',
     'public-page',

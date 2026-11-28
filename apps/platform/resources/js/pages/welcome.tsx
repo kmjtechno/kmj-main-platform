@@ -51,6 +51,7 @@ import PublicSiteFooter from '@/components/public-site-footer';
 import ProductArtwork from '@/components/product-artwork';
 import PublicSeo from '@/components/public-seo';
 import KristiLauncher from '@/components/public/kristi-launcher';
+import { useWebsite } from '@/lib/website';
 import { productImageForSlug } from '@/lib/product-image-identity';
 import '../../css/locked-landing.css';
 import '../../css/public-theme.css';
@@ -195,6 +196,10 @@ const guidanceIcons = [
     LifeBuoy,
     MessagesSquare,
 ];
+const catalogNote =
+    'Product availability and access remain governed by verified lifecycle and release states.';
+// One icon per roadmap step, in order.
+const roadmapIcons = [CircleCheck, Sparkles, Hammer, Telescope];
 function SectionHeading({
     icon: Icon,
     title,
@@ -338,6 +343,7 @@ export default function Welcome({
     products: Product[];
     portfolioCount: number;
 }) {
+    const { features, sections, headings, roadmap } = useWebsite();
     const [tour, setTour] = useState(false);
     // Catalog ordering and visibility remain controlled by the backend.
     const ecosystemProducts = products.filter(
@@ -479,349 +485,342 @@ export default function Welcome({
                             AND BEYOND
                         </div>
                     </section>
-                    <div className="lock-trust">
-                        {[
-                            [
-                                ShieldCheck,
-                                'Security by Design',
-                                'Enterprise Focus',
-                            ],
-                            [Cloud, 'Cloud-Ready', 'Global Deployment'],
-                            [
-                                Layers3,
-                                'Scalable Architecture',
-                                'From Startup to Enterprise',
-                            ],
-                            [
-                                Globe2,
-                                'Multi-Language Support',
-                                'Connected Experiences',
-                            ],
-                            [
-                                FileCheck,
-                                'Flexible Licensing',
-                                'Commercial & Enterprise',
-                            ],
-                            [
-                                Star,
-                                'Built for Global Clients',
-                                'Real-World Solutions',
-                            ],
-                        ].map(([Icon, title, detail]) => {
-                            const I = Icon as typeof Cloud;
-                            return (
-                                <div key={String(title)}>
-                                    <I />
-                                    <span>
-                                        <strong>{String(title)}</strong>
-                                        <small>{String(detail)}</small>
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                    <section className="lock-section" id="flagship">
-                        <SectionHeading
-                            icon={Boxes}
-                            title="Our Flagship Products"
-                            subtitle="Powerful solutions for immersive experiences, intelligent operations and real-world impact."
-                            href="/products"
-                            label="View All Products"
-                        />
-                        <div className="lock-products">
-                            {ecosystemProducts.map((p) => (
-                                <article className="lock-product" key={p.slug}>
-                                    <Link href={'/products/' + p.slug}>
-                                        <ProductArtwork
-                                            src={
-                                                artwork[p.slug]
-                                                    ? '/assets/locked/' +
-                                                      artwork[p.slug] +
-                                                      '.webp'
-                                                    : productImageForSlug(
-                                                          p.slug,
-                                                          p.image_path,
-                                                      )
-                                            }
-                                            name={p.name}
-                                            fallbackClassName="lock-product-art-unavailable"
-                                            fallbackText="Artwork coming soon"
-                                        />
-                                        <span className="lock-product-category">
-                                            {p.eyebrow || p.lifecycle_label}
-                                        </span>
-                                        <div>
-                                            <h3>{p.name}</h3>
-                                            <p>{p.summary}</p>
-                                            <span className="lock-product-cta">
-                                                Explore{' '}
-                                                {p.name.replace('KMJ ', '')}{' '}
-                                                <ArrowRight size={12} />
-                                            </span>
-                                        </div>
-                                    </Link>
-                                </article>
-                            ))}
-                        </div>
-                        <p className="lock-catalog-note">
-                            Product availability and access remain governed by
-                            verified lifecycle and release states.
-                        </p>
-                    </section>
-                    <section
-                        className="lock-section"
-                        aria-labelledby="what-we-build-heading"
-                    >
-                        <SectionHeading
-                            icon={CodeXml}
-                            title="What We Build"
-                            subtitle="From idea to global deployment — we build any kind of software, system or immersive experience."
-                            href="/capabilities"
-                        />
-                        <h2 id="what-we-build-heading" className="sr-only">
-                            Software capabilities
-                        </h2>
-                        <div className="lock-capabilities">
-                            {whatWeBuild.map(({ icon: Icon, title, text }) => (
-                                <Link href="/capabilities" key={title}>
-                                    <Icon />
-                                    <h3>{title}</h3>
-                                    <p>{text}</p>
-                                </Link>
-                            ))}
-                        </div>
-                    </section>
-                    <section className="lock-ecosystem">
-                        <SectionHeading
-                            icon={Network}
-                            title="A Complete and Connected Ecosystem"
-                            subtitle="Our products work together to create a unified platform for creation, control, deployment and growth."
-                            href="/products"
-                            label="Explore Full Ecosystem"
-                        />
-                        <div className="lock-ecosystem-scene">
-                            <img
-                                src="/assets/locked/ecosystem.webp"
-                                alt="Connected KMJ technology ecosystem"
-                                loading="lazy"
-                                width="2176"
-                                height="724"
-                            />
-                            <div className="lock-ecosystem-brand">
-                                <LockedBrand />
-                            </div>
-                            <div className="lock-orbit">
-                                {[
-                                    [
-                                        'CloudOS',
-                                        'Core Platform',
-                                        '/products/kmj-cloudos',
-
-                                        Cloud,
-                                    ],
-                                    [
-                                        'CodeBridge',
-                                        'Build Apps',
-                                        '/products/kmj-codebridge',
-
-                                        CodeXml,
-                                    ],
-                                    [
-                                        'Cloud Nexus',
-                                        'Engineering IDE',
-                                        '/products/kmj-cloud-nexus',
-
-                                        SquareTerminal,
-                                    ],
-                                    [
-                                        'Agent',
-                                        'AI Automation',
-                                        '/products/kmj-agent',
-
-                                        Bot,
-                                    ],
-                                    [
-                                        'Calibration Pro',
-                                        'Precision Tools',
-                                        '/products/kmj-calibration-pro',
-
-                                        ScanLine,
-                                    ],
-                                    [
-                                        'Cinema Platform',
-                                        'Immersive Media',
-                                        '/products/kmj-cinema-platform',
-
-                                        Projector,
-                                    ],
-                                    [
-                                        'Forge',
-                                        'Engineering Systems',
-                                        '/products/kmj-forge',
-
-                                        Hammer,
-                                    ],
-                                    [
-                                        'Licensing Hub',
-                                        'Access & Control',
-                                        '/products/kmj-licensing-hub',
-
-                                        KeyRound,
-                                    ],
-                                    [
-                                        'OmniDesk',
-                                        'Remote Access',
-                                        '/products/kmj-omnidesk',
-
-                                        MonitorSmartphone,
-                                    ],
-                                    [
-                                        'Creative Studio',
-                                        'Content & Media',
-                                        '/products/kmj-creative-studio',
-
-                                        Palette,
-                                    ],
-                                ].map(([name, detail, href, icon], i) => {
-                                    const Icon = icon as typeof Cloud;
-
-                                    return (
-                                        <Link
-                                            key={String(name)}
-                                            href={String(href)}
-                                            style={
-                                                {
-                                                    '--orbit-index': i,
-                                                } as React.CSSProperties
-                                            }
-                                        >
-                                            <Icon aria-hidden="true" />
-                                            <span>
-                                                <strong>{String(name)}</strong>
-                                                <small>{String(detail)}</small>
-                                            </span>
-                                        </Link>
-                                    );
-                                })}
-                            </div>
-                            <p className="lock-ecosystem-left">
-                                ONE
-                                <br />
-                                ECOSYSTEM
-                                <br />
-                                ENDLESS
-                                <br />
-                                POSSIBILITIES
-                            </p>
-                            <p className="lock-ecosystem-right">
-                                CREATE
-                                <br />
-                                CONNECT
-                                <br />
-                                DEPLOY
-                                <br />
-                                SCALE
-                                <br />
-                                INNOVATE
-                                <br />
-                                TOGETHER
-                            </p>
-                        </div>
-                    </section>
-                    <section className="lock-section" id="industries">
-                        <SectionHeading
-                            icon={Factory}
-                            title="Industries We Serve"
-                            subtitle="Real solutions for real-world challenges."
-                            href="/capabilities"
-                            label="View All Industries"
-                        />
-                        <div className="lock-industries">
-                            {industries.map(([key, label]) => {
-                                const Icon = industryIcons[key];
-
-                                return (
-                                    <Link href="/capabilities" key={key}>
-                                        <img
-                                            src={
-                                                '/assets/locked/industry-' +
-                                                key +
-                                                '.webp'
-                                            }
-                                            alt=""
-                                            loading="lazy"
-                                            width="320"
-                                            height="180"
-                                        />
-                                        <span className="lock-industry-icon">
-                                            <Icon aria-hidden="true" />
-                                        </span>
-                                        <h3>{label}</h3>
-                                    </Link>
-                                );
-                            })}
-                        </div>
-                    </section>
-                    <section id="roadmap" className="lock-roadmap">
-                        <SectionHeading
-                            icon={Map}
-                            title="Our Roadmap"
-                            subtitle="Building a future-ready ecosystem."
-                            href="/products"
-                            label="View Full Roadmap"
-                        />
-                        <div className="lock-roadmap-steps">
+                    {sections.trust && (
+                        <div className="lock-trust">
                             {[
                                 [
-                                    'Now',
-                                    'Available Products',
-                                    'Review platform and product availability.',
-                                    CircleCheck,
+                                    ShieldCheck,
+                                    'Security by Design',
+                                    'Enterprise Focus',
+                                ],
+                                [Cloud, 'Cloud-Ready', 'Global Deployment'],
+                                [
+                                    Layers3,
+                                    'Scalable Architecture',
+                                    'From Startup to Enterprise',
                                 ],
                                 [
-                                    'Next',
-                                    'Enhanced Features',
-                                    'Advanced capabilities and new integrations.',
-                                    Sparkles,
+                                    Globe2,
+                                    'Multi-Language Support',
+                                    'Connected Experiences',
                                 ],
                                 [
-                                    'In Development',
-                                    'New Products',
-                                    'Ongoing development and testing.',
-                                    Hammer,
+                                    FileCheck,
+                                    'Flexible Licensing',
+                                    'Commercial & Enterprise',
                                 ],
                                 [
-                                    'Future',
-                                    'Ecosystem Expansion',
-                                    'More industries, more tools and global reach.',
-                                    Telescope,
+                                    Star,
+                                    'Built for Global Clients',
+                                    'Real-World Solutions',
                                 ],
-                            ].map(([title, sub, text, icon], i) => {
-                                const Icon = icon as typeof Cloud;
-
+                            ].map(([Icon, title, detail]) => {
+                                const I = Icon as typeof Cloud;
                                 return (
                                     <div key={String(title)}>
+                                        <I />
                                         <span>
-                                            <Icon aria-hidden="true" />
+                                            <strong>{String(title)}</strong>
+                                            <small>{String(detail)}</small>
                                         </span>
-                                        <section>
-                                            <h3>
-                                                0{i + 1} · {String(title)}
-                                            </h3>
-                                            <strong>{String(sub)}</strong>
-                                            <p>{String(text)}</p>
-                                        </section>
                                     </div>
                                 );
                             })}
                         </div>
-                    </section>
+                    )}
+                    {sections.products && (
+                        <section className="lock-section" id="flagship">
+                            <SectionHeading
+                                icon={Boxes}
+                                title={headings.products.title}
+                                subtitle={headings.products.subtitle}
+                                href="/products"
+                                label="View All Products"
+                            />
+                            <div className="lock-products">
+                                {ecosystemProducts.map((p) => (
+                                    <article
+                                        className="lock-product"
+                                        key={p.slug}
+                                    >
+                                        <Link href={'/products/' + p.slug}>
+                                            <ProductArtwork
+                                                src={
+                                                    artwork[p.slug]
+                                                        ? '/assets/locked/' +
+                                                          artwork[p.slug] +
+                                                          '.webp'
+                                                        : productImageForSlug(
+                                                              p.slug,
+                                                              p.image_path,
+                                                          )
+                                                }
+                                                name={p.name}
+                                                fallbackClassName="lock-product-art-unavailable"
+                                                fallbackText="Artwork coming soon"
+                                            />
+                                            <span className="lock-product-category">
+                                                {p.eyebrow || p.lifecycle_label}
+                                            </span>
+                                            <div>
+                                                <h3>{p.name}</h3>
+                                                <p>{p.summary}</p>
+                                                <span className="lock-product-cta">
+                                                    Explore{' '}
+                                                    {p.name.replace('KMJ ', '')}{' '}
+                                                    <ArrowRight size={12} />
+                                                </span>
+                                            </div>
+                                        </Link>
+                                    </article>
+                                ))}
+                            </div>
+                            <p className="lock-catalog-note">{catalogNote}</p>
+                        </section>
+                    )}
+                    {sections.capabilities && (
+                        <section
+                            className="lock-section"
+                            aria-labelledby="what-we-build-heading"
+                        >
+                            <SectionHeading
+                                icon={CodeXml}
+                                title={headings.capabilities.title}
+                                subtitle={headings.capabilities.subtitle}
+                                href="/capabilities"
+                            />
+                            <h2 id="what-we-build-heading" className="sr-only">
+                                Software capabilities
+                            </h2>
+                            <div className="lock-capabilities">
+                                {whatWeBuild.map(
+                                    ({ icon: Icon, title, text }) => (
+                                        <Link href="/capabilities" key={title}>
+                                            <Icon />
+                                            <h3>{title}</h3>
+                                            <p>{text}</p>
+                                        </Link>
+                                    ),
+                                )}
+                            </div>
+                        </section>
+                    )}
+                    {sections.ecosystem && (
+                        <section className="lock-ecosystem">
+                            <SectionHeading
+                                icon={Network}
+                                title={headings.ecosystem.title}
+                                subtitle={headings.ecosystem.subtitle}
+                                href="/products"
+                                label="Explore Full Ecosystem"
+                            />
+                            <div className="lock-ecosystem-scene">
+                                <img
+                                    src="/assets/locked/ecosystem.webp"
+                                    alt="Connected KMJ technology ecosystem"
+                                    loading="lazy"
+                                    width="2176"
+                                    height="724"
+                                />
+                                <div className="lock-ecosystem-brand">
+                                    <LockedBrand />
+                                </div>
+                                <div className="lock-orbit">
+                                    {[
+                                        [
+                                            'CloudOS',
+                                            'Core Platform',
+                                            '/products/kmj-cloudos',
+
+                                            Cloud,
+                                        ],
+                                        [
+                                            'CodeBridge',
+                                            'Build Apps',
+                                            '/products/kmj-codebridge',
+
+                                            CodeXml,
+                                        ],
+                                        [
+                                            'Cloud Nexus',
+                                            'Engineering IDE',
+                                            '/products/kmj-cloud-nexus',
+
+                                            SquareTerminal,
+                                        ],
+                                        [
+                                            'Agent',
+                                            'AI Automation',
+                                            '/products/kmj-agent',
+
+                                            Bot,
+                                        ],
+                                        [
+                                            'Calibration Pro',
+                                            'Precision Tools',
+                                            '/products/kmj-calibration-pro',
+
+                                            ScanLine,
+                                        ],
+                                        [
+                                            'Cinema Platform',
+                                            'Immersive Media',
+                                            '/products/kmj-cinema-platform',
+
+                                            Projector,
+                                        ],
+                                        [
+                                            'Forge',
+                                            'Engineering Systems',
+                                            '/products/kmj-forge',
+
+                                            Hammer,
+                                        ],
+                                        [
+                                            'Licensing Hub',
+                                            'Access & Control',
+                                            '/products/kmj-licensing-hub',
+
+                                            KeyRound,
+                                        ],
+                                        [
+                                            'OmniDesk',
+                                            'Remote Access',
+                                            '/products/kmj-omnidesk',
+
+                                            MonitorSmartphone,
+                                        ],
+                                        [
+                                            'Creative Studio',
+                                            'Content & Media',
+                                            '/products/kmj-creative-studio',
+
+                                            Palette,
+                                        ],
+                                    ].map(([name, detail, href, icon], i) => {
+                                        const Icon = icon as typeof Cloud;
+
+                                        return (
+                                            <Link
+                                                key={String(name)}
+                                                href={String(href)}
+                                                style={
+                                                    {
+                                                        '--orbit-index': i,
+                                                    } as React.CSSProperties
+                                                }
+                                            >
+                                                <Icon aria-hidden="true" />
+                                                <span>
+                                                    <strong>
+                                                        {String(name)}
+                                                    </strong>
+                                                    <small>
+                                                        {String(detail)}
+                                                    </small>
+                                                </span>
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+                                <p className="lock-ecosystem-left">
+                                    ONE
+                                    <br />
+                                    ECOSYSTEM
+                                    <br />
+                                    ENDLESS
+                                    <br />
+                                    POSSIBILITIES
+                                </p>
+                                <p className="lock-ecosystem-right">
+                                    CREATE
+                                    <br />
+                                    CONNECT
+                                    <br />
+                                    DEPLOY
+                                    <br />
+                                    SCALE
+                                    <br />
+                                    INNOVATE
+                                    <br />
+                                    TOGETHER
+                                </p>
+                            </div>
+                        </section>
+                    )}
+                    {sections.industries && (
+                        <section className="lock-section" id="industries">
+                            <SectionHeading
+                                icon={Factory}
+                                title={headings.industries.title}
+                                subtitle={headings.industries.subtitle}
+                                href="/capabilities"
+                                label="View All Industries"
+                            />
+                            <div className="lock-industries">
+                                {industries.map(([key, label]) => {
+                                    const Icon = industryIcons[key];
+
+                                    return (
+                                        <Link href="/capabilities" key={key}>
+                                            <img
+                                                src={
+                                                    '/assets/locked/industry-' +
+                                                    key +
+                                                    '.webp'
+                                                }
+                                                alt=""
+                                                loading="lazy"
+                                                width="320"
+                                                height="180"
+                                            />
+                                            <span className="lock-industry-icon">
+                                                <Icon aria-hidden="true" />
+                                            </span>
+                                            <h3>{label}</h3>
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    )}
+                    {sections.roadmap && (
+                        <section id="roadmap" className="lock-roadmap">
+                            <SectionHeading
+                                icon={Map}
+                                title={headings.roadmap.title}
+                                subtitle={headings.roadmap.subtitle}
+                                href="/products"
+                                label="View Full Roadmap"
+                            />
+                            <div className="lock-roadmap-steps">
+                                {roadmap.map((step, i) => {
+                                    const Icon = roadmapIcons[i] ?? CircleCheck;
+
+                                    return (
+                                        <div key={i}>
+                                            <span>
+                                                <Icon aria-hidden="true" />
+                                            </span>
+                                            <section>
+                                                <h3>
+                                                    0{i + 1} · {step.title}
+                                                </h3>
+                                                <strong>{step.summary}</strong>
+                                                <p>{step.text}</p>
+                                            </section>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    )}
                 </main>
                 <PublicSiteFooter
                     products={ecosystemProducts}
                     support={false}
                 />
-                <PublicKristi />
+                {features.kristi && <PublicKristi />}
             </div>
         </>
     );

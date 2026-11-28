@@ -11,6 +11,7 @@ import {
     ShieldCheck,
     ShoppingCart,
     Users,
+    Globe,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
@@ -76,6 +77,11 @@ export function AppSidebar() {
                   title: 'Products',
                   href: '/operator/products',
                   icon: PackageOpen,
+              },
+              {
+                  title: 'Website & Team',
+                  href: '/operator/website',
+                  icon: Globe,
               },
               {
                   title: 'Customers & Organizations',

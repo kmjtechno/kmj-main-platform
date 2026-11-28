@@ -24,6 +24,7 @@ import {
     Users,
     Activity,
     Wrench,
+    Globe2,
 } from 'lucide-react';
 import { dashboard } from '@/routes';
 
@@ -892,6 +893,12 @@ function OwnerProductsPanel({ products }: { products: OwnerProduct[] }) {
                         detail: 'Publish and configure products',
                         href: '/operator/products',
                         icon: Package,
+                    },
+                    {
+                        title: 'Website',
+                        detail: 'Public pages and team members',
+                        href: '/operator/website',
+                        icon: Globe2,
                     },
                     {
                         title: 'Customers',

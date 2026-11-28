@@ -2,6 +2,7 @@ import Lenis from 'lenis';
 import { ArrowUp } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import 'lenis/dist/lenis.css';
+import { useWebsite } from '@/lib/website';
 
 /** Cards that fade up the first time they are scrolled into view. */
 const REVEAL = [
@@ -30,6 +31,8 @@ const SPOTLIGHT = [
 export default function PublicMotion() {
     const smooth = useRef<Lenis | null>(null);
     const [deep, setDeep] = useState(false);
+    const { features } = useWebsite();
+    const { smooth_scrolling: gliding, scroll_animations: animated } = features;
 
     const toTop = () => {
         if (smooth.current) {
@@ -64,29 +67,45 @@ export default function PublicMotion() {
             return stopHeader;
         }
 
-        const lenis = new Lenis({
-            autoRaf: true,
-            lerp: 0.1,
-            anchors: { offset: -88 },
-            allowNestedScroll: true,
-            stopInertiaOnNavigate: true,
-            prevent: (node) => node.getAttribute('role') === 'dialog',
-        });
-
-        smooth.current = lenis;
-
         // Dialogs lock the page; smooth scrolling must respect that lock.
-        const lock = new MutationObserver(() => {
-            if (document.body.hasAttribute('data-scroll-locked')) {
-                lenis.stop();
-            } else {
-                lenis.start();
-            }
-        });
-        lock.observe(document.body, {
-            attributes: true,
-            attributeFilter: ['data-scroll-locked'],
-        });
+        let lenis: Lenis | null = null;
+        let lock: MutationObserver | null = null;
+
+        if (gliding) {
+            const instance = new Lenis({
+                autoRaf: true,
+                lerp: 0.1,
+                anchors: { offset: -88 },
+                allowNestedScroll: true,
+                stopInertiaOnNavigate: true,
+                prevent: (node) => node.getAttribute('role') === 'dialog',
+            });
+
+            lock = new MutationObserver(() => {
+                if (document.body.hasAttribute('data-scroll-locked')) {
+                    instance.stop();
+                } else {
+                    instance.start();
+                }
+            });
+            lock.observe(document.body, {
+                attributes: true,
+                attributeFilter: ['data-scroll-locked'],
+            });
+            lenis = instance;
+            smooth.current = instance;
+        }
+
+        const stopScrolling = () => {
+            stopHeader();
+            lock?.disconnect();
+            smooth.current = null;
+            lenis?.destroy();
+        };
+
+        if (!animated) {
+            return stopScrolling;
+        }
 
         const reveal = new IntersectionObserver(
             (entries) => {
@@ -173,17 +192,18 @@ export default function PublicMotion() {
         document.addEventListener('pointermove', onPointer, { passive: true });
 
         return () => {
-            stopHeader();
+            stopScrolling();
             document.removeEventListener('pointermove', onPointer);
             reveal.disconnect();
-            lock.disconnect();
             targets.forEach((element) =>
                 element.removeAttribute('data-reveal'),
             );
-            smooth.current = null;
-            lenis.destroy();
         };
-    }, []);
+    }, [gliding, animated]);
+
+    if (!features.scroll_to_top) {
+        return null;
+    }
 
     return (
         <button

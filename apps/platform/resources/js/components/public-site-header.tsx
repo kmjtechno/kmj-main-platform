@@ -19,6 +19,7 @@ import { useRef, useState } from 'react';
 import LockedBrand from '@/components/locked-brand';
 import PublicLanguageSwitch from '@/components/public-language-switch';
 import PublicMotion from '@/components/public-motion';
+import { useWebsite } from '@/lib/website';
 import '../../css/locked-landing.css';
 import '../../css/public-theme.css';
 import '../../css/public-motion.css';
@@ -58,9 +59,11 @@ export default function PublicSiteHeader() {
     const registrationAvailable = publicSite?.registration_available === true;
     const dashboardHref = ownerEnabled ? '/super-admin' : '/dashboard';
     const currentPath = url.split('?')[0].split('#')[0];
-    // The owner asked to remove the Hindi button. A visitor who already
-    // saved Hindi still needs a way back to English.
-    const showLanguage = localization?.locale === 'hi';
+    // The owner turns the language button on in the admin panel. A visitor
+    // who already saved Hindi always keeps a way back to English.
+    const { features } = useWebsite();
+    const showLanguage =
+        features.language_button || localization?.locale === 'hi';
     return (
         <>
             <a className="lock-skip" href="#main-content">
