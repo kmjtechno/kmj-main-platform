@@ -42,6 +42,25 @@ class LiveProposalContract(unittest.TestCase):
                 with self.assertRaisesRegex(SystemExit, "OFFLINE_CHECKOUT_REQUIRED"):
                     mod.proposal(NEW, OLD, PROD)
 
+    def test_production_pointer_accepts_only_canonical_spellings(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target = root / "releases" / PROD
+            target.mkdir(parents=True)
+            link = root / "current"
+            with patch.object(self.mod, "PROD", link):
+                for raw, ok in ((str(target), True), ("releases/" + PROD, True),
+                                ("./releases/" + PROD, False), ("releases/../releases/" + PROD, False),
+                                ("releases/other", False)):
+                    link.symlink_to(raw)
+                    self.assertEqual(self.mod.exact_pointer(link, target), ok)
+                    link.unlink()
+                target.rmdir()
+                target.symlink_to(root)
+                link.symlink_to("releases/" + PROD)
+                self.assertFalse(self.mod.exact_pointer(link, target))
+
     def test_committed_pins(self):
         for path, pin in ((RUNNER, self.mod.RUNNER_BLOB), (UNIT, self.mod.UNIT_BLOB)):
             raw = path.read_bytes()
@@ -273,6 +292,26 @@ class Sandbox(unittest.TestCase):
     def test_runner_must_match_attested_digest(self):
         self.write_approval(runnerSha256="d" * 64)
         self.assertBlocked(*self.run_runner(), "RUNNER_DIGEST")
+
+    def test_canonical_relative_production_pointer_is_preserved(self):
+        link = self.d / "prod/current"
+        link.unlink()
+        raw = "releases/" + PROD
+        link.symlink_to(raw)
+        self.assertEqual(self.run_runner()[0], 0)
+        self.assertEqual(os.readlink(link), raw)
+        self.assertEqual(self.run_runner(), (0, f"KMJ_STAGE_ACTIVATE=ALREADY_ACTIVE sha={self.NEW}"))
+
+    def test_production_pointer_alias_or_broken_target_is_rejected(self):
+        link = self.d / "prod/current"
+        link.unlink()
+        for raw in ("./releases/" + PROD, "releases/../releases/" + PROD, "releases/missing"):
+            link.symlink_to(raw)
+            self.assertBlocked(*self.run_runner(), "PRODUCTION_DRIFT")
+            link.unlink()
+        (self.d / "prod/releases" / PROD).rmdir()
+        link.symlink_to("releases/" + PROD)
+        self.assertBlocked(*self.run_runner(), "PRODUCTION_DRIFT")
 
     def test_production_drift_blocks(self):
         os.unlink(self.d / "prod/current")
