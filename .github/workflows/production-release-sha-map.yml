@@ -25,6 +25,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - run: |
+      - name: Verify exact SHA mapping and rollback contract
+        run: |
           python3 -B -m unittest discover -s scripts -p test_production_release_sha_map.py -v
           python3 -B -m unittest discover -s scripts -p test_refresh_production_release_sha_map.py -v
