@@ -107,10 +107,45 @@ class AutoPublishSafetyTest(unittest.TestCase):
         self.assertEqual(verdict(evidence=dict(BASE_EVIDENCE,
                                              standingOwnerAuthorization=False),
                                  live=live), "BLOCKED_OWNER_AUTHORIZATION")
-        self.assertEqual(verdict(remote="c" * 40, live=live),
-                         "BLOCKED_STAGING_APPROVAL_DRIFT")
+        self.assertEqual(verdict(remote="c" * 40, live=live), "ALREADY_LIVE")
+        self.assertEqual(verdict(remote="", live=live), "ALREADY_LIVE")
+        self.assertEqual(verdict(remote=""), "BLOCKED_STAGING_APPROVAL_DRIFT")
+        self.assertEqual(verdict(evidence=dict(ELITE_EVIDENCE, stagingSha="c" * 40),
+                                 remote="c" * 40, live=live), "BLOCKED_ACCEPTANCE_IDENTITY")
         self.assertEqual(verdict(candidate="c" * 40, live=live),
                          "BLOCKED_CANDIDATE_IDENTITY")
+
+    def test_already_live_run_never_queries_staging_or_starts_release_unit(self):
+        import tempfile
+        from contextlib import ExitStack
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as temp, ExitStack() as stack:
+            patches = (
+                ("LOCK", Path(temp) / "gate.lock"),
+                ("live_release", lambda: "platform-" + SHA[:12]),
+                ("protected_json", lambda p: BASE_APPROVAL if p == mod.APPROVAL else ELITE_EVIDENCE),
+                ("candidate_sha", lambda target: SHA),
+                ("public_https_response", lambda: "HTTP/2 200\r\nx-kmj-deploy-sha: " + SHA + "\r\n\r\nKMJ_HTTP_STATUS=200"),
+            )
+            for name, value in patches:
+                stack.enter_context(patch.object(mod, name, value))
+            stack.enter_context(patch.object(mod.os, "geteuid", return_value=0))
+            stack.enter_context(patch.object(mod.socket, "gethostname", return_value="KMJ-elite"))
+            # CI need not run as root: only emulate the ownership returned for the private test lock.
+            original_fstat = mod.os.fstat
+            def root_fstat(fd):
+                s = original_fstat(fd)
+                return SimpleNamespace(st_mode=s.st_mode, st_uid=0, st_nlink=s.st_nlink)
+            stack.enter_context(patch.object(mod.os, "fstat", side_effect=root_fstat))
+            remote = stack.enter_context(patch.object(mod, "remote_sha", side_effect=AssertionError("network promotion unnecessary")))
+            command = stack.enter_context(patch.object(mod, "fixed_run", side_effect=AssertionError("no release start")))
+            self.assertEqual(mod.run("check"), 0)
+            self.assertEqual(mod.run("activate"), 0)
+            with patch.object(mod, "public_https_response", return_value=""):
+                self.assertEqual(mod.run("activate"), 2)
+            remote.assert_not_called()
+            command.assert_not_called()
 
     def test_already_live_requires_fresh_exact_public_https(self):
         source = SOURCE.read_text()
