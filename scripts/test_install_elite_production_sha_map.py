@@ -1,6 +1,7 @@
 import importlib.util
 from pathlib import Path
 import unittest
+import json
 import tempfile
 from unittest.mock import patch
 
@@ -29,14 +30,14 @@ class InstallerContractTests(unittest.TestCase):
             marker = Path(folder) / "qualification"
             with patch.object(m, "QUALIFICATION", marker), patch.object(m, "protected_dir"), \
                     patch.object(m, "guard_live", return_value=snapshot), \
-                    patch.object(m, "unit_property", side_effect=["100", "100"]), \
+                    patch.object(m, "journal_witness", return_value=None), \
                     patch.object(m, "fixed"):
                 with self.assertRaisesRegex(ValueError, "SERVICE_NOT_EXECUTED"):
                     m.qualify_service(snapshot)
                 self.assertFalse(marker.exists())
             with patch.object(m, "QUALIFICATION", marker), patch.object(m, "protected_dir"), \
                     patch.object(m, "guard_live", return_value=snapshot), \
-                    patch.object(m, "unit_property", side_effect=["100", "101", "success", "0"]), \
+                    patch.object(m, "journal_witness", return_value="a" * 32), \
                     patch.object(m, "fixed"):
                 m.qualify_service(snapshot)
                 self.assertFalse(marker.exists())
@@ -48,12 +49,24 @@ class InstallerContractTests(unittest.TestCase):
             marker.write_text("existing")
             with patch.object(m, "QUALIFICATION", marker), patch.object(m, "protected_dir"), \
                     patch.object(m, "guard_live", return_value=snapshot), \
-                    patch.object(m, "unit_property", return_value="0"), \
+                    patch.object(m, "journal_witness", return_value=None), \
                     patch.object(m, "fixed") as start:
                 with self.assertRaises(FileExistsError):
                     m.qualify_service(snapshot)
                 start.assert_not_called()
                 self.assertEqual(marker.read_text(), "existing")
+
+    def test_journal_requires_fresh_root_exact_service_marker(self):
+        entry = {"_SYSTEMD_UNIT": m.UNIT, "_UID": "0",
+                 "MESSAGE": "PRODUCTION_SHA_MAP=ALREADY_LIVE_VERIFIED",
+                 "_SYSTEMD_INVOCATION_ID": "a" * 32, "__MONOTONIC_TIMESTAMP": "200"}
+        self.assertEqual(m.qualification_invocation(json.dumps(entry), 100), "a" * 32)
+        self.assertIsNone(m.qualification_invocation(json.dumps(entry), 201))
+        for field, value in (("_UID", "1000"), ("_SYSTEMD_UNIT", "other.service"),
+                             ("MESSAGE", "unrelated"), ("_SYSTEMD_INVOCATION_ID", "invalid")):
+            self.assertIsNone(m.qualification_invocation(json.dumps(dict(entry, **{field: value})), 100))
+        other = dict(entry, _SYSTEMD_INVOCATION_ID="b" * 32)
+        self.assertIsNone(m.qualification_invocation(json.dumps(entry) + "\n" + json.dumps(other), 100))
 
 if __name__ == "__main__":
     unittest.main()
