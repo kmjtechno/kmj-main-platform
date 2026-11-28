@@ -35,9 +35,9 @@ class PrepareTests(unittest.TestCase):
     def test_sql_is_fixed_shape_and_rejects_unsafe_values(self):
         name = pr.names(SHA)
         sql = pr.sql_create(name, "c" * 32, "d" * 32)
-        self.assertEqual(len(sql), 5)
-        self.assertIn("NOSUPERUSER NOCREATEDB NOCREATEROLE", sql[2])
-        self.assertIn("kmj-disposable-rehearsal:" + "d" * 32, sql[4])
+        self.assertEqual(len(sql), 3)
+        self.assertIn("NOSUPERUSER NOCREATEDB NOCREATEROLE", sql[0])
+        self.assertIn("kmj-disposable-rehearsal:" + "d" * 32, sql[2])
         for bad in (("x; DROP", "c" * 32, "d" * 32), (name, "c'; --" + "c" * 26, "d" * 32),
                     (name, "c" * 32, "NOTHEX" * 6), ("production_db", "c" * 32, "d" * 32)):
             with self.assertRaises(ValueError):
@@ -69,7 +69,7 @@ class PrepareTests(unittest.TestCase):
                          "storage/app/secret.txt", "public/storage"):
                 self.assertFalse(os.path.lexists(dst / gone), gone)
 
-    def test_prepare_orders_steps_and_cleans_before_creating(self):
+    def test_prepare_never_cleans_before_creating(self):
         with tempfile.TemporaryDirectory() as d:
             base = pathlib.Path(d) / "base"
             base.mkdir()
@@ -77,12 +77,26 @@ class PrepareTests(unittest.TestCase):
             runs, sqls = [], []
             pr.prepare(SHA, EXP, lambda a, u=None: runs.append(a), lambda s: sqls.append(s), base, cfg,
                        lambda p, r: True)
-            self.assertEqual(sqls[0][0].split()[0:3], ["DROP", "DATABASE", "IF"])
-            self.assertEqual(len(sqls), 2)
+            self.assertEqual(sqls[0][0].split()[0:2], ["CREATE", "ROLE"])
+            self.assertEqual(len(sqls), 1)
+            self.assertFalse(any("DROP " in statement for batch in sqls for statement in batch))
             self.assertTrue(any(a[0] == '/usr/bin/chown' for a in runs))
             self.assertEqual(sum(1 for a in runs if a[0] == '/usr/bin/rsync'), 2)
             self.assertEqual(oct(cfg.stat().st_mode & 0o777), "0o600")
             self.assertEqual(json.loads(cfg.read_text())["env"]["DB_HOST"], "127.0.0.1")
+
+    def test_existing_state_and_cleanup_fail_without_sql(self):
+        with tempfile.TemporaryDirectory() as d:
+            base = pathlib.Path(d)
+            cfg = base / "release-rehearsal.json"
+            cfg.write_text("existing")
+            sqls = []
+            with self.assertRaisesRegex(ValueError, "BLOCKED_EXISTING_REHEARSAL"):
+                pr.prepare(SHA, EXP, lambda *a: None, sqls.append, base, cfg, lambda p, r: True)
+            with self.assertRaisesRegex(ValueError, "BLOCKED_CLEANUP_OWNERSHIP_UNVERIFIED"):
+                pr.cleanup(SHA, lambda *a: None, sqls.append, base, cfg)
+            self.assertEqual(sqls, [])
+            self.assertEqual(cfg.read_text(), "existing")
 
     def test_untrusted_tree_blocks_before_any_database_change(self):
         sqls = []
