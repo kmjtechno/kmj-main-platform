@@ -140,8 +140,9 @@ def prepare(sha, expected, runner=run, sql_runner=psql, base=BASE, config_path=C
     runner(["/usr/bin/chown", "-R", OWNER + ":" + OWNER, str(work)])
     password, nonce = secrets.token_hex(16), secrets.token_hex(16)
     sql_runner(sql_create(name, password, nonce))
-    write_config(make_config(name, password, nonce, work / "previous", work / "candidate"),
-                 config_path)
+    config = make_config(name, password, nonce, work / "previous", work / "candidate")
+    config.update(approvedSha=sha, expectedCurrentRelease=expected)
+    write_config(config, config_path)
 
 
 def cleanup(sha, runner=run, sql_runner=psql, base=BASE, config_path=CONFIG):
