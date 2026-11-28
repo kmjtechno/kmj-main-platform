@@ -14,6 +14,7 @@ def load(name):
 runtime = load("prepare-elite-isolated-stage-runtime-20261128.py")
 env = load("prepare-elite-isolated-stage-env-20261128.py")
 fpm = load("prepare-elite-isolated-stage-fpm-20261128.py")
+migrate = load("migrate-elite-isolated-stage-20261128.py")
 
 class StageRuntimeTests(unittest.TestCase):
     def test_candidate_fpm_exact_scope(self):
@@ -30,6 +31,20 @@ class StageRuntimeTests(unittest.TestCase):
         self.assertIn("listen = "+str(fpm.NEW_SOCKET), config)
         self.assertNotIn(str(fpm.OLD_SOCKET), config)
         self.assertIn("pm.max_children = 2", config)
+
+    def test_migration_scope_and_runtime_cache(self):
+        raw = env.env_bytes("a"*64, "base64:"+"A"*43+"=")
+        self.assertTrue(migrate.inspect_env(raw))
+        self.assertFalse(migrate.inspect_env(raw.replace(b"DB_URL=\n", b"DB_URL=postgres://wrong\n")))
+        self.assertIn("has_database_privilege", migrate.ROLE_SCOPE)
+        self.assertIn("NOT r.rolbypassrls", migrate.ROLE_SCOPE)
+        self.assertEqual(migrate.DB, runtime.DB)
+        self.assertEqual(migrate.ROLE, runtime.ROLE)
+        for k in ("packages", "services", "config", "routes", "events"):
+            key = "APP_" + k.upper() + "_CACHE"
+            value = str(runtime.RUNTIME / "cache" / (k + ".php"))
+            self.assertIn(key+"="+value, raw.decode())
+            self.assertIn("env["+key+"] = "+value, fpm.config_bytes().decode())
 
     def test_candidate_scope(self):
         self.assertEqual(runtime.SHA, "710c6f3ca10310457bc7243caabc0e48476ec110")
