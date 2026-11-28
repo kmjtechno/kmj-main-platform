@@ -25,3 +25,5 @@ ProtectControlGroups=true
 LockPersonality=true
 RestrictSUIDSGID=true
 ReadWritePaths=/var/lib/kmj-main-platform/activation-broker
+# Needed for the fixed expired-intent unlink; no other storage directory is writable.
+ReadWritePaths=/home/kmjprod/shared/storage/app/private/ops
