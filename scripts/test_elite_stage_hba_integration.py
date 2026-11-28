@@ -23,9 +23,31 @@ spec.loader.exec_module(hba)
 verify_spec = importlib.util.spec_from_file_location("hba_verify", Path(__file__).resolve().parent / "operations/verify-elite-isolated-stage-hba-20261128.py")
 verify = importlib.util.module_from_spec(verify_spec)
 verify_spec.loader.exec_module(verify)
+install_spec = importlib.util.spec_from_file_location("hba_install", Path(__file__).resolve().parent / "operations/install-elite-isolated-stage-hba-20261128.py")
+installer = importlib.util.module_from_spec(install_spec)
+install_spec.loader.exec_module(installer)
 
 
 class HbaPolicyTests(unittest.TestCase):
+    def test_installer_rollback_preserves_original_on_reload_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = root / "pg_hba.conf"
+            old = b"local all all peer\n"
+            new = hba.proposal(old)
+            config.write_bytes(old)
+            config.chmod(0o600)
+            def read(path):
+                return path.read_bytes()
+            with patch.object(installer.plan, "read_hba", side_effect=read), \
+                 patch.object(installer, "live_guard"), \
+                 patch.object(installer, "reload", side_effect=[ValueError("RELOAD_FAILED"), None]):
+                with self.assertRaisesRegex(ValueError, "RELOAD_FAILED"):
+                    installer.install(config, old, new, root)
+            self.assertEqual(config.read_bytes(), old)
+            self.assertEqual(config.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(list(root.glob("kmj-stage-hba-backup-*/pg_hba.conf.original"))[0].read_bytes(), old)
+
     def test_live_probe_requires_explicit_rejection(self):
         self.assertTrue(verify.rejected(SimpleNamespace(returncode=2, stderr=b"pg_hba.conf rejects connection")))
         for error in (b"password authentication failed", b"connection refused", b"database does not exist"):
@@ -126,7 +148,7 @@ class HbaRealIntegration(unittest.TestCase):
 if __name__ == "__main__":
     if "--pure" in sys.argv:
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(HbaPolicyTests)
-        expected = 2
+        expected = 3
     else:
         suite = unittest.defaultTestLoader.loadTestsFromTestCase(HbaRealIntegration)
         expected = 1
