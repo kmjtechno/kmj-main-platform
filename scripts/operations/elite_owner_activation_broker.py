@@ -91,7 +91,7 @@ def read_owner_intent(path: Path, uid: int, now: int) -> dict:
     if (not stat.S_ISDIR(parent.st_mode) or parent.st_uid != uid or
             stat.S_IMODE(parent.st_mode) & 0o022):
         raise ValueError("BLOCKED_INTENT_PARENT")
-    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
     try:
         info = os.fstat(fd)
         if (not stat.S_ISREG(info.st_mode) or info.st_uid != uid
@@ -106,6 +106,55 @@ def read_owner_intent(path: Path, uid: int, now: int) -> dict:
         return validate_intent(strict_json(data), now)
     finally:
         os.close(fd)
+
+
+
+def retire_expired_intent(path: Path, uid: int, now: int) -> bool:
+    """Retire only a structurally valid, expired fixed-inbox intent.
+
+    The systemd oneshot serializes normal broker invocations. PHP publishers
+    use create-only links and never replace a pending name. A changed inode
+    or metadata fails closed; an untrusted inbox writer can still cause DoS,
+    but cannot authorize a release through this cleanup-only path.
+    """
+    parent_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    try:
+        parent = os.fstat(parent_fd)
+        if (parent.st_uid != uid or stat.S_IMODE(parent.st_mode) & 0o022):
+            raise ValueError("BLOCKED_INTENT_PARENT")
+        fd = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK,
+                     dir_fd=parent_fd)
+        try:
+            before = os.fstat(fd)
+            if (not stat.S_ISREG(before.st_mode) or before.st_uid != uid
+                    or before.st_nlink != 1 or stat.S_IMODE(before.st_mode) & 0o027
+                    or not 128 <= before.st_size <= MAX_BYTES):
+                raise ValueError("BLOCKED_INTENT_IDENTITY")
+            data = os.read(fd, MAX_BYTES + 1)
+
+            def fingerprint(info):
+                return (info.st_dev, info.st_ino, info.st_mode, info.st_uid,
+                        info.st_nlink, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+
+            if len(data) != before.st_size or fingerprint(os.fstat(fd)) != fingerprint(before):
+                raise ValueError("BLOCKED_INTENT_RACE")
+            obj = strict_json(data)
+            created, expires = obj["created_at_unix"], obj["expires_at_unix"]
+            if type(created) is not int or type(expires) is not int or expires > now:
+                return False
+            # Validate the original bounded TTL and all identity fields at issuance.
+            # This is cleanup only; never use this historical validation for activation.
+            validate_intent(obj, created)
+            current = os.stat(path.name, dir_fd=parent_fd, follow_symlinks=False)
+            if fingerprint(current) != fingerprint(before):
+                raise ValueError("BLOCKED_INTENT_RACE")
+            os.unlink(path.name, dir_fd=parent_fd)
+            os.fsync(parent_fd)
+            return True
+        finally:
+            os.close(fd)
+    finally:
+        os.close(parent_fd)
 
 
 def trusted_gate():
@@ -257,14 +306,20 @@ def run(execute: bool, *, now: int | None = None) -> int:
     if os.geteuid() != 0 or socket.gethostname().split(".")[0] != HOST:
         print("KMJ_ACTIVATION_BROKER=BLOCKED_HOST_ROOT")
         return 2
-    now = int(time.time()) if now is None else now
+    observed_now = int(time.time()) if now is None else now
     try:
         uid = pwd.getpwnam(OWNER_USER).pw_uid
         try:
-            obj = read_owner_intent(INTENT, uid, now)
+            obj = read_owner_intent(INTENT, uid, observed_now)
         except FileNotFoundError:
             print("KMJ_ACTIVATION_BROKER=NO_PENDING_INTENT")
             return 0
+        except ValueError as exc:
+            if (execute and str(exc) == "BLOCKED_INTENT_EXPIRED_OR_FUTURE"
+                    and retire_expired_intent(INTENT, uid, observed_now)):
+                print("KMJ_ACTIVATION_BROKER=EXPIRED_INTENT_RETIRED_NO_DEPLOY")
+                return 0
+            raise
         if previously_claimed(obj):
             print("KMJ_ACTIVATION_BROKER=ALREADY_REQUESTED_NOT_LIVE_PROOF")
             return 0
@@ -275,7 +330,10 @@ def run(execute: bool, *, now: int | None = None) -> int:
             print("KMJ_ACTIVATION_BROKER=EXACT_PROTECTED_PREFLIGHT_PASS")
             print("PRODUCTION_MUTATION=NONE")
             return 0
-        claim_once(obj, now)
+        claim_now = int(time.time()) if now is None else now
+        if read_owner_intent(INTENT, uid, claim_now) != obj:
+            raise ValueError("BLOCKED_INTENT_DRIFT_BEFORE_CLAIM")
+        claim_once(obj, claim_now)
         accepted = trigger_fixed_unit()
         print("KMJ_ACTIVATION_BROKER=" + (
             "UNIT_START_ACCEPTED_NOT_LIVE_PROOF" if accepted else
