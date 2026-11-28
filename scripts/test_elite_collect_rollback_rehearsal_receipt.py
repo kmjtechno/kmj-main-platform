@@ -84,6 +84,18 @@ class RehearsalTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 col.load_env(p, os.getuid(), SHA, EXP)
 
+    def test_sandbox_scope_and_private_payload(self):
+        argv = col.sandbox_argv()
+        for flag in ("DynamicUser=yes", "ProtectHome=yes", "ProtectSystem=strict",
+                     "IPAddressDeny=any", "IPAddressAllow=localhost", "PrivateTmp=yes"):
+            self.assertIn("--property=" + flag, argv)
+        self.assertNotIn("kmjprod", argv)
+        password = "c" * 32
+        self.assertFalse(any(password in arg for arg in argv))
+        payload = col.runner_payload({"DB_PASSWORD": password}, "print('ok')")
+        self.assertIn(password, payload)
+        compile(payload, "<test>", "exec")
+
     def test_cli_guards_and_source_safety(self):
         self.assertEqual(col.main(["x", "--check", "bad", EXP]), 2)
         if os.geteuid() != 0:
