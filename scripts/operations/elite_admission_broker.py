@@ -14,7 +14,9 @@ file that the existing fixed gate requires:
   * the intent carries the owner's explicit authenticated-QA attestation; root mints
     the `authenticated-qa` receipt from it (an owner attestation, labelled as such).
 
-It writes ONLY the admission file (0600 root, no clobber). It starts no unit,
+It writes ONLY the admission file (0600 root, no clobber).
+The fixed systemd dependency prepares the Nginx SHA map separately;
+this broker checks the exact pair again before admitting a release. It starts no unit,
 changes no approval or pointer, and touches no production data.
 
   --inspect   verify everything, write nothing
@@ -37,6 +39,8 @@ import release_admission_receipts as ra  # noqa: E402
 import release_receipt_store as store  # noqa: E402
 import elite_collect_staging_origin_receipt as common  # noqa: E402
 import main_platform_autopublish_gate as gate  # noqa: E402
+import production_release_sha_map as sha_map  # noqa: E402
+import refresh_production_release_sha_map as map_refresh  # noqa: E402
 
 HOST = "KMJ-elite"
 OWNER_USER = "kmjprod"
@@ -220,15 +224,30 @@ def run(execute, now=None):
         return 2
 
 
+def verify_admission_map(intent):
+    data, _ = map_refresh.read_map(map_refresh.MAP)
+    target = intent["approved_sha"]
+    previous = intent["expected_current_release"]
+    values = sha_map.parse_existing(data)
+    if (len(values) != 2 or target not in values
+            or not any("platform-" + value[:12] == previous for value in values)):
+        raise ValueError("BLOCKED_PRODUCTION_SHA_MAP_NOT_READY")
+
+
 def decide_and_write(execute, uid, now):
     try:
         intent, raw = read_intent(INTENT, uid, now)
+        approval = gate.protected_json(gate.APPROVAL)
         admission, blockers = decide(
-            intent, raw, gate.protected_json(gate.APPROVAL), gate.live_release(),
+            intent, raw, approval, gate.live_release(),
             common.RECEIPT_DIR, now)
         if admission is None:
             print("KMJ_ADMISSION_BROKER=BLOCKED " + ",".join(blockers)[:200])
             return 2
+        verify_admission_map(intent)
+        if (gate.live_release() != intent["expected_current_release"]
+                or gate.protected_json(gate.APPROVAL) != approval):
+            raise ValueError("BLOCKED_APPROVAL_DRIFT_AFTER_MAP")
         if not execute:
             print("KMJ_ADMISSION_BROKER=EXACT_PREFLIGHT_PASS WRITTEN=NO")
         else:
