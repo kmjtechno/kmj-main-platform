@@ -10,6 +10,14 @@ export type DeliveryMilestone = {
 
 export const deliveryMilestones: DeliveryMilestone[] = [
     {
+        id: 'elite-release-shared-storage-preflight-20261128',
+        title: 'Release preflight recognizes exact shared storage',
+        state: 'active',
+        detail: 'SOURCE ONLY: host readback confirmed exact live HEAD, clean non-storage source and canonical shared storage. Preflight now checks the full index and non-storage worktree without ignoring arbitrary symlinks.',
+        evidence:
+            'PR #1283 diagnostic and gate regressions; installed root gate upgrade and exact host readback pending.',
+    },
+    {
         id: 'production-inbox-contract-20261128',
         title: 'Owner Inbox request validation and private response safety',
         state: 'active',

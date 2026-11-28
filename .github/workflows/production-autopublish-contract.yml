@@ -4,6 +4,8 @@ on:
     paths:
       - 'scripts/operations/main_platform_autopublish_gate.py'
       - 'scripts/test_main_platform_autopublish_gate.py'
+      - 'scripts/operations/diagnose-elite-release-candidate-readonly.py'
+      - 'scripts/test_elite_release_candidate_diagnostic.py'
       - 'infra/server/systemd/kmj-main-platform-autopublish.*'
       - 'docs/operations/CONTINUOUS_PRODUCTION_DELIVERY_20261028.md'
       - '.github/workflows/production-autopublish-contract.yml'
@@ -12,6 +14,8 @@ on:
     paths:
       - 'scripts/operations/main_platform_autopublish_gate.py'
       - 'scripts/test_main_platform_autopublish_gate.py'
+      - 'scripts/operations/diagnose-elite-release-candidate-readonly.py'
+      - 'scripts/test_elite_release_candidate_diagnostic.py'
       - 'infra/server/systemd/kmj-main-platform-autopublish.*'
       - 'docs/operations/CONTINUOUS_PRODUCTION_DELIVERY_20261028.md'
       - '.github/workflows/production-autopublish-contract.yml'
@@ -35,6 +39,8 @@ jobs:
           set -Eeuo pipefail
           python3 -B -m py_compile scripts/operations/main_platform_autopublish_gate.py
           python3 -B -m unittest discover -s scripts -p test_main_platform_autopublish_gate.py -v
+          python3 -B -m py_compile scripts/operations/diagnose-elite-release-candidate-readonly.py
+          python3 -B -m unittest discover -s scripts -p test_elite_release_candidate_diagnostic.py -v
           grep -Fq 'ExecStart=/usr/bin/python3 -B /opt/kmj-main-platform-autopublish/main_platform_autopublish_gate.py --activate' infra/server/systemd/kmj-main-platform-autopublish.service
           grep -Fq 'Unit=kmj-main-platform-autopublish.service' infra/server/systemd/kmj-main-platform-autopublish.timer
           echo 'AUTOPUBLISH_SOURCE_CONTRACT=PASS'

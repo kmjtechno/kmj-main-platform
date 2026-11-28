@@ -183,22 +183,102 @@ class AutoPublishSafetyTest(unittest.TestCase):
             folder = Path(temp) / ("platform-" + SHA[:12])
             folder.mkdir()
             with patch.object(mod, "RELEASES", Path(temp)), patch.object(
-                    mod, "fixed_run", side_effect=[SHA, False]) as runner:
+                    mod, "fixed_run", side_effect=[SHA, True, False]) as runner:
                 self.assertEqual(mod.candidate_sha(SHA), "")
-                self.assertEqual(runner.call_count, 2)
+                self.assertEqual(runner.call_count, 3)
                 args = runner.call_args.args[0]
                 self.assertIn("diff", args)
                 self.assertIn("--no-ext-diff", args)
                 self.assertIn("--quiet", args)
                 self.assertIn("HEAD", args)
+                self.assertNotIn(":(literal,exclude)apps/platform/storage", args)
                 self.assertTrue(runner.call_args.kwargs["return_success"])
             with patch.object(mod, "RELEASES", Path(temp)), patch.object(
-                    mod, "fixed_run", side_effect=[SHA, True]):
+                    mod, "fixed_run", side_effect=[SHA, True, True, SHA]):
                 self.assertEqual(mod.candidate_sha(SHA), SHA)
             with patch.object(mod, "RELEASES", Path(temp)), patch.object(
                     mod, "fixed_run", return_value="c" * 40) as runner:
                 self.assertEqual(mod.candidate_sha(SHA), "")
                 runner.assert_called_once()
+
+    def test_shared_storage_requires_exact_link_and_clean_index(self):
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            releases = root / "releases"
+            folder = releases / ("platform-" + SHA[:12])
+            app = folder / "apps/platform"
+            app.mkdir(parents=True)
+            shared = root / "shared/storage"
+            shared.mkdir(parents=True)
+            storage = app / "storage"
+            storage.symlink_to(shared, target_is_directory=True)
+            with patch.object(mod, "RELEASES", releases):
+                with patch.object(mod, "fixed_run", side_effect=[SHA, True, True, SHA]) as runner:
+                    self.assertEqual(mod.candidate_sha(SHA), SHA)
+                    self.assertIn("--cached", runner.call_args_list[1].args[0])
+                    self.assertIn(":(literal,exclude)apps/platform/storage",
+                                  runner.call_args_list[2].args[0])
+                with patch.object(mod, "fixed_run", side_effect=[SHA, False]) as runner:
+                    self.assertEqual(mod.candidate_sha(SHA), "")
+                    self.assertEqual(runner.call_count, 2)
+                with patch.object(mod, "fixed_run", side_effect=[SHA, True, False]):
+                    self.assertEqual(mod.candidate_sha(SHA), "")
+                with patch.object(mod, "fixed_run", side_effect=[SHA, True, True, "c" * 40]):
+                    self.assertEqual(mod.candidate_sha(SHA), "")
+                storage.unlink()
+                storage.symlink_to(app, target_is_directory=True)
+                with patch.object(mod, "fixed_run", side_effect=[SHA, True]):
+                    self.assertEqual(mod.candidate_sha(SHA), "")
+
+    def test_real_git_shared_storage_exception_does_not_hide_source_or_index(self):
+        import subprocess
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            releases = root / "releases"
+            releases.mkdir()
+            folder = releases / "fixture"
+            app = folder / "apps/platform"
+            storage = app / "storage"
+            storage.mkdir(parents=True)
+            shared = root / "shared/storage"
+            shared.mkdir(parents=True)
+            (storage / ".gitignore").write_text("*\\n!.gitignore\\n")
+            (app / "source.php").write_text("original\\n")
+
+            def git(*args):
+                return subprocess.run(["git", "-C", str(folder), *args],
+                                      capture_output=True, check=True).stdout
+
+            git("init", "-q")
+            git("add", ".")
+            git("-c", "user.name=CI", "-c", "user.email=ci@example.invalid",
+                "commit", "-qm", "fixture")
+            sha = git("rev-parse", "HEAD").decode().strip()
+            pinned = releases / ("platform-" + sha[:12])
+            folder.rename(pinned)
+            folder = pinned
+            app = folder / "apps/platform"
+            storage = app / "storage"
+            (storage / ".gitignore").unlink()
+            storage.rmdir()
+            storage.symlink_to(shared, target_is_directory=True)
+
+            def runner(argv, timeout=15, return_success=False):
+                p = subprocess.run(argv[4:], capture_output=True, check=False)
+                return (p.returncode == 0 if return_success else
+                        p.stdout.decode().strip() if p.returncode == 0 else "")
+
+            with patch.object(mod, "RELEASES", releases), patch.object(mod, "fixed_run", side_effect=runner):
+                self.assertEqual(mod.candidate_sha(sha), sha)
+                (app / "source.php").write_text("tampered\\n")
+                self.assertEqual(mod.candidate_sha(sha), "")
+                (app / "source.php").write_text("original\\n")
+                git("add", "-A", "apps/platform/storage")
+                self.assertEqual(mod.candidate_sha(sha), "")
 
     def test_git_diff_command_detects_real_tracked_mutations(self):
         import subprocess
