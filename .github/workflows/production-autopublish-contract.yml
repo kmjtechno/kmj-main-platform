@@ -8,6 +8,8 @@ on:
       - 'scripts/test_elite_release_candidate_diagnostic.py'
       - 'scripts/operations/upgrade-elite-autopublish-shared-storage-20261128.py'
       - 'scripts/test_elite_autopublish_shared_storage_upgrade.py'
+      - 'scripts/operations/sync-elite-evidence-private-gate-20261128.py'
+      - 'scripts/test_elite_evidence_private_gate_sync.py'
       - 'infra/server/systemd/kmj-main-platform-autopublish.*'
       - 'docs/operations/CONTINUOUS_PRODUCTION_DELIVERY_20261028.md'
       - '.github/workflows/production-autopublish-contract.yml'
@@ -20,6 +22,8 @@ on:
       - 'scripts/test_elite_release_candidate_diagnostic.py'
       - 'scripts/operations/upgrade-elite-autopublish-shared-storage-20261128.py'
       - 'scripts/test_elite_autopublish_shared_storage_upgrade.py'
+      - 'scripts/operations/sync-elite-evidence-private-gate-20261128.py'
+      - 'scripts/test_elite_evidence_private_gate_sync.py'
       - 'infra/server/systemd/kmj-main-platform-autopublish.*'
       - 'docs/operations/CONTINUOUS_PRODUCTION_DELIVERY_20261028.md'
       - '.github/workflows/production-autopublish-contract.yml'
@@ -47,6 +51,8 @@ jobs:
           python3 -B -m unittest discover -s scripts -p test_elite_release_candidate_diagnostic.py -v
           python3 -B -m py_compile scripts/operations/upgrade-elite-autopublish-shared-storage-20261128.py
           python3 -B -m unittest discover -s scripts -p test_elite_autopublish_shared_storage_upgrade.py -v
+          python3 -B -m py_compile scripts/operations/sync-elite-evidence-private-gate-20261128.py
+          python3 -B -m unittest discover -s scripts -p test_elite_evidence_private_gate_sync.py -v
           grep -Fq 'ExecStart=/usr/bin/python3 -B /opt/kmj-main-platform-autopublish/main_platform_autopublish_gate.py --activate' infra/server/systemd/kmj-main-platform-autopublish.service
           grep -Fq 'Unit=kmj-main-platform-autopublish.service' infra/server/systemd/kmj-main-platform-autopublish.timer
           echo 'AUTOPUBLISH_SOURCE_CONTRACT=PASS'
