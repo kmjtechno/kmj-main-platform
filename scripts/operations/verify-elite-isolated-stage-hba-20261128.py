@@ -41,13 +41,13 @@ def current_policy():
     return path, raw
 
 
-def database_names():
+def database_names(require_candidate=True):
     result = plan.pg("SELECT datname FROM pg_database WHERE datallowconn ORDER BY datname")
     names = result.splitlines()
     require(1 <= len(names) <= 128 and len(set(names)) == len(names), "DATABASE_LIST_SCOPE")
     require(all(re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,62}", n) for n in names),
             "DATABASE_NAME_UNSUPPORTED")
-    require(DB in names, "CANDIDATE_DATABASE_MISSING")
+    require((DB in names) == require_candidate, "CANDIDATE_DATABASE_STATE")
     return names
 
 
@@ -76,6 +76,23 @@ def probe(database, host, passfile):
 
 def rejected(result):
     return result.returncode != 0 and b"pg_hba.conf rejects connection" in result.stderr
+
+
+def verify_before_role():
+    baseline = current_policy()
+    require(plan.pg(f"SELECT count(*) FROM pg_roles WHERE rolname='{ROLE}'") == "0",
+            "ROLE_ALREADY_EXISTS")
+    names = database_names(require_candidate=False)
+    for name in names:
+        for host in ("127.0.0.1", "/var/run/postgresql"):
+            require(rejected(probe(name, host, "/dev/null")), "PRE_ROLE_HBA_NOT_ACTIVE")
+    require(rejected(probe(DB, "/var/run/postgresql", "/dev/null")), "PRE_ROLE_SOCKET_NOT_REJECTED")
+    challenge = probe(DB, "127.0.0.1", "/dev/null")
+    require(challenge.returncode != 0 and b"no password supplied" in challenge.stderr,
+            "PRE_ROLE_SCRAM_CHALLENGE_MISSING")
+    require(current_policy() == baseline and database_names(require_candidate=False) == names,
+            "POLICY_OR_CATALOG_DRIFT")
+    return len(names)
 
 
 def verify_live():
