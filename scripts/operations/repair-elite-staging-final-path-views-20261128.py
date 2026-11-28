@@ -43,7 +43,6 @@ try {
     if (config('view.compiled') !== $target || !is_dir($target)) {
         throw new RuntimeException('compile scope');
     }
-    (new Illuminate\Foundation\Exceptions\RegisterErrorViewPaths)();
     $compiler = $app->make('blade.compiler');
     $source = dirname((new ReflectionClass(Illuminate\Foundation\Http\HealthCheck::class))->getFileName()).'/../resources/health-up.blade.php';
     if (dirname($compiler->getCompiledPath($source)) !== $target || !is_file($source)) {
@@ -51,6 +50,18 @@ try {
     }
     if (Illuminate\Support\Facades\Artisan::call('view:cache') !== 0) {
         throw new RuntimeException('view cache');
+    }
+    // Register framework error views separately: a missing app errors path
+    // must not break the ordinary view:cache Finder.
+    $errors = dirname((new ReflectionClass(Illuminate\Foundation\Exceptions\RegisterErrorViewPaths::class))->getFileName()).'/views';
+    foreach (glob($errors.'/*.blade.php') ?: [] as $errorView) {
+        $compiler->compile($errorView);
+        if ($compiler->isExpired($errorView)) {
+            $compiler->compile($errorView);
+        }
+        if ($compiler->isExpired($errorView)) {
+            throw new RuntimeException('error cache expired');
+        }
     }
     // HealthCheck uses View::file with this lexical path, including /../.
     $compiler->compile($source);
@@ -126,7 +137,11 @@ def read_file(path, owner, limit, protected=True):
 def command(args, *, input=None, timeout=120, cwd="/"):
     p = subprocess.run(args, input=input, cwd=cwd, env=ENV, capture_output=True,
                        timeout=timeout, check=False)
-    need(p.returncode == 0, "COMMAND_FAILED")
+    if p.returncode != 0:
+        marker = re.search(rb"(?m)^(?:COMPILE|HEALTH)_FAILED [A-Za-z0-9_\\]+$", p.stdout)
+        if marker:
+            print(marker.group().decode("ascii"), flush=True)
+        raise ValueError("COMMAND_FAILED")
     return p.stdout
 
 
